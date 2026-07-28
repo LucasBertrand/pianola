@@ -21,6 +21,7 @@
   },
   "include": [
     "src/domain/**/*.ts",
-    "src/geometry/**/*.ts"
+    "src/geometry/**/*.ts",
+    "src/persistence/**/*.ts"
   ]
 }

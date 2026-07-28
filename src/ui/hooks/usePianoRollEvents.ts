@@ -77,7 +77,7 @@ export interface PianoRollEventController {
   getSelectedNotes(): readonly Note[];
   replaceSelection(notes: readonly Note[]): void;
   removeVoiceFromSelection(voiceId: VoiceId): void;
-  addPitchToSelection(pitch: number): void;
+  togglePitchSelection(pitch: number): void;
   cancel(): void;
   clearSelection(): void;
 }
@@ -120,6 +120,8 @@ export function usePianoRollEvents(
   const selectionRef = useRef<InteractionSelection | null>(null);
   const collisionBufferRef = useRef<Note[] | null>(null);
   const lassoBufferRef = useRef<Note[] | null>(null);
+  const gestureSelectionSnapshotRef =
+    useRef<Note[] | null>(null);
   const converterRef = useRef<CoordinateConverter | null>(null);
   const converterVersionRef = useRef(-1);
   const transactionSequenceRef = useRef(0);
@@ -144,6 +146,10 @@ export function usePianoRollEvents(
     lassoBufferRef.current = [];
   }
 
+  if (gestureSelectionSnapshotRef.current === null) {
+    gestureSelectionSnapshotRef.current = [];
+  }
+
   if (converterRef.current === null) {
     converterRef.current = new CoordinateConverter(viewport.get());
     converterVersionRef.current = viewport.version;
@@ -166,6 +172,8 @@ export function usePianoRollEvents(
     const converter = converterRef.current;
     const collisionBuffer = collisionBufferRef.current;
     const lassoBuffer = lassoBufferRef.current;
+    const gestureSelectionSnapshot =
+      gestureSelectionSnapshotRef.current;
     const tapState = tapStateRef.current;
 
     if (
@@ -173,10 +181,13 @@ export function usePianoRollEvents(
       || converter === null
       || collisionBuffer === null
       || lassoBuffer === null
+      || gestureSelectionSnapshot === null
       || tapState === null
     ) {
       return undefined;
     }
+
+    let gestureSelectionRestored = false;
 
     const updateConverter = (): void => {
       if (converterVersionRef.current !== viewport.version) {
@@ -276,6 +287,46 @@ export function usePianoRollEvents(
     const cancelGesture = (): void => {
       endGestureVisual();
       resetDraft();
+      showSelection();
+    };
+    const captureGestureSelection = (): void => {
+      gestureSelectionSnapshot.length = 0;
+
+      for (
+        let noteIndex = 0;
+        noteIndex < selection.notes.length;
+        noteIndex += 1
+      ) {
+        const note = selection.notes[noteIndex];
+
+        if (note !== undefined) {
+          gestureSelectionSnapshot.push(note);
+        }
+      }
+
+      gestureSelectionRestored = false;
+    };
+    const restoreGestureSelection = (): void => {
+      selection.noteIds.clear();
+      selection.notes.length = 0;
+
+      for (
+        let noteIndex = 0;
+        noteIndex < gestureSelectionSnapshot.length;
+        noteIndex += 1
+      ) {
+        const note = gestureSelectionSnapshot[noteIndex];
+
+        if (
+          note !== undefined
+          && !isVoiceLocked(note.voiceId)
+          && !selection.noteIds.has(note.id)
+        ) {
+          selection.noteIds.add(note.id);
+          selection.notes.push(note);
+        }
+      }
+
       showSelection();
     };
 
@@ -396,6 +447,7 @@ export function usePianoRollEvents(
         return;
       }
 
+      captureGestureSelection();
       updateConverter();
 
       const bounds = overlay.getBoundingClientRect();
@@ -969,8 +1021,17 @@ export function usePianoRollEvents(
     const handleGesture = (
       events: PointerEvent[],
     ): void => {
-      if (events.length >= 2 && draft.mode !== "IDLE") {
+      if (events.length < 2) {
+        return;
+      }
+
+      if (draft.mode !== "IDLE") {
         cancelGesture();
+      }
+
+      if (!gestureSelectionRestored) {
+        restoreGestureSelection();
+        gestureSelectionRestored = true;
       }
     };
 
@@ -1046,6 +1107,9 @@ export function usePianoRollEvents(
     const strategy: TouchAwareInteractionStrategy = {
       supportsHover: false,
       onPointerDown: handlePointerDown,
+      shouldScheduleLongPress(): boolean {
+        return draft.mode === "LASSO_SELECTING";
+      },
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,
       onPointerCancel: handlePointerCancel,
@@ -1163,12 +1227,14 @@ export function usePianoRollEvents(
 
       onSelectionChange?.(selection.notes.length > 0);
     },
-    addPitchToSelection(pitch: number): void {
+    togglePitchSelection(pitch: number): void {
       if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
         return;
       }
 
       const state = projectStore.getState();
+      let selectableNoteCount = 0;
+      let selectedNoteCount = 0;
 
       for (
         let voiceIndex = 0;
@@ -1196,10 +1262,76 @@ export function usePianoRollEvents(
           if (
             note !== undefined
             && note.pitch === pitch
-            && !selection.noteIds.has(note.id)
           ) {
-            selection.noteIds.add(note.id);
-            selection.notes.push(note);
+            selectableNoteCount += 1;
+
+            if (selection.noteIds.has(note.id)) {
+              selectedNoteCount += 1;
+            }
+          }
+        }
+      }
+
+      if (selectableNoteCount === 0) {
+        return;
+      }
+
+      if (selectedNoteCount === selectableNoteCount) {
+        let targetIndex = 0;
+
+        for (
+          let noteIndex = 0;
+          noteIndex < selection.notes.length;
+          noteIndex += 1
+        ) {
+          const note = selection.notes[noteIndex];
+
+          if (note === undefined) {
+            continue;
+          }
+
+          if (note.pitch === pitch) {
+            selection.noteIds.delete(note.id);
+            continue;
+          }
+
+          selection.notes[targetIndex] = note;
+          targetIndex += 1;
+        }
+
+        selection.notes.length = targetIndex;
+      } else {
+        for (
+          let voiceIndex = 0;
+          voiceIndex < state.voiceOrder.length;
+          voiceIndex += 1
+        ) {
+          const voiceId = state.voiceOrder[voiceIndex];
+
+          if (
+            voiceId === undefined
+            || state.voicesById[voiceId]?.locked !== false
+          ) {
+            continue;
+          }
+
+          const track = state.tracksByVoiceId[voiceId];
+
+          if (track === undefined) {
+            continue;
+          }
+
+          for (const noteId in track.notesById) {
+            const note = track.notesById[noteId];
+
+            if (
+              note !== undefined
+              && note.pitch === pitch
+              && !selection.noteIds.has(note.id)
+            ) {
+              selection.noteIds.add(note.id);
+              selection.notes.push(note);
+            }
           }
         }
       }

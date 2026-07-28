@@ -7,6 +7,7 @@ export type MidiPitch = number;
 export type MidiVelocity = number;
 
 export const DEFAULT_PPQN = 960 as const;
+export const PROJECT_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_MEASURE_COUNT = 16 as const;
 export const MINIMUM_MEASURE_COUNT = 1 as const;
 export const MAXIMUM_MEASURE_COUNT = 256 as const;
@@ -110,7 +111,8 @@ export interface LoopRegion {
 export interface TransportState {
   readonly bpm: number;
   readonly timeSignature: TimeSignature;
-  readonly loop: LoopRegion | null;
+  readonly loop: LoopRegion;
+  readonly loopEnabled: boolean;
   readonly ppqn: number;
   readonly anchorTick: Tick;
   readonly anchorAudioTimeSeconds: number | null;
@@ -147,7 +149,11 @@ export function createDefaultTransportState(): TransportState {
       numerator: 4,
       denominator: 4,
     },
-    loop: null,
+    loop: {
+      startTick: 0,
+      endTick: DEFAULT_PPQN * 4,
+    },
+    loopEnabled: false,
     ppqn: DEFAULT_PPQN,
     anchorTick: 0,
     anchorAudioTimeSeconds: null,

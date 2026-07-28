@@ -301,8 +301,15 @@ export function useInteractionManager(
         activePointers.size === 1
         && !suppressSinglePointer
       ) {
-        strategyRef.current?.onPointerDown(event);
-        scheduleLongPress(event);
+        const strategy = strategyRef.current;
+
+        strategy?.onPointerDown(event);
+
+        if (strategy?.shouldScheduleLongPress() === true) {
+          scheduleLongPress(event);
+        } else {
+          cancelLongPress();
+        }
       } else if (activePointers.size === 2) {
         beginGesture();
       }

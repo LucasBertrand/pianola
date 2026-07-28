@@ -17,6 +17,7 @@ const MAXIMUM_HISTORY_ENTRIES = 200;
 export interface ProjectStorePort {
   getState(): ProjectState;
   dispatch(transaction: Transaction): ProjectState;
+  replaceState(state: ProjectState, label?: string): ProjectState;
   canUndo(): boolean;
   canRedo(): boolean;
   undo(): ProjectState;
@@ -58,6 +59,27 @@ export class ProjectStore implements ProjectStorePort {
     this.notify(nextState, previousState, transaction);
 
     return nextState;
+  }
+
+  public replaceState(
+    state: ProjectState,
+    label = "Replace project",
+  ): ProjectState {
+    const previousState = this.currentState;
+
+    this.pastStates.length = 0;
+    this.futureStates.length = 0;
+    this.currentState = {
+      ...state,
+      revision: previousState.revision + 1,
+    };
+    this.notify(
+      this.currentState,
+      previousState,
+      this.createHistoryTransaction(label),
+    );
+
+    return this.currentState;
   }
 
   public canUndo(): boolean {

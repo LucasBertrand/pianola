@@ -370,13 +370,16 @@ export function InteractionOverlay(
     voiceSelectionRequest,
     onSelectionChange,
   });
-  eventControllerRef.current = eventController;
 
   useEffect(
-    () => (): void => {
-      if (eventControllerRef.current === eventController) {
-        eventControllerRef.current = null;
-      }
+    () => {
+      eventControllerRef.current = eventController;
+
+      return (): void => {
+        if (eventControllerRef.current === eventController) {
+          eventControllerRef.current = null;
+        }
+      };
     },
     [
       eventController,

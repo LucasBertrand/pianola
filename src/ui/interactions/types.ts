@@ -14,6 +14,7 @@ export interface InteractionToolSignal {
 export interface TouchAwareInteractionStrategy {
   readonly supportsHover: false;
   onPointerDown(event: PointerEvent): void;
+  shouldScheduleLongPress(): boolean;
   onPointerMove(event: PointerEvent): void;
   onPointerUp(event: PointerEvent): void;
   onPointerCancel(event: PointerEvent): void;

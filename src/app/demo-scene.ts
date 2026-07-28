@@ -11,6 +11,7 @@ import {
   createDefaultTransportState,
   DEFAULT_MEASURE_COUNT,
   getProjectDurationTicks,
+  PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
   ProjectStore,
@@ -92,7 +93,7 @@ export function createDemoScene(): DemoScene {
   const spatialIndex = new SpatialIndex();
   const notes = createDemoNotes(DEMO_NOTE_COUNT);
   const projectStore = new ProjectStore(
-    createDemoProjectState(notes),
+    createProjectState(notes, "Untitled exploration"),
   );
   const indexedNotesBuffer: Note[] = [];
   const voiceStyles = new MutableRenderSignal(
@@ -144,6 +145,10 @@ export function createDemoScene(): DemoScene {
   };
 }
 
+export function createBlankProjectState(): ProjectState {
+  return createProjectState([], "Untitled project");
+}
+
 function createVoiceRenderStyles(
   state: ProjectState,
 ): Readonly<Record<VoiceId, VoiceRenderStyle>> {
@@ -166,6 +171,7 @@ function createVoiceRenderStyles(
       styles[voiceId] = {
         fillStyle: voice.color,
         opacity: voice.muted ? 0.16 : 1,
+        locked: voice.locked,
       };
     }
   }
@@ -263,8 +269,9 @@ function getDurationTicks(selector: number): number {
   }
 }
 
-function createDemoProjectState(
+function createProjectState(
   notes: readonly Note[],
+  title: string,
 ): ProjectState {
   const voicesById: Record<VoiceId, Voice> = {};
   const tracksByVoiceId: Record<VoiceId, Track> = {};
@@ -319,9 +326,9 @@ function createDemoProjectState(
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
-    title: "Untitled exploration",
+    title,
     measureCount: DEFAULT_MEASURE_COUNT,
     voicesById,
     voiceOrder,

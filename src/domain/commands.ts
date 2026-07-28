@@ -125,7 +125,12 @@ export interface UpdateTimeSignatureCommand {
 
 export interface UpdateLoopCommand {
   readonly type: "UpdateLoop";
-  readonly loop: LoopRegion | null;
+  readonly loop: LoopRegion;
+}
+
+export interface SetLoopEnabledCommand {
+  readonly type: "SetLoopEnabled";
+  readonly enabled: boolean;
 }
 
 export interface SetTransportAnchorCommand {
@@ -150,6 +155,7 @@ export type PianoRollCommand =
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
   | UpdateLoopCommand
+  | SetLoopEnabledCommand
   | SetTransportAnchorCommand;
 
 export interface Transaction {
@@ -169,6 +175,7 @@ export type CommandErrorCode =
   | "TRACK_ALREADY_EXISTS"
   | "NOTE_NOT_FOUND"
   | "NOTE_ALREADY_EXISTS"
+  | "NOTE_OVERLAP"
   | "DUPLICATE_NOTE_ID"
   | "INVALID_VOICE_ORDER";
 
@@ -253,6 +260,8 @@ function applyCommand(
       return applyUpdateTimeSignature(state, command);
     case "UpdateLoop":
       return applyUpdateLoop(state, command);
+    case "SetLoopEnabled":
+      return applySetLoopEnabled(state, command);
     case "SetTransportAnchor":
       return applySetTransportAnchor(state, command);
     default:
@@ -502,6 +511,7 @@ function applyRemoveMeasure(
     state.transportSettings,
     removalStartTick,
     removalEndTick,
+    (state.measureCount - 1) * measureTicks,
   );
 
   assertValidTransportState(transportSettings);
@@ -622,6 +632,60 @@ function applyMoveNotes(
     }
 
     movedNotes.push(movedNote);
+  }
+
+  const movedNoteIds = new Set(command.noteIds);
+
+  for (
+    let movedIndex = 0;
+    movedIndex < movedNotes.length;
+    movedIndex += 1
+  ) {
+    const movedNote = movedNotes[movedIndex];
+
+    if (movedNote === undefined) {
+      continue;
+    }
+
+    for (const candidateId in targetTrack.notesById) {
+      const candidate = targetTrack.notesById[candidateId];
+
+      if (
+        candidate !== undefined
+        && !(
+          command.sourceVoiceId === command.targetVoiceId
+          && movedNoteIds.has(candidate.id)
+        )
+        && notesOverlapInVoice(movedNote, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Note "${movedNote.id}" overlaps note "${candidate.id}" in voice "${command.targetVoiceId}".`,
+          command.type,
+        );
+      }
+    }
+
+    if (command.sourceVoiceId !== command.targetVoiceId) {
+      for (
+        let candidateIndex = 0;
+        candidateIndex < movedIndex;
+        candidateIndex += 1
+      ) {
+        const candidate = movedNotes[candidateIndex];
+
+        if (
+          candidate !== undefined
+          && notesOverlapInVoice(movedNote, candidate)
+        ) {
+          reject(
+            "NOTE_OVERLAP",
+            `Transferred notes "${movedNote.id}" and "${candidate.id}" overlap.`,
+            command.type,
+          );
+        }
+      }
+    }
   }
 
   if (
@@ -816,8 +880,8 @@ function applyUpdateLoop(
   assertValidTransportState(transportSettings);
 
   if (
-    command.loop?.startTick === state.transportSettings.loop?.startTick
-    && command.loop?.endTick === state.transportSettings.loop?.endTick
+    command.loop.startTick === state.transportSettings.loop.startTick
+    && command.loop.endTick === state.transportSettings.loop.endTick
   ) {
     return state;
   }
@@ -825,6 +889,31 @@ function applyUpdateLoop(
   return {
     ...state,
     transportSettings,
+  };
+}
+
+function applySetLoopEnabled(
+  state: ProjectState,
+  command: SetLoopEnabledCommand,
+): ProjectState {
+  if (typeof command.enabled !== "boolean") {
+    reject(
+      "INVALID_COMMAND",
+      "Loop enabled state must be a boolean.",
+      command.type,
+    );
+  }
+
+  if (command.enabled === state.transportSettings.loopEnabled) {
+    return state;
+  }
+
+  return {
+    ...state,
+    transportSettings: {
+      ...state.transportSettings,
+      loopEnabled: command.enabled,
+    },
   };
 }
 
@@ -1035,32 +1124,14 @@ function insertTimeIntoTransport(
     transport.anchorTick >= insertionTick
       ? transport.anchorTick + insertedTicks
       : transport.anchorTick;
-  const loop =
-    transport.loop === null
-      ? null
-      : {
-          startTick:
-            transport.loop.startTick >= insertionTick
-              ? transport.loop.startTick + insertedTicks
-              : transport.loop.startTick,
-          endTick:
-            transport.loop.endTick > insertionTick
-              ? transport.loop.endTick + insertedTicks
-              : transport.loop.endTick,
-        };
 
-  if (
-    anchorTick === transport.anchorTick
-    && loop?.startTick === transport.loop?.startTick
-    && loop?.endTick === transport.loop?.endTick
-  ) {
+  if (anchorTick === transport.anchorTick) {
     return transport;
   }
 
   return {
     ...transport,
     anchorTick,
-    loop,
   };
 }
 
@@ -1068,41 +1139,22 @@ function removeTimeFromTransport(
   transport: TransportState,
   removalStartTick: number,
   removalEndTick: number,
+  projectDurationTicks: number,
 ): TransportState {
   const anchorTick = collapseTickForRemovedTime(
     transport.anchorTick,
     removalStartTick,
     removalEndTick,
   );
-  const loopStartTick =
-    transport.loop === null
-      ? 0
-      : collapseTickForRemovedTime(
-          transport.loop.startTick,
-          removalStartTick,
-          removalEndTick,
-        );
-  const loopEndTick =
-    transport.loop === null
-      ? 0
-      : collapseTickForRemovedTime(
-          transport.loop.endTick,
-          removalStartTick,
-          removalEndTick,
-        );
-  const loop =
-    transport.loop !== null
-    && loopEndTick > loopStartTick
-      ? {
-          startTick: loopStartTick,
-          endTick: loopEndTick,
-        }
-      : null;
+  const loop = fitLoopRegionToProject(
+    transport.loop,
+    projectDurationTicks,
+  );
 
   if (
     anchorTick === transport.anchorTick
-    && loop?.startTick === transport.loop?.startTick
-    && loop?.endTick === transport.loop?.endTick
+    && loop.startTick === transport.loop.startTick
+    && loop.endTick === transport.loop.endTick
   ) {
     return transport;
   }
@@ -1128,6 +1180,48 @@ function collapseTickForRemovedTime(
   }
 
   return removalStartTick;
+}
+
+function createFallbackLoopRegion(
+  preferredStartTick: number,
+  preferredDurationTicks: number,
+  projectDurationTicks: number,
+): LoopRegion {
+  const durationTicks = Math.max(
+    1,
+    Math.min(preferredDurationTicks, projectDurationTicks),
+  );
+  const startTick = Math.min(
+    preferredStartTick,
+    projectDurationTicks - durationTicks,
+  );
+
+  return {
+    startTick,
+    endTick: startTick + durationTicks,
+  };
+}
+
+function fitLoopRegionToProject(
+  loop: LoopRegion,
+  projectDurationTicks: number,
+): LoopRegion {
+  if (loop.endTick <= projectDurationTicks) {
+    return loop;
+  }
+
+  if (loop.startTick < projectDurationTicks) {
+    return {
+      startTick: loop.startTick,
+      endTick: projectDurationTicks,
+    };
+  }
+
+  return createFallbackLoopRegion(
+    projectDurationTicks,
+    loop.endTick - loop.startTick,
+    projectDurationTicks,
+  );
 }
 
 function assertMeasureIndex(
@@ -1175,6 +1269,17 @@ function assertNoteWithinProject(
       commandType,
     );
   }
+}
+
+function notesOverlapInVoice(left: Note, right: Note): boolean {
+  return (
+    left.voiceId === right.voiceId
+    && left.pitch === right.pitch
+    && left.startTick
+      < right.startTick + right.durationTicks
+    && right.startTick
+      < left.startTick + left.durationTicks
+  );
 }
 
 function trimProjectToDuration(
@@ -1246,14 +1351,14 @@ function trimProjectToDuration(
     transport.anchorTick,
     projectDurationTicks,
   );
-  const loop =
-    transport.loop !== null
-    && transport.loop.endTick <= projectDurationTicks
-      ? transport.loop
-      : null;
+  const loop = fitLoopRegionToProject(
+    transport.loop,
+    projectDurationTicks,
+  );
   const transportChanged =
     anchorTick !== transport.anchorTick
-    || loop !== transport.loop;
+    || loop.startTick !== transport.loop.startTick
+    || loop.endTick !== transport.loop.endTick;
 
   if (!tracksChanged && !transportChanged) {
     return state;

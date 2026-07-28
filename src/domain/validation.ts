@@ -206,17 +206,22 @@ export function validateTransportState(
   }
 
   if (
-    transport.loop !== null
-    && (
-      !isValidTick(transport.loop.startTick)
-      || !isValidTick(transport.loop.endTick)
-      || transport.loop.startTick >= transport.loop.endTick
-    )
+    !isValidTick(transport.loop.startTick)
+    || !isValidTick(transport.loop.endTick)
+    || transport.loop.startTick >= transport.loop.endTick
   ) {
     issues.push({
       code: "INVALID_LOOP",
       path: "loop",
       message: "Loop start must be non-negative and strictly lower than loop end.",
+    });
+  }
+
+  if (typeof transport.loopEnabled !== "boolean") {
+    issues.push({
+      code: "INVALID_LOOP",
+      path: "loopEnabled",
+      message: "Loop enabled state must be a boolean.",
     });
   }
 

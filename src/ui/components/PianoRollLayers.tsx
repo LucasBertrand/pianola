@@ -37,6 +37,9 @@ import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
 import {
+  APPLICATION_SURFACE_COLOR,
+} from "../rendering/theme";
+import {
   InteractionOverlay,
 } from "./InteractionOverlay";
 
@@ -55,6 +58,7 @@ export interface CanvasLayerProps {
 export interface VoiceRenderStyle {
   readonly fillStyle: string;
   readonly opacity: number;
+  readonly locked: boolean;
 }
 
 export type NoteColorMode = "voice" | "pitch";
@@ -109,14 +113,14 @@ const CANVAS_LAYER_STYLE: CSSProperties = {
 };
 
 const OPAQUE_CONTEXT_ATTRIBUTES: CanvasRenderingContext2DSettings = {
-  alpha: true,
+  alpha: false,
 };
 
 const TRANSPARENT_CONTEXT_ATTRIBUTES: CanvasRenderingContext2DSettings = {
   alpha: true,
 };
 
-const GRID_BACKGROUND_COLOR = "#16181d";
+const GRID_BACKGROUND_COLOR = APPLICATION_SURFACE_COLOR;
 const BLACK_KEY_ROW_COLOR = "#121419";
 const PITCH_LINE_COLOR = "#252a33";
 const SUBDIVISION_LINE_COLOR = "#242933";
@@ -326,6 +330,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       let currentVoiceId: VoiceId | null = null;
       let currentPitch = -1;
       let currentOpacity = -1;
+      let hasVisibleLockedNote = false;
       const context = frame.context;
 
       for (
@@ -367,6 +372,10 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
 
         const opacity = voiceStyle?.opacity ?? 1;
 
+        if (voiceStyle?.locked === true) {
+          hasVisibleLockedNote = true;
+        }
+
         if (opacity !== currentOpacity) {
           context.globalAlpha = voiceStyle?.opacity ?? 1;
           currentOpacity = opacity;
@@ -378,11 +387,60 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         );
         const y = converter.pitchToCssPixelY(note.pitch);
         const nextRowY = converter.pitchToCssPixelY(note.pitch - 1);
-        const width = endX - x;
+        const width = Math.max(1, endX - x - 1);
         const height = Math.max(1, nextRowY - y - 1);
 
         context.fillRect(x, y, width, height);
       }
+
+      const lockedPattern =
+        hasVisibleLockedNote
+          ? getLockedNotePattern(context)
+          : null;
+
+      if (lockedPattern !== null) {
+        context.fillStyle = lockedPattern;
+
+        for (
+          let noteIndex = 0;
+          noteIndex < visibleNotes.length;
+          noteIndex += 1
+        ) {
+          const note = visibleNotes[noteIndex];
+
+          if (
+            note === undefined
+            || editingNoteIds.has(note.id)
+          ) {
+            continue;
+          }
+
+          const voiceStyle = stylesByVoiceId[note.voiceId];
+
+          if (voiceStyle?.locked !== true) {
+            continue;
+          }
+
+          const x = converter.tickToCssPixelX(note.startTick);
+          const endX = converter.tickToCssPixelX(
+            note.startTick + note.durationTicks,
+          );
+          const y = converter.pitchToCssPixelY(note.pitch);
+          const nextRowY =
+            converter.pitchToCssPixelY(note.pitch - 1);
+
+          context.globalAlpha =
+            Math.min(1, voiceStyle.opacity * 0.68);
+          context.fillRect(
+            x,
+            y,
+            Math.max(1, endX - x - 1),
+            Math.max(1, nextRowY - y - 1),
+          );
+        }
+      }
+
+      context.globalAlpha = 1;
     },
     [
       spatialIndex,
@@ -407,6 +465,46 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       aria-hidden="true"
     />
   );
+}
+
+const lockedNotePatterns =
+  new WeakMap<CanvasRenderingContext2D, CanvasPattern>();
+
+function getLockedNotePattern(
+  context: CanvasRenderingContext2D,
+): CanvasPattern | null {
+  const cachedPattern = lockedNotePatterns.get(context);
+
+  if (cachedPattern !== undefined) {
+    return cachedPattern;
+  }
+
+  const patternCanvas = document.createElement("canvas");
+  patternCanvas.width = 8;
+  patternCanvas.height = 8;
+  const patternContext = patternCanvas.getContext("2d");
+
+  if (patternContext === null) {
+    return null;
+  }
+
+  patternContext.clearRect(0, 0, 8, 8);
+  patternContext.strokeStyle = "rgba(8, 10, 14, 0.72)";
+  patternContext.lineWidth = 2;
+  patternContext.beginPath();
+  patternContext.moveTo(-2, 8);
+  patternContext.lineTo(8, -2);
+  patternContext.moveTo(4, 10);
+  patternContext.lineTo(10, 4);
+  patternContext.stroke();
+
+  const pattern = context.createPattern(patternCanvas, "repeat");
+
+  if (pattern !== null) {
+    lockedNotePatterns.set(context, pattern);
+  }
+
+  return pattern;
 }
 
 function useSignalInvalidation<T>(

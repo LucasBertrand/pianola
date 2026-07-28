@@ -7,12 +7,17 @@ import React, {
   type FocusEvent,
   type KeyboardEvent,
 } from "react";
-import type {
-  PianoRollCommand,
-  Transaction,
-  UpdateVoiceChanges,
+import {
+  createPortal,
+} from "react-dom";
+import {
+  CommandRejectedError,
+  type PianoRollCommand,
+  type Transaction,
+  type UpdateVoiceChanges,
 } from "../domain/commands";
 import type {
+  LoopRegion,
   Note,
   NoteId,
   OscillatorWaveform,
@@ -36,6 +41,15 @@ import {
   type ViewportState,
 } from "../geometry/converter";
 import {
+  createNativeProjectFileName,
+  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
+  MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
+  NativeProjectFileError,
+  parseNativeProjectFile,
+  serializeNativeProjectFile,
+  type NativeProjectFileMetadata,
+} from "../persistence/native-project-file";
+import {
   PianoRollLayers,
   type NoteColorMode,
 } from "../ui/components/PianoRollLayers";
@@ -50,7 +64,11 @@ import type {
   ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
 import {
+  APPLICATION_SURFACE_COLOR,
+} from "../ui/rendering/theme";
+import {
   calculateVisibleRegion,
+  createBlankProjectState,
   createDemoScene,
   DEMO_NOTE_COUNT,
   INITIAL_MAX_VISIBLE_PITCH,
@@ -88,6 +106,9 @@ const VIEW_INPUT_HORIZONTAL_ZOOM = 2;
 const VIEW_INPUT_VERTICAL_SCROLL = 4;
 const VIEW_INPUT_VERTICAL_ZOOM = 8;
 const RULER_HEIGHT_CSS_PIXELS = 28;
+const LOOP_REGION_HEIGHT_CSS_PIXELS = 22;
+const TIMELINE_HEADER_HEIGHT_CSS_PIXELS =
+  RULER_HEIGHT_CSS_PIXELS + LOOP_REGION_HEIGHT_CSS_PIXELS;
 
 export function App(): React.JSX.Element {
   const sceneRef = useRef<DemoScene | null>(null);
@@ -99,6 +120,8 @@ export function App(): React.JSX.Element {
   const pitchZoomInputRef = useRef<HTMLInputElement | null>(null);
   const zoomLabelRef = useRef<HTMLOutputElement | null>(null);
   const pitchZoomLabelRef = useRef<HTMLOutputElement | null>(null);
+  const loadProjectInputRef =
+    useRef<HTMLInputElement | null>(null);
   const barLabelRef = useRef<HTMLOutputElement | null>(null);
   const playheadPositionLabelRef =
     useRef<HTMLOutputElement | null>(null);
@@ -108,6 +131,8 @@ export function App(): React.JSX.Element {
   const clipboardRef = useRef<PianoRollClipboard | null>(null);
   const voiceTransactionSequenceRef = useRef(0);
   const editTransactionSequenceRef = useRef(0);
+  const documentMetadataRef =
+    useRef<NativeProjectFileMetadata | null>(null);
   const dimensionsRef = useRef<ViewportDimensions>({
     width: 1_600,
     height: 900,
@@ -118,6 +143,11 @@ export function App(): React.JSX.Element {
   }
 
   const scene = sceneRef.current;
+
+  if (documentMetadataRef.current === null) {
+    documentMetadataRef.current =
+      createNativeProjectFileMetadata();
+  }
   const [projectState, setProjectState] = useState(
     () => scene.projectStore.getState(),
   );
@@ -126,6 +156,10 @@ export function App(): React.JSX.Element {
       () => scene.projectStore.getState().voiceOrder[0] ?? null,
     );
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [
+    inspectorToolbarHost,
+    setInspectorToolbarHost,
+  ] = useState<HTMLDivElement | null>(null);
   const [clipboardAvailable, setClipboardAvailable] =
     useState(false);
   const [selectionAvailable, setSelectionAvailable] =
@@ -138,6 +172,10 @@ export function App(): React.JSX.Element {
     selectedVoiceId === null
       ? undefined
       : projectState.voicesById[selectedVoiceId];
+  const selectedVoiceIndex =
+    selectedVoiceId === null
+      ? -1
+      : projectState.voiceOrder.indexOf(selectedVoiceId);
   const totalTicks = getProjectDurationTicks(projectState);
   const handleSelectionChange = useCallback(
     (hasSelection: boolean): void => {
@@ -147,7 +185,7 @@ export function App(): React.JSX.Element {
   );
   const handlePitchSelect = useCallback((pitch: number): void => {
     pianoRollEventControllerRef.current
-      ?.addPitchToSelection(pitch);
+      ?.togglePitchSelection(pitch);
   }, []);
 
   useEffect(
@@ -203,7 +241,7 @@ export function App(): React.JSX.Element {
     ): void => {
       const height = Math.max(
         1,
-        stageHeight - RULER_HEIGHT_CSS_PIXELS,
+        stageHeight - TIMELINE_HEADER_HEIGHT_CSS_PIXELS,
       );
 
       dimensionsRef.current.width = width;
@@ -1079,21 +1117,11 @@ export function App(): React.JSX.Element {
       scene,
     ],
   );
-  const clearExternalSelection = useCallback((): void => {
-    const request = scene.voiceSelectionRequest;
-
-    if (request.get() === null) {
-      request.invalidate();
-    } else {
-      request.set(null);
-    }
-  }, [scene]);
   const handleVoiceSelect = useCallback(
     (voiceId: VoiceId): void => {
       setSelectedVoiceId(voiceId);
-      clearExternalSelection();
     },
-    [clearExternalSelection],
+    [],
   );
   const handleAddVoice = useCallback((): void => {
     const state = scene.projectStore.getState();
@@ -1110,12 +1138,52 @@ export function App(): React.JSX.Element {
       "Add voice",
     );
     setSelectedVoiceId(voice.id);
-    clearExternalSelection();
   }, [
-    clearExternalSelection,
     dispatchVoiceCommand,
     scene,
   ]);
+  const handleMoveSelectedVoice = useCallback(
+    (direction: -1 | 1): void => {
+      if (selectedVoiceId === null) {
+        return;
+      }
+
+      const state = scene.projectStore.getState();
+      const currentIndex =
+        state.voiceOrder.indexOf(selectedVoiceId);
+      const nextIndex = currentIndex + direction;
+
+      if (
+        currentIndex < 0
+        || nextIndex < 0
+        || nextIndex >= state.voiceOrder.length
+      ) {
+        return;
+      }
+
+      const voiceOrder = [...state.voiceOrder];
+      const displacedVoiceId = voiceOrder[nextIndex];
+
+      if (displacedVoiceId === undefined) {
+        return;
+      }
+
+      voiceOrder[currentIndex] = displacedVoiceId;
+      voiceOrder[nextIndex] = selectedVoiceId;
+      dispatchVoiceCommand(
+        {
+          type: "ReorderVoices",
+          voiceOrder,
+        },
+        direction < 0 ? "Move voice up" : "Move voice down",
+      );
+    },
+    [
+      dispatchVoiceCommand,
+      scene,
+      selectedVoiceId,
+    ],
+  );
   const handleDeleteVoice = useCallback(
     (voiceId: VoiceId): void => {
       const state = scene.projectStore.getState();
@@ -1143,14 +1211,14 @@ export function App(): React.JSX.Element {
         },
         "Delete voice",
       );
-      clearExternalSelection();
+      pianoRollEventControllerRef.current
+        ?.removeVoiceFromSelection(voiceId);
 
       if (selectedVoiceId === voiceId) {
         setSelectedVoiceId(nextVoiceId);
       }
     },
     [
-      clearExternalSelection,
       dispatchVoiceCommand,
       scene,
       selectedVoiceId,
@@ -1373,6 +1441,80 @@ export function App(): React.JSX.Element {
     dispatchEditCommands,
     scene,
   ]);
+  const handleTransferSelectionToVoice =
+    useCallback((): void => {
+      const controller = pianoRollEventControllerRef.current;
+      const targetVoiceId = selectedVoiceId;
+
+      if (controller === null || targetVoiceId === null) {
+        return;
+      }
+
+      const selectedNotes = controller.getSelectedNotes();
+      const transferPlan = createVoiceTransferPlan(
+        scene.projectStore.getState(),
+        selectedNotes,
+        targetVoiceId,
+      );
+
+      if (!transferPlan.valid) {
+        window.alert(transferPlan.message);
+        return;
+      }
+
+      if (transferPlan.commands.length === 0) {
+        return;
+      }
+
+      try {
+        const nextState = dispatchEditCommands(
+          transferPlan.commands,
+          "Transfer notes to voice",
+        );
+
+        if (nextState === null) {
+          return;
+        }
+
+        const targetTrack =
+          nextState.tracksByVoiceId[targetVoiceId];
+        const nextSelection: Note[] = [];
+
+        if (targetTrack !== undefined) {
+          for (
+            let noteIndex = 0;
+            noteIndex < selectedNotes.length;
+            noteIndex += 1
+          ) {
+            const note = selectedNotes[noteIndex];
+
+            if (note === undefined) {
+              continue;
+            }
+
+            const transferredNote =
+              targetTrack.notesById[note.id];
+
+            if (transferredNote !== undefined) {
+              nextSelection.push(transferredNote);
+            }
+          }
+        }
+
+        controller.replaceSelection(nextSelection);
+      } catch (error: unknown) {
+        const message =
+          error instanceof CommandRejectedError
+            ? error.message
+            : "The selected notes could not be transferred.";
+
+        window.alert(`Transfer cancelled. ${message}`);
+      }
+    }, [
+      dispatchEditCommands,
+      scene,
+      selectedVoiceId,
+    ]);
   const handleProjectTitleCommit = useCallback(
     (input: HTMLInputElement): void => {
       const title = input.value.trim();
@@ -1409,6 +1551,196 @@ export function App(): React.JSX.Element {
       return nextMode;
     });
   }, [scene]);
+  const handleToggleLoop = useCallback((): void => {
+    dispatchEditCommands(
+      [
+        {
+          type: "SetLoopEnabled",
+          enabled:
+            !scene.projectStore.getState()
+              .transportSettings.loopEnabled,
+        },
+      ],
+      "Toggle loop",
+    );
+  }, [
+    dispatchEditCommands,
+    scene,
+  ]);
+  const handleLoopRegionCommit = useCallback(
+    (loop: LoopRegion): void => {
+      dispatchEditCommands(
+        [
+          {
+            type: "UpdateLoop",
+            loop,
+          },
+        ],
+        "Update loop region",
+      );
+    },
+    [dispatchEditCommands],
+  );
+  const handleSaveProject = useCallback((): void => {
+    const currentMetadata = documentMetadataRef.current;
+
+    if (currentMetadata === null) {
+      return;
+    }
+
+    try {
+      const metadata: NativeProjectFileMetadata = {
+        ...currentMetadata,
+        savedAt: new Date().toISOString(),
+      };
+      const state = scene.projectStore.getState();
+      const stateForSave: ProjectState = {
+        ...state,
+        transportSettings: {
+          ...state.transportSettings,
+          anchorTick: scene.playheadTick.get(),
+          anchorAudioTimeSeconds: null,
+        },
+      };
+      const serialized = serializeNativeProjectFile(
+        stateForSave,
+        metadata,
+      );
+      const projectBlob = new Blob(
+        [serialized],
+        {
+          type: "application/json;charset=utf-8",
+        },
+      );
+
+      if (projectBlob.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
+        throw new NativeProjectFileError(
+          "INVALID_DATA",
+          "$",
+          "The project is too large to save as a native file.",
+        );
+      }
+
+      const downloadUrl = URL.createObjectURL(projectBlob);
+      const downloadLink = document.createElement("a");
+
+      documentMetadataRef.current = metadata;
+      downloadLink.href = downloadUrl;
+      downloadLink.download =
+        createNativeProjectFileName(state.title);
+      downloadLink.hidden = true;
+      document.body.append(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.setTimeout(() => {
+        URL.revokeObjectURL(downloadUrl);
+      }, 1_000);
+    } catch (error: unknown) {
+      window.alert(formatNativeProjectError(
+        "Unable to save the project.",
+        error,
+      ));
+    }
+  }, [scene]);
+  const handleNewProject = useCallback((): void => {
+    const confirmed = window.confirm(
+      "Create a new project? Unsaved changes will be lost.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const controller = pianoRollEventControllerRef.current;
+    const blankProject = createBlankProjectState();
+
+    controller?.cancel();
+    controller?.clearSelection();
+    clipboardRef.current = null;
+    setClipboardAvailable(false);
+    setSelectionAvailable(false);
+    scene.voiceSelectionRequest.set(null);
+    scene.gridResolutionTicks.set(240);
+    documentMetadataRef.current =
+      createNativeProjectFileMetadata();
+    scene.projectStore.replaceState(
+      blankProject,
+      "Create project",
+    );
+    setSelectedVoiceId(blankProject.voiceOrder[0] ?? null);
+    scene.playheadTick.set(0);
+    handleResetView();
+  }, [
+    handleResetView,
+    scene,
+  ]);
+  const handleOpenProject = useCallback((): void => {
+    const input = loadProjectInputRef.current;
+
+    if (input === null) {
+      return;
+    }
+
+    input.value = "";
+    input.click();
+  }, []);
+  const handleProjectFileChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+      const input = event.currentTarget;
+      const file = input.files?.[0];
+
+      if (file === undefined) {
+        return;
+      }
+
+      try {
+        if (file.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
+          throw new NativeProjectFileError(
+            "INVALID_DATA",
+            "$",
+            "The selected project file is too large.",
+          );
+        }
+
+        const loadedProject = parseNativeProjectFile(
+          await file.text(),
+        );
+        const controller =
+          pianoRollEventControllerRef.current;
+
+        controller?.cancel();
+        controller?.clearSelection();
+        clipboardRef.current = null;
+        setClipboardAvailable(false);
+        setSelectionAvailable(false);
+        documentMetadataRef.current =
+          loadedProject.metadata;
+        scene.projectStore.replaceState(
+          loadedProject.projectState,
+          "Load project",
+        );
+        setSelectedVoiceId(
+          loadedProject.projectState.voiceOrder[0] ?? null,
+        );
+        scene.playheadTick.set(
+          loadedProject.projectState
+            .transportSettings.anchorTick,
+        );
+        handleResetView();
+      } catch (error: unknown) {
+        window.alert(formatNativeProjectError(
+          "Unable to load the project.",
+          error,
+        ));
+      } finally {
+        input.value = "";
+      }
+    },
+    [
+      handleResetView,
+      scene,
+    ],
+  );
 
   return (
     <main
@@ -1428,6 +1760,7 @@ export function App(): React.JSX.Element {
               key={projectState.title}
               className="project-title-input"
               type="text"
+              maxLength={MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH}
               defaultValue={projectState.title}
               aria-label="Project title"
               onBlur={(event) => {
@@ -1464,6 +1797,37 @@ export function App(): React.JSX.Element {
           >
             <span className="stop-icon" aria-hidden="true" />
           </button>
+          <button
+            className={
+              `icon-button loop-toggle-button${
+                projectState.transportSettings.loopEnabled
+                  ? " is-active"
+                  : ""
+              }`
+            }
+            type="button"
+            title={
+              projectState.transportSettings.loopEnabled
+                ? "Disable loop"
+                : "Enable loop"
+            }
+            aria-label={
+              projectState.transportSettings.loopEnabled
+                ? "Disable loop"
+                : "Enable loop"
+            }
+            aria-pressed={
+              projectState.transportSettings.loopEnabled
+            }
+            onClick={handleToggleLoop}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 7h10a4 4 0 0 1 4 4v1" />
+              <path d="m17 9 3 3 3-3" />
+              <path d="M18 17H8a4 4 0 0 1-4-4v-1" />
+              <path d="m7 15-3-3-3 3" />
+            </svg>
+          </button>
         </div>
 
         <TransportMetrics
@@ -1471,14 +1835,63 @@ export function App(): React.JSX.Element {
           gridResolutionTicks={scene.gridResolutionTicks}
         />
 
-        <div className="topbar-actions">
-          <span className="engine-status">
-            <i />
-            Canvas ready
-          </span>
-          <button className="secondary-button" type="button">
-            Export
-          </button>
+        <div
+          className="topbar-actions"
+          aria-label="Project file actions"
+        >
+          <div
+            className="project-file-actions"
+            role="group"
+            aria-label="Create, save, and load project"
+          >
+            <button
+              className="project-file-button"
+              type="button"
+              title="New project"
+              aria-label="New project"
+              onClick={handleNewProject}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3h8l4 4v14H6z" />
+                <path d="M14 3v5h5M9 14h6M12 11v6" />
+              </svg>
+            </button>
+            <button
+              className="project-file-button"
+              type="button"
+              title="Save project"
+              aria-label="Save project"
+              onClick={handleSaveProject}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 3h12l2 2v16H5z" />
+                <path d="M8 3v6h8V3M8 21v-8h8v8" />
+              </svg>
+            </button>
+            <button
+              className="project-file-button"
+              type="button"
+              title="Load project"
+              aria-label="Load project"
+              onClick={handleOpenProject}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 7h7l2 2h9v11H3z" />
+                <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
+              </svg>
+            </button>
+            <input
+              ref={loadProjectInputRef}
+              className="native-project-file-input"
+              type="file"
+              accept=".pianoroll,application/json"
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={(event) => {
+                void handleProjectFileChange(event);
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -1488,6 +1901,9 @@ export function App(): React.JSX.Element {
         }
       >
         <div className="editor-panel">
+          {inspectorToolbarHost === null
+            ? null
+            : createPortal(
           <div className="editor-toolbar">
             <div className="editor-toolbar-actions">
               <button
@@ -1562,6 +1978,22 @@ export function App(): React.JSX.Element {
                   </svg>
                 </button>
                 <button
+                  type="button"
+                  title="Paste notes at the playhead"
+                  aria-label="Paste notes at the playhead"
+                  disabled={
+                    !clipboardAvailable
+                  }
+                  onClick={handlePaste}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 5h6" />
+                    <path d="M10 3h4a2 2 0 0 1 2 2v2H8V5a2 2 0 0 1 2-2Z" />
+                    <path d="M8 5H6a2 2 0 0 0-2 2v13h12" />
+                    <rect x="10" y="9" width="10" height="11" rx="2" />
+                  </svg>
+                </button>
+                <button
                   className="delete-notes-button"
                   type="button"
                   title="Delete selected notes"
@@ -1577,19 +2009,23 @@ export function App(): React.JSX.Element {
                   </svg>
                 </button>
                 <button
+                  className="voice-transfer-button"
                   type="button"
-                  title="Paste notes at the playhead"
-                  aria-label="Paste notes at the playhead"
+                  title="Move selected notes to the selected voice"
+                  aria-label="Move selected notes to the selected voice"
                   disabled={
-                    !clipboardAvailable
+                    !selectionAvailable
+                    || selectedVoice === undefined
+                    || selectedVoice.locked
                   }
-                  onClick={handlePaste}
+                  style={{
+                    color: selectedVoice?.color ?? "#596271",
+                  }}
+                  onClick={handleTransferSelectionToVoice}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M9 5h6" />
-                    <path d="M10 3h4a2 2 0 0 1 2 2v2H8V5a2 2 0 0 1 2-2Z" />
-                    <path d="M8 5H6a2 2 0 0 0-2 2v13h12" />
-                    <rect x="10" y="9" width="10" height="11" rx="2" />
+                    <path d="M4 6h7M4 12h7M4 18h7" />
+                    <path d="M13 12h7M17 8l4 4-4 4" />
                   </svg>
                 </button>
                 <button
@@ -1626,16 +2062,9 @@ export function App(): React.JSX.Element {
                 </button>
               </div>
             </div>
-            <div className="project-summary">
-              <span>
-                <i className="summary-dot" />
-                <span ref={noteCountLabelRef}>
-                  {DEMO_NOTE_COUNT.toLocaleString()} indexed notes
-                </span>
-              </span>
-              <span>960 PPQN</span>
-            </div>
-          </div>
+          </div>,
+          inspectorToolbarHost,
+        )}
 
           <div className="roll-frame">
             <PianoKeyboard
@@ -1648,6 +2077,12 @@ export function App(): React.JSX.Element {
                 projectStore={scene.projectStore}
                 gridResolutionTicks={scene.gridResolutionTicks}
                 playheadTick={scene.playheadTick}
+              />
+              <TimelineLoopRegion
+                viewport={scene.viewport}
+                projectStore={scene.projectStore}
+                gridResolutionTicks={scene.gridResolutionTicks}
+                onCommit={handleLoopRegionCommit}
               />
               <ProjectLengthControls
                 measureCount={projectState.measureCount}
@@ -1757,12 +2192,44 @@ export function App(): React.JSX.Element {
           id="voice-inspector"
           className={`inspector${inspectorOpen ? " is-open" : ""}`}
         >
+          <div
+            ref={setInspectorToolbarHost}
+            className="inspector-toolbar-host"
+          />
           <div className="inspector-heading">
             <div>
               <small>Arrangement</small>
               <h1>Voices</h1>
             </div>
             <div className="inspector-heading-actions">
+              <button
+                className="voice-order-button"
+                type="button"
+                aria-label="Move selected voice up"
+                title="Move selected voice up"
+                disabled={selectedVoiceIndex <= 0}
+                onClick={() => handleMoveSelectedVoice(-1)}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
+                </svg>
+              </button>
+              <button
+                className="voice-order-button"
+                type="button"
+                aria-label="Move selected voice down"
+                title="Move selected voice down"
+                disabled={
+                  selectedVoiceIndex < 0
+                  || selectedVoiceIndex
+                    >= projectState.voiceOrder.length - 1
+                }
+                onClick={() => handleMoveSelectedVoice(1)}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M10 5v10M5.5 10.5 10 15l4.5-4.5" />
+                </svg>
+              </button>
               <button
                 className="inspector-close-button"
                 type="button"
@@ -1828,25 +2295,17 @@ export function App(): React.JSX.Element {
                     />
                   </label>
                   <div className="voice-copy">
-                    <input
-                      className="voice-name-input"
-                      type="text"
-                      defaultValue={voice.name}
-                      aria-label={`Name for ${voice.name}`}
-                      onBlur={(event) => {
-                        const name = event.currentTarget.value.trim();
-
-                        if (name.length === 0) {
-                          event.currentTarget.value = voice.name;
-                        } else if (name !== voice.name) {
-                          handleUpdateVoice(
-                            voice.id,
-                            {
-                              name,
-                            },
-                            "Rename voice",
-                          );
-                        }
+                    <VoiceNameEditor
+                      voice={voice}
+                      onSelect={handleVoiceSelect}
+                      onRename={(name) => {
+                        handleUpdateVoice(
+                          voice.id,
+                          {
+                            name,
+                          },
+                          "Rename voice",
+                        );
                       }}
                     />
                     <span>{getVoiceInstrumentLabel(voice)}</span>
@@ -2039,9 +2498,179 @@ export function App(): React.JSX.Element {
             </div>
           </section>
 
+          <div className="project-summary">
+            <span>
+              <i className="summary-dot" />
+              <span ref={noteCountLabelRef}>
+                {DEMO_NOTE_COUNT.toLocaleString()} indexed notes
+              </span>
+            </span>
+            <span>960 PPQN</span>
+          </div>
+
         </aside>
       </section>
     </main>
+  );
+}
+
+interface VoiceNameEditorProps {
+  readonly voice: Voice;
+  readonly onSelect: (voiceId: VoiceId) => void;
+  readonly onRename: (name: string) => void;
+}
+
+const VOICE_NAME_LONG_PRESS_DELAY_MS = 520;
+const VOICE_NAME_LONG_PRESS_MOVEMENT_TOLERANCE = 10;
+
+function VoiceNameEditor(
+  props: VoiceNameEditorProps,
+): React.JSX.Element {
+  const {
+    voice,
+    onSelect,
+    onRename,
+  } = props;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressPointerIdRef = useRef(-1);
+  const longPressOriginXRef = useRef(0);
+  const longPressOriginYRef = useRef(0);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    const input = inputRef.current;
+
+    if (input === null) {
+      return;
+    }
+
+    if (editing) {
+      input.focus();
+      input.select();
+    } else {
+      input.value = voice.name;
+    }
+  }, [
+    editing,
+    voice.name,
+  ]);
+
+  useEffect(() => () => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+    }
+  }, []);
+
+  const cancelLongPress = (): void => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    longPressPointerIdRef.current = -1;
+  };
+
+  const beginEditing = (): void => {
+    cancelLongPress();
+    setEditing(true);
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      className="voice-name-input"
+      type="text"
+      defaultValue={voice.name}
+      readOnly={!editing}
+      tabIndex={editing ? 0 : -1}
+      aria-label={`Name for ${voice.name}`}
+      title="Press and hold to rename"
+      onPointerDown={(event) => {
+        event.stopPropagation();
+
+        if (!editing) {
+          event.preventDefault();
+          onSelect(voice.id);
+          cancelLongPress();
+          longPressPointerIdRef.current = event.pointerId;
+          longPressOriginXRef.current = event.clientX;
+          longPressOriginYRef.current = event.clientY;
+
+          if (
+            !event.currentTarget.hasPointerCapture(event.pointerId)
+          ) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }
+
+          longPressTimerRef.current = window.setTimeout(
+            beginEditing,
+            VOICE_NAME_LONG_PRESS_DELAY_MS,
+          );
+        }
+      }}
+      onPointerMove={(event) => {
+        event.stopPropagation();
+
+        if (
+          event.pointerId === longPressPointerIdRef.current
+          && (
+            Math.abs(
+              event.clientX - longPressOriginXRef.current,
+            ) > VOICE_NAME_LONG_PRESS_MOVEMENT_TOLERANCE
+            || Math.abs(
+              event.clientY - longPressOriginYRef.current,
+            ) > VOICE_NAME_LONG_PRESS_MOVEMENT_TOLERANCE
+          )
+        ) {
+          cancelLongPress();
+        }
+      }}
+      onPointerUp={(event) => {
+        event.stopPropagation();
+        cancelLongPress();
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
+      onPointerCancel={(event) => {
+        event.stopPropagation();
+        cancelLongPress();
+      }}
+      onLostPointerCapture={cancelLongPress}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        event.preventDefault();
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onBlur={(event) => {
+        if (!editing) {
+          return;
+        }
+
+        const name = event.currentTarget.value.trim();
+
+        if (name.length === 0) {
+          event.currentTarget.value = voice.name;
+        } else if (name !== voice.name) {
+          onRename(name);
+        }
+
+        setEditing(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.currentTarget.blur();
+        }
+      }}
+    />
   );
 }
 
@@ -2214,6 +2843,156 @@ function canPasteNotes(
   }
 
   return notes.length > 0;
+}
+
+type VoiceTransferPlan =
+  | {
+      readonly valid: true;
+      readonly commands: readonly PianoRollCommand[];
+    }
+  | {
+      readonly valid: false;
+      readonly message: string;
+    };
+
+function createVoiceTransferPlan(
+  state: ProjectState,
+  selectedNotes: readonly Note[],
+  targetVoiceId: VoiceId,
+): VoiceTransferPlan {
+  const targetVoice = state.voicesById[targetVoiceId];
+  const targetTrack = state.tracksByVoiceId[targetVoiceId];
+
+  if (targetVoice === undefined || targetTrack === undefined) {
+    return {
+      valid: false,
+      message: "The selected target voice is unavailable.",
+    };
+  }
+
+  if (targetVoice.locked) {
+    return {
+      valid: false,
+      message: "Unlock the selected target voice before transferring notes.",
+    };
+  }
+
+  const transferredNotes: Note[] = [];
+  const noteIdsBySourceVoice = new Map<VoiceId, NoteId[]>();
+
+  for (
+    let noteIndex = 0;
+    noteIndex < selectedNotes.length;
+    noteIndex += 1
+  ) {
+    const selectedNote = selectedNotes[noteIndex];
+
+    if (selectedNote === undefined) {
+      continue;
+    }
+
+    const sourceVoice = state.voicesById[selectedNote.voiceId];
+    const sourceTrack =
+      state.tracksByVoiceId[selectedNote.voiceId];
+
+    if (
+      sourceVoice === undefined
+      || sourceTrack?.notesById[selectedNote.id] === undefined
+    ) {
+      return {
+        valid: false,
+        message: "The selection contains a note that is no longer available.",
+      };
+    }
+
+    if (sourceVoice.locked) {
+      return {
+        valid: false,
+        message: `Unlock voice "${sourceVoice.name}" before transferring its notes.`,
+      };
+    }
+
+    if (selectedNote.voiceId === targetVoiceId) {
+      continue;
+    }
+
+    if (targetTrack.notesById[selectedNote.id] !== undefined) {
+      return {
+        valid: false,
+        message: `Transfer cancelled because note ID "${selectedNote.id}" already exists in the target voice.`,
+      };
+    }
+
+    const transferredNote: Note = {
+      ...selectedNote,
+      voiceId: targetVoiceId,
+    };
+
+    for (const existingNoteId in targetTrack.notesById) {
+      const existingNote =
+        targetTrack.notesById[existingNoteId];
+
+      if (
+        existingNote !== undefined
+        && notesOverlap(transferredNote, existingNote)
+      ) {
+        return {
+          valid: false,
+          message: `Transfer cancelled because note "${selectedNote.id}" overlaps an existing note in "${targetVoice.name}".`,
+        };
+      }
+    }
+
+    for (
+      let candidateIndex = 0;
+      candidateIndex < transferredNotes.length;
+      candidateIndex += 1
+    ) {
+      const candidate = transferredNotes[candidateIndex];
+
+      if (
+        candidate !== undefined
+        && notesOverlap(transferredNote, candidate)
+      ) {
+        return {
+          valid: false,
+          message: "Transfer cancelled because selected notes would overlap in the target voice.",
+        };
+      }
+    }
+
+    transferredNotes.push(transferredNote);
+    let sourceNoteIds =
+      noteIdsBySourceVoice.get(selectedNote.voiceId);
+
+    if (sourceNoteIds === undefined) {
+      sourceNoteIds = [];
+      noteIdsBySourceVoice.set(
+        selectedNote.voiceId,
+        sourceNoteIds,
+      );
+    }
+
+    sourceNoteIds.push(selectedNote.id);
+  }
+
+  const commands: PianoRollCommand[] = [];
+
+  for (const [sourceVoiceId, noteIds] of noteIdsBySourceVoice) {
+    commands.push({
+      type: "MoveNotes",
+      sourceVoiceId,
+      targetVoiceId,
+      noteIds,
+      deltaTicks: 0,
+      deltaPitch: 0,
+    });
+  }
+
+  return {
+    valid: true,
+    commands,
+  };
 }
 
 function notesOverlap(left: Note, right: Note): boolean {
@@ -2663,6 +3442,435 @@ interface BarRulerProps extends PianoKeyboardProps {
   readonly playheadTick: DemoScene["playheadTick"];
 }
 
+type LoopGestureMode =
+  | "move"
+  | "set-start"
+  | "set-end"
+  | "resize-start"
+  | "resize-end";
+
+interface TimelineLoopRegionProps {
+  readonly viewport: DemoScene["viewport"];
+  readonly projectStore: DemoScene["projectStore"];
+  readonly gridResolutionTicks: DemoScene["gridResolutionTicks"];
+  readonly onCommit: (loop: LoopRegion) => void;
+}
+
+function TimelineLoopRegion(
+  props: TimelineLoopRegionProps,
+): React.JSX.Element {
+  const {
+    viewport,
+    projectStore,
+    gridResolutionTicks,
+    onCommit,
+  } = props;
+  const layerRef = useRef<HTMLDivElement | null>(null);
+  const bandRef = useRef<HTMLButtonElement | null>(null);
+  const startFlagRef = useRef<HTMLButtonElement | null>(null);
+  const endFlagRef = useRef<HTMLButtonElement | null>(null);
+  const boundaryLayerRef = useRef<HTMLDivElement | null>(null);
+  const startBoundaryRef = useRef<HTMLElement | null>(null);
+  const endBoundaryRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const layer = layerRef.current;
+    const band = bandRef.current;
+    const startFlag = startFlagRef.current;
+    const endFlag = endFlagRef.current;
+    const boundaryLayer = boundaryLayerRef.current;
+    const startBoundary = startBoundaryRef.current;
+    const endBoundary = endBoundaryRef.current;
+
+    if (
+      layer === null
+      || band === null
+      || startFlag === null
+      || endFlag === null
+      || boundaryLayer === null
+      || startBoundary === null
+      || endBoundary === null
+    ) {
+      return undefined;
+    }
+
+    let activePointerId = -1;
+    let gestureMode: LoopGestureMode | null = null;
+    let originClientX = 0;
+    let originStartTick = 0;
+    let originEndTick = 0;
+    let draftStartTick = 0;
+    let draftEndTick = 0;
+    let snapResolutionTicks = 1;
+    let projectDurationTicks = 1;
+    let layerLeft = 0;
+
+    const updateElements = (
+      startTick: number,
+      endTick: number,
+      enabled: boolean,
+    ): void => {
+      const currentViewport = viewport.get();
+      const pixelsPerTick =
+        currentViewport.zoomX / currentViewport.ticksPerPixel;
+      const startX =
+        startTick * pixelsPerTick - currentViewport.scrollX;
+      const endX =
+        endTick * pixelsPerTick - currentViewport.scrollX;
+
+      band.style.transform =
+        `translate3d(${startX}px, 0, 0)`;
+      band.style.width = `${Math.max(1, endX - startX)}px`;
+      startFlag.style.transform =
+        `translate3d(${startX - 11}px, 0, 0)`;
+      endFlag.style.transform =
+        `translate3d(${endX - 11}px, 0, 0)`;
+      startBoundary.style.transform =
+        `translate3d(${startX}px, 0, 0)`;
+      endBoundary.style.transform =
+        `translate3d(${endX}px, 0, 0)`;
+      startBoundary.style.display = "block";
+      endBoundary.style.display = "block";
+      layer.dataset["enabled"] = String(enabled);
+      boundaryLayer.dataset["enabled"] = String(enabled);
+    };
+    const updateFromState = (): void => {
+      if (activePointerId !== -1) {
+        return;
+      }
+
+      const transport =
+        projectStore.getState().transportSettings;
+
+      updateElements(
+        transport.loop.startTick,
+        transport.loop.endTick,
+        transport.loopEnabled,
+      );
+    };
+    const updateDraft = (clientX: number): void => {
+      if (gestureMode === null) {
+        return;
+      }
+
+      const currentViewport = viewport.get();
+      const rawDeltaTicks =
+        (clientX - originClientX)
+        * currentViewport.ticksPerPixel
+        / currentViewport.zoomX;
+      const minimumDurationTicks = Math.min(
+        snapResolutionTicks,
+        Math.max(1, originEndTick - originStartTick),
+      );
+      const pointerHasMoved = clientX !== originClientX;
+
+      if (gestureMode === "set-start") {
+        const absolutePointerTick =
+          (
+            currentViewport.scrollX
+            + clientX
+            - layerLeft
+          )
+          * currentViewport.ticksPerPixel
+          / currentViewport.zoomX;
+        const snappedStartTick =
+          Math.round(
+            absolutePointerTick / snapResolutionTicks,
+          ) * snapResolutionTicks;
+        const maximumStartTick = Math.max(
+          0,
+          originEndTick - minimumDurationTicks,
+        );
+
+        draftStartTick = Math.min(
+          maximumStartTick,
+          Math.max(0, snappedStartTick),
+        );
+        draftEndTick = originEndTick;
+      } else if (gestureMode === "set-end") {
+        const absolutePointerTick =
+          (
+            currentViewport.scrollX
+            + clientX
+            - layerLeft
+          )
+          * currentViewport.ticksPerPixel
+          / currentViewport.zoomX;
+        const snappedEndTick =
+          Math.round(
+            absolutePointerTick / snapResolutionTicks,
+          ) * snapResolutionTicks;
+
+        draftStartTick = originStartTick;
+        draftEndTick = Math.max(
+          originStartTick + minimumDurationTicks,
+          Math.min(projectDurationTicks, snappedEndTick),
+        );
+      } else if (gestureMode === "resize-start") {
+        const snappedStartTick = pointerHasMoved
+          ? Math.round(
+              (originStartTick + rawDeltaTicks)
+              / snapResolutionTicks,
+            ) * snapResolutionTicks
+          : originStartTick;
+
+        draftStartTick = Math.min(
+          originEndTick - minimumDurationTicks,
+          Math.max(0, snappedStartTick),
+        );
+        draftEndTick = originEndTick;
+      } else if (gestureMode === "resize-end") {
+        const snappedEndTick = pointerHasMoved
+          ? Math.round(
+              (originEndTick + rawDeltaTicks)
+              / snapResolutionTicks,
+            ) * snapResolutionTicks
+          : originEndTick;
+
+        draftStartTick = originStartTick;
+        draftEndTick = Math.max(
+          originStartTick + minimumDurationTicks,
+          Math.min(
+            projectDurationTicks,
+            snappedEndTick,
+          ),
+        );
+      } else {
+        const durationTicks =
+          originEndTick - originStartTick;
+        const snappedStartTick = pointerHasMoved
+          ? Math.round(
+              (originStartTick + rawDeltaTicks)
+              / snapResolutionTicks,
+            ) * snapResolutionTicks
+          : originStartTick;
+        const movedStartTick = Math.min(
+          projectDurationTicks - durationTicks,
+          Math.max(0, snappedStartTick),
+        );
+
+        draftStartTick = movedStartTick;
+        draftEndTick = movedStartTick + durationTicks;
+      }
+
+      updateElements(
+        draftStartTick,
+        draftEndTick,
+        projectStore.getState().transportSettings.loopEnabled,
+      );
+    };
+    const handlePointerDown = (event: PointerEvent): void => {
+      if (
+        event.button !== 0
+        || activePointerId !== -1
+      ) {
+        return;
+      }
+
+      const gestureTarget =
+        (event.target as Element).closest<HTMLElement>(
+          "[data-loop-mode]",
+        );
+      const requestedMode =
+        gestureTarget?.dataset["loopMode"];
+      const state = projectStore.getState();
+      const loop = state.transportSettings.loop;
+      const layerBounds = layer.getBoundingClientRect();
+      const currentViewport = viewport.get();
+      const absolutePointerTick =
+        (
+          currentViewport.scrollX
+          + event.clientX
+          - layerBounds.left
+        )
+        * currentViewport.ticksPerPixel
+        / currentViewport.zoomX;
+      const resolvedMode =
+        requestedMode === undefined
+        && event.target === layer
+          ? absolutePointerTick
+              <= (loop.startTick + loop.endTick) / 2
+            ? "set-start"
+            : "set-end"
+          : requestedMode;
+
+      if (
+        resolvedMode !== "move"
+        && resolvedMode !== "set-start"
+        && resolvedMode !== "set-end"
+        && resolvedMode !== "resize-start"
+        && resolvedMode !== "resize-end"
+      ) {
+        return;
+      }
+
+      activePointerId = event.pointerId;
+      gestureMode = resolvedMode;
+      originClientX = event.clientX;
+      originStartTick = loop.startTick;
+      originEndTick = loop.endTick;
+      draftStartTick = loop.startTick;
+      draftEndTick = loop.endTick;
+      snapResolutionTicks = Math.max(
+        1,
+        gridResolutionTicks.get(),
+      );
+      projectDurationTicks = getProjectDurationTicks(state);
+      layerLeft = layerBounds.left;
+      layer.setPointerCapture(event.pointerId);
+
+      if (
+        resolvedMode === "set-start"
+        || resolvedMode === "set-end"
+      ) {
+        updateDraft(event.clientX);
+      }
+
+      event.preventDefault();
+    };
+    const handlePointerMove = (event: PointerEvent): void => {
+      if (event.pointerId !== activePointerId) {
+        return;
+      }
+
+      updateDraft(event.clientX);
+      event.preventDefault();
+    };
+    const finishPointer = (event: PointerEvent): void => {
+      if (event.pointerId !== activePointerId) {
+        return;
+      }
+
+      updateDraft(event.clientX);
+      const nextStartTick = draftStartTick;
+      const nextEndTick = draftEndTick;
+      const changed =
+        nextStartTick !== originStartTick
+        || nextEndTick !== originEndTick;
+
+      activePointerId = -1;
+      gestureMode = null;
+
+      if (layer.hasPointerCapture(event.pointerId)) {
+        layer.releasePointerCapture(event.pointerId);
+      }
+
+      if (changed) {
+        onCommit({
+          startTick: nextStartTick,
+          endTick: nextEndTick,
+        });
+      } else {
+        updateFromState();
+      }
+
+      event.preventDefault();
+    };
+    const cancelPointer = (event: PointerEvent): void => {
+      if (event.pointerId !== activePointerId) {
+        return;
+      }
+
+      activePointerId = -1;
+      gestureMode = null;
+      updateFromState();
+    };
+    const unsubscribeViewport =
+      viewport.subscribe(updateFromState);
+    const unsubscribeProject =
+      projectStore.subscribe(updateFromState);
+
+    layer.addEventListener("pointerdown", handlePointerDown);
+    layer.addEventListener("pointermove", handlePointerMove);
+    layer.addEventListener("pointerup", finishPointer);
+    layer.addEventListener("pointercancel", cancelPointer);
+    layer.addEventListener(
+      "lostpointercapture",
+      cancelPointer,
+    );
+    updateFromState();
+
+    return (): void => {
+      unsubscribeViewport();
+      unsubscribeProject();
+      layer.removeEventListener(
+        "pointerdown",
+        handlePointerDown,
+      );
+      layer.removeEventListener(
+        "pointermove",
+        handlePointerMove,
+      );
+      layer.removeEventListener("pointerup", finishPointer);
+      layer.removeEventListener(
+        "pointercancel",
+        cancelPointer,
+      );
+      layer.removeEventListener(
+        "lostpointercapture",
+        cancelPointer,
+      );
+    };
+  }, [
+    gridResolutionTicks,
+    onCommit,
+    projectStore,
+    viewport,
+  ]);
+
+  return (
+    <>
+      <div
+        ref={layerRef}
+        className="timeline-loop-layer"
+        aria-label="Loop region"
+      >
+        <button
+          ref={bandRef}
+          className="timeline-loop-band"
+          type="button"
+          data-loop-mode="move"
+          title="Move loop region"
+          aria-label="Move loop region"
+        />
+        <button
+          ref={startFlagRef}
+          className="timeline-loop-flag is-start"
+          type="button"
+          data-loop-mode="resize-start"
+          title="Adjust loop start"
+          aria-label="Adjust loop start"
+        >
+          <svg viewBox="0 0 22 20" aria-hidden="true">
+            <path d="M11 2v16M11 3h8l-3.5 4L19 11h-8" />
+          </svg>
+        </button>
+        <button
+          ref={endFlagRef}
+          className="timeline-loop-flag is-end"
+          type="button"
+          data-loop-mode="resize-end"
+          title="Adjust loop end"
+          aria-label="Adjust loop end"
+        >
+          <svg viewBox="0 0 22 20" aria-hidden="true">
+            <path d="M11 2v16M11 3H3l3.5 4L3 11h8" />
+          </svg>
+        </button>
+      </div>
+      <div
+        ref={boundaryLayerRef}
+        className="timeline-loop-boundaries"
+        data-enabled="false"
+        aria-hidden="true"
+      >
+        <i ref={startBoundaryRef} />
+        <i ref={endBoundaryRef} />
+      </div>
+    </>
+  );
+}
+
 function BarRuler(
   props: BarRulerProps,
 ): React.JSX.Element {
@@ -2700,7 +3908,7 @@ function BarRuler(
       );
       const context = frame.context;
 
-      context.fillStyle = "#191c22";
+      context.fillStyle = APPLICATION_SURFACE_COLOR;
       context.fillRect(
         0,
         0,
@@ -3231,8 +4439,12 @@ function PianoKeyboard(
 
   return (
     <div className="piano-strip" aria-label="Piano keyboard">
-      <div ref={keysElementRef} className="piano-keys-inner">
-        {PIANO_KEYS}
+      <div className="piano-loop-spacer" aria-hidden="true" />
+      <div className="piano-ruler-spacer" aria-hidden="true" />
+      <div className="piano-keyboard-viewport">
+        <div ref={keysElementRef} className="piano-keys-inner">
+          {PIANO_KEYS}
+        </div>
       </div>
     </div>
   );
@@ -3431,4 +4643,40 @@ function countProjectNotes(
   }
 
   return count;
+}
+
+function createNativeProjectFileMetadata():
+  NativeProjectFileMetadata {
+  const now = new Date().toISOString();
+  const documentId =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID()
+      : (
+          `project-${Date.now()}-`
+          + Math.random().toString(36).slice(2)
+        );
+
+  return {
+    documentId,
+    createdAt: now,
+    savedAt: now,
+  };
+}
+
+function formatNativeProjectError(
+  prefix: string,
+  error: unknown,
+): string {
+  if (error instanceof NativeProjectFileError) {
+    const location =
+      error.path === "$" ? "" : ` Location: ${error.path}.`;
+
+    return `${prefix} ${error.message}${location}`;
+  }
+
+  if (error instanceof Error) {
+    return `${prefix} ${error.message}`;
+  }
+
+  return prefix;
 }
