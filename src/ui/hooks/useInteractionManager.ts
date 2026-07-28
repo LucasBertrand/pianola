@@ -3,13 +3,20 @@ import {
   useRef,
   type RefObject,
 } from "react";
-import type {
-  ViewportState,
+import {
+  MAXIMUM_HORIZONTAL_ZOOM,
+  MAXIMUM_VERTICAL_ZOOM,
+  MINIMUM_HORIZONTAL_ZOOM,
+  MINIMUM_VERTICAL_ZOOM,
+  type ViewportState,
 } from "../../geometry/converter";
 import type {
   InteractionManagerController,
   InteractionToolSignal,
   TouchAwareInteractionStrategy,
+} from "../interactions/types";
+import {
+  isSupportedPointerActivation,
 } from "../interactions/types";
 import type {
   ReadonlyRenderSignal,
@@ -36,12 +43,9 @@ interface MutableGestureState {
 }
 
 const LONG_PRESS_DELAY_MS = 560;
+const PEN_LONG_PRESS_DELAY_MS = 280;
 const LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS = 12;
 const MINIMUM_PINCH_DISTANCE_CSS_PIXELS = 8;
-const MINIMUM_HORIZONTAL_ZOOM = 0.4;
-const MAXIMUM_HORIZONTAL_ZOOM = 2.5;
-const MINIMUM_VERTICAL_ZOOM = 0.6;
-const MAXIMUM_VERTICAL_ZOOM = 2.2;
 
 export function useInteractionManager(
   options: UseInteractionManagerOptions,
@@ -258,6 +262,11 @@ export function useInteractionManager(
       longPressOriginX = event.clientX;
       longPressOriginY = event.clientY;
       longPressEvent = event;
+      const delay =
+        event.pointerType === "pen"
+          ? PEN_LONG_PRESS_DELAY_MS
+          : LONG_PRESS_DELAY_MS;
+
       longPressTimerId = window.setTimeout(() => {
         const retainedEvent = longPressEvent;
 
@@ -274,11 +283,11 @@ export function useInteractionManager(
         strategyRef.current?.cancel();
         strategyRef.current?.onLongPress(retainedEvent);
         suppressSinglePointer = false;
-      }, LONG_PRESS_DELAY_MS);
+      }, delay);
     };
 
     const handlePointerDown = (event: PointerEvent): void => {
-      if (event.button !== 0) {
+      if (!isSupportedPointerActivation(event)) {
         return;
       }
 

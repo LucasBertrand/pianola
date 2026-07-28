@@ -37,3 +37,9 @@ export interface PianoRollContextActionDetail {
 
 export const PIANO_ROLL_CONTEXT_ACTION_EVENT =
   "piano-roll-context-action" as const;
+
+export function isSupportedPointerActivation(
+  event: PointerEvent,
+): boolean {
+  return event.button === 0;
+}

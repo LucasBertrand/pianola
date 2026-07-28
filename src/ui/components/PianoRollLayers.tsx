@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useRef,
   type CSSProperties,
+  type MutableRefObject,
 } from "react";
 import type {
   Note,
@@ -27,6 +28,9 @@ import {
   type CanvasFrame,
 } from "../hooks/useCanvasRenderer";
 import type {
+  PianoRollEventController,
+} from "../hooks/usePianoRollEvents";
+import type {
   InteractionToolSignal,
 } from "../interactions/types";
 import type {
@@ -50,7 +54,10 @@ export interface CanvasLayerProps {
 
 export interface VoiceRenderStyle {
   readonly fillStyle: string;
+  readonly opacity: number;
 }
+
+export type NoteColorMode = "voice" | "pitch";
 
 export interface GridCanvasProps extends CanvasLayerProps {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
@@ -62,6 +69,7 @@ export interface NotesCanvasProps extends CanvasLayerProps {
   readonly voiceStyles: ReadonlyRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
+  readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly editingNoteIds: ReadonlySet<NoteId>;
 }
 
@@ -70,13 +78,18 @@ export interface PianoRollLayersProps extends CanvasLayerProps {
   readonly voiceStyles: ReadonlyRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
-  readonly playheadTick: ReadonlyRenderSignal<number>;
+  readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly projectStore: ProjectStorePort;
   readonly toolState: InteractionToolSignal;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
+  readonly eventControllerRef: MutableRefObject<
+    PianoRollEventController | null
+  >;
+  readonly onSelectionChange: (hasSelection: boolean) => void;
 }
 
 const LAYER_STACK_STYLE: CSSProperties = {
@@ -110,6 +123,20 @@ const SUBDIVISION_LINE_COLOR = "#242933";
 const BEAT_LINE_COLOR = "#303744";
 const BAR_LINE_COLOR = "#465164";
 const DEFAULT_NOTE_COLOR = "#6ea8fe";
+const PITCH_CLASS_NOTE_COLORS = [
+  "#ef5c65",
+  "#f07c5d",
+  "#eaa64f",
+  "#d3c958",
+  "#8bcf63",
+  "#55c89e",
+  "#4bc2d1",
+  "#5797ea",
+  "#7775e8",
+  "#a66fdc",
+  "#d56dbc",
+  "#ea6f8d",
+] as const;
 const MIN_GRID_LINE_SPACING_CSS_PIXELS = 4;
 const MAX_GRID_LINES_PER_PASS = 4_096;
 
@@ -121,13 +148,16 @@ export function PianoRollLayers(
     visibleRegion,
     spatialIndex,
     voiceStyles,
-    playheadTick,
+    noteColorMode,
     projectStore,
     toolState,
     activeVoiceId,
     totalTicks,
     setViewport,
     gridResolutionTicks,
+    voiceSelectionRequest,
+    eventControllerRef,
+    onSelectionChange,
   } = props;
   const editingNoteIdsRef = useRef<Set<NoteId> | null>(null);
 
@@ -150,20 +180,24 @@ export function PianoRollLayers(
         visibleRegion={visibleRegion}
         spatialIndex={spatialIndex}
         voiceStyles={voiceStyles}
+        noteColorMode={noteColorMode}
         editingNoteIds={editingNoteIds}
       />
       <InteractionOverlay
         viewport={viewport}
-        playheadTick={playheadTick}
         spatialIndex={spatialIndex}
         voiceStyles={voiceStyles}
+        noteColorMode={noteColorMode}
         projectStore={projectStore}
         toolState={toolState}
         activeVoiceId={activeVoiceId}
         totalTicks={totalTicks}
         setViewport={setViewport}
         gridResolutionTicks={gridResolutionTicks}
+        voiceSelectionRequest={voiceSelectionRequest}
         editingNoteIds={editingNoteIds}
+        eventControllerRef={eventControllerRef}
+        onSelectionChange={onSelectionChange}
       />
     </div>
   );
@@ -246,6 +280,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     visibleRegion,
     spatialIndex,
     voiceStyles,
+    noteColorMode,
     editingNoteIds,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
@@ -273,6 +308,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       const region = visibleRegion.get();
       const visibleNotes = visibleNotesRef.current;
       const stylesByVoiceId = voiceStyles.get();
+      const colorMode = noteColorMode.get();
 
       spatialIndex.queryRect(
         region.startTick,
@@ -281,9 +317,15 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         region.maxPitch,
         visibleNotes,
       );
-      visibleNotes.sort(compareNotesByVoice);
+      visibleNotes.sort(
+        colorMode === "voice"
+          ? compareNotesByVoice
+          : compareNotesByPitch,
+      );
 
       let currentVoiceId: VoiceId | null = null;
+      let currentPitch = -1;
+      let currentOpacity = -1;
       const context = frame.context;
 
       for (
@@ -301,11 +343,33 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
           continue;
         }
 
-        if (note.voiceId !== currentVoiceId) {
-          const voiceStyle = stylesByVoiceId[note.voiceId];
+        const voiceStyle = stylesByVoiceId[note.voiceId];
+
+        if (
+          (
+            colorMode === "voice"
+            && note.voiceId !== currentVoiceId
+          )
+          || (
+            colorMode === "pitch"
+            && note.pitch !== currentPitch
+          )
+        ) {
           context.fillStyle =
-            voiceStyle?.fillStyle ?? DEFAULT_NOTE_COLOR;
+            getNoteFillStyle(
+              note,
+              stylesByVoiceId,
+              colorMode,
+            );
           currentVoiceId = note.voiceId;
+          currentPitch = note.pitch;
+        }
+
+        const opacity = voiceStyle?.opacity ?? 1;
+
+        if (opacity !== currentOpacity) {
+          context.globalAlpha = voiceStyle?.opacity ?? 1;
+          currentOpacity = opacity;
         }
 
         const x = converter.tickToCssPixelX(note.startTick);
@@ -326,6 +390,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       viewport,
       visibleRegion,
       voiceStyles,
+      noteColorMode,
     ],
   );
   const renderer = useCanvasRenderer({
@@ -562,6 +627,32 @@ function compareNotesByVoice(left: Note, right: Note): number {
   }
 
   return 0;
+}
+
+function compareNotesByPitch(left: Note, right: Note): number {
+  if (left.pitch !== right.pitch) {
+    return left.pitch - right.pitch;
+  }
+
+  return compareNotesByVoice(left, right);
+}
+
+export function getNoteFillStyle(
+  note: Note,
+  stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+  colorMode: NoteColorMode,
+): string {
+  return colorMode === "pitch"
+    ? getPitchNoteColor(note.pitch)
+    : stylesByVoiceId[note.voiceId]?.fillStyle
+      ?? DEFAULT_NOTE_COLOR;
+}
+
+export function getPitchNoteColor(pitch: number): string {
+  const pitchClass = ((pitch % 12) + 12) % 12;
+
+  return PITCH_CLASS_NOTE_COLORS[pitchClass]
+    ?? DEFAULT_NOTE_COLOR;
 }
 
 function isBlackKey(pitch: number): boolean {

@@ -19,8 +19,7 @@ export type InteractionMode =
   | "LASSO_SELECTING"
   | "RESIZING_START"
   | "RESIZING_END"
-  | "DRAWING"
-  | "ERASING";
+  | "DRAWING";
 
 export type ResizeEdge = "start" | "end";
 
@@ -42,6 +41,7 @@ export interface InteractionDraft {
   minimumResizeDeltaTicks: number;
   maximumResizeDeltaTicks: number;
   minimumSelectedStartTick: number;
+  maximumSelectedEndTick: number;
   minimumSelectedPitch: number;
   maximumSelectedPitch: number;
   targetNoteId: NoteId | null;
@@ -64,7 +64,11 @@ export interface InteractionVisualController {
     converter: CoordinateConverter,
     stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
   ): void;
-  updateDrag(deltaXCssPixels: number, deltaYCssPixels: number): void;
+  updateDrag(
+    deltaXCssPixels: number,
+    deltaYCssPixels: number,
+    deltaPitch: number,
+  ): void;
   endDrag(): void;
   beginResize(
     notes: readonly Note[],
@@ -118,6 +122,7 @@ export function createInteractionDraft(): InteractionDraft {
     minimumResizeDeltaTicks: Number.NEGATIVE_INFINITY,
     maximumResizeDeltaTicks: Number.POSITIVE_INFINITY,
     minimumSelectedStartTick: 0,
+    maximumSelectedEndTick: 0,
     minimumSelectedPitch: 0,
     maximumSelectedPitch: 127,
     targetNoteId: null,

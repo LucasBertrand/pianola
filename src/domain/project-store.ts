@@ -12,15 +12,24 @@ export type ProjectStoreListener = (
   transaction: Transaction,
 ) => void;
 
+const MAXIMUM_HISTORY_ENTRIES = 200;
+
 export interface ProjectStorePort {
   getState(): ProjectState;
   dispatch(transaction: Transaction): ProjectState;
+  canUndo(): boolean;
+  canRedo(): boolean;
+  undo(): ProjectState;
+  redo(): ProjectState;
   subscribe(listener: ProjectStoreListener): () => void;
 }
 
 export class ProjectStore implements ProjectStorePort {
   private currentState: ProjectState;
+  private readonly pastStates: ProjectState[] = [];
+  private readonly futureStates: ProjectState[] = [];
   private readonly listeners = new Set<ProjectStoreListener>();
+  private historySequence = 0;
 
   public constructor(initialState: ProjectState) {
     this.currentState = initialState;
@@ -38,13 +47,74 @@ export class ProjectStore implements ProjectStorePort {
       return previousState;
     }
 
-    this.currentState = nextState;
+    this.pastStates.push(previousState);
 
-    for (const listener of this.listeners) {
-      listener(nextState, previousState, transaction);
+    if (this.pastStates.length > MAXIMUM_HISTORY_ENTRIES) {
+      this.pastStates.shift();
     }
 
+    this.futureStates.length = 0;
+    this.currentState = nextState;
+    this.notify(nextState, previousState, transaction);
+
     return nextState;
+  }
+
+  public canUndo(): boolean {
+    return this.pastStates.length > 0;
+  }
+
+  public canRedo(): boolean {
+    return this.futureStates.length > 0;
+  }
+
+  public undo(): ProjectState {
+    const previousSnapshot = this.pastStates.pop();
+
+    if (previousSnapshot === undefined) {
+      return this.currentState;
+    }
+
+    const previousState = this.currentState;
+    this.futureStates.push(previousState);
+    this.currentState = {
+      ...previousSnapshot,
+      revision: previousState.revision + 1,
+    };
+    this.notify(
+      this.currentState,
+      previousState,
+      this.createHistoryTransaction("Undo"),
+    );
+
+    return this.currentState;
+  }
+
+  public redo(): ProjectState {
+    const nextSnapshot = this.futureStates.pop();
+
+    if (nextSnapshot === undefined) {
+      return this.currentState;
+    }
+
+    const previousState = this.currentState;
+    this.pastStates.push(previousState);
+
+    if (this.pastStates.length > MAXIMUM_HISTORY_ENTRIES) {
+      this.pastStates.shift();
+    }
+
+    this.currentState = {
+      ...nextSnapshot,
+      revision: previousState.revision + 1,
+    };
+    this.notify(
+      this.currentState,
+      previousState,
+      this.createHistoryTransaction("Redo"),
+    );
+
+    return this.currentState;
   }
 
   public subscribe(listener: ProjectStoreListener): () => void {
@@ -53,5 +123,28 @@ export class ProjectStore implements ProjectStorePort {
     return (): void => {
       this.listeners.delete(listener);
     };
+  }
+
+  private createHistoryTransaction(label: string): Transaction {
+    this.historySequence += 1;
+    const timestamp = Date.now();
+
+    return {
+      transactionId:
+        `history-${timestamp}-${this.historySequence}`,
+      label,
+      createdAt: timestamp,
+      commands: [],
+    };
+  }
+
+  private notify(
+    state: ProjectState,
+    previousState: ProjectState,
+    transaction: Transaction,
+  ): void {
+    for (const listener of this.listeners) {
+      listener(state, previousState, transaction);
+    }
   }
 }

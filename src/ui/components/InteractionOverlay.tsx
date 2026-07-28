@@ -2,6 +2,7 @@ import React, {
   useEffect,
   useRef,
   type CSSProperties,
+  type MutableRefObject,
 } from "react";
 import type {
   ProjectStorePort,
@@ -11,9 +12,9 @@ import type {
   NoteId,
   VoiceId,
 } from "../../domain/model";
-import {
+import type {
   CoordinateConverter,
-  type ViewportState,
+  ViewportState,
 } from "../../geometry/converter";
 import {
   SpatialIndex,
@@ -23,6 +24,7 @@ import {
 } from "../hooks/useInteractionManager";
 import {
   usePianoRollEvents,
+  type PianoRollEventController,
 } from "../hooks/usePianoRollEvents";
 import type {
   InteractionVisualController,
@@ -35,24 +37,32 @@ import type {
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
-import type {
-  VoiceRenderStyle,
+import {
+  getNoteFillStyle,
+  getPitchNoteColor,
+  type NoteColorMode,
+  type VoiceRenderStyle,
 } from "./PianoRollLayers";
 
 export interface InteractionOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
-  readonly playheadTick: ReadonlyRenderSignal<number>;
   readonly spatialIndex: SpatialIndex;
   readonly voiceStyles: ReadonlyRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
+  readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly projectStore: ProjectStorePort;
   readonly toolState: InteractionToolSignal;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly editingNoteIds: Set<NoteId>;
+  readonly eventControllerRef: MutableRefObject<
+    PianoRollEventController | null
+  >;
+  readonly onSelectionChange: (hasSelection: boolean) => void;
 }
 
 const INTERACTION_LAYER_STYLE: CSSProperties = {
@@ -62,17 +72,6 @@ const INTERACTION_LAYER_STYLE: CSSProperties = {
   touchAction: "none",
   outline: "none",
   cursor: "crosshair",
-};
-
-const PLAYHEAD_STYLE: CSSProperties = {
-  position: "absolute",
-  top: 0,
-  bottom: 0,
-  left: 0,
-  width: 1,
-  background: "#ff4d4d",
-  pointerEvents: "none",
-  willChange: "transform",
 };
 
 const GHOST_LAYER_STYLE: CSSProperties = {
@@ -105,42 +104,38 @@ export function InteractionOverlay(
 ): React.JSX.Element {
   const {
     viewport,
-    playheadTick,
     spatialIndex,
     voiceStyles,
+    noteColorMode,
     projectStore,
     toolState,
     activeVoiceId,
     totalTicks,
     setViewport,
     gridResolutionTicks,
+    voiceSelectionRequest,
     editingNoteIds,
+    eventControllerRef,
+    onSelectionChange,
   } = props;
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  const playheadElementRef = useRef<HTMLDivElement | null>(null);
   const selectionLayerRef = useRef<HTMLDivElement | null>(null);
   const ghostLayerRef = useRef<HTMLDivElement | null>(null);
   const lassoElementRef = useRef<HTMLDivElement | null>(null);
   const ghostElementsRef = useRef<HTMLElement[]>([]);
   const ghostBaseLeftRef = useRef<Float64Array | null>(null);
   const ghostBaseWidthRef = useRef<Float64Array | null>(null);
+  const ghostBasePitchRef = useRef<Int16Array | null>(null);
   const selectionElementsRef = useRef<HTMLElement[]>([]);
   const selectionBaseLeftRef = useRef<Float64Array | null>(null);
   const selectionBaseWidthRef = useRef<Float64Array | null>(null);
   const drawGhostElementRef = useRef<HTMLElement | null>(null);
-  const converterRef = useRef<CoordinateConverter | null>(null);
-  const converterVersionRef = useRef(-1);
   const visualsRef = useRef<InteractionVisualController | null>(
     null,
   );
   const strategyRef = useRef<TouchAwareInteractionStrategy | null>(
     null,
   );
-
-  if (converterRef.current === null) {
-    converterRef.current = new CoordinateConverter(viewport.get());
-    converterVersionRef.current = viewport.version;
-  }
 
   if (visualsRef.current === null) {
     visualsRef.current = {
@@ -152,13 +147,19 @@ export function InteractionOverlay(
           notes,
           converter,
           stylesByVoiceId,
+          noteColorMode.get(),
           null,
           ghostElementsRef.current,
           ghostBaseLeftRef,
           ghostBaseWidthRef,
+          ghostBasePitchRef,
         );
       },
-      updateDrag(deltaXCssPixels, deltaYCssPixels): void {
+      updateDrag(
+        deltaXCssPixels,
+        deltaYCssPixels,
+        deltaPitch,
+      ): void {
         const ghostLayer = ghostLayerRef.current;
         const selectionLayer = selectionLayerRef.current;
         const transform =
@@ -170,6 +171,14 @@ export function InteractionOverlay(
 
         if (selectionLayer !== null) {
           selectionLayer.style.transform = transform;
+        }
+
+        if (noteColorMode.get() === "pitch") {
+          updateGhostPitchColors(
+            ghostElementsRef.current,
+            ghostBasePitchRef.current,
+            deltaPitch,
+          );
         }
       },
       endDrag(): void {
@@ -193,10 +202,12 @@ export function InteractionOverlay(
           notes,
           converter,
           stylesByVoiceId,
+          noteColorMode.get(),
           edge,
           ghostElementsRef.current,
           ghostBaseLeftRef,
           ghostBaseWidthRef,
+          ghostBasePitchRef,
         );
       },
       updateResize(edge, deltaXCssPixels): void {
@@ -261,7 +272,9 @@ export function InteractionOverlay(
         element.style.height =
           `${Math.max(1, nextY - y - 1)}px`;
         element.style.background =
-          style?.fillStyle ?? "#79a7ff";
+          noteColorMode.get() === "pitch"
+            ? getPitchNoteColor(pitch)
+            : style?.fillStyle ?? "#79a7ff";
         drawGhostElementRef.current = element;
         ghostLayer.appendChild(element);
       },
@@ -342,7 +355,7 @@ export function InteractionOverlay(
     setViewport,
   });
 
-  usePianoRollEvents({
+  const eventController = usePianoRollEvents({
     overlayRef,
     visualsRef,
     strategyRef,
@@ -351,40 +364,25 @@ export function InteractionOverlay(
     voiceStyles,
     projectStore,
     activeVoiceId,
+    totalTicks,
     getActiveTool: interactionManager.getActiveTool,
     gridResolutionTicks,
+    voiceSelectionRequest,
+    onSelectionChange,
   });
+  eventControllerRef.current = eventController;
 
-  useEffect(() => {
-    const updatePlayhead = (): void => {
-      const converter = converterRef.current;
-      const element = playheadElementRef.current;
-
-      if (converter === null || element === null) {
-        return;
+  useEffect(
+    () => (): void => {
+      if (eventControllerRef.current === eventController) {
+        eventControllerRef.current = null;
       }
-
-      if (converterVersionRef.current !== viewport.version) {
-        converter.setViewportState(viewport.get());
-        converterVersionRef.current = viewport.version;
-      }
-
-      const x = converter.tickToCssPixelX(playheadTick.get());
-      element.style.transform = `translate3d(${x}px, 0, 0)`;
-    };
-    const unsubscribePlayhead = playheadTick.subscribe(updatePlayhead);
-    const unsubscribeViewport = viewport.subscribe(updatePlayhead);
-
-    updatePlayhead();
-
-    return (): void => {
-      unsubscribePlayhead();
-      unsubscribeViewport();
-    };
-  }, [
-    playheadTick,
-    viewport,
-  ]);
+    },
+    [
+      eventController,
+      eventControllerRef,
+    ],
+  );
 
   return (
     <div
@@ -394,11 +392,6 @@ export function InteractionOverlay(
       role="application"
       aria-label="Interactive piano roll"
     >
-      <div
-        ref={playheadElementRef}
-        style={PLAYHEAD_STYLE}
-        aria-hidden="true"
-      />
       <div
         ref={ghostLayerRef}
         className="interaction-ghost-layer"
@@ -426,10 +419,12 @@ function populateGhostLayer(
   notes: readonly Note[],
   converter: CoordinateConverter,
   stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+  colorMode: NoteColorMode,
   resizeEdge: ResizeEdge | null,
   elements: HTMLElement[],
   baseLeftRef: React.MutableRefObject<Float64Array | null>,
   baseWidthRef: React.MutableRefObject<Float64Array | null>,
+  basePitchRef: React.MutableRefObject<Int16Array | null>,
 ): void {
   if (ghostLayer === null) {
     return;
@@ -440,6 +435,7 @@ function populateGhostLayer(
   elements.length = 0;
   const baseLeft = new Float64Array(notes.length);
   const baseWidth = new Float64Array(notes.length);
+  const basePitch = new Int16Array(notes.length);
   const fragment = document.createDocumentFragment();
 
   for (
@@ -453,7 +449,6 @@ function populateGhostLayer(
       continue;
     }
 
-    const element = document.createElement("div");
     const x = converter.tickToCssPixelX(note.startTick);
     const endX = converter.tickToCssPixelX(
       note.startTick + note.durationTicks,
@@ -461,7 +456,17 @@ function populateGhostLayer(
     const y = converter.pitchToCssPixelY(note.pitch);
     const nextY = converter.pitchToCssPixelY(note.pitch - 1);
     const width = Math.max(1, endX - x);
-    const style = stylesByVoiceId[note.voiceId];
+
+    if (
+      endX < 0
+      || x > ghostLayer.clientWidth
+      || nextY < 0
+      || y > ghostLayer.clientHeight
+    ) {
+      continue;
+    }
+
+    const element = document.createElement("div");
 
     element.className =
       resizeEdge === null
@@ -473,16 +478,45 @@ function populateGhostLayer(
     element.style.height =
       `${Math.max(1, nextY - y - 1)}px`;
     element.style.background =
-      style?.fillStyle ?? "#79a7ff";
+      getNoteFillStyle(note, stylesByVoiceId, colorMode);
     baseLeft[elements.length] = x;
     baseWidth[elements.length] = width;
+    basePitch[elements.length] = note.pitch;
     elements.push(element);
     fragment.appendChild(element);
   }
 
   baseLeftRef.current = baseLeft;
   baseWidthRef.current = baseWidth;
+  basePitchRef.current = basePitch;
   ghostLayer.appendChild(fragment);
+}
+
+function updateGhostPitchColors(
+  elements: readonly HTMLElement[],
+  basePitches: Int16Array | null,
+  deltaPitch: number,
+): void {
+  if (basePitches === null) {
+    return;
+  }
+
+  for (
+    let elementIndex = 0;
+    elementIndex < elements.length;
+    elementIndex += 1
+  ) {
+    const element = elements[elementIndex];
+    const basePitch = basePitches[elementIndex];
+
+    if (element === undefined || basePitch === undefined) {
+      continue;
+    }
+
+    element.style.background = getPitchNoteColor(
+      basePitch + deltaPitch,
+    );
+  }
 }
 
 function clearGhostLayer(

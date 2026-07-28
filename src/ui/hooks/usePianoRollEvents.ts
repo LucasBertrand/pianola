@@ -41,6 +41,9 @@ import type {
   InteractionTool,
   TouchAwareInteractionStrategy,
 } from "../interactions/types";
+import {
+  isSupportedPointerActivation,
+} from "../interactions/types";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
@@ -58,8 +61,11 @@ export interface UsePianoRollEventsOptions {
   >;
   readonly projectStore: ProjectStorePort;
   readonly activeVoiceId: VoiceId;
+  readonly totalTicks: number;
   readonly getActiveTool: () => InteractionTool;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
+  readonly onSelectionChange?: (hasSelection: boolean) => void;
   readonly onTransactionRejected?:
     | ((error: unknown) => void)
     | undefined;
@@ -68,6 +74,10 @@ export interface UsePianoRollEventsOptions {
 export interface PianoRollEventController {
   readonly draft: InteractionDraft;
   readonly selection: InteractionSelection;
+  getSelectedNotes(): readonly Note[];
+  replaceSelection(notes: readonly Note[]): void;
+  removeVoiceFromSelection(voiceId: VoiceId): void;
+  addPitchToSelection(pitch: number): void;
   cancel(): void;
   clearSelection(): void;
 }
@@ -94,6 +104,7 @@ export function usePianoRollEvents(
     overlayRef,
     visualsRef,
     strategyRef,
+    totalTicks,
     viewport,
     spatialIndex,
     voiceStyles,
@@ -101,6 +112,8 @@ export function usePianoRollEvents(
     activeVoiceId,
     getActiveTool,
     gridResolutionTicks,
+    voiceSelectionRequest,
+    onSelectionChange,
     onTransactionRejected,
   } = options;
   const draftRef = useRef<InteractionDraft | null>(null);
@@ -178,6 +191,7 @@ export function usePianoRollEvents(
         selection.notes,
         converter,
       );
+      onSelectionChange?.(selection.notes.length > 0);
     };
 
     const resetDraft = (): void => {
@@ -189,6 +203,7 @@ export function usePianoRollEvents(
         Number.NEGATIVE_INFINITY;
       draft.maximumResizeDeltaTicks =
         Number.POSITIVE_INFINITY;
+      draft.maximumSelectedEndTick = 0;
       draft.originResizeTick = 0;
       draft.targetNoteId = null;
       draft.drawStartTick = 0;
@@ -202,7 +217,11 @@ export function usePianoRollEvents(
       selection.noteIds.clear();
       selection.notes.length = 0;
       visualsRef.current?.clearSelection();
+      onSelectionChange?.(false);
     };
+
+    const isVoiceLocked = (voiceId: VoiceId): boolean =>
+      projectStore.getState().voicesById[voiceId]?.locked ?? true;
 
     const refreshSelection = (
       projectState: ProjectState,
@@ -225,7 +244,10 @@ export function usePianoRollEvents(
             .tracksByVoiceId[previousNote.voiceId]
             ?.notesById[previousNote.id];
 
-        if (updatedNote !== undefined) {
+        if (
+          updatedNote !== undefined
+          && !isVoiceLocked(updatedNote.voiceId)
+        ) {
           selection.notes[targetIndex] = updatedNote;
           targetIndex += 1;
         } else {
@@ -286,6 +308,10 @@ export function usePianoRollEvents(
       note: Note,
       additive: boolean,
     ): void => {
+      if (isVoiceLocked(note.voiceId)) {
+        return;
+      }
+
       if (!selection.noteIds.has(note.id)) {
         if (!additive) {
           clearSelection();
@@ -302,6 +328,10 @@ export function usePianoRollEvents(
       note: Note,
       includeSelection = true,
     ): boolean => {
+      if (isVoiceLocked(note.voiceId)) {
+        return false;
+      }
+
       const deleteSelection =
         includeSelection && selection.noteIds.has(note.id);
       const commands = deleteSelection
@@ -359,7 +389,10 @@ export function usePianoRollEvents(
     };
 
     const handlePointerDown = (event: PointerEvent): void => {
-      if (event.button !== 0 || draft.mode !== "IDLE") {
+      if (
+        !isSupportedPointerActivation(event)
+        || draft.mode !== "IDLE"
+      ) {
         return;
       }
 
@@ -378,24 +411,34 @@ export function usePianoRollEvents(
         MOUSE_NOTE_HIT_ENVELOPE_CSS_PIXELS,
         TOUCH_NOTE_HIT_ENVELOPE_CSS_PIXELS,
       );
-      const hitNote = spatialIndex.queryPointWithEnvelope(
+      const hitCandidate = spatialIndex.queryPointWithEnvelope(
         pointerTick,
         pointerPitch,
         bodyEnvelope,
       );
+      const hitNote =
+        hitCandidate !== undefined
+        && !isVoiceLocked(hitCandidate.voiceId)
+          ? hitCandidate
+          : undefined;
       const edgeEnvelope = createTouchEnvelope(
         converter,
         event.pointerType,
         MOUSE_RESIZE_HANDLE_CSS_PIXELS,
         TOUCH_RESIZE_HANDLE_CSS_PIXELS,
       );
-      const edgeCandidate =
+      const rawEdgeCandidate =
         activeTool === "select"
           ? spatialIndex.queryNoteEdge(
               pointerTick,
               pointerPitch,
               edgeEnvelope,
             )
+          : undefined;
+      const edgeCandidate =
+        rawEdgeCandidate !== undefined
+        && !isVoiceLocked(rawEdgeCandidate.note.voiceId)
+          ? rawEdgeCandidate
           : undefined;
       const edgeHit =
         edgeCandidate !== undefined
@@ -448,6 +491,7 @@ export function usePianoRollEvents(
             selection.notes,
             resizeEdge,
             resolutionTicks,
+            totalTicks,
           );
           visualsRef.current?.beginResize(
             selection.notes,
@@ -497,6 +541,12 @@ export function usePianoRollEvents(
           deltaTicks = -draft.minimumSelectedStartTick;
         }
 
+        if (
+          draft.maximumSelectedEndTick + deltaTicks > totalTicks
+        ) {
+          deltaTicks = totalTicks - draft.maximumSelectedEndTick;
+        }
+
         if (draft.minimumSelectedPitch + deltaPitch < 0) {
           deltaPitch = -draft.minimumSelectedPitch;
         } else if (
@@ -519,7 +569,11 @@ export function usePianoRollEvents(
             converter.pitchToCssPixelY(deltaPitch)
             - converter.pitchToCssPixelY(0);
 
-          visualsRef.current?.updateDrag(deltaX, deltaY);
+          visualsRef.current?.updateDrag(
+            deltaX,
+            deltaY,
+            deltaPitch,
+          );
         }
       } else if (
         draft.mode === "RESIZING_START"
@@ -563,9 +617,12 @@ export function usePianoRollEvents(
           pointerTick,
           draft.snapResolutionTicks,
         );
-        const durationTicks = Math.max(
-          draft.snapResolutionTicks,
-          snappedEndTick - draft.drawStartTick,
+        const durationTicks = Math.min(
+          totalTicks - draft.drawStartTick,
+          Math.max(
+            draft.snapResolutionTicks,
+            snappedEndTick - draft.drawStartTick,
+          ),
         );
 
         if (durationTicks !== draft.drawDurationTicks) {
@@ -770,6 +827,7 @@ export function usePianoRollEvents(
 
           if (
             note !== undefined
+            && !isVoiceLocked(note.voiceId)
             && !selection.noteIds.has(note.id)
           ) {
             selection.noteIds.add(note.id);
@@ -815,7 +873,10 @@ export function usePianoRollEvents(
         converter.cssPixelYToPitch(localY),
       );
 
-      if (note !== undefined) {
+      if (
+        note !== undefined
+        && !isVoiceLocked(note.voiceId)
+      ) {
         deleteHitNote(note);
         event.preventDefault();
       }
@@ -843,13 +904,22 @@ export function usePianoRollEvents(
       );
 
       if (note !== undefined) {
+        if (isVoiceLocked(note.voiceId)) {
+          return;
+        }
+
         selectHitNote(note, false);
         return;
       }
 
+      const activeVoice =
+        projectStore.getState().voicesById[activeVoiceId];
+
       if (
         pitch < 0
         || pitch > 127
+        || activeVoice === undefined
+        || activeVoice.locked
         || projectStore
           .getState()
           .tracksByVoiceId[activeVoiceId] === undefined
@@ -861,6 +931,10 @@ export function usePianoRollEvents(
         0,
         snapTickToCellStart(tick, resolutionTicks),
       );
+
+      if (startTick + resolutionTicks > totalTicks) {
+        return;
+      }
 
       draft.activeTool = "select";
       draft.snapResolutionTicks = resolutionTicks;
@@ -904,9 +978,71 @@ export function usePianoRollEvents(
       updateConverter();
       showSelection();
     };
+    const handleVoiceSelectionRequest = (): void => {
+      const voiceId = voiceSelectionRequest.get();
+
+      if (voiceId === null) {
+        clearSelection();
+        return;
+      }
+
+      let uniqueNoteCount = 0;
+      const projectState = projectStore.getState();
+
+      selection.noteIds.clear();
+
+      for (
+        let noteIndex = 0;
+        noteIndex < selection.notes.length;
+        noteIndex += 1
+      ) {
+        const selectedNote = selection.notes[noteIndex];
+
+        if (
+          selectedNote !== undefined
+          && !(
+            projectState.voicesById[selectedNote.voiceId]
+              ?.locked ?? true
+          )
+          && !selection.noteIds.has(selectedNote.id)
+        ) {
+          selection.noteIds.add(selectedNote.id);
+          selection.notes[uniqueNoteCount] = selectedNote;
+          uniqueNoteCount += 1;
+        }
+      }
+
+      selection.notes.length = uniqueNoteCount;
+
+      const track = projectState.tracksByVoiceId[voiceId];
+      const requestedVoice = projectState.voicesById[voiceId];
+
+      if (track === undefined || requestedVoice?.locked !== false) {
+        showSelection();
+        return;
+      }
+
+      for (const noteId in track.notesById) {
+        const note = track.notesById[noteId];
+
+        if (
+          note !== undefined
+          && !selection.noteIds.has(note.id)
+        ) {
+          selection.noteIds.add(note.id);
+          selection.notes.push(note);
+        }
+      }
+
+      showSelection();
+    };
     const unsubscribeViewport = viewport.subscribe(
       handleViewportChange,
     );
+    const unsubscribeVoiceSelection =
+      voiceSelectionRequest.subscribe(
+        handleVoiceSelectionRequest,
+      );
     const strategy: TouchAwareInteractionStrategy = {
       supportsHover: false,
       onPointerDown: handlePointerDown,
@@ -926,6 +1062,7 @@ export function usePianoRollEvents(
     return (): void => {
       cancelGesture();
       unsubscribeViewport();
+      unsubscribeVoiceSelection();
 
       if (strategyRef.current === strategy) {
         strategyRef.current = null;
@@ -937,6 +1074,7 @@ export function usePianoRollEvents(
     getActiveTool,
     gridResolutionTicks,
     onTransactionRejected,
+    onSelectionChange,
     overlayRef,
     projectStore,
     selection,
@@ -944,12 +1082,139 @@ export function usePianoRollEvents(
     strategyRef,
     viewport,
     visualsRef,
+    voiceSelectionRequest,
     voiceStyles,
   ]);
 
   return {
     draft,
     selection,
+    getSelectedNotes(): readonly Note[] {
+      return selection.notes.slice();
+    },
+    replaceSelection(notes: readonly Note[]): void {
+      selection.noteIds.clear();
+      selection.notes.length = 0;
+
+      for (
+        let noteIndex = 0;
+        noteIndex < notes.length;
+        noteIndex += 1
+      ) {
+        const note = notes[noteIndex];
+
+        if (
+          note !== undefined
+          && !selection.noteIds.has(note.id)
+        ) {
+          selection.noteIds.add(note.id);
+          selection.notes.push(note);
+        }
+      }
+
+      const converter = converterRef.current;
+
+      if (converter !== null) {
+        if (converterVersionRef.current !== viewport.version) {
+          converter.setViewportState(viewport.get());
+          converterVersionRef.current = viewport.version;
+        }
+
+        visualsRef.current?.showSelection(
+          selection.notes,
+          converter,
+        );
+      }
+
+      onSelectionChange?.(selection.notes.length > 0);
+    },
+    removeVoiceFromSelection(voiceId: VoiceId): void {
+      let targetIndex = 0;
+
+      for (
+        let noteIndex = 0;
+        noteIndex < selection.notes.length;
+        noteIndex += 1
+      ) {
+        const note = selection.notes[noteIndex];
+
+        if (note === undefined) {
+          continue;
+        }
+
+        if (note.voiceId === voiceId) {
+          selection.noteIds.delete(note.id);
+        } else {
+          selection.notes[targetIndex] = note;
+          targetIndex += 1;
+        }
+      }
+
+      selection.notes.length = targetIndex;
+
+      const converter = converterRef.current;
+
+      if (converter !== null) {
+        visualsRef.current?.showSelection(
+          selection.notes,
+          converter,
+        );
+      }
+
+      onSelectionChange?.(selection.notes.length > 0);
+    },
+    addPitchToSelection(pitch: number): void {
+      if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
+        return;
+      }
+
+      const state = projectStore.getState();
+
+      for (
+        let voiceIndex = 0;
+        voiceIndex < state.voiceOrder.length;
+        voiceIndex += 1
+      ) {
+        const voiceId = state.voiceOrder[voiceIndex];
+
+        if (
+          voiceId === undefined
+          || state.voicesById[voiceId]?.locked !== false
+        ) {
+          continue;
+        }
+
+        const track = state.tracksByVoiceId[voiceId];
+
+        if (track === undefined) {
+          continue;
+        }
+
+        for (const noteId in track.notesById) {
+          const note = track.notesById[noteId];
+
+          if (
+            note !== undefined
+            && note.pitch === pitch
+            && !selection.noteIds.has(note.id)
+          ) {
+            selection.noteIds.add(note.id);
+            selection.notes.push(note);
+          }
+        }
+      }
+
+      const converter = converterRef.current;
+
+      if (converter !== null) {
+        visualsRef.current?.showSelection(
+          selection.notes,
+          converter,
+        );
+      }
+
+      onSelectionChange?.(selection.notes.length > 0);
+    },
     cancel(): void {
       visualsRef.current?.endDrag();
       visualsRef.current?.endResize();
@@ -971,6 +1236,7 @@ export function usePianoRollEvents(
       selection.noteIds.clear();
       selection.notes.length = 0;
       visualsRef.current?.clearSelection();
+      onSelectionChange?.(false);
     },
   };
 }
@@ -1012,7 +1278,7 @@ function createTouchEnvelope(
   touchRadiusCssPixels: number,
 ): SpatialTouchEnvelope {
   const radiusCssPixels =
-    pointerType === "touch" || pointerType === "pen"
+    pointerType === "touch"
       ? touchRadiusCssPixels
       : mouseRadiusCssPixels;
   const tickRadius = Math.abs(
@@ -1031,6 +1297,7 @@ function updateSelectedBounds(
   notes: readonly Note[],
 ): void {
   let minimumStartTick = Number.POSITIVE_INFINITY;
+  let maximumEndTick = 0;
   let minimumPitch = 127;
   let maximumPitch = 0;
 
@@ -1043,6 +1310,12 @@ function updateSelectedBounds(
 
     if (note.startTick < minimumStartTick) {
       minimumStartTick = note.startTick;
+    }
+
+    const endTick = note.startTick + note.durationTicks;
+
+    if (endTick > maximumEndTick) {
+      maximumEndTick = endTick;
     }
 
     if (note.pitch < minimumPitch) {
@@ -1059,6 +1332,7 @@ function updateSelectedBounds(
   )
     ? minimumStartTick
     : 0;
+  draft.maximumSelectedEndTick = maximumEndTick;
   draft.minimumSelectedPitch = minimumPitch;
   draft.maximumSelectedPitch = maximumPitch;
 }
@@ -1068,6 +1342,7 @@ function updateResizeBounds(
   notes: readonly Note[],
   edge: ResizeEdge,
   gridResolutionTicks: number,
+  totalTicks: number,
 ): void {
   let minimumDelta = Number.NEGATIVE_INFINITY;
   let maximumDelta = Number.POSITIVE_INFINITY;
@@ -1097,6 +1372,10 @@ function updateResizeBounds(
       minimumDelta = Math.max(
         minimumDelta,
         minimumDuration - note.durationTicks,
+      );
+      maximumDelta = Math.min(
+        maximumDelta,
+        totalTicks - note.startTick - note.durationTicks,
       );
     }
   }

@@ -7,6 +7,9 @@ export type MidiPitch = number;
 export type MidiVelocity = number;
 
 export const DEFAULT_PPQN = 960 as const;
+export const DEFAULT_MEASURE_COUNT = 16 as const;
+export const MINIMUM_MEASURE_COUNT = 1 as const;
+export const MAXIMUM_MEASURE_COUNT = 256 as const;
 
 export interface Note {
   readonly id: NoteId;
@@ -79,6 +82,7 @@ export interface Voice {
   readonly name: string;
   readonly color: string;
   readonly muted: boolean;
+  readonly locked: boolean;
   readonly solo: boolean;
   readonly gain: number;
   readonly pan: number;
@@ -115,6 +119,8 @@ export interface TransportState {
 export interface ProjectState {
   readonly schemaVersion: number;
   readonly revision: number;
+  readonly title: string;
+  readonly measureCount: number;
   readonly voicesById: Readonly<Record<VoiceId, Voice>>;
   readonly voiceOrder: readonly VoiceId[];
   readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
@@ -146,4 +152,24 @@ export function createDefaultTransportState(): TransportState {
     anchorTick: 0,
     anchorAudioTimeSeconds: null,
   };
+}
+
+export function getProjectDurationTicks(
+  state: Pick<ProjectState, "measureCount" | "transportSettings">,
+): number {
+  return (
+    state.measureCount
+    * getTicksPerMeasure(state.transportSettings)
+  );
+}
+
+export function getTicksPerMeasure(
+  transport: TransportState,
+): number {
+  return (
+    transport.ppqn
+    * 4
+    * transport.timeSignature.numerator
+    / transport.timeSignature.denominator
+  );
 }

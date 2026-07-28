@@ -9,9 +9,16 @@ import type {
   Tick,
   TimeSignature,
   Track,
+  TransportState,
   Voice,
   VoiceId,
   VoiceInterpretation,
+} from "./model";
+import {
+  getProjectDurationTicks,
+  getTicksPerMeasure,
+  MAXIMUM_MEASURE_COUNT,
+  MINIMUM_MEASURE_COUNT,
 } from "./model";
 import {
   assertValidNoteForTrack,
@@ -27,6 +34,7 @@ export interface UpdateVoiceChanges {
   readonly name?: string;
   readonly color?: string;
   readonly muted?: boolean;
+  readonly locked?: boolean;
   readonly solo?: boolean;
   readonly gain?: number;
   readonly pan?: number;
@@ -50,6 +58,26 @@ export interface DeleteVoiceCommand {
 export interface ReorderVoicesCommand {
   readonly type: "ReorderVoices";
   readonly voiceOrder: readonly VoiceId[];
+}
+
+export interface UpdateProjectTitleCommand {
+  readonly type: "UpdateProjectTitle";
+  readonly title: string;
+}
+
+export interface UpdateMeasureCountCommand {
+  readonly type: "UpdateMeasureCount";
+  readonly measureCount: number;
+}
+
+export interface InsertMeasureCommand {
+  readonly type: "InsertMeasure";
+  readonly afterMeasureIndex: number;
+}
+
+export interface RemoveMeasureCommand {
+  readonly type: "RemoveMeasure";
+  readonly measureIndex: number;
 }
 
 export interface AddNotesCommand {
@@ -111,6 +139,10 @@ export type PianoRollCommand =
   | UpdateVoiceCommand
   | DeleteVoiceCommand
   | ReorderVoicesCommand
+  | UpdateProjectTitleCommand
+  | UpdateMeasureCountCommand
+  | InsertMeasureCommand
+  | RemoveMeasureCommand
   | AddNotesCommand
   | MoveNotesCommand
   | ResizeNotesCommand
@@ -132,6 +164,7 @@ export type CommandErrorCode =
   | "INVALID_COMMAND"
   | "VOICE_NOT_FOUND"
   | "VOICE_ALREADY_EXISTS"
+  | "VOICE_LOCKED"
   | "TRACK_NOT_FOUND"
   | "TRACK_ALREADY_EXISTS"
   | "NOTE_NOT_FOUND"
@@ -198,6 +231,14 @@ function applyCommand(
       return applyDeleteVoice(state, command);
     case "ReorderVoices":
       return applyReorderVoices(state, command);
+    case "UpdateProjectTitle":
+      return applyUpdateProjectTitle(state, command);
+    case "UpdateMeasureCount":
+      return applyUpdateMeasureCount(state, command);
+    case "InsertMeasure":
+      return applyInsertMeasure(state, command);
+    case "RemoveMeasure":
+      return applyRemoveMeasure(state, command);
     case "AddNotes":
       return applyAddNotes(state, command);
     case "MoveNotes":
@@ -335,15 +376,155 @@ function applyReorderVoices(
   };
 }
 
+function applyUpdateProjectTitle(
+  state: ProjectState,
+  command: UpdateProjectTitleCommand,
+): ProjectState {
+  const title = command.title.trim();
+
+  if (title.length === 0) {
+    reject(
+      "INVALID_COMMAND",
+      "Project title must not be empty.",
+      command.type,
+    );
+  }
+
+  if (title === state.title) {
+    return state;
+  }
+
+  return {
+    ...state,
+    title,
+  };
+}
+
+function applyUpdateMeasureCount(
+  state: ProjectState,
+  command: UpdateMeasureCountCommand,
+): ProjectState {
+  if (
+    !Number.isSafeInteger(command.measureCount)
+    || command.measureCount < MINIMUM_MEASURE_COUNT
+    || command.measureCount > MAXIMUM_MEASURE_COUNT
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Measure count must be between ${MINIMUM_MEASURE_COUNT} and ${MAXIMUM_MEASURE_COUNT}.`,
+      command.type,
+    );
+  }
+
+  if (command.measureCount === state.measureCount) {
+    return state;
+  }
+
+  return trimProjectToDuration({
+    ...state,
+    measureCount: command.measureCount,
+  });
+}
+
+function applyInsertMeasure(
+  state: ProjectState,
+  command: InsertMeasureCommand,
+): ProjectState {
+  assertMeasureIndex(
+    command.afterMeasureIndex,
+    state.measureCount,
+    command.type,
+  );
+
+  if (state.measureCount >= MAXIMUM_MEASURE_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_MEASURE_COUNT} measures.`,
+      command.type,
+    );
+  }
+
+  const measureTicks = getTicksPerMeasure(
+    state.transportSettings,
+  );
+  const insertionTick =
+    (command.afterMeasureIndex + 1) * measureTicks;
+  const tracksByVoiceId = transformTracksForInsertedTime(
+    state,
+    insertionTick,
+    measureTicks,
+  );
+  const transportSettings = insertTimeIntoTransport(
+    state.transportSettings,
+    insertionTick,
+    measureTicks,
+  );
+
+  assertValidTransportState(transportSettings);
+
+  return {
+    ...state,
+    measureCount: state.measureCount + 1,
+    tracksByVoiceId,
+    transportSettings,
+  };
+}
+
+function applyRemoveMeasure(
+  state: ProjectState,
+  command: RemoveMeasureCommand,
+): ProjectState {
+  assertMeasureIndex(
+    command.measureIndex,
+    state.measureCount,
+    command.type,
+  );
+
+  if (state.measureCount <= MINIMUM_MEASURE_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `A project must contain at least ${MINIMUM_MEASURE_COUNT} measure.`,
+      command.type,
+    );
+  }
+
+  const measureTicks = getTicksPerMeasure(
+    state.transportSettings,
+  );
+  const removalStartTick = command.measureIndex * measureTicks;
+  const removalEndTick = removalStartTick + measureTicks;
+  const tracksByVoiceId = transformTracksForRemovedTime(
+    state,
+    removalStartTick,
+    removalEndTick,
+  );
+  const transportSettings = removeTimeFromTransport(
+    state.transportSettings,
+    removalStartTick,
+    removalEndTick,
+  );
+
+  assertValidTransportState(transportSettings);
+
+  return {
+    ...state,
+    measureCount: state.measureCount - 1,
+    tracksByVoiceId,
+    transportSettings,
+  };
+}
+
 function applyAddNotes(
   state: ProjectState,
   command: AddNotesCommand,
 ): ProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
+  assertVoiceEditable(state, command.trackVoiceId, command.type);
   const commandNoteIds = new Set<NoteId>();
 
   for (const note of command.notes) {
     assertValidNoteForTrack(note, command.trackVoiceId);
+    assertNoteWithinProject(state, note, command.type);
 
     if (commandNoteIds.has(note.id)) {
       reject(
@@ -407,6 +588,12 @@ function applyMoveNotes(
     command.targetVoiceId,
     command.type,
   );
+  assertVoiceEditable(state, command.sourceVoiceId, command.type);
+
+  if (command.targetVoiceId !== command.sourceVoiceId) {
+    assertVoiceEditable(state, command.targetVoiceId, command.type);
+  }
+
   assertUniqueNoteIds(command.noteIds, command.type);
 
   const movedNotes: Note[] = [];
@@ -421,6 +608,7 @@ function applyMoveNotes(
     };
 
     assertValidNoteForTrack(movedNote, command.targetVoiceId);
+    assertNoteWithinProject(state, movedNote, command.type);
 
     if (
       command.sourceVoiceId !== command.targetVoiceId
@@ -495,6 +683,7 @@ function applyResizeNotes(
   command: ResizeNotesCommand,
 ): ProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
+  assertVoiceEditable(state, command.trackVoiceId, command.type);
   const changedNoteIds = new Set<NoteId>();
   const updatedNotes: Note[] = [];
 
@@ -515,6 +704,7 @@ function applyResizeNotes(
     };
 
     assertValidNoteForTrack(updatedNote, track.voiceId);
+    assertNoteWithinProject(state, updatedNote, command.type);
     changedNoteIds.add(change.noteId);
     updatedNotes.push(updatedNote);
   }
@@ -542,6 +732,7 @@ function applyDeleteNotes(
   command: DeleteNotesCommand,
 ): ProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
+  assertVoiceEditable(state, command.trackVoiceId, command.type);
   assertUniqueNoteIds(command.noteIds, command.type);
 
   for (const noteId of command.noteIds) {
@@ -607,10 +798,10 @@ function applyUpdateTimeSignature(
     return state;
   }
 
-  return {
+  return trimProjectToDuration({
     ...state,
     transportSettings,
-  };
+  });
 }
 
 function applyUpdateLoop(
@@ -663,6 +854,300 @@ function applySetTransportAnchor(
   };
 }
 
+function transformTracksForInsertedTime(
+  state: ProjectState,
+  insertionTick: number,
+  insertedTicks: number,
+): ProjectState["tracksByVoiceId"] {
+  let tracksByVoiceId = state.tracksByVoiceId;
+
+  for (
+    let voiceIndex = 0;
+    voiceIndex < state.voiceOrder.length;
+    voiceIndex += 1
+  ) {
+    const voiceId = state.voiceOrder[voiceIndex];
+    const track =
+      voiceId === undefined
+        ? undefined
+        : state.tracksByVoiceId[voiceId];
+
+    if (voiceId === undefined || track === undefined) {
+      continue;
+    }
+
+    let notesById: Record<NoteId, Note> | null = null;
+
+    for (const noteId in track.notesById) {
+      const note = track.notesById[noteId];
+
+      if (note === undefined) {
+        continue;
+      }
+
+      let updatedNote: Note | null = null;
+
+      if (note.startTick >= insertionTick) {
+        updatedNote = {
+          ...note,
+          startTick: note.startTick + insertedTicks,
+        };
+      } else if (
+        note.startTick + note.durationTicks > insertionTick
+      ) {
+        updatedNote = {
+          ...note,
+          durationTicks: note.durationTicks + insertedTicks,
+        };
+      }
+
+      if (updatedNote === null) {
+        continue;
+      }
+
+      if (notesById === null) {
+        notesById = {
+          ...track.notesById,
+        };
+      }
+
+      notesById[noteId] = updatedNote;
+    }
+
+    if (notesById === null) {
+      continue;
+    }
+
+    if (tracksByVoiceId === state.tracksByVoiceId) {
+      tracksByVoiceId = {
+        ...state.tracksByVoiceId,
+      };
+    }
+
+    tracksByVoiceId = {
+      ...tracksByVoiceId,
+      [voiceId]: {
+        ...track,
+        notesById,
+      },
+    };
+  }
+
+  return tracksByVoiceId;
+}
+
+function transformTracksForRemovedTime(
+  state: ProjectState,
+  removalStartTick: number,
+  removalEndTick: number,
+): ProjectState["tracksByVoiceId"] {
+  let tracksByVoiceId = state.tracksByVoiceId;
+
+  for (
+    let voiceIndex = 0;
+    voiceIndex < state.voiceOrder.length;
+    voiceIndex += 1
+  ) {
+    const voiceId = state.voiceOrder[voiceIndex];
+    const track =
+      voiceId === undefined
+        ? undefined
+        : state.tracksByVoiceId[voiceId];
+
+    if (voiceId === undefined || track === undefined) {
+      continue;
+    }
+
+    let notesById: Record<NoteId, Note> | null = null;
+
+    for (const noteId in track.notesById) {
+      const note = track.notesById[noteId];
+
+      if (note === undefined) {
+        continue;
+      }
+
+      const originalEndTick =
+        note.startTick + note.durationTicks;
+      const startTick = collapseTickForRemovedTime(
+        note.startTick,
+        removalStartTick,
+        removalEndTick,
+      );
+      const endTick = collapseTickForRemovedTime(
+        originalEndTick,
+        removalStartTick,
+        removalEndTick,
+      );
+
+      if (
+        startTick === note.startTick
+        && endTick === originalEndTick
+      ) {
+        continue;
+      }
+
+      if (notesById === null) {
+        notesById = {
+          ...track.notesById,
+        };
+      }
+
+      if (endTick <= startTick) {
+        delete notesById[noteId];
+      } else {
+        notesById[noteId] = {
+          ...note,
+          startTick,
+          durationTicks: endTick - startTick,
+        };
+      }
+    }
+
+    if (notesById === null) {
+      continue;
+    }
+
+    if (tracksByVoiceId === state.tracksByVoiceId) {
+      tracksByVoiceId = {
+        ...state.tracksByVoiceId,
+      };
+    }
+
+    tracksByVoiceId = {
+      ...tracksByVoiceId,
+      [voiceId]: {
+        ...track,
+        notesById,
+      },
+    };
+  }
+
+  return tracksByVoiceId;
+}
+
+function insertTimeIntoTransport(
+  transport: TransportState,
+  insertionTick: number,
+  insertedTicks: number,
+): TransportState {
+  const anchorTick =
+    transport.anchorTick >= insertionTick
+      ? transport.anchorTick + insertedTicks
+      : transport.anchorTick;
+  const loop =
+    transport.loop === null
+      ? null
+      : {
+          startTick:
+            transport.loop.startTick >= insertionTick
+              ? transport.loop.startTick + insertedTicks
+              : transport.loop.startTick,
+          endTick:
+            transport.loop.endTick > insertionTick
+              ? transport.loop.endTick + insertedTicks
+              : transport.loop.endTick,
+        };
+
+  if (
+    anchorTick === transport.anchorTick
+    && loop?.startTick === transport.loop?.startTick
+    && loop?.endTick === transport.loop?.endTick
+  ) {
+    return transport;
+  }
+
+  return {
+    ...transport,
+    anchorTick,
+    loop,
+  };
+}
+
+function removeTimeFromTransport(
+  transport: TransportState,
+  removalStartTick: number,
+  removalEndTick: number,
+): TransportState {
+  const anchorTick = collapseTickForRemovedTime(
+    transport.anchorTick,
+    removalStartTick,
+    removalEndTick,
+  );
+  const loopStartTick =
+    transport.loop === null
+      ? 0
+      : collapseTickForRemovedTime(
+          transport.loop.startTick,
+          removalStartTick,
+          removalEndTick,
+        );
+  const loopEndTick =
+    transport.loop === null
+      ? 0
+      : collapseTickForRemovedTime(
+          transport.loop.endTick,
+          removalStartTick,
+          removalEndTick,
+        );
+  const loop =
+    transport.loop !== null
+    && loopEndTick > loopStartTick
+      ? {
+          startTick: loopStartTick,
+          endTick: loopEndTick,
+        }
+      : null;
+
+  if (
+    anchorTick === transport.anchorTick
+    && loop?.startTick === transport.loop?.startTick
+    && loop?.endTick === transport.loop?.endTick
+  ) {
+    return transport;
+  }
+
+  return {
+    ...transport,
+    anchorTick,
+    loop,
+  };
+}
+
+function collapseTickForRemovedTime(
+  tick: number,
+  removalStartTick: number,
+  removalEndTick: number,
+): number {
+  if (tick <= removalStartTick) {
+    return tick;
+  }
+
+  if (tick >= removalEndTick) {
+    return tick - removalEndTick + removalStartTick;
+  }
+
+  return removalStartTick;
+}
+
+function assertMeasureIndex(
+  measureIndex: number,
+  measureCount: number,
+  commandType: PianoRollCommand["type"],
+): void {
+  if (
+    !Number.isSafeInteger(measureIndex)
+    || measureIndex < 0
+    || measureIndex >= measureCount
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Measure index must be between 0 and ${measureCount - 1}.`,
+      commandType,
+    );
+  }
+}
+
 function replaceTrack(state: ProjectState, track: Track): ProjectState {
   return {
     ...state,
@@ -670,6 +1155,120 @@ function replaceTrack(state: ProjectState, track: Track): ProjectState {
       ...state.tracksByVoiceId,
       [track.voiceId]: track,
     },
+  };
+}
+
+function assertNoteWithinProject(
+  state: ProjectState,
+  note: Note,
+  commandType: PianoRollCommand["type"],
+): void {
+  const projectDurationTicks = getProjectDurationTicks(state);
+
+  if (
+    note.startTick + note.durationTicks
+      > projectDurationTicks
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Note "${note.id}" exceeds the project duration.`,
+      commandType,
+    );
+  }
+}
+
+function trimProjectToDuration(
+  state: ProjectState,
+): ProjectState {
+  const projectDurationTicks = getProjectDurationTicks(state);
+  let tracksByVoiceId = state.tracksByVoiceId;
+  let tracksChanged = false;
+
+  for (
+    let voiceIndex = 0;
+    voiceIndex < state.voiceOrder.length;
+    voiceIndex += 1
+  ) {
+    const voiceId = state.voiceOrder[voiceIndex];
+
+    if (voiceId === undefined) {
+      continue;
+    }
+
+    const track = state.tracksByVoiceId[voiceId];
+
+    if (track === undefined) {
+      continue;
+    }
+
+    let notesChanged = false;
+    const notesById: Record<NoteId, Note> = {};
+
+    for (const noteId in track.notesById) {
+      const note = track.notesById[noteId];
+
+      if (note === undefined) {
+        continue;
+      }
+
+      if (
+        note.startTick + note.durationTicks
+        <= projectDurationTicks
+      ) {
+        notesById[note.id] = note;
+      } else {
+        notesChanged = true;
+      }
+    }
+
+    if (!notesChanged) {
+      continue;
+    }
+
+    if (!tracksChanged) {
+      tracksByVoiceId = {
+        ...state.tracksByVoiceId,
+      };
+      tracksChanged = true;
+    }
+
+    tracksByVoiceId = {
+      ...tracksByVoiceId,
+      [voiceId]: {
+        ...track,
+        notesById,
+      },
+    };
+  }
+
+  const transport = state.transportSettings;
+  const anchorTick = Math.min(
+    transport.anchorTick,
+    projectDurationTicks,
+  );
+  const loop =
+    transport.loop !== null
+    && transport.loop.endTick <= projectDurationTicks
+      ? transport.loop
+      : null;
+  const transportChanged =
+    anchorTick !== transport.anchorTick
+    || loop !== transport.loop;
+
+  if (!tracksChanged && !transportChanged) {
+    return state;
+  }
+
+  return {
+    ...state,
+    tracksByVoiceId,
+    transportSettings: transportChanged
+      ? {
+          ...transport,
+          anchorTick,
+          loop,
+        }
+      : transport,
   };
 }
 
@@ -707,6 +1306,22 @@ function requireTrack(
   }
 
   return track;
+}
+
+function assertVoiceEditable(
+  state: ProjectState,
+  voiceId: VoiceId,
+  commandType: PianoRollCommand["type"],
+): void {
+  const voice = requireVoice(state, voiceId, commandType);
+
+  if (voice.locked) {
+    reject(
+      "VOICE_LOCKED",
+      `Voice "${voiceId}" is locked.`,
+      commandType,
+    );
+  }
 }
 
 function requireNote(

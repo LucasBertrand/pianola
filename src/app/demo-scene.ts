@@ -9,6 +9,8 @@ import type {
 } from "../domain/model";
 import {
   createDefaultTransportState,
+  DEFAULT_MEASURE_COUNT,
+  getProjectDurationTicks,
 } from "../domain/model";
 import {
   ProjectStore,
@@ -20,6 +22,7 @@ import {
   SpatialIndex,
 } from "../geometry/spatial-index";
 import type {
+  NoteColorMode,
   Rect,
   VoiceRenderStyle,
 } from "../ui/components/PianoRollLayers";
@@ -30,8 +33,8 @@ import {
   MutableRenderSignal,
 } from "../ui/rendering/render-signal";
 
-export const DEMO_NOTE_COUNT = 10_000;
-export const DEMO_TOTAL_TICKS = 960 * 4 * 128;
+export const DEMO_NOTE_COUNT = 100;
+const DEMO_INITIAL_NOTE_SPAN_TICKS = 960 * 4 * 8;
 export const INITIAL_PITCH_HEIGHT = 18;
 export const INITIAL_MAX_VISIBLE_PITCH = 84;
 
@@ -51,6 +54,8 @@ export interface DemoScene {
   readonly voiceStyles: MutableRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
+  readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
+  readonly voiceSelectionRequest: MutableRenderSignal<VoiceId | null>;
   readonly playheadTick: MutableRenderSignal<number>;
   readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
   readonly gridResolutionTicks: MutableRenderSignal<number>;
@@ -71,20 +76,6 @@ export const DEMO_VOICES: readonly DemoVoice[] = [
     color: "#a77bf3",
     waveform: "Sine",
   },
-  {
-    id: "voice-pulse",
-    name: "Pulse",
-    role: "Rhythm",
-    color: "#ff9b71",
-    waveform: "Square",
-  },
-  {
-    id: "voice-glass",
-    name: "Glass",
-    role: "Counterpoint",
-    color: "#62d6b4",
-    waveform: "Triangle",
-  },
 ] as const;
 
 export function createDemoScene(): DemoScene {
@@ -104,21 +95,9 @@ export function createDemoScene(): DemoScene {
     createDemoProjectState(notes),
   );
   const indexedNotesBuffer: Note[] = [];
-  const voiceStyles: Record<VoiceId, VoiceRenderStyle> = {};
-
-  for (
-    let voiceIndex = 0;
-    voiceIndex < DEMO_VOICES.length;
-    voiceIndex += 1
-  ) {
-    const voice = DEMO_VOICES[voiceIndex];
-
-    if (voice !== undefined) {
-      voiceStyles[voice.id] = {
-        fillStyle: voice.color,
-      };
-    }
-  }
+  const voiceStyles = new MutableRenderSignal(
+    createVoiceRenderStyles(projectStore.getState()),
+  );
 
   spatialIndex.update(notes);
   projectStore.subscribe((state, previousState) => {
@@ -132,6 +111,10 @@ export function createDemoScene(): DemoScene {
         indexedNotesBuffer,
       );
     }
+
+    if (state.voicesById !== previousState.voicesById) {
+      voiceStyles.set(createVoiceRenderStyles(state));
+    }
   });
 
   return {
@@ -139,9 +122,20 @@ export function createDemoScene(): DemoScene {
     spatialIndex,
     viewport: new MutableRenderSignal(viewportState),
     visibleRegion: new MutableRenderSignal(
-      calculateVisibleRegion(viewportState, 1_600, 900),
+      calculateVisibleRegion(
+        viewportState,
+        1_600,
+        900,
+        getProjectDurationTicks(projectStore.getState()),
+      ),
     ),
-    voiceStyles: new MutableRenderSignal(voiceStyles),
+    voiceStyles,
+    noteColorMode: new MutableRenderSignal<NoteColorMode>(
+      "voice",
+    ),
+    voiceSelectionRequest: new MutableRenderSignal<VoiceId | null>(
+      null,
+    ),
     playheadTick: new MutableRenderSignal(960 * 4),
     interactionToolState: new MutableRenderSignal({
       activeTool: "select",
@@ -150,10 +144,40 @@ export function createDemoScene(): DemoScene {
   };
 }
 
+function createVoiceRenderStyles(
+  state: ProjectState,
+): Readonly<Record<VoiceId, VoiceRenderStyle>> {
+  const styles: Record<VoiceId, VoiceRenderStyle> = {};
+
+  for (
+    let voiceIndex = 0;
+    voiceIndex < state.voiceOrder.length;
+    voiceIndex += 1
+  ) {
+    const voiceId = state.voiceOrder[voiceIndex];
+
+    if (voiceId === undefined) {
+      continue;
+    }
+
+    const voice = state.voicesById[voiceId];
+
+    if (voice !== undefined) {
+      styles[voiceId] = {
+        fillStyle: voice.color,
+        opacity: voice.muted ? 0.16 : 1,
+      };
+    }
+  }
+
+  return styles;
+}
+
 export function calculateVisibleRegion(
   viewport: ViewportState,
   widthCssPixels: number,
   heightCssPixels: number,
+  totalTicks: number,
 ): Rect {
   const startTick =
     viewport.scrollX * viewport.ticksPerPixel / viewport.zoomX;
@@ -173,7 +197,7 @@ export function calculateVisibleRegion(
 
   return {
     startTick: Math.max(0, startTick),
-    endTick: Math.min(DEMO_TOTAL_TICKS, endTick),
+    endTick: Math.min(totalTicks, endTick),
     minPitch: Math.max(0, minPitch),
     maxPitch: Math.min(127, maxPitch),
   };
@@ -186,7 +210,8 @@ function createDemoNotes(noteCount: number): readonly Note[] {
   for (let noteIndex = 0; noteIndex < noteCount; noteIndex += 1) {
     randomState = nextRandomState(randomState);
     const startStep =
-      (randomState >>> 1) % (DEMO_TOTAL_TICKS / 120);
+      (randomState >>> 1)
+      % (DEMO_INITIAL_NOTE_SPAN_TICKS / 120);
     randomState = nextRandomState(randomState);
     const pitch = 32 + (randomState >>> 8) % 57;
     randomState = nextRandomState(randomState);
@@ -296,6 +321,8 @@ function createDemoProjectState(
   return {
     schemaVersion: 1,
     revision: 0,
+    title: "Untitled exploration",
+    measureCount: DEFAULT_MEASURE_COUNT,
     voicesById,
     voiceOrder,
     tracksByVoiceId,
@@ -315,6 +342,7 @@ function createDomainVoice(
     name: demoVoice.name,
     color: demoVoice.color,
     muted: false,
+    locked: false,
     solo: false,
     gain: 0.82,
     pan: 0,

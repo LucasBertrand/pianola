@@ -1,5 +1,9 @@
 export const MIN_MIDI_PITCH = 0 as const;
 export const MAX_MIDI_PITCH = 127 as const;
+export const MINIMUM_HORIZONTAL_ZOOM = 0.1 as const;
+export const MAXIMUM_HORIZONTAL_ZOOM = 2.5 as const;
+export const MINIMUM_VERTICAL_ZOOM = 0.5 as const;
+export const MAXIMUM_VERTICAL_ZOOM = 2.2 as const;
 
 export interface ViewportState {
   readonly zoomX: number;
