@@ -23,6 +23,9 @@ import type {
   Rect,
   VoiceRenderStyle,
 } from "../ui/components/PianoRollLayers";
+import type {
+  InteractionModeState,
+} from "../ui/interactions/types";
 import {
   MutableRenderSignal,
 } from "../ui/rendering/render-signal";
@@ -49,6 +52,8 @@ export interface DemoScene {
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
   readonly playheadTick: MutableRenderSignal<number>;
+  readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
+  readonly gridResolutionTicks: MutableRenderSignal<number>;
 }
 
 export const DEMO_VOICES: readonly DemoVoice[] = [
@@ -116,12 +121,17 @@ export function createDemoScene(): DemoScene {
   }
 
   spatialIndex.update(notes);
-  projectStore.subscribe((state) => {
-    rebuildSpatialIndex(
-      state,
-      spatialIndex,
-      indexedNotesBuffer,
-    );
+  projectStore.subscribe((state, previousState) => {
+    if (
+      state.tracksByVoiceId
+      !== previousState.tracksByVoiceId
+    ) {
+      rebuildSpatialIndex(
+        state,
+        spatialIndex,
+        indexedNotesBuffer,
+      );
+    }
   });
 
   return {
@@ -133,6 +143,10 @@ export function createDemoScene(): DemoScene {
     ),
     voiceStyles: new MutableRenderSignal(voiceStyles),
     playheadTick: new MutableRenderSignal(960 * 4),
+    interactionToolState: new MutableRenderSignal({
+      activeTool: "select",
+    }),
+    gridResolutionTicks: new MutableRenderSignal(240),
   };
 }
 
@@ -285,7 +299,10 @@ function createDemoProjectState(
     voicesById,
     voiceOrder,
     tracksByVoiceId,
-    transportSettings: createDefaultTransportState(),
+    transportSettings: {
+      ...createDefaultTransportState(),
+      bpm: 112,
+    },
   };
 }
 

@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 5173 --strictPort",
     "build": "npm run typecheck && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0",
     "typecheck": "npm run typecheck:core && npm run typecheck:ui",
     "typecheck:core": "tsc --project tsconfig.json",
     "typecheck:ui": "tsc --project tsconfig.ui.json"

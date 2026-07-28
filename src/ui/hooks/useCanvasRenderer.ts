@@ -40,6 +40,10 @@ interface MutableCanvasFrame {
   deltaMs: number;
 }
 
+const MAXIMUM_CANVAS_DEVICE_PIXEL_RATIO = 2;
+const MAXIMUM_COARSE_POINTER_DEVICE_PIXEL_RATIO = 1.5;
+let cachedMaximumDevicePixelRatio: number | null = null;
+
 export function useCanvasRenderer(
   options: UseCanvasRendererOptions,
 ): CanvasRendererController {
@@ -265,5 +269,21 @@ export function useCanvasRenderer(
 function getDevicePixelRatio(): number {
   const ratio = window.devicePixelRatio;
 
-  return Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    return 1;
+  }
+
+  return Math.min(ratio, getMaximumDevicePixelRatio());
+}
+
+function getMaximumDevicePixelRatio(): number {
+  if (cachedMaximumDevicePixelRatio === null) {
+    cachedMaximumDevicePixelRatio = window.matchMedia(
+      "(pointer: coarse)",
+    ).matches
+      ? MAXIMUM_COARSE_POINTER_DEVICE_PIXEL_RATIO
+      : MAXIMUM_CANVAS_DEVICE_PIXEL_RATIO;
+  }
+
+  return cachedMaximumDevicePixelRatio;
 }

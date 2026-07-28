@@ -9,14 +9,24 @@ import type {
 import type {
   VoiceRenderStyle,
 } from "../components/PianoRollLayers";
+import type {
+  InteractionTool,
+} from "./types";
 
 export type InteractionMode =
   | "IDLE"
   | "DRAGGING"
-  | "LASSO_SELECTING";
+  | "LASSO_SELECTING"
+  | "RESIZING_START"
+  | "RESIZING_END"
+  | "DRAWING"
+  | "ERASING";
+
+export type ResizeEdge = "start" | "end";
 
 export interface InteractionDraft {
   mode: InteractionMode;
+  activeTool: InteractionTool;
   pointerId: number;
   overlayLeft: number;
   overlayTop: number;
@@ -26,11 +36,20 @@ export interface InteractionDraft {
   currentLocalY: number;
   originPointerTick: number;
   originPointerPitch: number;
+  originResizeTick: number;
   deltaTicks: number;
   deltaPitch: number;
+  minimumResizeDeltaTicks: number;
+  maximumResizeDeltaTicks: number;
   minimumSelectedStartTick: number;
   minimumSelectedPitch: number;
   maximumSelectedPitch: number;
+  targetNoteId: NoteId | null;
+  drawStartTick: number;
+  drawPitch: number;
+  drawDurationTicks: number;
+  drawVoiceId: VoiceId | null;
+  snapResolutionTicks: number;
   additiveSelection: boolean;
 }
 
@@ -47,6 +66,24 @@ export interface InteractionVisualController {
   ): void;
   updateDrag(deltaXCssPixels: number, deltaYCssPixels: number): void;
   endDrag(): void;
+  beginResize(
+    notes: readonly Note[],
+    converter: CoordinateConverter,
+    stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+    edge: ResizeEdge,
+  ): void;
+  updateResize(edge: ResizeEdge, deltaXCssPixels: number): void;
+  endResize(): void;
+  beginDraw(
+    startTick: number,
+    pitch: number,
+    durationTicks: number,
+    voiceId: VoiceId,
+    converter: CoordinateConverter,
+    style: VoiceRenderStyle | undefined,
+  ): void;
+  updateDraw(widthCssPixels: number): void;
+  endDraw(): void;
   beginLasso(localX: number, localY: number): void;
   updateLasso(
     startX: number,
@@ -55,11 +92,17 @@ export interface InteractionVisualController {
     currentY: number,
   ): void;
   endLasso(): void;
+  showSelection(
+    notes: readonly Note[],
+    converter: CoordinateConverter,
+  ): void;
+  clearSelection(): void;
 }
 
 export function createInteractionDraft(): InteractionDraft {
   return {
     mode: "IDLE",
+    activeTool: "select",
     pointerId: -1,
     overlayLeft: 0,
     overlayTop: 0,
@@ -69,11 +112,20 @@ export function createInteractionDraft(): InteractionDraft {
     currentLocalY: 0,
     originPointerTick: 0,
     originPointerPitch: 0,
+    originResizeTick: 0,
     deltaTicks: 0,
     deltaPitch: 0,
+    minimumResizeDeltaTicks: Number.NEGATIVE_INFINITY,
+    maximumResizeDeltaTicks: Number.POSITIVE_INFINITY,
     minimumSelectedStartTick: 0,
     minimumSelectedPitch: 0,
     maximumSelectedPitch: 127,
+    targetNoteId: null,
+    drawStartTick: 0,
+    drawPitch: 0,
+    drawDurationTicks: 0,
+    drawVoiceId: null,
+    snapResolutionTicks: 240,
     additiveSelection: false,
   };
 }

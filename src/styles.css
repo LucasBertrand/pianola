@@ -17,10 +17,15 @@ html,
 body,
 #root {
   width: 100%;
-  min-width: 860px;
+  min-width: 0;
   height: 100%;
   margin: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  touch-action: none;
 }
 
 button,
@@ -164,10 +169,10 @@ input:focus-visible {
   font-size: 13px;
 }
 
-.icon-button:hover,
-.play-button:hover {
+.icon-button:active,
+.play-button:active {
   border-color: #79a7ff;
-  transform: translateY(-1px);
+  transform: scale(0.97);
 }
 
 .stop-icon {
@@ -216,6 +221,43 @@ input:focus-visible {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 13px;
   font-weight: 600;
+}
+
+.metric-control {
+  min-width: 0;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #dce7fa;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  touch-action: manipulation;
+}
+
+.metric-control:focus-visible {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(121, 167, 255, 0.48);
+}
+
+.tempo-control {
+  width: 54px;
+  appearance: textfield;
+}
+
+.tempo-control::-webkit-inner-spin-button,
+.tempo-control::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.metric-select {
+  width: 70px;
+  padding-right: 14px;
+  color-scheme: dark;
+  cursor: pointer;
 }
 
 .metric span {
@@ -280,7 +322,7 @@ input:focus-visible {
 
 .editor-toolbar {
   display: flex;
-  min-height: 50px;
+  min-height: 58px;
   padding: 0 14px;
   border-bottom: 1px solid #242832;
   background: #121419;
@@ -288,35 +330,8 @@ input:focus-visible {
   justify-content: space-between;
 }
 
-.tool-group {
-  display: flex;
-  padding: 3px;
-  border: 1px solid #2d323d;
-  border-radius: 8px;
-  background: #0f1115;
-  gap: 2px;
-}
-
-.tool-button {
-  padding: 6px 12px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #727c8c;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  text-transform: uppercase;
-}
-
-.tool-button.is-active {
-  background: #262c37;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  color: #d5deeb;
-}
-
 .project-summary {
+  margin-left: auto;
   display: flex;
   color: #687282;
   font-size: 10px;
@@ -394,6 +409,8 @@ input:focus-visible {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .bar-ruler {
@@ -402,26 +419,21 @@ input:focus-visible {
   top: 0;
   right: 0;
   left: 0;
-  display: grid;
+  display: block;
+  width: 100%;
   height: 28px;
+  overflow: hidden;
+  contain: strict;
   border-bottom: 1px solid #2b3039;
-  background:
-    linear-gradient(90deg, transparent 99.8%, #343a45 99.8%),
-    #191c22;
-  background-size: 20% 100%;
-  color: #7b8491;
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 9px;
-  grid-template-columns: repeat(5, 1fr);
-}
-
-.bar-ruler span {
-  padding: 8px 0 0 8px;
+  background: #191c22;
 }
 
 .canvas-host {
   position: absolute;
   inset: 28px 0 0;
+  contain: strict;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .view-controls {
@@ -451,8 +463,8 @@ input[type="range"] {
 }
 
 input[type="range"]::-webkit-slider-thumb {
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   border: 2px solid #121419;
   border-radius: 50%;
   appearance: none;
@@ -512,6 +524,64 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow:
     0 0 0 1px rgba(20, 25, 34, 0.8),
     0 5px 14px rgba(0, 0, 0, 0.32);
+}
+
+.interaction-overlay {
+  user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.interaction-note-selection {
+  position: absolute;
+  border: 2px solid #f8fbff;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0 0 2px rgba(71, 139, 255, 0.95),
+    0 0 14px rgba(96, 164, 255, 0.72);
+  box-sizing: border-box;
+}
+
+.interaction-note-selection::before,
+.interaction-note-selection::after {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  width: 10px;
+  height: 82%;
+  min-height: 10px;
+  border: 1px solid #172033;
+  border-radius: 3px;
+  background: #ffffff;
+  box-shadow: 0 0 5px rgba(84, 151, 255, 0.9);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.interaction-note-selection::before {
+  left: -7px;
+}
+
+.interaction-note-selection::after {
+  right: -7px;
+}
+
+.interaction-note-ghost.is-resizing-start,
+.interaction-note-ghost.is-resizing-end {
+  opacity: 0.9;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 7px 18px rgba(0, 0, 0, 0.4);
+}
+
+.interaction-note-ghost.is-drawing {
+  border-style: dashed;
+  opacity: 0.9;
+  box-shadow:
+    0 0 0 2px rgba(98, 214, 180, 0.48),
+    0 7px 18px rgba(0, 0, 0, 0.4);
 }
 
 .inspector {
@@ -850,11 +920,24 @@ input[type="range"]::-webkit-slider-thumb {
 
 @media (max-width: 920px) {
   .topbar {
+    min-height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
     grid-template-columns: minmax(170px, 1fr) auto;
+    gap: 10px;
   }
 
   .transport-metrics {
-    display: none;
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    grid-column: 1 / -1;
+    scrollbar-width: thin;
+  }
+
+  .transport-metrics .metric {
+    min-width: 108px;
+    flex: 1 0 auto;
   }
 
   .workspace {

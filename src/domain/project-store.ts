@@ -15,6 +15,7 @@ export type ProjectStoreListener = (
 export interface ProjectStorePort {
   getState(): ProjectState;
   dispatch(transaction: Transaction): ProjectState;
+  subscribe(listener: ProjectStoreListener): () => void;
 }
 
 export class ProjectStore implements ProjectStorePort {

@@ -8,6 +8,20 @@ import {
 
 const PITCH_BUCKET_COUNT = 128;
 const SEARCH_BLOCK_SIZE = 32;
+const TOUCH_QUERY_END_EPSILON_TICKS = 0.000_001;
+
+export interface SpatialTouchEnvelope {
+  readonly tickRadius: number;
+  readonly pitchRadius: number;
+}
+
+export type SpatialNoteEdge = "start" | "end";
+
+export interface SpatialNoteEdgeHit {
+  readonly note: Note;
+  readonly edge: SpatialNoteEdge;
+  readonly distanceTicks: number;
+}
 
 interface PitchBucket {
   readonly notes: Note[];
@@ -16,6 +30,7 @@ interface PitchBucket {
 
 export class SpatialIndex {
   private readonly buckets: PitchBucket[];
+  private readonly touchQueryBuffer: Note[] = [];
   private indexedNoteCount = 0;
 
   public constructor() {
@@ -125,6 +140,155 @@ export class SpatialIndex {
     return undefined;
   }
 
+  public queryPointWithEnvelope(
+    tick: number,
+    pitch: number,
+    envelope: SpatialTouchEnvelope,
+  ): Note | undefined {
+    if (!isValidTouchQuery(tick, pitch, envelope)) {
+      return undefined;
+    }
+
+    if (
+      envelope.tickRadius === 0
+      && envelope.pitchRadius === 0
+    ) {
+      return this.queryPoint(tick, pitch);
+    }
+
+    const candidates = this.touchQueryBuffer;
+
+    this.queryRect(
+      tick
+        - envelope.tickRadius
+        - TOUCH_QUERY_END_EPSILON_TICKS,
+      tick
+        + envelope.tickRadius
+        + TOUCH_QUERY_END_EPSILON_TICKS,
+      pitch - envelope.pitchRadius,
+      pitch + envelope.pitchRadius,
+      candidates,
+    );
+
+    let closestNote: Note | undefined;
+    let closestPitchDistance = Number.POSITIVE_INFINITY;
+    let closestTickDistance = Number.POSITIVE_INFINITY;
+
+    for (
+      let candidateIndex = 0;
+      candidateIndex < candidates.length;
+      candidateIndex += 1
+    ) {
+      const note = candidates[candidateIndex];
+
+      if (note === undefined) {
+        continue;
+      }
+
+      const pitchDistance = Math.abs(note.pitch - pitch);
+      const noteEndTick = note.startTick + note.durationTicks;
+      const tickDistance =
+        tick < note.startTick
+          ? note.startTick - tick
+          : tick > noteEndTick
+            ? tick - noteEndTick
+            : 0;
+
+      if (
+        pitchDistance < closestPitchDistance
+        || (
+          pitchDistance === closestPitchDistance
+          && tickDistance < closestTickDistance
+        )
+      ) {
+        closestNote = note;
+        closestPitchDistance = pitchDistance;
+        closestTickDistance = tickDistance;
+      }
+    }
+
+    return closestNote;
+  }
+
+  public queryNoteEdge(
+    tick: number,
+    pitch: number,
+    envelope: SpatialTouchEnvelope,
+  ): SpatialNoteEdgeHit | undefined {
+    if (!isValidTouchQuery(tick, pitch, envelope)) {
+      return undefined;
+    }
+
+    const candidates = this.touchQueryBuffer;
+
+    this.queryRect(
+      tick
+        - envelope.tickRadius
+        - TOUCH_QUERY_END_EPSILON_TICKS,
+      tick
+        + envelope.tickRadius
+        + TOUCH_QUERY_END_EPSILON_TICKS,
+      pitch - envelope.pitchRadius,
+      pitch + envelope.pitchRadius,
+      candidates,
+    );
+
+    let closestNote: Note | undefined;
+    let closestEdge: SpatialNoteEdge = "start";
+    let closestPitchDistance = Number.POSITIVE_INFINITY;
+    let closestTickDistance = Number.POSITIVE_INFINITY;
+
+    for (
+      let candidateIndex = 0;
+      candidateIndex < candidates.length;
+      candidateIndex += 1
+    ) {
+      const note = candidates[candidateIndex];
+
+      if (note === undefined) {
+        continue;
+      }
+
+      const pitchDistance = Math.abs(note.pitch - pitch);
+      const startDistance = Math.abs(note.startTick - tick);
+      const endDistance = Math.abs(
+        note.startTick + note.durationTicks - tick,
+      );
+      const edge =
+        startDistance <= endDistance ? "start" : "end";
+      const tickDistance = Math.min(
+        startDistance,
+        endDistance,
+      );
+
+      if (
+        tickDistance <= envelope.tickRadius
+        && (
+          pitchDistance < closestPitchDistance
+          || (
+            pitchDistance === closestPitchDistance
+            && tickDistance < closestTickDistance
+          )
+        )
+      ) {
+        closestNote = note;
+        closestEdge = edge;
+        closestPitchDistance = pitchDistance;
+        closestTickDistance = tickDistance;
+      }
+    }
+
+    if (closestNote === undefined) {
+      return undefined;
+    }
+
+    return {
+      note: closestNote,
+      edge: closestEdge,
+      distanceTicks: closestTickDistance,
+    };
+  }
+
   public queryRect(
     startTick: number,
     endTick: number,
@@ -210,6 +374,21 @@ export class SpatialIndex {
 
     return result;
   }
+}
+
+function isValidTouchQuery(
+  tick: number,
+  pitch: number,
+  envelope: SpatialTouchEnvelope,
+): boolean {
+  return (
+    Number.isFinite(tick)
+    && Number.isFinite(pitch)
+    && Number.isFinite(envelope.tickRadius)
+    && envelope.tickRadius >= 0
+    && Number.isFinite(envelope.pitchRadius)
+    && envelope.pitchRadius >= 0
+  );
 }
 
 function validateIndexableNotes(notes: readonly Note[]): void {

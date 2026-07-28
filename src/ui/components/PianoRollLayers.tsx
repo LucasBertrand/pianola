@@ -6,6 +6,8 @@ import React, {
 } from "react";
 import type {
   Note,
+  NoteId,
+  ProjectState,
   VoiceId,
 } from "../../domain/model";
 import type {
@@ -24,6 +26,9 @@ import {
   useCanvasRenderer,
   type CanvasFrame,
 } from "../hooks/useCanvasRenderer";
+import type {
+  InteractionToolSignal,
+} from "../interactions/types";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
@@ -48,7 +53,8 @@ export interface VoiceRenderStyle {
 }
 
 export interface GridCanvasProps extends CanvasLayerProps {
-  readonly gridResolutionTicks: number;
+  readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly projectStore: ProjectStorePort;
 }
 
 export interface NotesCanvasProps extends CanvasLayerProps {
@@ -56,6 +62,7 @@ export interface NotesCanvasProps extends CanvasLayerProps {
   readonly voiceStyles: ReadonlyRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
+  readonly editingNoteIds: ReadonlySet<NoteId>;
 }
 
 export interface PianoRollLayersProps extends CanvasLayerProps {
@@ -65,20 +72,11 @@ export interface PianoRollLayersProps extends CanvasLayerProps {
   >;
   readonly playheadTick: ReadonlyRenderSignal<number>;
   readonly projectStore: ProjectStorePort;
+  readonly toolState: InteractionToolSignal;
   readonly activeVoiceId: VoiceId;
-  readonly gridResolutionTicks: number;
-}
-
-type GridSurface = OffscreenCanvas | HTMLCanvasElement;
-type GridRenderingContext =
-  | OffscreenCanvasRenderingContext2D
-  | CanvasRenderingContext2D;
-
-interface GridCache {
-  surface: GridSurface | null;
-  context: GridRenderingContext | null;
-  widthDevicePixels: number;
-  heightDevicePixels: number;
+  readonly totalTicks: number;
+  readonly setViewport: (viewport: ViewportState) => void;
+  readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
 }
 
 const LAYER_STACK_STYLE: CSSProperties = {
@@ -98,20 +96,19 @@ const CANVAS_LAYER_STYLE: CSSProperties = {
 };
 
 const OPAQUE_CONTEXT_ATTRIBUTES: CanvasRenderingContext2DSettings = {
-  alpha: false,
-  desynchronized: true,
+  alpha: true,
 };
 
 const TRANSPARENT_CONTEXT_ATTRIBUTES: CanvasRenderingContext2DSettings = {
   alpha: true,
-  desynchronized: true,
 };
 
 const GRID_BACKGROUND_COLOR = "#16181d";
 const BLACK_KEY_ROW_COLOR = "#121419";
 const PITCH_LINE_COLOR = "#252a33";
-const MINOR_TICK_LINE_COLOR = "#242933";
-const MAJOR_TICK_LINE_COLOR = "#394252";
+const SUBDIVISION_LINE_COLOR = "#242933";
+const BEAT_LINE_COLOR = "#303744";
+const BAR_LINE_COLOR = "#465164";
 const DEFAULT_NOTE_COLOR = "#6ea8fe";
 const MIN_GRID_LINE_SPACING_CSS_PIXELS = 4;
 const MAX_GRID_LINES_PER_PASS = 4_096;
@@ -126,9 +123,19 @@ export function PianoRollLayers(
     voiceStyles,
     playheadTick,
     projectStore,
+    toolState,
     activeVoiceId,
+    totalTicks,
+    setViewport,
     gridResolutionTicks,
   } = props;
+  const editingNoteIdsRef = useRef<Set<NoteId> | null>(null);
+
+  if (editingNoteIdsRef.current === null) {
+    editingNoteIdsRef.current = new Set<NoteId>();
+  }
+
+  const editingNoteIds = editingNoteIdsRef.current;
 
   return (
     <div style={LAYER_STACK_STYLE}>
@@ -136,12 +143,14 @@ export function PianoRollLayers(
         viewport={viewport}
         visibleRegion={visibleRegion}
         gridResolutionTicks={gridResolutionTicks}
+        projectStore={projectStore}
       />
       <NotesCanvas
         viewport={viewport}
         visibleRegion={visibleRegion}
         spatialIndex={spatialIndex}
         voiceStyles={voiceStyles}
+        editingNoteIds={editingNoteIds}
       />
       <InteractionOverlay
         viewport={viewport}
@@ -149,9 +158,12 @@ export function PianoRollLayers(
         spatialIndex={spatialIndex}
         voiceStyles={voiceStyles}
         projectStore={projectStore}
+        toolState={toolState}
         activeVoiceId={activeVoiceId}
+        totalTicks={totalTicks}
+        setViewport={setViewport}
         gridResolutionTicks={gridResolutionTicks}
-        defaultNoteDurationTicks={gridResolutionTicks * 2}
+        editingNoteIds={editingNoteIds}
       />
     </div>
   );
@@ -162,31 +174,21 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
     viewport,
     visibleRegion,
     gridResolutionTicks,
+    projectStore,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
   const converterVersionRef = useRef(-1);
-  const cacheRef = useRef<GridCache | null>(null);
 
   if (converterRef.current === null) {
     converterRef.current = new CoordinateConverter(viewport.get());
     converterVersionRef.current = viewport.version;
   }
 
-  if (cacheRef.current === null) {
-    cacheRef.current = {
-      surface: null,
-      context: null,
-      widthDevicePixels: 0,
-      heightDevicePixels: 0,
-    };
-  }
-
   const renderGrid = useCallback(
     (frame: CanvasFrame): void => {
       const converter = converterRef.current;
-      const cache = cacheRef.current;
 
-      if (converter === null || cache === null) {
+      if (converter === null) {
         return;
       }
 
@@ -195,31 +197,18 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         converterVersionRef.current = viewport.version;
       }
 
-      const cacheContext = prepareGridCache(cache, frame);
-      renderGridCache(
-        cacheContext,
+      paintGrid(
+        frame.context,
         frame,
         converter,
         visibleRegion.get(),
-        gridResolutionTicks,
+        gridResolutionTicks.get(),
+        projectStore.getState().transportSettings,
       );
-
-      if (cache.surface !== null) {
-        frame.context.drawImage(
-          cache.surface,
-          0,
-          0,
-          cache.widthDevicePixels,
-          cache.heightDevicePixels,
-          0,
-          0,
-          frame.widthCssPixels,
-          frame.heightCssPixels,
-        );
-      }
     },
     [
       gridResolutionTicks,
+      projectStore,
       viewport,
       visibleRegion,
     ],
@@ -233,13 +222,14 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
 
   useSignalInvalidation(viewport, renderer.invalidate);
   useSignalInvalidation(visibleRegion, renderer.invalidate);
-
-  useEffect(() => {
-    renderer.invalidate();
-  }, [
-    gridResolutionTicks,
-    renderer,
-  ]);
+  useSignalInvalidation(gridResolutionTicks, renderer.invalidate);
+  useEffect(
+    () => projectStore.subscribe(renderer.invalidate),
+    [
+      projectStore,
+      renderer.invalidate,
+    ],
+  );
 
   return (
     <canvas
@@ -256,6 +246,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     visibleRegion,
     spatialIndex,
     voiceStyles,
+    editingNoteIds,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
   const converterVersionRef = useRef(-1);
@@ -306,6 +297,10 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
           continue;
         }
 
+        if (editingNoteIds.has(note.id)) {
+          continue;
+        }
+
         if (note.voiceId !== currentVoiceId) {
           const voiceStyle = stylesByVoiceId[note.voiceId];
           context.fillStyle =
@@ -327,6 +322,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     },
     [
       spatialIndex,
+      editingNoteIds,
       viewport,
       visibleRegion,
       voiceStyles,
@@ -361,90 +357,17 @@ function useSignalInvalidation<T>(
   ]);
 }
 
-function prepareGridCache(
-  cache: GridCache,
-  frame: CanvasFrame,
-): GridRenderingContext {
-  const widthDevicePixels = Math.max(
-    1,
-    Math.round(frame.widthCssPixels * frame.devicePixelRatio),
-  );
-  const heightDevicePixels = Math.max(
-    1,
-    Math.round(frame.heightCssPixels * frame.devicePixelRatio),
-  );
-
-  if (cache.surface === null) {
-    cache.surface = createGridSurface(
-      widthDevicePixels,
-      heightDevicePixels,
-    );
-    cache.context = getGridContext(cache.surface);
-  } else if (
-    cache.widthDevicePixels !== widthDevicePixels
-    || cache.heightDevicePixels !== heightDevicePixels
-  ) {
-    cache.surface.width = widthDevicePixels;
-    cache.surface.height = heightDevicePixels;
-  }
-
-  cache.widthDevicePixels = widthDevicePixels;
-  cache.heightDevicePixels = heightDevicePixels;
-
-  if (cache.context === null) {
-    throw new Error("An offscreen 2D rendering context is required.");
-  }
-
-  return cache.context;
-}
-
-function createGridSurface(
-  width: number,
-  height: number,
-): GridSurface {
-  if (typeof OffscreenCanvas !== "undefined") {
-    return new OffscreenCanvas(width, height);
-  }
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  return canvas;
-}
-
-function getGridContext(
-  surface: GridSurface,
-): GridRenderingContext {
-  const context = surface.getContext("2d", {
-    alpha: false,
-  });
-
-  if (context === null) {
-    throw new Error("An offscreen 2D rendering context is required.");
-  }
-
-  return context as GridRenderingContext;
-}
-
-function renderGridCache(
-  context: GridRenderingContext,
+function paintGrid(
+  context: CanvasRenderingContext2D,
   frame: CanvasFrame,
   converter: CoordinateConverter,
   region: Rect,
   gridResolutionTicks: number,
+  transport: ProjectState["transportSettings"],
 ): void {
   const width = frame.widthCssPixels;
   const height = frame.heightCssPixels;
-  const ratio = frame.devicePixelRatio;
 
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.clearRect(
-    0,
-    0,
-    Math.round(width * ratio),
-    Math.round(height * ratio),
-  );
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.fillStyle = GRID_BACKGROUND_COLOR;
   context.fillRect(0, 0, width, height);
 
@@ -467,17 +390,16 @@ function renderGridCache(
     }
   }
 
-  context.beginPath();
-
   for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {
     const y = converter.pitchToCssPixelY(pitch);
-    context.moveTo(0, y);
-    context.lineTo(width, y);
+    fillHorizontalDeviceLine(
+      context,
+      y,
+      width,
+      frame.devicePixelRatio,
+      PITCH_LINE_COLOR,
+    );
   }
-
-  context.strokeStyle = PITCH_LINE_COLOR;
-  context.lineWidth = 1;
-  context.stroke();
 
   if (
     !Number.isSafeInteger(gridResolutionTicks)
@@ -494,19 +416,33 @@ function renderGridCache(
 
   drawTickLines(
     context,
+    frame.devicePixelRatio,
     converter,
     region,
     height,
     effectiveResolutionTicks,
-    false,
+    SUBDIVISION_LINE_COLOR,
   );
+  const ticksPerBeat =
+    transport.ppqn * 4 / transport.timeSignature.denominator;
+
   drawTickLines(
     context,
+    frame.devicePixelRatio,
     converter,
     region,
     height,
-    effectiveResolutionTicks * 4,
-    true,
+    ticksPerBeat,
+    BEAT_LINE_COLOR,
+  );
+  drawTickLines(
+    context,
+    frame.devicePixelRatio,
+    converter,
+    region,
+    height,
+    ticksPerBeat * transport.timeSignature.numerator,
+    BAR_LINE_COLOR,
   );
 }
 
@@ -541,17 +477,20 @@ function getEffectiveGridResolution(
 }
 
 function drawTickLines(
-  context: GridRenderingContext,
+  context: CanvasRenderingContext2D,
+  devicePixelRatio: number,
   converter: CoordinateConverter,
   region: Rect,
   height: number,
   resolutionTicks: number,
-  major: boolean,
+  color: string,
 ): void {
+  if (!Number.isFinite(resolutionTicks) || resolutionTicks <= 0) {
+    return;
+  }
+
   const firstTick =
     Math.floor(region.startTick / resolutionTicks) * resolutionTicks;
-
-  context.beginPath();
 
   for (
     let tick = firstTick;
@@ -559,15 +498,44 @@ function drawTickLines(
     tick += resolutionTicks
   ) {
     const x = converter.tickToCssPixelX(tick);
-    context.moveTo(x, 0);
-    context.lineTo(x, height);
+    fillVerticalDeviceLine(
+      context,
+      x,
+      height,
+      devicePixelRatio,
+      color,
+    );
   }
+}
 
-  context.strokeStyle = major
-    ? MAJOR_TICK_LINE_COLOR
-    : MINOR_TICK_LINE_COLOR;
-  context.lineWidth = major ? 1.5 : 1;
-  context.stroke();
+function fillVerticalDeviceLine(
+  context: CanvasRenderingContext2D,
+  x: number,
+  height: number,
+  devicePixelRatio: number,
+  color: string,
+): void {
+  const lineWidth = 1 / devicePixelRatio;
+  const alignedX =
+    Math.round(x * devicePixelRatio) / devicePixelRatio;
+
+  context.fillStyle = color;
+  context.fillRect(alignedX, 0, lineWidth, height);
+}
+
+function fillHorizontalDeviceLine(
+  context: CanvasRenderingContext2D,
+  y: number,
+  width: number,
+  devicePixelRatio: number,
+  color: string,
+): void {
+  const lineHeight = 1 / devicePixelRatio;
+  const alignedY =
+    Math.round(y * devicePixelRatio) / devicePixelRatio;
+
+  context.fillStyle = color;
+  context.fillRect(0, alignedY, width, lineHeight);
 }
 
 function compareNotesByVoice(left: Note, right: Note): number {

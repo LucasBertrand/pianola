@@ -11,13 +11,11 @@ React owns only the stable layer tree and lifecycle subscriptions. It never owns
 
 ## Pixel spaces
 
-`useCanvasRenderer` scales the visible context by `devicePixelRatio`. Render functions therefore use the converter CSS-pixel methods. The converter device-pixel methods remain available for direct backing-store operations.
+`useCanvasRenderer` scales the visible context by `devicePixelRatio`, capped at 2 for precise pointers and 1.5 for coarse pointers to bound mobile GPU fill cost. Render functions therefore use the converter CSS-pixel methods. The converter device-pixel methods remain available for direct backing-store operations.
 
 ## Grid cache
 
-The grid is painted into an `OffscreenCanvas` when supported. A detached `HTMLCanvasElement` is the fallback. The cached bitmap is copied to the visible canvas with one `drawImage` call.
-
-The cache is rebuilt only after an explicit invalidation. Scrolling changes the viewport signal, so it invalidates the cached visible grid without involving React.
+The grid is painted directly into its visible canvas after an explicit invalidation. Avoiding an intermediate bitmap keeps the path compatible with mobile GPU implementations and removes the additional HiDPI-sized surface.
 
 ## Notes culling and batching
 

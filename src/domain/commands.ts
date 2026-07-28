@@ -69,6 +69,7 @@ export interface MoveNotesCommand {
 
 export interface NoteDurationChange {
   readonly noteId: NoteId;
+  readonly startTick?: Tick;
   readonly durationTicks: Tick;
 }
 
@@ -509,6 +510,7 @@ function applyResizeNotes(
     const note = requireNote(track, change.noteId, command.type);
     const updatedNote: Note = {
       ...note,
+      startTick: change.startTick ?? note.startTick,
       durationTicks: change.durationTicks,
     };
 

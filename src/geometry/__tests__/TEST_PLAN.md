@@ -67,6 +67,10 @@ Required scenarios:
 8. Index replacement through consecutive `update` calls.
 9. Reuse of the optional result buffer in `queryRect`.
 10. Rejection of invalid pitches, start ticks, and durations.
+11. Touch-envelope hits immediately before a note start and after its end.
+12. Nearest-edge selection when both resize envelopes overlap.
+13. Touch-envelope radii converted from CSS pixels at minimum and maximum zoom.
+14. Deterministic misses immediately outside the configured touch envelope.
 
 For generated datasets, compare:
 
@@ -98,4 +102,5 @@ The hot-query allocation target is:
 
 - zero explicit allocation for `queryPoint`;
 - zero explicit allocation for `queryRect` when a reusable target is supplied;
+- reusable internal candidate storage for touch-envelope queries;
 - no bucket or comparator recreation during queries.

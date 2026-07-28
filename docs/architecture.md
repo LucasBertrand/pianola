@@ -331,7 +331,12 @@ Responsabilités :
 - interroger l’index spatial avec un buffer réutilisable ;
 - mettre à jour le brouillon mutable pendant le geste ;
 - créer une commande métier unique lors de la validation ;
-- annuler le geste sur `pointercancel`, perte de focus ou touche Escape.
+- cancel the current draft on `pointercancel` or pointer-capture loss;
+- delete notes with a mouse double-click or touch double-tap;
+- resize one or more selected notes from either edge on the active grid.
+- route one pointer to the active sticky tool and reserve two pointers for viewport gestures;
+- publish `piano-roll-context-action` after a long press instead of opening a browser context menu;
+- convert visual touch radii to tick envelopes before querying the spatial index.
 
 ## 8. Lookahead Scheduler
 
