@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "jsx": "react-jsx",
+    "types": [
+      "react"
+    ]
+  },
+  "include": [
+    "src/domain/**/*.ts",
+    "src/geometry/**/*.ts",
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
+    "src/main.tsx",
+    "src/ui/**/*.ts",
+    "src/ui/**/*.tsx",
+    "src/vite-env.d.ts"
+  ]
+}
