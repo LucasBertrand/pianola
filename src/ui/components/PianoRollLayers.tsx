@@ -5,6 +5,9 @@ import React, {
   type CSSProperties,
   type MutableRefObject,
 } from "react";
+import {
+  RENDERING_CONSTANTS,
+} from "../../config/program-constants";
 import type {
   Note,
   NoteId,
@@ -124,13 +127,20 @@ const TRANSPARENT_CONTEXT_ATTRIBUTES: CanvasRenderingContext2DSettings = {
 };
 
 const GRID_BACKGROUND_COLOR = APPLICATION_SURFACE_COLOR;
-const BLACK_KEY_ROW_COLOR = "#121419";
-const PITCH_LINE_COLOR = "#252a33";
-const SUBDIVISION_LINE_COLOR = "#242933";
-const BEAT_LINE_COLOR = "#303744";
-const BAR_LINE_COLOR = "#465164";
-const MIN_GRID_LINE_SPACING_CSS_PIXELS = 4;
-const MAX_GRID_LINES_PER_PASS = 4_096;
+const BLACK_KEY_ROW_COLOR =
+  RENDERING_CONSTANTS.gridBlackKeyRowColor;
+const PITCH_LINE_COLOR =
+  RENDERING_CONSTANTS.gridPitchLineColor;
+const SUBDIVISION_LINE_COLOR =
+  RENDERING_CONSTANTS.gridSubdivisionLineColor;
+const BEAT_LINE_COLOR =
+  RENDERING_CONSTANTS.gridBeatLineColor;
+const BAR_LINE_COLOR =
+  RENDERING_CONSTANTS.gridBarLineColor;
+const MIN_GRID_LINE_SPACING_CSS_PIXELS =
+  RENDERING_CONSTANTS.minimumGridLineSpacingCssPixels;
+const MAX_GRID_LINES_PER_PASS =
+  RENDERING_CONSTANTS.maximumGridLinesPerPass;
 
 export function PianoRollLayers(
   props: PianoRollLayersProps,

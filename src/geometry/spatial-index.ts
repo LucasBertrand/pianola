@@ -6,7 +6,8 @@ import {
   MIN_MIDI_PITCH,
 } from "./converter";
 
-const PITCH_BUCKET_COUNT = 128;
+const PITCH_BUCKET_COUNT =
+  MAX_MIDI_PITCH - MIN_MIDI_PITCH + 1;
 const SEARCH_BLOCK_SIZE = 32;
 const TOUCH_QUERY_END_EPSILON_TICKS = 0.000_001;
 

@@ -1,3 +1,7 @@
+import {
+  INTERACTION_CONSTANTS,
+} from "../../config/program-constants";
+
 export type InteractionTool = "select";
 
 export interface InteractionModeState {
@@ -37,7 +41,7 @@ export interface PianoRollContextActionDetail {
 }
 
 export const PIANO_ROLL_CONTEXT_ACTION_EVENT =
-  "piano-roll-context-action" as const;
+  INTERACTION_CONSTANTS.contextActionEventName;
 
 export function isSupportedPointerActivation(
   event: PointerEvent,

@@ -1,3 +1,7 @@
+import {
+  PROJECT_CONSTANTS,
+} from "../config/program-constants";
+
 export type NoteId = string;
 export type VoiceId = string;
 export type EffectId = string;
@@ -6,24 +10,41 @@ export type Tick = number;
 export type MidiPitch = number;
 export type MidiVelocity = number;
 
-export const DEFAULT_PPQN = 960 as const;
-export const PROJECT_SCHEMA_VERSION = 5 as const;
-export const DEFAULT_MEASURE_COUNT = 16 as const;
-export const DEFAULT_MASTER_GAIN = 0.72 as const;
-export const MINIMUM_MASTER_GAIN = 0 as const;
-export const MAXIMUM_MASTER_GAIN = 1 as const;
-export const DEFAULT_INSTRUMENT_POLYPHONY = 1 as const;
-export const MINIMUM_INSTRUMENT_POLYPHONY = 1 as const;
-export const MAXIMUM_INSTRUMENT_POLYPHONY = 16 as const;
-export const MINIMUM_MEASURE_COUNT = 1 as const;
-export const MAXIMUM_MEASURE_COUNT = 256 as const;
-export const MAXIMUM_ENTITY_ID_LENGTH = 160 as const;
-export const MAXIMUM_PROJECT_TITLE_LENGTH = 200 as const;
-export const MAXIMUM_VOICE_NAME_LENGTH = 128 as const;
-export const MAXIMUM_PROJECT_VOICE_COUNT = 256 as const;
-export const MAXIMUM_PROJECT_NOTE_COUNT = 250_000 as const;
-export const MAXIMUM_VOICE_DESCRIPTOR_COUNT = 128 as const;
-export const MAXIMUM_DESCRIPTOR_PARAMETER_COUNT = 256 as const;
+export const DEFAULT_PPQN = PROJECT_CONSTANTS.ppqn;
+export const PROJECT_SCHEMA_VERSION =
+  PROJECT_CONSTANTS.schemaVersion;
+export const DEFAULT_MEASURE_COUNT =
+  PROJECT_CONSTANTS.defaultMeasureCount;
+export const DEFAULT_MASTER_GAIN =
+  PROJECT_CONSTANTS.defaultMasterGain;
+export const MINIMUM_MASTER_GAIN =
+  PROJECT_CONSTANTS.minimumMasterGain;
+export const MAXIMUM_MASTER_GAIN =
+  PROJECT_CONSTANTS.maximumMasterGain;
+export const DEFAULT_INSTRUMENT_POLYPHONY =
+  PROJECT_CONSTANTS.defaultInstrumentPolyphony;
+export const MINIMUM_INSTRUMENT_POLYPHONY =
+  PROJECT_CONSTANTS.minimumInstrumentPolyphony;
+export const MAXIMUM_INSTRUMENT_POLYPHONY =
+  PROJECT_CONSTANTS.maximumInstrumentPolyphony;
+export const MINIMUM_MEASURE_COUNT =
+  PROJECT_CONSTANTS.minimumMeasureCount;
+export const MAXIMUM_MEASURE_COUNT =
+  PROJECT_CONSTANTS.maximumMeasureCount;
+export const MAXIMUM_ENTITY_ID_LENGTH =
+  PROJECT_CONSTANTS.maximumEntityIdLength;
+export const MAXIMUM_PROJECT_TITLE_LENGTH =
+  PROJECT_CONSTANTS.maximumProjectTitleLength;
+export const MAXIMUM_VOICE_NAME_LENGTH =
+  PROJECT_CONSTANTS.maximumVoiceNameLength;
+export const MAXIMUM_PROJECT_VOICE_COUNT =
+  PROJECT_CONSTANTS.maximumVoiceCount;
+export const MAXIMUM_PROJECT_NOTE_COUNT =
+  PROJECT_CONSTANTS.maximumNoteCount;
+export const MAXIMUM_VOICE_DESCRIPTOR_COUNT =
+  PROJECT_CONSTANTS.maximumVoiceDescriptorCount;
+export const MAXIMUM_DESCRIPTOR_PARAMETER_COUNT =
+  PROJECT_CONSTANTS.maximumDescriptorParameterCount;
 
 export interface Note {
   readonly id: NoteId;
@@ -155,16 +176,22 @@ export interface AudioEngineConfig {
 
 export function createDefaultTransportState(): TransportState {
   return {
-    bpm: 120,
+    bpm: PROJECT_CONSTANTS.defaultTempoBpm,
     timeSignature: {
-      numerator: 4,
-      denominator: 4,
+      numerator:
+        PROJECT_CONSTANTS.defaultTimeSignatureNumerator,
+      denominator:
+        PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
     },
     loop: {
       startTick: 0,
-      endTick: DEFAULT_PPQN * 4,
+      endTick:
+        DEFAULT_PPQN
+        * 4
+        * PROJECT_CONSTANTS.defaultTimeSignatureNumerator
+        / PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
     },
-    loopEnabled: false,
+    loopEnabled: PROJECT_CONSTANTS.defaultLoopEnabled,
     ppqn: DEFAULT_PPQN,
     anchorTick: 0,
     anchorAudioTimeSeconds: null,
@@ -174,7 +201,7 @@ export function createDefaultTransportState(): TransportState {
 export function createDefaultMasterBusState(): MasterBusState {
   return {
     gain: DEFAULT_MASTER_GAIN,
-    muted: false,
+    muted: PROJECT_CONSTANTS.defaultMasterMuted,
   };
 }
 

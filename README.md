@@ -41,6 +41,7 @@ New-NetFirewallRule -DisplayName "Piano Roll Vite 5173" -Direction Inbound -Acti
 ```bash
 npm run typecheck
 npm run test:audio
+npm run test:midi
 npm run build
 ```
 
@@ -52,6 +53,7 @@ persistence, application, and UI before creating the Vite production bundle.
 - immutable, voice-oriented project model;
 - atomic command transactions with bounded snapshot-based Undo/Redo;
 - native versioned `.pianoroll` save and load format;
+- Standard MIDI File format 0/1 import and deterministic format 1 export;
 - two default voices, editable names and colors, mute, solo, and lock
   controls, and directly adjustable output levels;
 - voice ordering, note selection by voice, and selection transfer;
@@ -73,7 +75,8 @@ persistence, application, and UI before creating the Vite production bundle.
 - touch-first selection, lasso, dragging, and multi-note resizing;
 - long-press note drawing and double-click or double-tap deletion;
 - two-finger pan and pinch zoom;
-- copy, cut, paste, delete, Undo, Redo, New, Save, and Load tools;
+- copy, cut, paste, delete, Undo, Redo, New, Save, Load, MIDI Import,
+  and MIDI Export tools;
 - custom in-application confirmation and error dialogs that preserve
   fullscreen mode;
 - collision resolution for move, resize, draw, paste, and voice transfer
@@ -115,15 +118,53 @@ resolved collision remains one atomic Undo step.
 src/
   app/          Application composition and the deterministic initial scene
   audio/        Playback snapshots, time math, scheduler, and Web Audio engine
+  config/       Central product defaults, limits, interaction feel, and tuning
   domain/       Immutable model, validation, commands, reducer, and store
   geometry/     Coordinate conversion and the spatial note index
+  midi/         Bounded SMF codec plus domain import and export mapping
   persistence/  Native project file parsing, migration, and serialization
   ui/           Canvas layers, interaction hooks, overlays, and render signals
 ```
 
+Product-level constants are centralized in
+`src/config/program-constants.ts`, with English comments documenting each
+configuration group. Binary protocol masks and other private algorithm
+details intentionally remain next to the implementation that owns them.
+
 The current application manages one project at a time. The native document
 metadata and replaceable project store keep the file workflow compatible with
 a future tabbed multi-project interface.
+
+## MIDI file behavior
+
+Import accepts Standard MIDI File format 0 and format 1 with PPQN timing.
+Format 0 creates one project voice per populated MIDI channel. Format 1
+creates one voice per populated track and channel pair, preserving simultaneous
+notes as instrument polyphony.
+
+The importer uses the first tempo and the first supported time signature.
+Tempo is quantized to the editor's 0.1 BPM precision and constrained to
+30–240 BPM; any adjustment is reported before import. Later tempo or meter
+events, program changes, pitch bend, pressure, SysEx, unknown metadata, and
+every Control Change event are reported and ignored. CC64 sustain is therefore
+deliberately not applied to note durations.
+
+MIDI can contain overlapping notes with the same pitch and destination voice,
+while the native project model cannot. The in-application import dialog offers
+two explicit resolutions only when such overlaps exist:
+
+- **Merge** joins each connected overlap into one continuous note.
+- **Slice** gives the latest Note On priority, then resumes any still-active
+  underlying note after the newer note ends.
+
+There is no track-splitting option in the dialog. Import always replaces the
+single active project after confirmation. Import is bounded to 100,000 notes
+and conservative event budgets to protect tablet memory. Export writes one
+conductor track plus one track per project voice. It preserves a
+SMF-compatible project PPQN, or converts timing to 960 PPQN when required.
+Instrument patches, loop markers, voice colors, mute or solo state,
+automation, CC data, effects, and synth parameters are not exported in this
+first interoperable MIDI baseline.
 
 ## Audio status
 

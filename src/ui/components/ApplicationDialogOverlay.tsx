@@ -5,6 +5,7 @@ export type ApplicationDialogTone = "default" | "danger";
 export interface ApplicationDialogState {
   readonly title: string;
   readonly message: string;
+  readonly details?: readonly string[];
   readonly confirmLabel: string;
   readonly alternateLabel: string | null;
   readonly cancelLabel: string | null;
@@ -55,6 +56,18 @@ export function ApplicationDialogOverlay(
         <p id="application-dialog-message">
           {dialog.message}
         </p>
+        {dialog.details === undefined
+          || dialog.details.length === 0
+          ? null
+          : (
+              <ul className="application-dialog-details">
+                {dialog.details.map((detail, index) => (
+                  <li key={`${String(index)}-${detail}`}>
+                    {detail}
+                  </li>
+                ))}
+              </ul>
+            )}
         <div
           className={
             dialog.alternateLabel === null

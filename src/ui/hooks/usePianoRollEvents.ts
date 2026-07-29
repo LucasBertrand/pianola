@@ -3,6 +3,10 @@ import {
   useRef,
   type RefObject,
 } from "react";
+import {
+  EDITOR_CONSTANTS,
+  INTERACTION_CONSTANTS,
+} from "../../config/program-constants";
 import type {
   NoteDurationChange,
   PianoRollCommand,
@@ -107,13 +111,20 @@ interface TapState {
   clientY: number;
 }
 
-const TOUCH_DOUBLE_TAP_DELAY_MS = 360;
-const TOUCH_DOUBLE_TAP_DISTANCE_CSS_PIXELS = 24;
-const TAP_MOVEMENT_TOLERANCE_CSS_PIXELS = 10;
-const MOUSE_RESIZE_HANDLE_CSS_PIXELS = 8;
-const TOUCH_RESIZE_HANDLE_CSS_PIXELS = 16;
-const MOUSE_NOTE_HIT_ENVELOPE_CSS_PIXELS = 2;
-const TOUCH_NOTE_HIT_ENVELOPE_CSS_PIXELS = 10;
+const TOUCH_DOUBLE_TAP_DELAY_MS =
+  INTERACTION_CONSTANTS.touchDoubleTapDelayMs;
+const TOUCH_DOUBLE_TAP_DISTANCE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.touchDoubleTapDistanceCssPixels;
+const TAP_MOVEMENT_TOLERANCE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.tapMovementToleranceCssPixels;
+const MOUSE_RESIZE_HANDLE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.mouseResizeHandleCssPixels;
+const TOUCH_RESIZE_HANDLE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.touchResizeHandleCssPixels;
+const MOUSE_NOTE_HIT_ENVELOPE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.mouseNoteHitEnvelopeCssPixels;
+const TOUCH_NOTE_HIT_ENVELOPE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.touchNoteHitEnvelopeCssPixels;
 
 export function usePianoRollEvents(
   options: UsePianoRollEventsOptions,
@@ -906,7 +917,7 @@ export function usePianoRollEvents(
             pitch: draft.drawPitch,
             startTick: draft.drawStartTick,
             durationTicks: draft.drawDurationTicks,
-            velocity: 100,
+            velocity: EDITOR_CONSTANTS.defaultDrawVelocity,
             voiceId,
           };
 

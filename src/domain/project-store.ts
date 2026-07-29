@@ -2,6 +2,9 @@ import {
   projectReducer,
   type Transaction,
 } from "./commands";
+import {
+  PROJECT_CONSTANTS,
+} from "../config/program-constants";
 import type {
   ProjectState,
 } from "./model";
@@ -11,8 +14,6 @@ export type ProjectStoreListener = (
   previousState: ProjectState,
   transaction: Transaction,
 ) => void;
-
-const MAXIMUM_HISTORY_ENTRIES = 200;
 
 export interface ProjectStorePort {
   getState(): ProjectState;
@@ -50,7 +51,10 @@ export class ProjectStore implements ProjectStorePort {
 
     this.pastStates.push(previousState);
 
-    if (this.pastStates.length > MAXIMUM_HISTORY_ENTRIES) {
+    if (
+      this.pastStates.length
+      > PROJECT_CONSTANTS.maximumHistoryEntries
+    ) {
       this.pastStates.shift();
     }
 
@@ -122,7 +126,10 @@ export class ProjectStore implements ProjectStorePort {
     const previousState = this.currentState;
     this.pastStates.push(previousState);
 
-    if (this.pastStates.length > MAXIMUM_HISTORY_ENTRIES) {
+    if (
+      this.pastStates.length
+      > PROJECT_CONSTANTS.maximumHistoryEntries
+    ) {
       this.pastStates.shift();
     }
 

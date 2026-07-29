@@ -1,20 +1,28 @@
 import type {
   Note,
   NoteId,
-  OscillatorWaveform,
   ProjectState,
   Track,
   Voice,
   VoiceId,
 } from "../domain/model";
 import {
+  EDITOR_CONSTANTS,
+  PROJECT_CONSTANTS,
+  VIEWPORT_CONSTANTS,
+  VOICE_CONSTANTS,
+} from "../config/program-constants";
+import {
   createDefaultMasterBusState,
   createDefaultTransportState,
-  DEFAULT_INSTRUMENT_POLYPHONY,
   DEFAULT_MEASURE_COUNT,
   getProjectDurationTicks,
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
+import {
+  createDefaultVoice,
+  getDefaultOscillatorWaveform,
+} from "../domain/voice-factory";
 import {
   ProjectStore,
 } from "../domain/project-store";
@@ -44,17 +52,18 @@ import {
   type ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
 
-export const DEMO_NOTE_COUNT = 100;
-const DEMO_INITIAL_NOTE_SPAN_TICKS = 960 * 4 * 8;
-export const INITIAL_PITCH_HEIGHT = 18;
-export const INITIAL_MAX_VISIBLE_PITCH = 84;
+export const DEMO_NOTE_COUNT = EDITOR_CONSTANTS.demoNoteCount;
+const DEMO_INITIAL_NOTE_SPAN_TICKS =
+  EDITOR_CONSTANTS.demoInitialNoteSpanTicks;
+export const INITIAL_PITCH_HEIGHT =
+  VIEWPORT_CONSTANTS.initialPitchHeightCssPixels;
+export const INITIAL_MAX_VISIBLE_PITCH =
+  VIEWPORT_CONSTANTS.initialMaximumVisiblePitch;
 
 export interface DemoVoice {
   readonly id: VoiceId;
   readonly name: string;
-  readonly role: string;
   readonly color: string;
-  readonly waveform: string;
 }
 
 export interface DemoScene {
@@ -73,38 +82,31 @@ export interface DemoScene {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
 }
 
-export const DEMO_VOICES: readonly DemoVoice[] = [
-  {
-    id: "voice-atlas",
-    name: "Atlas",
-    role: "Foundation",
-    color: "#79a7ff",
-    waveform: "Saw",
-  },
-  {
-    id: "voice-bloom",
-    name: "Bloom",
-    role: "Harmony",
-    color: "#a77bf3",
-    waveform: "Sine",
-  },
-] as const;
+export const DEMO_VOICES: readonly DemoVoice[] =
+  VOICE_CONSTANTS.demoVoices;
 
 export function createDemoScene(): DemoScene {
   const viewportState: ViewportState = {
-    zoomX: 1,
-    zoomY: 1,
+    zoomX: VIEWPORT_CONSTANTS.initialHorizontalZoom,
+    zoomY: VIEWPORT_CONSTANTS.initialVerticalZoom,
     scrollX: 0,
     scrollY:
-      (127 - INITIAL_MAX_VISIBLE_PITCH) * INITIAL_PITCH_HEIGHT,
+      (
+        VIEWPORT_CONSTANTS.maximumMidiPitch
+        - INITIAL_MAX_VISIBLE_PITCH
+      ) * INITIAL_PITCH_HEIGHT,
     pitchHeight: INITIAL_PITCH_HEIGHT,
-    ticksPerPixel: 5,
-    devicePixelRatio: 1,
+    ticksPerPixel: VIEWPORT_CONSTANTS.initialTicksPerPixel,
+    devicePixelRatio:
+      VIEWPORT_CONSTANTS.initialDevicePixelRatio,
   };
   const spatialIndex = new SpatialIndex();
   const notes = createDemoNotes(DEMO_NOTE_COUNT);
   const projectStore = new ProjectStore(
-    createProjectState(notes, "Untitled exploration"),
+    createProjectState(
+      notes,
+      PROJECT_CONSTANTS.demoProjectTitle,
+    ),
   );
   const indexedNotesBuffer: Note[] = [];
   const voiceStyles = new MutableRenderSignal(
@@ -139,21 +141,26 @@ export function createDemoScene(): DemoScene {
     visibleRegion: new MutableRenderSignal(
       calculateVisibleRegion(
         viewportState,
-        1_600,
-        900,
+        VIEWPORT_CONSTANTS.initialWidthCssPixels,
+        VIEWPORT_CONSTANTS.initialHeightCssPixels,
         getProjectDurationTicks(projectStore.getState()),
       ),
     ),
     voiceStyles,
     noteColorMode: new MutableRenderSignal<NoteColorMode>(
-      "voice",
+      EDITOR_CONSTANTS.defaultNoteColorMode,
     ),
     voiceSelectionRequest: new MutableRenderSignal<VoiceId | null>(
       null,
     ),
-    playheadTick: new MutableRenderSignal(960 * 4),
+    playheadTick: new MutableRenderSignal(
+      PROJECT_CONSTANTS.ppqn
+      * 4
+      * PROJECT_CONSTANTS.defaultTimeSignatureNumerator
+      / PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
+    ),
     interactionToolState: new MutableRenderSignal({
-      activeTool: "select",
+      activeTool: EDITOR_CONSTANTS.defaultInteractionTool,
     }),
     gridSettings,
     gridResolutionTicks: new MappedRenderSignal(
@@ -216,9 +223,10 @@ export function calculateVisibleRegion(
   const pitchHeight =
     viewport.pitchHeight * viewport.zoomY;
   const maxPitch =
-    127 - Math.floor(viewport.scrollY / pitchHeight);
+    VIEWPORT_CONSTANTS.maximumMidiPitch
+    - Math.floor(viewport.scrollY / pitchHeight);
   const minPitch =
-    127
+    VIEWPORT_CONSTANTS.maximumMidiPitch
     - Math.floor(
       (viewport.scrollY + heightCssPixels) / pitchHeight,
     );
@@ -226,8 +234,14 @@ export function calculateVisibleRegion(
   return {
     startTick: Math.max(0, startTick),
     endTick: Math.min(totalTicks, endTick),
-    minPitch: Math.max(0, minPitch),
-    maxPitch: Math.min(127, maxPitch),
+    minPitch: Math.max(
+      VIEWPORT_CONSTANTS.minimumMidiPitch,
+      minPitch,
+    ),
+    maxPitch: Math.min(
+      VIEWPORT_CONSTANTS.maximumMidiPitch,
+      maxPitch,
+    ),
   };
 }
 
@@ -404,7 +418,7 @@ function createProjectState(
     tracksByVoiceId,
     transportSettings: {
       ...createDefaultTransportState(),
-      bpm: 112,
+      bpm: PROJECT_CONSTANTS.demoTempoBpm,
     },
     masterBus: createDefaultMasterBusState(),
   };
@@ -414,54 +428,13 @@ function createDomainVoice(
   demoVoice: DemoVoice,
   voiceIndex: number,
 ): Voice {
-  return {
+  return createDefaultVoice({
     id: demoVoice.id,
     name: demoVoice.name,
     color: demoVoice.color,
-    muted: false,
-    locked: false,
-    solo: false,
-    gain: 0.82,
-    pan: 0,
-    instrument: {
-      kind: "subtractive",
-      oscillatorWaveform: getOscillatorWaveform(voiceIndex),
-      polyphony: DEFAULT_INSTRUMENT_POLYPHONY,
-      oscillatorDetuneCents: 0,
-      envelope: {
-        attackSeconds: 0.012,
-        decaySeconds: 0.18,
-        sustainLevel: 0.72,
-        releaseSeconds: 0.42,
-      },
-      filterCutoffHz: 12_000,
-      filterResonance: 0.2,
-    },
-    effects: [],
-    generativeRules: [],
-    interpretation: {
-      transposeSemitones: 0,
-      timingOffsetTicks: 0,
-      gateRatio: 1,
-      velocityScale: 1,
-      probability: 1,
-    },
-  };
-}
-
-function getOscillatorWaveform(
-  voiceIndex: number,
-): OscillatorWaveform {
-  switch (voiceIndex % 4) {
-    case 0:
-      return "sawtooth";
-    case 1:
-      return "sine";
-    case 2:
-      return "square";
-    default:
-      return "triangle";
-  }
+    oscillatorWaveform:
+      getDefaultOscillatorWaveform(voiceIndex),
+  });
 }
 
 function rebuildSpatialIndex(

@@ -18,6 +18,9 @@ import type {
   VoiceInterpretation,
 } from "../domain/model";
 import {
+  FILE_CONSTANTS,
+} from "../config/program-constants";
+import {
   createDefaultMasterBusState,
   DEFAULT_INSTRUMENT_POLYPHONY,
   getProjectDurationTicks,
@@ -44,11 +47,13 @@ import {
 } from "../domain/validation";
 
 export const NATIVE_PROJECT_FILE_FORMAT =
-  "com.piano-roll.native-project" as const;
-export const NATIVE_PROJECT_FILE_VERSION = 5 as const;
-export const NATIVE_PROJECT_FILE_EXTENSION = ".pianoroll" as const;
+  FILE_CONSTANTS.nativeProjectFormat;
+export const NATIVE_PROJECT_FILE_VERSION =
+  FILE_CONSTANTS.nativeProjectVersion;
+export const NATIVE_PROJECT_FILE_EXTENSION =
+  FILE_CONSTANTS.nativeProjectExtension;
 export const MAXIMUM_NATIVE_PROJECT_FILE_BYTES =
-  32 * 1024 * 1024;
+  FILE_CONSTANTS.nativeProjectMaximumBytes;
 export const MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH =
   MAXIMUM_PROJECT_TITLE_LENGTH;
 

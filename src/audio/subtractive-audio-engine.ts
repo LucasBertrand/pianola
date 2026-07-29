@@ -2,6 +2,9 @@ import type {
   AudioEngineConfig,
   VoiceId,
 } from "../domain/model";
+import {
+  AUDIO_CONSTANTS,
+} from "../config/program-constants";
 import type {
   AudioEnginePort,
   PlaybackSnapshot,
@@ -32,11 +35,6 @@ interface ActiveVoice {
   stopAudioTimeSeconds: number;
   ended: boolean;
 }
-
-const MINIMUM_NOTE_SECONDS = 0.002;
-const CANCELLATION_FADE_SECONDS = 0.006;
-const BUS_RAMP_SECONDS = 0.008;
-const ENVELOPE_TIME_CONSTANT_DIVISOR = 5;
 
 export class SubtractiveAudioEngine implements AudioEnginePort {
   private currentConfig: AudioEngineConfig;
@@ -148,7 +146,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
       event.startAudioTimeSeconds,
     );
     const noteEndAudioTimeSeconds = Math.max(
-      startAudioTimeSeconds + MINIMUM_NOTE_SECONDS,
+      startAudioTimeSeconds + AUDIO_CONSTANTS.minimumNoteSeconds,
       event.endAudioTimeSeconds,
     );
 
@@ -245,7 +243,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     };
     oscillator.start(startAudioTimeSeconds);
     oscillator.stop(
-      stopAudioTimeSeconds + MINIMUM_NOTE_SECONDS,
+      stopAudioTimeSeconds + AUDIO_CONSTANTS.minimumNoteSeconds,
     );
   }
 
@@ -634,7 +632,8 @@ function scheduleEnvelope(
 
   if (attackSeconds > 0) {
     const attackTimeConstant =
-      attackSeconds / ENVELOPE_TIME_CONSTANT_DIVISOR;
+      attackSeconds
+      / AUDIO_CONSTANTS.envelopeTimeConstantDivisor;
 
     parameter.setTargetAtTime(
       peakLevel,
@@ -666,7 +665,8 @@ function scheduleEnvelope(
       && noteEndAudioTimeSeconds < decayEnd
     ) {
       const decayTimeConstant =
-        decaySeconds / ENVELOPE_TIME_CONSTANT_DIVISOR;
+        decaySeconds
+        / AUDIO_CONSTANTS.envelopeTimeConstantDivisor;
 
       parameter.setTargetAtTime(
         sustainGain,
@@ -688,7 +688,8 @@ function scheduleEnvelope(
         parameter.setTargetAtTime(
           sustainGain,
           attackEnd,
-          decaySeconds / ENVELOPE_TIME_CONSTANT_DIVISOR,
+          decaySeconds
+            / AUDIO_CONSTANTS.envelopeTimeConstantDivisor,
         );
         parameter.setValueAtTime(sustainGain, decayEnd);
       } else {
@@ -711,7 +712,8 @@ function scheduleEnvelope(
     parameter.setTargetAtTime(
       0,
       noteEndAudioTimeSeconds,
-      releaseSeconds / ENVELOPE_TIME_CONSTANT_DIVISOR,
+      releaseSeconds
+        / AUDIO_CONSTANTS.envelopeTimeConstantDivisor,
     );
     parameter.setValueAtTime(
       0,
@@ -744,7 +746,7 @@ function stopActiveVoice(
   }
 
   const stopTime =
-    atAudioTimeSeconds + CANCELLATION_FADE_SECONDS;
+    atAudioTimeSeconds + AUDIO_CONSTANTS.cancellationFadeSeconds;
   const gain = activeVoice.envelopeGain.gain;
 
   holdAudioParam(gain, atAudioTimeSeconds);
@@ -752,7 +754,7 @@ function stopActiveVoice(
 
   try {
     activeVoice.oscillator.stop(
-      stopTime + MINIMUM_NOTE_SECONDS,
+      stopTime + AUDIO_CONSTANTS.minimumNoteSeconds,
     );
   } catch {
     activeVoice.ended = true;
@@ -766,7 +768,7 @@ function cancelFutureVoice(
   atAudioTimeSeconds: number,
 ): void {
   const stopTime =
-    atAudioTimeSeconds + MINIMUM_NOTE_SECONDS;
+    atAudioTimeSeconds + AUDIO_CONSTANTS.minimumNoteSeconds;
   const gain = activeVoice.envelopeGain.gain;
 
   gain.cancelScheduledValues(atAudioTimeSeconds);
@@ -789,7 +791,7 @@ function setAudioParamSmoothly(
   holdAudioParam(parameter, atAudioTimeSeconds);
   parameter.linearRampToValueAtTime(
     value,
-    atAudioTimeSeconds + BUS_RAMP_SECONDS,
+    atAudioTimeSeconds + AUDIO_CONSTANTS.busRampSeconds,
   );
 }
 

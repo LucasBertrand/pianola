@@ -2,6 +2,9 @@ import type {
   Note,
   VoiceId,
 } from "../../domain/model";
+import {
+  RENDERING_CONSTANTS,
+} from "../../config/program-constants";
 
 export interface VoiceRenderStyle {
   readonly fillStyle: string;
@@ -11,21 +14,10 @@ export interface VoiceRenderStyle {
 
 export type NoteColorMode = "voice" | "pitch";
 
-const DEFAULT_NOTE_COLOR = "#6ea8fe";
-const PITCH_CLASS_NOTE_COLORS = [
-  "#ef5c65",
-  "#f07c5d",
-  "#eaa64f",
-  "#d3c958",
-  "#8bcf63",
-  "#55c89e",
-  "#4bc2d1",
-  "#5797ea",
-  "#7775e8",
-  "#a66fdc",
-  "#d56dbc",
-  "#ea6f8d",
-] as const;
+const DEFAULT_NOTE_COLOR =
+  RENDERING_CONSTANTS.defaultNoteColor;
+const PITCH_CLASS_NOTE_COLORS =
+  RENDERING_CONSTANTS.pitchClassNoteColors;
 
 export function compareNotesByVoiceRenderOrder(
   left: Note,

@@ -11,6 +11,16 @@ import {
   createPortal,
 } from "react-dom";
 import {
+  EDITOR_CONSTANTS,
+  FILE_CONSTANTS,
+  INTERACTION_CONSTANTS,
+  MIDI_CONSTANTS,
+  PROJECT_CONSTANTS,
+  RENDERING_CONSTANTS,
+  VIEWPORT_CONSTANTS,
+  VOICE_CONSTANTS,
+} from "../config/program-constants";
+import {
   CommandRejectedError,
   type PianoRollCommand,
   type Transaction,
@@ -31,7 +41,6 @@ import type {
 import {
   getProjectDurationTicks,
   getTicksPerMeasure,
-  DEFAULT_INSTRUMENT_POLYPHONY,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MEASURE_COUNT,
@@ -40,6 +49,10 @@ import {
   MINIMUM_MASTER_GAIN,
   MAXIMUM_VOICE_NAME_LENGTH,
 } from "../domain/model";
+import {
+  createDefaultVoice,
+  getDefaultOscillatorWaveform,
+} from "../domain/voice-factory";
 import {
   countNoteEditCollisions,
   createNoteCollisionResolutionPlan,
@@ -53,6 +66,23 @@ import {
   MINIMUM_VERTICAL_ZOOM,
   type ViewportState,
 } from "../geometry/converter";
+import {
+  createMidiExport,
+  createMidiFileName,
+} from "../midi/midi-exporter";
+import {
+  analyzeMidiImport,
+  createProjectFromMidiImport,
+  formatMidiImportError,
+  type MidiImportAnalysis,
+  type MidiImportCollisionStrategy,
+} from "../midi/midi-importer";
+import {
+  readStandardMidiFile,
+} from "../midi/smf-reader";
+import {
+  writeStandardMidiFile,
+} from "../midi/smf-writer";
 import {
   createNativeProjectFileName,
   MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
@@ -153,12 +183,19 @@ const VIEW_INPUT_HORIZONTAL_SCROLL = 1;
 const VIEW_INPUT_HORIZONTAL_ZOOM = 2;
 const VIEW_INPUT_VERTICAL_SCROLL = 4;
 const VIEW_INPUT_VERTICAL_ZOOM = 8;
-const RULER_HEIGHT_CSS_PIXELS = 28;
-const LOOP_REGION_HEIGHT_CSS_PIXELS = 22;
-const PIANO_KEY_LONG_PRESS_DELAY_MS = 520;
-const PIANO_KEY_PEN_LONG_PRESS_DELAY_MS = 280;
-const PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE = 10;
-const ENVELOPE_SLIDER_CURVE_EXPONENT = 2.6;
+const RULER_HEIGHT_CSS_PIXELS =
+  EDITOR_CONSTANTS.rulerHeightCssPixels;
+const LOOP_REGION_HEIGHT_CSS_PIXELS =
+  EDITOR_CONSTANTS.loopRegionHeightCssPixels;
+const PIANO_KEY_LONG_PRESS_DELAY_MS =
+  INTERACTION_CONSTANTS.pianoKeyLongPressDelayMs;
+const PIANO_KEY_PEN_LONG_PRESS_DELAY_MS =
+  INTERACTION_CONSTANTS.pianoKeyPenLongPressDelayMs;
+const PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE =
+  INTERACTION_CONSTANTS
+    .pianoKeyLongPressMovementToleranceCssPixels;
+const ENVELOPE_SLIDER_CURVE_EXPONENT =
+  EDITOR_CONSTANTS.envelopeSliderCurveExponent;
 const TIMELINE_HEADER_HEIGHT_CSS_PIXELS =
   RULER_HEIGHT_CSS_PIXELS + LOOP_REGION_HEIGHT_CSS_PIXELS;
 
@@ -174,6 +211,8 @@ export function App(): React.JSX.Element {
   const pitchZoomLabelRef = useRef<HTMLOutputElement | null>(null);
   const loadProjectInputRef =
     useRef<HTMLInputElement | null>(null);
+  const importMidiInputRef =
+    useRef<HTMLInputElement | null>(null);
   const barLabelRef = useRef<HTMLOutputElement | null>(null);
   const playheadPositionLabelRef =
     useRef<HTMLOutputElement | null>(null);
@@ -184,9 +223,11 @@ export function App(): React.JSX.Element {
   const editTransactionSequenceRef = useRef(0);
   const documentMetadataRef =
     useRef<NativeProjectFileMetadata | null>(null);
+  const pendingMidiImportRef =
+    useRef<MidiImportAnalysis | null>(null);
   const dimensionsRef = useRef<ViewportDimensions>({
-    width: 1_600,
-    height: 900,
+    width: VIEWPORT_CONSTANTS.initialWidthCssPixels,
+    height: VIEWPORT_CONSTANTS.initialHeightCssPixels,
   });
 
   if (sceneRef.current === null) {
@@ -279,6 +320,7 @@ export function App(): React.JSX.Element {
   );
   const handleApplicationDialogCancel =
     useCallback((): void => {
+      pendingMidiImportRef.current = null;
       setApplicationDialog(null);
     }, []);
   const handleApplicationDialogConfirm =
@@ -852,7 +894,11 @@ export function App(): React.JSX.Element {
         / currentPitchHeight;
       const maximumScroll = Math.max(
         0,
-        128 * nextPitchHeight - viewportHeight,
+        (
+          VIEWPORT_CONSTANTS.maximumMidiPitch
+          - VIEWPORT_CONSTANTS.minimumMidiPitch
+          + 1
+        ) * nextPitchHeight - viewportHeight,
       );
       const scrollY = Math.min(
         maximumScroll,
@@ -890,18 +936,23 @@ export function App(): React.JSX.Element {
 
     const viewport: ViewportState = {
       ...currentScene.viewport.get(),
-      zoomX: 1,
-      zoomY: 1,
+      zoomX: VIEWPORT_CONSTANTS.initialHorizontalZoom,
+      zoomY: VIEWPORT_CONSTANTS.initialVerticalZoom,
       scrollX: 0,
       scrollY:
-        (127 - INITIAL_MAX_VISIBLE_PITCH)
+        (
+          VIEWPORT_CONSTANTS.maximumMidiPitch
+          - INITIAL_MAX_VISIBLE_PITCH
+        )
         * INITIAL_PITCH_HEIGHT,
     };
 
     publishViewport(viewport);
 
     if (zoomInputRef.current !== null) {
-      zoomInputRef.current.value = "1";
+      zoomInputRef.current.value = String(
+        VIEWPORT_CONSTANTS.initialHorizontalZoom,
+      );
     }
 
     if (scrollInputRef.current !== null) {
@@ -936,11 +987,14 @@ export function App(): React.JSX.Element {
     }
 
     if (pitchZoomInputRef.current !== null) {
-      pitchZoomInputRef.current.value = "1";
+      pitchZoomInputRef.current.value = String(
+        VIEWPORT_CONSTANTS.initialVerticalZoom,
+      );
     }
 
     if (zoomLabelRef.current !== null) {
-      zoomLabelRef.current.value = "100%";
+      zoomLabelRef.current.value =
+        `${Math.round(VIEWPORT_CONSTANTS.initialHorizontalZoom * 100)}%`;
     }
 
     if (barLabelRef.current !== null) {
@@ -948,7 +1002,8 @@ export function App(): React.JSX.Element {
     }
 
     if (pitchZoomLabelRef.current !== null) {
-      pitchZoomLabelRef.current.value = "100%";
+      pitchZoomLabelRef.current.value =
+        `${Math.round(VIEWPORT_CONSTANTS.initialVerticalZoom * 100)}%`;
     }
   }, [publishViewport]);
 
@@ -2015,20 +2070,11 @@ export function App(): React.JSX.Element {
         );
       }
 
-      const downloadUrl = URL.createObjectURL(projectBlob);
-      const downloadLink = document.createElement("a");
-
       documentMetadataRef.current = metadata;
-      downloadLink.href = downloadUrl;
-      downloadLink.download =
-        createNativeProjectFileName(state.title);
-      downloadLink.hidden = true;
-      document.body.append(downloadLink);
-      downloadLink.click();
-      downloadLink.remove();
-      window.setTimeout(() => {
-        URL.revokeObjectURL(downloadUrl);
-      }, 1_000);
+      downloadBrowserFile(
+        projectBlob,
+        createNativeProjectFileName(state.title),
+      );
     } catch (error: unknown) {
       showApplicationAlert(
         "Save failed",
@@ -2043,32 +2089,49 @@ export function App(): React.JSX.Element {
     scene,
     showApplicationAlert,
   ]);
+  const replaceActiveProject = useCallback(
+    (
+      nextProject: ProjectState,
+      metadata: NativeProjectFileMetadata,
+      label: string,
+      playheadTick: number,
+    ): void => {
+      const controller =
+        pianoRollEventControllerRef.current;
+
+      stopPlayback();
+      controller?.cancel();
+      controller?.clearSelection();
+      clipboardRef.current = null;
+      pendingMidiImportRef.current = null;
+      setClipboardAvailable(false);
+      setSelectionAvailable(false);
+      scene.voiceSelectionRequest.set(null);
+      scene.gridSettings.set(DEFAULT_GRID_SETTINGS);
+      documentMetadataRef.current = metadata;
+      scene.projectStore.replaceState(nextProject, label);
+      setSelectedVoiceId(nextProject.voiceOrder[0] ?? null);
+      seekPlayback(playheadTick);
+      handleResetView();
+    },
+    [
+      handleResetView,
+      scene,
+      seekPlayback,
+      stopPlayback,
+    ],
+  );
   const createNewProject = useCallback((): void => {
-    const controller = pianoRollEventControllerRef.current;
     const blankProject = createBlankProjectState();
 
-    stopPlayback();
-    controller?.cancel();
-    controller?.clearSelection();
-    clipboardRef.current = null;
-    setClipboardAvailable(false);
-    setSelectionAvailable(false);
-    scene.voiceSelectionRequest.set(null);
-    scene.gridSettings.set(DEFAULT_GRID_SETTINGS);
-    documentMetadataRef.current =
-      createNativeProjectFileMetadata();
-    scene.projectStore.replaceState(
+    replaceActiveProject(
       blankProject,
+      createNativeProjectFileMetadata(),
       "Create project",
+      0,
     );
-    setSelectedVoiceId(blankProject.voiceOrder[0] ?? null);
-    seekPlayback(0);
-    handleResetView();
   }, [
-    handleResetView,
-    scene,
-    seekPlayback,
-    stopPlayback,
+    replaceActiveProject,
   ]);
   const handleNewProject = useCallback((): void => {
     showApplicationConfirmation({
@@ -2114,30 +2177,13 @@ export function App(): React.JSX.Element {
         const loadedProject = parseNativeProjectFile(
           await file.text(),
         );
-        const controller =
-          pianoRollEventControllerRef.current;
-
-        stopPlayback();
-        controller?.cancel();
-        controller?.clearSelection();
-        clipboardRef.current = null;
-        setClipboardAvailable(false);
-        setSelectionAvailable(false);
-        documentMetadataRef.current =
-          loadedProject.metadata;
-        scene.gridSettings.set(DEFAULT_GRID_SETTINGS);
-        scene.projectStore.replaceState(
+        replaceActiveProject(
           loadedProject.projectState,
+          loadedProject.metadata,
           "Load project",
-        );
-        setSelectedVoiceId(
-          loadedProject.projectState.voiceOrder[0] ?? null,
-        );
-        seekPlayback(
           loadedProject.projectState
             .transportSettings.anchorTick,
         );
-        handleResetView();
       } catch (error: unknown) {
         showApplicationAlert(
           "Load failed",
@@ -2152,19 +2198,183 @@ export function App(): React.JSX.Element {
       }
     },
     [
-      handleResetView,
-      scene,
-      seekPlayback,
+      replaceActiveProject,
       showApplicationAlert,
-      stopPlayback,
     ],
   );
+  const commitMidiImport = useCallback(
+    (strategy: MidiImportCollisionStrategy): void => {
+      const analysis = pendingMidiImportRef.current;
+
+      if (analysis === null) {
+        return;
+      }
+
+      try {
+        const importedProject = createProjectFromMidiImport(
+          analysis,
+          strategy,
+        );
+
+        pendingMidiImportRef.current = null;
+        replaceActiveProject(
+          importedProject,
+          createNativeProjectFileMetadata(),
+          "Import MIDI project",
+          0,
+        );
+      } catch (error: unknown) {
+        pendingMidiImportRef.current = null;
+        showApplicationAlert(
+          "MIDI import failed",
+          formatMidiImportError(error),
+          "danger",
+        );
+      }
+    },
+    [
+      replaceActiveProject,
+      showApplicationAlert,
+    ],
+  );
+  const presentMidiImportAnalysis = useCallback(
+    (analysis: MidiImportAnalysis): void => {
+      pendingMidiImportRef.current = analysis;
+      const details = [
+        `Format ${String(analysis.sourceFormat)} - ${String(analysis.sourceTicksPerQuarterNote)} PPQN`,
+        `${String(analysis.noteCount)} notes - ${String(analysis.voiceCandidates.length)} voices`,
+        `${formatTempo(analysis.tempoBpm)} BPM - ${String(analysis.timeSignature.numerator)}/${String(analysis.timeSignature.denominator)}`,
+        ...analysis.warnings,
+      ];
+
+      if (analysis.collisionCount > 0) {
+        details.unshift(
+          `${String(analysis.collisionCount)} same-voice, same-pitch overlaps require resolution.`,
+        );
+      }
+
+      setApplicationDialog({
+        title: `Import "${analysis.title}"?`,
+        message:
+          "Importing this MIDI file will replace the active project and discard unsaved changes. Unsupported MIDI performance data is listed below.",
+        details,
+        confirmLabel:
+          analysis.collisionCount > 0
+            ? "Merge and import"
+            : "Import project",
+        alternateLabel:
+          analysis.collisionCount > 0
+            ? "Slice and import"
+            : null,
+        cancelLabel: "Cancel",
+        tone: "default",
+        onConfirm(): void {
+          commitMidiImport("merge");
+        },
+        onAlternate:
+          analysis.collisionCount > 0
+            ? (): void => {
+                commitMidiImport("slice");
+              }
+            : null,
+      });
+    },
+    [commitMidiImport],
+  );
+  const handleOpenMidiImport = useCallback((): void => {
+    const input = importMidiInputRef.current;
+
+    if (input === null) {
+      return;
+    }
+
+    input.value = "";
+    input.click();
+  }, []);
+  const handleMidiFileChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+      const input = event.currentTarget;
+      const file = input.files?.[0];
+
+      if (file === undefined) {
+        return;
+      }
+
+      try {
+        if (file.size > MIDI_CONSTANTS.maximumFileBytes) {
+          throw new Error(
+            "The selected MIDI file is too large.",
+          );
+        }
+
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const midiFile = readStandardMidiFile(bytes);
+        const analysis = analyzeMidiImport(
+          midiFile,
+          file.name,
+        );
+
+        presentMidiImportAnalysis(analysis);
+      } catch (error: unknown) {
+        pendingMidiImportRef.current = null;
+        showApplicationAlert(
+          "MIDI import failed",
+          formatMidiImportError(error),
+          "danger",
+        );
+      } finally {
+        input.value = "";
+      }
+    },
+    [
+      presentMidiImportAnalysis,
+      showApplicationAlert,
+    ],
+  );
+  const handleExportMidi = useCallback((): void => {
+    try {
+      const state = scene.projectStore.getState();
+      const midiExport = createMidiExport(state);
+      const bytes = writeStandardMidiFile(midiExport.file);
+      const payload = new Uint8Array(bytes.byteLength);
+
+      payload.set(bytes);
+      downloadBrowserFile(
+        new Blob(
+          [payload.buffer],
+          {
+            type: "audio/midi",
+          },
+        ),
+        createMidiFileName(state.title),
+      );
+
+      if (midiExport.warnings.length > 0) {
+        showApplicationAlert(
+          "MIDI exported with adjustments",
+          midiExport.warnings.join(" "),
+        );
+      }
+    } catch (error: unknown) {
+      showApplicationAlert(
+        "MIDI export failed",
+        formatMidiImportError(error),
+        "danger",
+      );
+    }
+  }, [
+    scene,
+    showApplicationAlert,
+  ]);
 
   return (
     <main
       ref={appShellRef}
       className="app-shell"
       data-project-revision="0"
+      style={{
+        "--app-surface-color": APPLICATION_SURFACE_COLOR,
+      } as React.CSSProperties}
     >
       <header className="topbar">
         <div className="brand">
@@ -2175,7 +2385,7 @@ export function App(): React.JSX.Element {
             <div
               className="project-file-actions"
               role="group"
-              aria-label="Create, save, and load project"
+              aria-label="Create, save, load, import, and export project"
             >
               <button
                 className="project-file-button"
@@ -2213,15 +2423,56 @@ export function App(): React.JSX.Element {
                   <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
                 </svg>
               </button>
+              <button
+                className="project-file-button"
+                type="button"
+                title="Import MIDI"
+                aria-label="Import MIDI"
+                onClick={handleOpenMidiImport}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 3h8l4 4v14H6z" />
+                  <path d="M14 3v5h5M12 11v7M9 15l3 3 3-3" />
+                </svg>
+              </button>
+              <button
+                className="project-file-button"
+                type="button"
+                title="Export MIDI"
+                aria-label="Export MIDI"
+                onClick={handleExportMidi}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 3h8l4 4v14H6z" />
+                  <path d="M14 3v5h5M12 18v-7M9 14l3-3 3 3" />
+                </svg>
+              </button>
               <input
                 ref={loadProjectInputRef}
-                className="native-project-file-input"
+                className="project-file-input"
                 type="file"
-                accept=".pianoroll,application/json"
+                accept={
+                  `${FILE_CONSTANTS.nativeProjectExtension},`
+                  + "application/json"
+                }
                 aria-hidden="true"
                 tabIndex={-1}
                 onChange={(event) => {
                   void handleProjectFileChange(event);
+                }}
+              />
+              <input
+                ref={importMidiInputRef}
+                className="project-file-input"
+                type="file"
+                accept={[
+                  ...MIDI_CONSTANTS.acceptedFileExtensions,
+                  ...MIDI_CONSTANTS.acceptedMimeTypes,
+                ].join(",")}
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={(event) => {
+                  void handleMidiFileChange(event);
                 }}
               />
             </div>
@@ -2609,7 +2860,7 @@ export function App(): React.JSX.Element {
               className="timeline-range"
               type="range"
               min="0"
-              step="48"
+              step={EDITOR_CONSTANTS.horizontalScrollStep}
               defaultValue="0"
               aria-label="Horizontal timeline position"
             />
@@ -2620,12 +2871,18 @@ export function App(): React.JSX.Element {
                 type="range"
                 min={MINIMUM_HORIZONTAL_ZOOM}
                 max={MAXIMUM_HORIZONTAL_ZOOM}
-                step="0.05"
-                defaultValue="1"
+                step={EDITOR_CONSTANTS.zoomStep}
+                defaultValue={
+                  VIEWPORT_CONSTANTS.initialHorizontalZoom
+                }
                 aria-label="Horizontal zoom"
               />
               <span aria-hidden="true">+</span>
-              <output ref={zoomLabelRef}>100%</output>
+              <output ref={zoomLabelRef}>
+                {Math.round(
+                  VIEWPORT_CONSTANTS.initialHorizontalZoom * 100,
+                )}%
+              </output>
             </div>
             <div className="pitch-control">
               <span>Pitch</span>
@@ -2634,10 +2891,23 @@ export function App(): React.JSX.Element {
                 className="pitch-scroll-range"
                 type="range"
                 min="0"
-                max="1404"
-                step="4"
+                max={Math.max(
+                  0,
+                  (
+                    VIEWPORT_CONSTANTS.maximumMidiPitch
+                    - VIEWPORT_CONSTANTS.minimumMidiPitch
+                    + 1
+                  )
+                    * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels
+                    * VIEWPORT_CONSTANTS.initialVerticalZoom
+                    - VIEWPORT_CONSTANTS.initialHeightCssPixels,
+                )}
+                step={EDITOR_CONSTANTS.verticalScrollStep}
                 defaultValue={String(
-                  (127 - INITIAL_MAX_VISIBLE_PITCH)
+                  (
+                    VIEWPORT_CONSTANTS.maximumMidiPitch
+                    - INITIAL_MAX_VISIBLE_PITCH
+                  )
                   * INITIAL_PITCH_HEIGHT,
                 )}
                 aria-label="Vertical pitch position"
@@ -2649,11 +2919,17 @@ export function App(): React.JSX.Element {
                 type="range"
                 min={MINIMUM_VERTICAL_ZOOM}
                 max={MAXIMUM_VERTICAL_ZOOM}
-                step="0.05"
-                defaultValue="1"
+                step={EDITOR_CONSTANTS.zoomStep}
+                defaultValue={
+                  VIEWPORT_CONSTANTS.initialVerticalZoom
+                }
                 aria-label="Vertical pitch zoom"
               />
-              <output ref={pitchZoomLabelRef}>100%</output>
+              <output ref={pitchZoomLabelRef}>
+                {Math.round(
+                  VIEWPORT_CONSTANTS.initialVerticalZoom * 100,
+                )}%
+              </output>
             </div>
             <button
               className="reset-button"
@@ -2959,10 +3235,16 @@ export function App(): React.JSX.Element {
                       );
                     }}
                   >
-                    <option value="sine">Sine</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Saw</option>
-                    <option value="square">Square</option>
+                    {VOICE_CONSTANTS
+                      .oscillatorWaveformOptions
+                      .map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
                   </select>
                   <select
                     className="polyphony-select"
@@ -2999,8 +3281,12 @@ export function App(): React.JSX.Element {
                     selectedVoice.instrument.envelope.attackSeconds
                   }
                   minimum={0}
-                  maximum={2}
-                  step={0.001}
+                  maximum={
+                    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds
+                  }
+                  step={
+                    EDITOR_CONSTANTS.envelopeTimeStepSeconds
+                  }
                   formatValue={formatEnvelopeTime}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -3017,8 +3303,12 @@ export function App(): React.JSX.Element {
                     selectedVoice.instrument.envelope.decaySeconds
                   }
                   minimum={0}
-                  maximum={2}
-                  step={0.001}
+                  maximum={
+                    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds
+                  }
+                  step={
+                    EDITOR_CONSTANTS.envelopeTimeStepSeconds
+                  }
                   formatValue={formatEnvelopeTime}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -3036,7 +3326,7 @@ export function App(): React.JSX.Element {
                   }
                   minimum={0}
                   maximum={1}
-                  step={0.005}
+                  step={EDITOR_CONSTANTS.sustainStep}
                   formatValue={formatPercentage}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -3053,8 +3343,12 @@ export function App(): React.JSX.Element {
                     selectedVoice.instrument.envelope.releaseSeconds
                   }
                   minimum={0}
-                  maximum={2}
-                  step={0.001}
+                  maximum={
+                    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds
+                  }
+                  step={
+                    EDITOR_CONSTANTS.envelopeTimeStepSeconds
+                  }
                   formatValue={formatEnvelopeTime}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -3086,8 +3380,10 @@ interface VoiceNameEditorProps {
   readonly onRename: (name: string) => void;
 }
 
-const VOICE_NAME_LONG_PRESS_DELAY_MS = 520;
-const VOICE_NAME_LONG_PRESS_MOVEMENT_TOLERANCE = 10;
+const VOICE_NAME_LONG_PRESS_DELAY_MS =
+  INTERACTION_CONSTANTS.voiceNameLongPressDelayMs;
+const VOICE_NAME_LONG_PRESS_MOVEMENT_TOLERANCE =
+  INTERACTION_CONSTANTS.voiceNameLongPressMovementToleranceCssPixels;
 
 function VoiceNameEditor(
   props: VoiceNameEditorProps,
@@ -3537,65 +3833,23 @@ function findNotesByIds(
   return notes;
 }
 
-const USER_VOICE_COLORS = [
-  "#79a7ff",
-  "#a77bf3",
-  "#ff9b71",
-  "#62d6b4",
-  "#f0c66f",
-  "#f17ca8",
-] as const;
-
 function createUserVoice(
   voiceIndex: number,
   sequence: number,
 ): Voice {
   const color =
-    USER_VOICE_COLORS[voiceIndex % USER_VOICE_COLORS.length]
+    RENDERING_CONSTANTS.userVoiceColors[
+      voiceIndex % RENDERING_CONSTANTS.userVoiceColors.length
+    ]
     ?? "#79a7ff";
-  const waveformIndex = voiceIndex % 4;
-  const oscillatorWaveform =
-    waveformIndex === 0
-      ? "sawtooth"
-      : waveformIndex === 1
-        ? "sine"
-        : waveformIndex === 2
-          ? "square"
-          : "triangle";
 
-  return {
+  return createDefaultVoice({
     id: `voice-${Date.now()}-${sequence + 1}`,
     name: `Voice ${voiceIndex + 1}`,
     color,
-    muted: false,
-    locked: false,
-    solo: false,
-    gain: 0.82,
-    pan: 0,
-    instrument: {
-      kind: "subtractive",
-      oscillatorWaveform,
-      polyphony: DEFAULT_INSTRUMENT_POLYPHONY,
-      oscillatorDetuneCents: 0,
-      envelope: {
-        attackSeconds: 0.012,
-        decaySeconds: 0.18,
-        sustainLevel: 0.72,
-        releaseSeconds: 0.42,
-      },
-      filterCutoffHz: 12_000,
-      filterResonance: 0.2,
-    },
-    effects: [],
-    generativeRules: [],
-    interpretation: {
-      transposeSemitones: 0,
-      timingOffsetTicks: 0,
-      gateRatio: 1,
-      velocityScale: 1,
-      probability: 1,
-    },
-  };
+    oscillatorWaveform:
+      getDefaultOscillatorWaveform(voiceIndex),
+  });
 }
 
 function getVoiceInstrumentLabel(): string {
@@ -3652,11 +3906,14 @@ function TransportMetrics(
     gridSettings,
   } = props;
   const tempoInputRef = useRef<HTMLInputElement | null>(null);
-  const meterSelectRef = useRef<HTMLSelectElement | null>(null);
   const gridSelectRef = useRef<HTMLSelectElement | null>(null);
   const subdivisionSelectRef =
     useRef<HTMLSelectElement | null>(null);
   const transactionSequenceRef = useRef(0);
+  const [meterValue, setMeterValue] = useState(() =>
+    formatTimeSignatureValue(
+      projectStore.getState().transportSettings.timeSignature,
+    ));
 
   useEffect(() => {
     const updateTransportControls = (): void => {
@@ -3670,10 +3927,9 @@ function TransportMetrics(
           transport.bpm.toFixed(1);
       }
 
-      if (meterSelectRef.current !== null) {
-        meterSelectRef.current.value =
-          `${transport.timeSignature.numerator}/${transport.timeSignature.denominator}`;
-      }
+      setMeterValue(
+        formatTimeSignatureValue(transport.timeSignature),
+      );
     };
     const updateGridControl = (): void => {
       const settings = gridSettings.get();
@@ -3742,10 +3998,13 @@ function TransportMetrics(
       }
 
       const bpm = Math.min(
-        240,
+        EDITOR_CONSTANTS.tempoMaximumBpm,
         Math.max(
-          30,
-          Math.round(requestedBpm * 10) / 10,
+          EDITOR_CONSTANTS.tempoMinimumBpm,
+          Math.round(
+            requestedBpm
+            / EDITOR_CONSTANTS.tempoStepBpm,
+          ) * EDITOR_CONSTANTS.tempoStepBpm,
         ),
       );
 
@@ -3782,6 +4041,7 @@ function TransportMetrics(
         return;
       }
 
+      setMeterValue(event.currentTarget.value);
       dispatchCommand(
         {
           type: "UpdateTimeSignature",
@@ -3841,10 +4101,10 @@ function TransportMetrics(
           ref={tempoInputRef}
           className="metric-control tempo-control"
           type="number"
-          min="30"
-          max="240"
-          step="0.1"
-          defaultValue="112.0"
+          min={EDITOR_CONSTANTS.tempoMinimumBpm}
+          max={EDITOR_CONSTANTS.tempoMaximumBpm}
+          step={EDITOR_CONSTANTS.tempoStepBpm}
+          defaultValue={PROJECT_CONSTANTS.demoTempoBpm.toFixed(1)}
           inputMode="decimal"
           onBlur={handleTempoCommit}
           onKeyDown={handleTempoKeyDown}
@@ -3855,16 +4115,25 @@ function TransportMetrics(
       <label className="metric">
         <small>Meter</small>
         <select
-          ref={meterSelectRef}
           className="metric-control metric-select"
-          defaultValue="4/4"
+          value={meterValue}
           onChange={handleMeterChange}
           aria-label="Time signature"
         >
-          <option value="3/4">3 / 4</option>
-          <option value="4/4">4 / 4</option>
-          <option value="5/4">5 / 4</option>
-          <option value="6/8">6 / 8</option>
+          {isConfiguredTimeSignatureValue(meterValue)
+            ? null
+            : (
+                <option value={meterValue}>
+                  {meterValue.replace("/", " / ")}
+                </option>
+              )}
+          {EDITOR_CONSTANTS.transportMeterOptions.map(
+            (option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ),
+          )}
         </select>
       </label>
       <label className="metric">
@@ -3876,11 +4145,13 @@ function TransportMetrics(
           onChange={handleGridChange}
           aria-label="Grid resolution"
         >
-          <option value="960">1 / 4</option>
-          <option value="480">1 / 8</option>
-          <option value="240">1 / 16</option>
-          <option value="120">1 / 32</option>
-          <option value="60">1 / 64</option>
+          {EDITOR_CONSTANTS.gridResolutionOptions.map(
+            (option) => (
+              <option key={option.ticks} value={option.ticks}>
+                {option.label}
+              </option>
+            ),
+          )}
         </select>
       </label>
       <label className="metric">
@@ -3892,9 +4163,13 @@ function TransportMetrics(
           onChange={handleSubdivisionChange}
           aria-label="Grid subdivision"
         >
-          <option value="straight">Straight</option>
-          <option value="triplet">Triplet</option>
-          <option value="dotted">Dotted</option>
+          {EDITOR_CONSTANTS.gridSubdivisionOptions.map(
+            (option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ),
+          )}
         </select>
       </label>
     </div>
@@ -3904,30 +4179,51 @@ function TransportMetrics(
 function parseTimeSignature(
   value: string,
 ): TimeSignature | null {
-  switch (value) {
-    case "3/4":
-      return {
-        numerator: 3,
-        denominator: 4,
-      };
-    case "4/4":
-      return {
-        numerator: 4,
-        denominator: 4,
-      };
-    case "5/4":
-      return {
-        numerator: 5,
-        denominator: 4,
-      };
-    case "6/8":
-      return {
-        numerator: 6,
-        denominator: 8,
-      };
-    default:
-      return null;
+  const parts = value.split("/");
+
+  if (parts.length !== 2) {
+    return null;
   }
+
+  const numerator = Number(parts[0]);
+  const denominator = Number(parts[1]);
+
+  if (
+    !Number.isSafeInteger(numerator)
+    || numerator <= 0
+    || (
+      denominator !== 1
+      && denominator !== 2
+      && denominator !== 4
+      && denominator !== 8
+      && denominator !== 16
+      && denominator !== 32
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    numerator,
+    denominator,
+  };
+}
+
+function formatTimeSignatureValue(
+  timeSignature: TimeSignature,
+): string {
+  return (
+    `${String(timeSignature.numerator)}`
+    + `/${String(timeSignature.denominator)}`
+  );
+}
+
+function isConfiguredTimeSignatureValue(
+  value: string,
+): boolean {
+  return EDITOR_CONSTANTS.transportMeterOptions.some(
+    (option) => option.value === value,
+  );
 }
 
 interface BarRulerProps {
@@ -5156,9 +5452,9 @@ function VoiceGainSlider(
       <input
         ref={inputRef}
         type="range"
-        min="0"
-        max="1"
-        step="0.01"
+        min={VOICE_CONSTANTS.minimumGain}
+        max={VOICE_CONSTANTS.maximumGain}
+        step={EDITOR_CONSTANTS.gainStep}
         defaultValue={gain}
         aria-label={`Volume for ${voiceName}`}
         onInput={(event) => {
@@ -5271,7 +5567,7 @@ function ParameterSlider(
           type="range"
           min="0"
           max="1"
-          step="0.001"
+          step={EDITOR_CONSTANTS.parameterSliderPositionStep}
           defaultValue={parameterValueToSliderPosition(
             value,
             minimum,
@@ -5426,7 +5722,7 @@ function MasterGainControl(
           type="range"
           min={MINIMUM_MASTER_GAIN}
           max={MAXIMUM_MASTER_GAIN}
-          step="0.01"
+          step={EDITOR_CONSTANTS.gainStep}
           defaultValue={gain}
           aria-label="Master gain"
           onInput={(event) => {
@@ -5477,8 +5773,8 @@ function createPianoKeys(): readonly React.JSX.Element[] {
   const keys: React.JSX.Element[] = [];
 
   for (
-    let pitch = 127;
-    pitch >= 0;
+    let pitch = VIEWPORT_CONSTANTS.maximumMidiPitch;
+    pitch >= VIEWPORT_CONSTANTS.minimumMidiPitch;
     pitch -= 1
   ) {
     const pitchClass = pitch % 12;
@@ -5605,14 +5901,45 @@ function formatMusicalPosition(
   );
 }
 
+function formatTempo(tempoBpm: number): string {
+  if (Number.isInteger(tempoBpm)) {
+    return String(tempoBpm);
+  }
+
+  return tempoBpm.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 function getMaximumVerticalScroll(
   viewport: ViewportState,
   viewportHeight: number,
 ): number {
   return Math.max(
     0,
-    128 * viewport.pitchHeight * viewport.zoomY - viewportHeight,
+    (
+      VIEWPORT_CONSTANTS.maximumMidiPitch
+      - VIEWPORT_CONSTANTS.minimumMidiPitch
+      + 1
+    ) * viewport.pitchHeight * viewport.zoomY - viewportHeight,
   );
+}
+
+function downloadBrowserFile(
+  blob: Blob,
+  fileName: string,
+): void {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = objectUrl;
+  link.download = fileName;
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, FILE_CONSTANTS.objectUrlRevokeDelayMs);
 }
 
 function createNativeProjectFileMetadata():

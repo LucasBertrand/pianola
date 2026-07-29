@@ -4,6 +4,9 @@ import {
   type RefObject,
 } from "react";
 import {
+  INTERACTION_CONSTANTS,
+} from "../../config/program-constants";
+import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
   MINIMUM_HORIZONTAL_ZOOM,
@@ -43,14 +46,22 @@ interface MutableGestureState {
   previousMidpointY: number;
 }
 
-const LONG_PRESS_DELAY_MS = 560;
-const PEN_LONG_PRESS_DELAY_MS = 280;
-const LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS = 12;
-const MINIMUM_PINCH_DISTANCE_CSS_PIXELS = 8;
-const PINCH_AXIS_LOCK_RATIO = 1.35;
-const MINIMUM_PINCH_SCALE = 0.82;
-const MAXIMUM_PINCH_SCALE = 1.22;
-const PINCH_SCALE_DEAD_ZONE = 0.003;
+const LONG_PRESS_DELAY_MS =
+  INTERACTION_CONSTANTS.longPressDelayMs;
+const PEN_LONG_PRESS_DELAY_MS =
+  INTERACTION_CONSTANTS.penLongPressDelayMs;
+const LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.longPressMovementToleranceCssPixels;
+const MINIMUM_PINCH_DISTANCE_CSS_PIXELS =
+  INTERACTION_CONSTANTS.minimumPinchDistanceCssPixels;
+const PINCH_AXIS_LOCK_RATIO =
+  INTERACTION_CONSTANTS.pinchAxisLockRatio;
+const MINIMUM_PINCH_SCALE =
+  INTERACTION_CONSTANTS.minimumPinchScale;
+const MAXIMUM_PINCH_SCALE =
+  INTERACTION_CONSTANTS.maximumPinchScale;
+const PINCH_SCALE_DEAD_ZONE =
+  INTERACTION_CONSTANTS.pinchScaleDeadZone;
 
 export function useInteractionManager(
   options: UseInteractionManagerOptions,

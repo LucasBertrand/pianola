@@ -5,6 +5,9 @@ import {
   useRef,
   type RefObject,
 } from "react";
+import {
+  VIEWPORT_CONSTANTS,
+} from "../../config/program-constants";
 
 export type CanvasRenderMode = "continuous" | "on-demand";
 
@@ -40,8 +43,6 @@ interface MutableCanvasFrame {
   deltaMs: number;
 }
 
-const MAXIMUM_CANVAS_DEVICE_PIXEL_RATIO = 2;
-const MAXIMUM_COARSE_POINTER_DEVICE_PIXEL_RATIO = 1.5;
 let cachedMaximumDevicePixelRatio: number | null = null;
 
 export function useCanvasRenderer(
@@ -281,8 +282,8 @@ function getMaximumDevicePixelRatio(): number {
     cachedMaximumDevicePixelRatio = window.matchMedia(
       "(pointer: coarse)",
     ).matches
-      ? MAXIMUM_COARSE_POINTER_DEVICE_PIXEL_RATIO
-      : MAXIMUM_CANVAS_DEVICE_PIXEL_RATIO;
+        ? VIEWPORT_CONSTANTS.maximumCoarsePointerDevicePixelRatio
+        : VIEWPORT_CONSTANTS.maximumCanvasDevicePixelRatio;
   }
 
   return cachedMaximumDevicePixelRatio;

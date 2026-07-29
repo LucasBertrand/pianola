@@ -25,6 +25,7 @@
     "src/audio/time-math.ts",
     "src/domain/**/*.ts",
     "src/geometry/**/*.ts",
+    "src/midi/**/*.ts",
     "src/persistence/**/*.ts"
   ]
 }

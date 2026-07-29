@@ -5,6 +5,10 @@ import type {
   VoiceId,
 } from "../domain/model";
 import {
+  AUDIO_CONSTANTS,
+  PROJECT_CONSTANTS,
+} from "../config/program-constants";
+import {
   MAXIMUM_INSTRUMENT_POLYPHONY,
 } from "../domain/model";
 import type {
@@ -22,14 +26,18 @@ import {
 
 export const DEFAULT_AUDIO_ENGINE_CONFIG: AudioEngineConfig =
   Object.freeze({
-    latencyHint: "interactive",
-    schedulerPulseIntervalMs: 25,
-    scheduleAheadSeconds: 0.12,
-    lateEventToleranceSeconds: 0.035,
-    latencyCompensationSeconds: 0.012,
-    masterGain: 0.72,
+    latencyHint: AUDIO_CONSTANTS.latencyHint,
+    schedulerPulseIntervalMs:
+      AUDIO_CONSTANTS.schedulerPulseIntervalMs,
+    scheduleAheadSeconds:
+      AUDIO_CONSTANTS.scheduleAheadSeconds,
+    lateEventToleranceSeconds:
+      AUDIO_CONSTANTS.lateEventToleranceSeconds,
+    latencyCompensationSeconds:
+      AUDIO_CONSTANTS.latencyCompensationSeconds,
+    masterGain: PROJECT_CONSTANTS.defaultMasterGain,
     maxPolyphonyPerVoice: MAXIMUM_INSTRUMENT_POLYPHONY,
-    releaseTailSeconds: 2,
+    releaseTailSeconds: AUDIO_CONSTANTS.releaseTailSeconds,
   });
 
 export interface SchedulerTimerPort {
@@ -54,10 +62,7 @@ const DEFAULT_SCHEDULER_TIMER: SchedulerTimerPort = {
   },
 };
 
-const MINIMUM_RESTART_LEAD_SECONDS = 0.012;
 const SCHEDULING_EPSILON_TICKS = 1e-7;
-const AUDITION_NOTE_DURATION_SECONDS = 0.4;
-const AUDITION_NOTE_VELOCITY = 104;
 
 export class LookaheadScheduler implements AudioTransportController {
   private currentStatus: PlaybackStatus = "stopped";
@@ -289,10 +294,11 @@ export class LookaheadScheduler implements AudioTransportController {
       generation: this.generation,
       voice,
       pitch,
-      velocity: AUDITION_NOTE_VELOCITY,
+      velocity: AUDIO_CONSTANTS.auditionNoteVelocity,
       startAudioTimeSeconds,
       endAudioTimeSeconds:
-        startAudioTimeSeconds + AUDITION_NOTE_DURATION_SECONDS,
+        startAudioTimeSeconds
+        + AUDIO_CONSTANTS.auditionNoteDurationSeconds,
     });
   }
 
@@ -348,7 +354,7 @@ export class LookaheadScheduler implements AudioTransportController {
       + (
         restartLeadSeconds
         ?? Math.max(
-          MINIMUM_RESTART_LEAD_SECONDS,
+          AUDIO_CONSTANTS.minimumRestartLeadSeconds,
           this.engine.config.latencyCompensationSeconds,
         )
       );

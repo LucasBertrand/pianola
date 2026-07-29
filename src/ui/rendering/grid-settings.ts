@@ -1,3 +1,7 @@
+import {
+  EDITOR_CONSTANTS,
+} from "../../config/program-constants";
+
 export type GridSubdivision = "straight" | "triplet" | "dotted";
 
 export interface GridSettings {
@@ -7,9 +11,11 @@ export interface GridSettings {
 }
 
 export const DEFAULT_GRID_SETTINGS: GridSettings = Object.freeze({
-  baseResolutionTicks: 240,
-  subdivision: "straight",
-  resolutionTicks: 240,
+  baseResolutionTicks:
+    EDITOR_CONSTANTS.defaultGridBaseResolutionTicks,
+  subdivision: EDITOR_CONSTANTS.defaultGridSubdivision,
+  resolutionTicks:
+    EDITOR_CONSTANTS.defaultGridBaseResolutionTicks,
 });
 
 export function createGridSettings(
