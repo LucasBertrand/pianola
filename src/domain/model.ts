@@ -11,6 +11,13 @@ export const PROJECT_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_MEASURE_COUNT = 16 as const;
 export const MINIMUM_MEASURE_COUNT = 1 as const;
 export const MAXIMUM_MEASURE_COUNT = 256 as const;
+export const MAXIMUM_ENTITY_ID_LENGTH = 160 as const;
+export const MAXIMUM_PROJECT_TITLE_LENGTH = 200 as const;
+export const MAXIMUM_VOICE_NAME_LENGTH = 128 as const;
+export const MAXIMUM_PROJECT_VOICE_COUNT = 256 as const;
+export const MAXIMUM_PROJECT_NOTE_COUNT = 250_000 as const;
+export const MAXIMUM_VOICE_DESCRIPTOR_COUNT = 128 as const;
+export const MAXIMUM_DESCRIPTOR_PARAMETER_COUNT = 256 as const;
 
 export interface Note {
   readonly id: NoteId;

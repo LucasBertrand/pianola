@@ -27,9 +27,10 @@ import {
 import type {
   SpatialTouchEnvelope,
 } from "../../geometry/spatial-index";
-import type {
-  VoiceRenderStyle,
-} from "../components/PianoRollLayers";
+import {
+  compareNotesByVoiceRenderOrder,
+  type VoiceRenderStyle,
+} from "../rendering/note-style";
 import {
   createInteractionDraft,
   type InteractionDraft,
@@ -233,6 +234,10 @@ export function usePianoRollEvents(
 
     const isVoiceLocked = (voiceId: VoiceId): boolean =>
       projectStore.getState().voicesById[voiceId]?.locked ?? true;
+    const isNoteEditable = (note: Note): boolean =>
+      !isVoiceLocked(note.voiceId);
+    const isSelectedNoteEditable = (note: Note): boolean =>
+      selection.noteIds.has(note.id) && isNoteEditable(note);
 
     const refreshSelection = (
       projectState: ProjectState,
@@ -467,31 +472,39 @@ export function usePianoRollEvents(
         pointerTick,
         pointerPitch,
         bodyEnvelope,
+        isNoteEditable,
+        compareNotesByVoiceRenderOrder,
       );
-      const hitNote =
-        hitCandidate !== undefined
-        && !isVoiceLocked(hitCandidate.voiceId)
-          ? hitCandidate
-          : undefined;
+      const hitNote = hitCandidate;
       const edgeEnvelope = createTouchEnvelope(
         converter,
         event.pointerType,
         MOUSE_RESIZE_HANDLE_CSS_PIXELS,
         TOUCH_RESIZE_HANDLE_CSS_PIXELS,
       );
-      const rawEdgeCandidate =
+      const selectedEdgeCandidate =
         activeTool === "select"
           ? spatialIndex.queryNoteEdge(
               pointerTick,
               pointerPitch,
               edgeEnvelope,
+              isSelectedNoteEditable,
+              compareNotesByVoiceRenderOrder,
             )
           : undefined;
       const edgeCandidate =
-        rawEdgeCandidate !== undefined
-        && !isVoiceLocked(rawEdgeCandidate.note.voiceId)
-          ? rawEdgeCandidate
-          : undefined;
+        selectedEdgeCandidate
+        ?? (
+          activeTool === "select"
+            ? spatialIndex.queryNoteEdge(
+                pointerTick,
+                pointerPitch,
+                edgeEnvelope,
+                isNoteEditable,
+                compareNotesByVoiceRenderOrder,
+              )
+            : undefined
+        );
       const edgeHit =
         edgeCandidate !== undefined
         && selection.noteIds.has(edgeCandidate.note.id)
@@ -923,12 +936,11 @@ export function usePianoRollEvents(
       const note = spatialIndex.queryPoint(
         converter.cssPixelXToTick(localX),
         converter.cssPixelYToPitch(localY),
+        isNoteEditable,
+        compareNotesByVoiceRenderOrder,
       );
 
-      if (
-        note !== undefined
-        && !isVoiceLocked(note.voiceId)
-      ) {
+      if (note !== undefined) {
         deleteHitNote(note);
         event.preventDefault();
       }
@@ -953,13 +965,11 @@ export function usePianoRollEvents(
         tick,
         pitch,
         envelope,
+        isNoteEditable,
+        compareNotesByVoiceRenderOrder,
       );
 
       if (note !== undefined) {
-        if (isVoiceLocked(note.voiceId)) {
-          return;
-        }
-
         selectHitNote(note, false);
         return;
       }
@@ -1144,6 +1154,7 @@ export function usePianoRollEvents(
     selection,
     spatialIndex,
     strategyRef,
+    totalTicks,
     viewport,
     visualsRef,
     voiceSelectionRequest,

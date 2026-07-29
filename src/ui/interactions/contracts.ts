@@ -8,7 +8,7 @@ import type {
 } from "../../geometry/converter";
 import type {
   VoiceRenderStyle,
-} from "../components/PianoRollLayers";
+} from "../rendering/note-style";
 import type {
   InteractionTool,
 } from "./types";

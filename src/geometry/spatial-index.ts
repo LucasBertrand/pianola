@@ -23,6 +23,9 @@ export interface SpatialNoteEdgeHit {
   readonly distanceTicks: number;
 }
 
+export type SpatialNotePredicate = (note: Note) => boolean;
+export type SpatialNoteComparator = (left: Note, right: Note) => number;
+
 interface PitchBucket {
   readonly notes: Note[];
   readonly blockMaxEndTicks: number[];
@@ -89,7 +92,12 @@ export class SpatialIndex {
     this.indexedNoteCount = 0;
   }
 
-  public queryPoint(tick: number, pitch: number): Note | undefined {
+  public queryPoint(
+    tick: number,
+    pitch: number,
+    predicate?: SpatialNotePredicate,
+    priorityComparator?: SpatialNoteComparator,
+  ): Note | undefined {
     if (
       !Number.isFinite(tick)
       || !Number.isInteger(pitch)
@@ -106,6 +114,7 @@ export class SpatialIndex {
     }
 
     let candidateIndex = upperBoundStartTick(bucket.notes, tick) - 1;
+    let preferredNote: Note | undefined;
 
     while (candidateIndex >= 0) {
       const blockIndex = Math.floor(candidateIndex / SEARCH_BLOCK_SIZE);
@@ -128,8 +137,18 @@ export class SpatialIndex {
             note !== undefined
             && tick >= note.startTick
             && tick < note.startTick + note.durationTicks
+            && (predicate === undefined || predicate(note))
           ) {
-            return note;
+            if (priorityComparator === undefined) {
+              return note;
+            }
+
+            if (
+              preferredNote === undefined
+              || priorityComparator(note, preferredNote) > 0
+            ) {
+              preferredNote = note;
+            }
           }
         }
       }
@@ -137,13 +156,15 @@ export class SpatialIndex {
       candidateIndex = blockIndex * SEARCH_BLOCK_SIZE - 1;
     }
 
-    return undefined;
+    return preferredNote;
   }
 
   public queryPointWithEnvelope(
     tick: number,
     pitch: number,
     envelope: SpatialTouchEnvelope,
+    predicate?: SpatialNotePredicate,
+    priorityComparator?: SpatialNoteComparator,
   ): Note | undefined {
     if (!isValidTouchQuery(tick, pitch, envelope)) {
       return undefined;
@@ -153,7 +174,12 @@ export class SpatialIndex {
       envelope.tickRadius === 0
       && envelope.pitchRadius === 0
     ) {
-      return this.queryPoint(tick, pitch);
+      return this.queryPoint(
+        tick,
+        pitch,
+        predicate,
+        priorityComparator,
+      );
     }
 
     const candidates = this.touchQueryBuffer;
@@ -185,6 +211,10 @@ export class SpatialIndex {
         continue;
       }
 
+      if (predicate !== undefined && !predicate(note)) {
+        continue;
+      }
+
       const pitchDistance = Math.abs(note.pitch - pitch);
       const noteEndTick = note.startTick + note.durationTicks;
       const tickDistance =
@@ -200,6 +230,13 @@ export class SpatialIndex {
           pitchDistance === closestPitchDistance
           && tickDistance < closestTickDistance
         )
+        || (
+          pitchDistance === closestPitchDistance
+          && tickDistance === closestTickDistance
+          && closestNote !== undefined
+          && priorityComparator !== undefined
+          && priorityComparator(note, closestNote) > 0
+        )
       ) {
         closestNote = note;
         closestPitchDistance = pitchDistance;
@@ -214,6 +251,8 @@ export class SpatialIndex {
     tick: number,
     pitch: number,
     envelope: SpatialTouchEnvelope,
+    predicate?: SpatialNotePredicate,
+    priorityComparator?: SpatialNoteComparator,
   ): SpatialNoteEdgeHit | undefined {
     if (!isValidTouchQuery(tick, pitch, envelope)) {
       return undefined;
@@ -249,6 +288,10 @@ export class SpatialIndex {
         continue;
       }
 
+      if (predicate !== undefined && !predicate(note)) {
+        continue;
+      }
+
       const pitchDistance = Math.abs(note.pitch - pitch);
       const startDistance = Math.abs(note.startTick - tick);
       const endDistance = Math.abs(
@@ -268,6 +311,13 @@ export class SpatialIndex {
           || (
             pitchDistance === closestPitchDistance
             && tickDistance < closestTickDistance
+          )
+          || (
+            pitchDistance === closestPitchDistance
+            && tickDistance === closestTickDistance
+            && closestNote !== undefined
+            && priorityComparator !== undefined
+            && priorityComparator(note, closestNote) > 0
           )
         )
       ) {

@@ -42,7 +42,7 @@ import {
   getPitchNoteColor,
   type NoteColorMode,
   type VoiceRenderStyle,
-} from "./PianoRollLayers";
+} from "../rendering/note-style";
 
 export interface InteractionOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;

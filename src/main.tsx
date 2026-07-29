@@ -1,4 +1,4 @@
-import React, {
+import {
   StrictMode,
 } from "react";
 import {

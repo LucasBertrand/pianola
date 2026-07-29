@@ -19,13 +19,22 @@ import type {
 } from "../domain/model";
 import {
   getProjectDurationTicks,
+  MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
+  MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_MEASURE_COUNT,
+  MAXIMUM_PROJECT_NOTE_COUNT,
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+  MAXIMUM_PROJECT_VOICE_COUNT,
+  MAXIMUM_VOICE_DESCRIPTOR_COUNT,
+  MAXIMUM_VOICE_NAME_LENGTH,
   MINIMUM_MEASURE_COUNT,
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
   validateNoteForTrack,
+  validateProjectDuration,
   validateTransportState,
+  validateVoice,
 } from "../domain/validation";
 
 export const NATIVE_PROJECT_FILE_FORMAT =
@@ -34,14 +43,15 @@ export const NATIVE_PROJECT_FILE_VERSION = 2 as const;
 export const NATIVE_PROJECT_FILE_EXTENSION = ".pianoroll" as const;
 export const MAXIMUM_NATIVE_PROJECT_FILE_BYTES =
   32 * 1024 * 1024;
-export const MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH = 200;
+export const MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH =
+  MAXIMUM_PROJECT_TITLE_LENGTH;
 
-const MAXIMUM_VOICE_COUNT = 256;
-const MAXIMUM_NOTE_COUNT = 250_000;
-const MAXIMUM_NAME_LENGTH = 128;
-const MAXIMUM_ID_LENGTH = 160;
-const MAXIMUM_DESCRIPTOR_COUNT = 128;
-const MAXIMUM_PARAMETER_COUNT = 256;
+const MAXIMUM_VOICE_COUNT = MAXIMUM_PROJECT_VOICE_COUNT;
+const MAXIMUM_NOTE_COUNT = MAXIMUM_PROJECT_NOTE_COUNT;
+const MAXIMUM_NAME_LENGTH = MAXIMUM_VOICE_NAME_LENGTH;
+const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
+const MAXIMUM_DESCRIPTOR_COUNT = MAXIMUM_VOICE_DESCRIPTOR_COUNT;
+const MAXIMUM_PARAMETER_COUNT = MAXIMUM_DESCRIPTOR_PARAMETER_COUNT;
 const LEGACY_NATIVE_PROJECT_FILE_VERSION = 1 as const;
 const LEGACY_PROJECT_SCHEMA_VERSION = 1;
 
@@ -324,6 +334,20 @@ function parseProjectSnapshot(
     tracksByVoiceId: {},
     transportSettings,
   };
+  const durationValidation = validateProjectDuration(
+    measureCount,
+    transportSettings,
+  );
+
+  if (!durationValidation.valid) {
+    fail(
+      "INVALID_DATA",
+      `${path}.measureCount`,
+      durationValidation.issues[0]?.message
+        ?? "Project duration is invalid.",
+    );
+  }
+
   const tracksByVoiceId = parseTracks(
     project["tracksByVoiceId"],
     voiceOrder,
@@ -445,7 +469,7 @@ function parseVoice(
     );
   }
 
-  return {
+  const parsedVoice: Voice = {
     id,
     name: readNonEmptyString(
       voice["name"],
@@ -477,6 +501,19 @@ function parseVoice(
       `${path}.interpretation`,
     ),
   };
+  const validation = validateVoice(parsedVoice);
+
+  if (!validation.valid) {
+    const issue = validation.issues[0];
+
+    fail(
+      "INVALID_DATA",
+      issue === undefined ? path : `${path}.${issue.path}`,
+      issue?.message ?? "Voice configuration is invalid.",
+    );
+  }
+
+  return parsedVoice;
 }
 
 function parseInstrument(

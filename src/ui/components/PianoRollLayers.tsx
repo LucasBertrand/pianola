@@ -37,6 +37,13 @@ import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
 import {
+  compareNotesByPitchRenderOrder,
+  compareNotesByVoiceRenderOrder,
+  getNoteFillStyle,
+  type NoteColorMode,
+  type VoiceRenderStyle,
+} from "../rendering/note-style";
+import {
   APPLICATION_SURFACE_COLOR,
 } from "../rendering/theme";
 import {
@@ -54,14 +61,6 @@ export interface CanvasLayerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly visibleRegion: ReadonlyRenderSignal<Rect>;
 }
-
-export interface VoiceRenderStyle {
-  readonly fillStyle: string;
-  readonly opacity: number;
-  readonly locked: boolean;
-}
-
-export type NoteColorMode = "voice" | "pitch";
 
 export interface GridCanvasProps extends CanvasLayerProps {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
@@ -126,21 +125,6 @@ const PITCH_LINE_COLOR = "#252a33";
 const SUBDIVISION_LINE_COLOR = "#242933";
 const BEAT_LINE_COLOR = "#303744";
 const BAR_LINE_COLOR = "#465164";
-const DEFAULT_NOTE_COLOR = "#6ea8fe";
-const PITCH_CLASS_NOTE_COLORS = [
-  "#ef5c65",
-  "#f07c5d",
-  "#eaa64f",
-  "#d3c958",
-  "#8bcf63",
-  "#55c89e",
-  "#4bc2d1",
-  "#5797ea",
-  "#7775e8",
-  "#a66fdc",
-  "#d56dbc",
-  "#ea6f8d",
-] as const;
 const MIN_GRID_LINE_SPACING_CSS_PIXELS = 4;
 const MAX_GRID_LINES_PER_PASS = 4_096;
 
@@ -323,8 +307,8 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       );
       visibleNotes.sort(
         colorMode === "voice"
-          ? compareNotesByVoice
-          : compareNotesByPitch,
+          ? compareNotesByVoiceRenderOrder
+          : compareNotesByPitchRenderOrder,
       );
 
       let currentVoiceId: VoiceId | null = null;
@@ -699,58 +683,6 @@ function fillHorizontalDeviceLine(
 
   context.fillStyle = color;
   context.fillRect(0, alignedY, width, lineHeight);
-}
-
-function compareNotesByVoice(left: Note, right: Note): number {
-  if (left.voiceId < right.voiceId) {
-    return -1;
-  }
-
-  if (left.voiceId > right.voiceId) {
-    return 1;
-  }
-
-  const startDifference = left.startTick - right.startTick;
-
-  if (startDifference !== 0) {
-    return startDifference;
-  }
-
-  if (left.id < right.id) {
-    return -1;
-  }
-
-  if (left.id > right.id) {
-    return 1;
-  }
-
-  return 0;
-}
-
-function compareNotesByPitch(left: Note, right: Note): number {
-  if (left.pitch !== right.pitch) {
-    return left.pitch - right.pitch;
-  }
-
-  return compareNotesByVoice(left, right);
-}
-
-export function getNoteFillStyle(
-  note: Note,
-  stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
-  colorMode: NoteColorMode,
-): string {
-  return colorMode === "pitch"
-    ? getPitchNoteColor(note.pitch)
-    : stylesByVoiceId[note.voiceId]?.fillStyle
-      ?? DEFAULT_NOTE_COLOR;
-}
-
-export function getPitchNoteColor(pitch: number): string {
-  const pitchClass = ((pitch % 12) + 12) % 12;
-
-  return PITCH_CLASS_NOTE_COLORS[pitchClass]
-    ?? DEFAULT_NOTE_COLOR;
 }
 
 function isBlackKey(pitch: number): boolean {

@@ -32,6 +32,7 @@ import {
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
+  MAXIMUM_VOICE_NAME_LENGTH,
 } from "../domain/model";
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
@@ -56,7 +57,6 @@ import {
 } from "../ui/components/ApplicationDialogOverlay";
 import {
   PianoRollLayers,
-  type NoteColorMode,
 } from "../ui/components/PianoRollLayers";
 import {
   useCanvasRenderer,
@@ -68,6 +68,14 @@ import type {
 import type {
   ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
+import {
+  createGridSettings,
+  DEFAULT_GRID_SETTINGS,
+  parseGridSubdivision,
+} from "../ui/rendering/grid-settings";
+import type {
+  NoteColorMode,
+} from "../ui/rendering/note-style";
 import {
   APPLICATION_SURFACE_COLOR,
 } from "../ui/rendering/theme";
@@ -1734,7 +1742,7 @@ export function App(): React.JSX.Element {
     setClipboardAvailable(false);
     setSelectionAvailable(false);
     scene.voiceSelectionRequest.set(null);
-    scene.gridResolutionTicks.set(240);
+    scene.gridSettings.set(DEFAULT_GRID_SETTINGS);
     documentMetadataRef.current =
       createNativeProjectFileMetadata();
     scene.projectStore.replaceState(
@@ -1802,6 +1810,7 @@ export function App(): React.JSX.Element {
         setSelectionAvailable(false);
         documentMetadataRef.current =
           loadedProject.metadata;
+        scene.gridSettings.set(DEFAULT_GRID_SETTINGS);
         scene.projectStore.replaceState(
           loadedProject.projectState,
           "Load project",
@@ -1924,7 +1933,7 @@ export function App(): React.JSX.Element {
 
         <TransportMetrics
           projectStore={scene.projectStore}
-          gridResolutionTicks={scene.gridResolutionTicks}
+          gridSettings={scene.gridSettings}
         />
 
         <div
@@ -2689,6 +2698,7 @@ function VoiceNameEditor(
       className="voice-name-input"
       type="text"
       defaultValue={voice.name}
+      maxLength={MAXIMUM_VOICE_NAME_LENGTH}
       readOnly={!editing}
       tabIndex={editing ? 0 : -1}
       aria-label={`Name for ${voice.name}`}
@@ -3222,26 +3232,21 @@ interface PianoKeyboardProps {
 
 interface TransportMetricsProps {
   readonly projectStore: DemoScene["projectStore"];
-  readonly gridResolutionTicks: DemoScene["gridResolutionTicks"];
+  readonly gridSettings: DemoScene["gridSettings"];
 }
-
-type GridSubdivision = "straight" | "triplet" | "dotted";
 
 function TransportMetrics(
   props: TransportMetricsProps,
 ): React.JSX.Element {
   const {
     projectStore,
-    gridResolutionTicks,
+    gridSettings,
   } = props;
   const tempoInputRef = useRef<HTMLInputElement | null>(null);
   const meterSelectRef = useRef<HTMLSelectElement | null>(null);
   const gridSelectRef = useRef<HTMLSelectElement | null>(null);
   const subdivisionSelectRef =
     useRef<HTMLSelectElement | null>(null);
-  const gridBaseResolutionRef = useRef(240);
-  const gridSubdivisionRef =
-    useRef<GridSubdivision>("straight");
   const transactionSequenceRef = useRef(0);
 
   useEffect(() => {
@@ -3262,21 +3267,23 @@ function TransportMetrics(
       }
     };
     const updateGridControl = (): void => {
+      const settings = gridSettings.get();
+
       if (gridSelectRef.current !== null) {
         gridSelectRef.current.value = String(
-          gridBaseResolutionRef.current,
+          settings.baseResolutionTicks,
         );
       }
 
       if (subdivisionSelectRef.current !== null) {
         subdivisionSelectRef.current.value =
-          gridSubdivisionRef.current;
+          settings.subdivision;
       }
     };
     const unsubscribeProject = projectStore.subscribe(
       updateTransportControls,
     );
-    const unsubscribeGrid = gridResolutionTicks.subscribe(
+    const unsubscribeGrid = gridSettings.subscribe(
       updateGridControl,
     );
 
@@ -3288,7 +3295,7 @@ function TransportMetrics(
       unsubscribeGrid();
     };
   }, [
-    gridResolutionTicks,
+    gridSettings,
     projectStore,
   ]);
 
@@ -3387,16 +3394,15 @@ function TransportMetrics(
         Number.isSafeInteger(baseResolutionTicks)
         && baseResolutionTicks > 0
       ) {
-        gridBaseResolutionRef.current = baseResolutionTicks;
-        gridResolutionTicks.set(
-          calculateSubdivisionTicks(
+        gridSettings.set(
+          createGridSettings(
             baseResolutionTicks,
-            gridSubdivisionRef.current,
+            gridSettings.get().subdivision,
           ),
         );
       }
     },
-    [gridResolutionTicks],
+    [gridSettings],
   );
   const handleSubdivisionChange = useCallback(
     (event: ChangeEvent<HTMLSelectElement>): void => {
@@ -3408,15 +3414,14 @@ function TransportMetrics(
         return;
       }
 
-      gridSubdivisionRef.current = subdivision;
-      gridResolutionTicks.set(
-        calculateSubdivisionTicks(
-          gridBaseResolutionRef.current,
+      gridSettings.set(
+        createGridSettings(
+          gridSettings.get().baseResolutionTicks,
           subdivision,
         ),
       );
     },
-    [gridResolutionTicks],
+    [gridSettings],
   );
 
   return (
@@ -3485,33 +3490,6 @@ function TransportMetrics(
       </label>
     </div>
   );
-}
-
-function parseGridSubdivision(
-  value: string,
-): GridSubdivision | null {
-  switch (value) {
-    case "straight":
-    case "triplet":
-    case "dotted":
-      return value;
-    default:
-      return null;
-  }
-}
-
-function calculateSubdivisionTicks(
-  baseResolutionTicks: number,
-  subdivision: GridSubdivision,
-): number {
-  switch (subdivision) {
-    case "triplet":
-      return Math.round(baseResolutionTicks * 2 / 3);
-    case "dotted":
-      return Math.round(baseResolutionTicks * 3 / 2);
-    case "straight":
-      return baseResolutionTicks;
-  }
 }
 
 function parseTimeSignature(

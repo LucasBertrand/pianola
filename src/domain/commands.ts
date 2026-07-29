@@ -19,10 +19,16 @@ import {
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
+  MAXIMUM_PROJECT_NOTE_COUNT,
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+  MAXIMUM_PROJECT_VOICE_COUNT,
 } from "./model";
 import {
   assertValidNoteForTrack,
+  assertValidProjectDuration,
   assertValidTransportState,
+  assertValidVoice,
+  DomainValidationError,
 } from "./validation";
 
 export interface AddVoiceCommand {
@@ -208,7 +214,19 @@ export function projectReducer(
   let nextState = state;
 
   for (const command of transaction.commands) {
-    nextState = applyCommand(nextState, command);
+    try {
+      nextState = applyCommand(nextState, command);
+    } catch (error: unknown) {
+      if (error instanceof DomainValidationError) {
+        throw new CommandRejectedError(
+          "INVALID_COMMAND",
+          error.message,
+          command.type,
+        );
+      }
+
+      throw error;
+    }
   }
 
   if (nextState === state) {
@@ -273,7 +291,15 @@ function applyAddVoice(
   state: ProjectState,
   command: AddVoiceCommand,
 ): ProjectState {
-  assertNonEmptyId(command.voice.id, command.type);
+  assertValidVoice(command.voice);
+
+  if (state.voiceOrder.length >= MAXIMUM_PROJECT_VOICE_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_PROJECT_VOICE_COUNT} voices.`,
+      command.type,
+    );
+  }
 
   if (hasOwn(state.voicesById, command.voice.id)) {
     reject(
@@ -319,6 +345,8 @@ function applyUpdateVoice(
     ...voice,
     ...command.changes,
   };
+
+  assertValidVoice(updatedVoice);
 
   return {
     ...state,
@@ -391,10 +419,13 @@ function applyUpdateProjectTitle(
 ): ProjectState {
   const title = command.title.trim();
 
-  if (title.length === 0) {
+  if (
+    title.length === 0
+    || title.length > MAXIMUM_PROJECT_TITLE_LENGTH
+  ) {
     reject(
       "INVALID_COMMAND",
-      "Project title must not be empty.",
+      `Project title must contain between 1 and ${MAXIMUM_PROJECT_TITLE_LENGTH} characters.`,
       command.type,
     );
   }
@@ -429,6 +460,11 @@ function applyUpdateMeasureCount(
     return state;
   }
 
+  assertValidProjectDuration(
+    command.measureCount,
+    state.transportSettings,
+  );
+
   return trimProjectToDuration({
     ...state,
     measureCount: command.measureCount,
@@ -452,6 +488,11 @@ function applyInsertMeasure(
       command.type,
     );
   }
+
+  assertValidProjectDuration(
+    state.measureCount + 1,
+    state.transportSettings,
+  );
 
   const measureTicks = getTicksPerMeasure(
     state.transportSettings,
@@ -532,6 +573,17 @@ function applyAddNotes(
   assertVoiceEditable(state, command.trackVoiceId, command.type);
   const commandNoteIds = new Set<NoteId>();
 
+  if (
+    command.notes.length
+    > MAXIMUM_PROJECT_NOTE_COUNT - countProjectNotes(state)
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_PROJECT_NOTE_COUNT} notes.`,
+      command.type,
+    );
+  }
+
   for (const note of command.notes) {
     assertValidNoteForTrack(note, command.trackVoiceId);
     assertNoteWithinProject(state, note, command.type);
@@ -544,10 +596,12 @@ function applyAddNotes(
       );
     }
 
-    if (hasOwn(track.notesById, note.id)) {
+    const existingVoiceId = findNoteVoiceId(state, note.id);
+
+    if (existingVoiceId !== undefined) {
       reject(
         "NOTE_ALREADY_EXISTS",
-        `Note "${note.id}" already exists in track "${track.voiceId}".`,
+        `Note "${note.id}" already exists in voice "${existingVoiceId}".`,
         command.type,
       );
     }
@@ -831,6 +885,7 @@ function applyUpdateTempo(
   };
 
   assertValidTransportState(transportSettings);
+  assertValidProjectDuration(state.measureCount, transportSettings);
 
   if (transportSettings.bpm === state.transportSettings.bpm) {
     return state;
@@ -852,6 +907,7 @@ function applyUpdateTimeSignature(
   };
 
   assertValidTransportState(transportSettings);
+  assertValidProjectDuration(state.measureCount, transportSettings);
 
   if (
     command.timeSignature.numerator
@@ -878,6 +934,11 @@ function applyUpdateLoop(
   };
 
   assertValidTransportState(transportSettings);
+  assertTransportWithinProjectDuration(
+    state,
+    transportSettings,
+    command.type,
+  );
 
   if (
     command.loop.startTick === state.transportSettings.loop.startTick
@@ -928,6 +989,11 @@ function applySetTransportAnchor(
   };
 
   assertValidTransportState(transportSettings);
+  assertTransportWithinProjectDuration(
+    state,
+    transportSettings,
+    command.type,
+  );
 
   if (
     command.anchorTick === state.transportSettings.anchorTick
@@ -1447,6 +1513,64 @@ function requireNote(
   return note;
 }
 
+function findNoteVoiceId(
+  state: ProjectState,
+  noteId: NoteId,
+): VoiceId | undefined {
+  for (const voiceId in state.tracksByVoiceId) {
+    const track = state.tracksByVoiceId[voiceId];
+
+    if (
+      track !== undefined
+      && hasOwn(track.notesById, noteId)
+    ) {
+      return voiceId;
+    }
+  }
+
+  return undefined;
+}
+
+function countProjectNotes(state: ProjectState): number {
+  let noteCount = 0;
+
+  for (const voiceId in state.tracksByVoiceId) {
+    const track = state.tracksByVoiceId[voiceId];
+
+    if (track !== undefined) {
+      noteCount += Object.keys(track.notesById).length;
+    }
+  }
+
+  return noteCount;
+}
+
+function assertTransportWithinProjectDuration(
+  state: ProjectState,
+  transport: TransportState,
+  commandType: PianoRollCommand["type"],
+): void {
+  assertValidProjectDuration(state.measureCount, transport);
+  const projectDurationTicks =
+    state.measureCount * getTicksPerMeasure(transport);
+
+  if (transport.anchorTick > projectDurationTicks) {
+    reject(
+      "INVALID_COMMAND",
+      "Transport anchor cannot exceed the project duration.",
+      commandType,
+    );
+  }
+
+  if (transport.loop.endTick > projectDurationTicks) {
+    reject(
+      "INVALID_COMMAND",
+      "Loop region cannot exceed the project duration.",
+      commandType,
+    );
+  }
+}
+
 function assertUniqueNoteIds(
   noteIds: readonly NoteId[],
   commandType: PianoRollCommand["type"],
@@ -1471,19 +1595,6 @@ function assertValidTransaction(transaction: Transaction): void {
       "INVALID_TRANSACTION",
       "Transaction ID must not be empty and creation time must be finite.",
       null,
-    );
-  }
-}
-
-function assertNonEmptyId(
-  id: string,
-  commandType: PianoRollCommand["type"],
-): void {
-  if (id.trim().length === 0) {
-    reject(
-      "INVALID_COMMAND",
-      "ID must not be empty.",
-      commandType,
     );
   }
 }

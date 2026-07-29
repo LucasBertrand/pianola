@@ -23,15 +23,23 @@ import {
   SpatialIndex,
 } from "../geometry/spatial-index";
 import type {
-  NoteColorMode,
   Rect,
-  VoiceRenderStyle,
 } from "../ui/components/PianoRollLayers";
+import type {
+  NoteColorMode,
+  VoiceRenderStyle,
+} from "../ui/rendering/note-style";
 import type {
   InteractionModeState,
 } from "../ui/interactions/types";
 import {
+  DEFAULT_GRID_SETTINGS,
+  type GridSettings,
+} from "../ui/rendering/grid-settings";
+import {
+  MappedRenderSignal,
   MutableRenderSignal,
+  type ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
 
 export const DEMO_NOTE_COUNT = 100;
@@ -59,7 +67,8 @@ export interface DemoScene {
   readonly voiceSelectionRequest: MutableRenderSignal<VoiceId | null>;
   readonly playheadTick: MutableRenderSignal<number>;
   readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
-  readonly gridResolutionTicks: MutableRenderSignal<number>;
+  readonly gridSettings: MutableRenderSignal<GridSettings>;
+  readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
 }
 
 export const DEMO_VOICES: readonly DemoVoice[] = [
@@ -98,6 +107,9 @@ export function createDemoScene(): DemoScene {
   const indexedNotesBuffer: Note[] = [];
   const voiceStyles = new MutableRenderSignal(
     createVoiceRenderStyles(projectStore.getState()),
+  );
+  const gridSettings = new MutableRenderSignal<GridSettings>(
+    DEFAULT_GRID_SETTINGS,
   );
 
   spatialIndex.update(notes);
@@ -141,8 +153,16 @@ export function createDemoScene(): DemoScene {
     interactionToolState: new MutableRenderSignal({
       activeTool: "select",
     }),
-    gridResolutionTicks: new MutableRenderSignal(240),
+    gridSettings,
+    gridResolutionTicks: new MappedRenderSignal(
+      gridSettings,
+      getGridResolutionTicks,
+    ),
   };
+}
+
+function getGridResolutionTicks(settings: GridSettings): number {
+  return settings.resolutionTicks;
 }
 
 export function createBlankProjectState(): ProjectState {

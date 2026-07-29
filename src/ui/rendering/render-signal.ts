@@ -48,3 +48,29 @@ export class MutableRenderSignal<T> implements ReadonlyRenderSignal<T> {
     };
   }
 }
+
+export class MappedRenderSignal<TSource, TValue>
+  implements ReadonlyRenderSignal<TValue> {
+  private readonly source: ReadonlyRenderSignal<TSource>;
+  private readonly mapValue: (source: TSource) => TValue;
+
+  public constructor(
+    source: ReadonlyRenderSignal<TSource>,
+    mapValue: (source: TSource) => TValue,
+  ) {
+    this.source = source;
+    this.mapValue = mapValue;
+  }
+
+  public get version(): number {
+    return this.source.version;
+  }
+
+  public get(): TValue {
+    return this.mapValue(this.source.get());
+  }
+
+  public subscribe(listener: RenderSignalListener): () => void {
+    return this.source.subscribe(listener);
+  }
+}
