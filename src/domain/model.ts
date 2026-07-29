@@ -7,8 +7,11 @@ export type MidiPitch = number;
 export type MidiVelocity = number;
 
 export const DEFAULT_PPQN = 960 as const;
-export const PROJECT_SCHEMA_VERSION = 2 as const;
+export const PROJECT_SCHEMA_VERSION = 3 as const;
 export const DEFAULT_MEASURE_COUNT = 16 as const;
+export const DEFAULT_MASTER_GAIN = 0.72 as const;
+export const MINIMUM_MASTER_GAIN = 0 as const;
+export const MAXIMUM_MASTER_GAIN = 1 as const;
 export const MINIMUM_MEASURE_COUNT = 1 as const;
 export const MAXIMUM_MEASURE_COUNT = 256 as const;
 export const MAXIMUM_ENTITY_ID_LENGTH = 160 as const;
@@ -116,6 +119,10 @@ export interface TransportState {
   readonly anchorAudioTimeSeconds: number | null;
 }
 
+export interface MasterBusState {
+  readonly gain: number;
+}
+
 export interface ProjectState {
   readonly schemaVersion: number;
   readonly revision: number;
@@ -125,6 +132,7 @@ export interface ProjectState {
   readonly voiceOrder: readonly VoiceId[];
   readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
   readonly transportSettings: TransportState;
+  readonly masterBus: MasterBusState;
 }
 
 export type AudioLatencyHint = "interactive" | "balanced" | "playback" | number;
@@ -155,6 +163,12 @@ export function createDefaultTransportState(): TransportState {
     ppqn: DEFAULT_PPQN,
     anchorTick: 0,
     anchorAudioTimeSeconds: null,
+  };
+}
+
+export function createDefaultMasterBusState(): MasterBusState {
+  return {
+    gain: DEFAULT_MASTER_GAIN,
   };
 }
 

@@ -52,6 +52,7 @@ export interface PlaybackSnapshot {
   readonly projectRevision: number;
   readonly ppqn: number;
   readonly durationTicks: Tick;
+  readonly masterGain: number;
   readonly tempoMap: TempoMapSnapshot;
   readonly voices: readonly PlaybackVoiceSnapshot[];
 }
@@ -75,6 +76,7 @@ export interface AudioEnginePort {
   replacePlaybackSnapshot(snapshot: PlaybackSnapshot): void;
   resume(): Promise<void>;
   scheduleNote(event: ScheduledNoteEvent): void;
+  cancelScheduledAfter(atAudioTimeSeconds: number): void;
   cancelAll(atAudioTimeSeconds: number): void;
   dispose(): Promise<void>;
 }
@@ -90,6 +92,7 @@ export interface AudioTransportController {
   pause(): void;
   stop(): void;
   seek(tick: Tick): void;
+  previewMasterGain(gain: number): void;
   pulse(): void;
   dispose(): Promise<void>;
 }

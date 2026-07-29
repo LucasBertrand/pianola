@@ -128,8 +128,10 @@ export class LookaheadScheduler implements AudioTransportController {
     const currentTick = this.getPositionTick();
 
     if (wasPlaying) {
-      this.engine.cancelAll(this.engine.currentTimeSeconds);
       this.clearTimer();
+      this.engine.cancelScheduledAfter(
+        this.engine.currentTimeSeconds,
+      );
     }
 
     this.snapshot = snapshot;
@@ -142,7 +144,7 @@ export class LookaheadScheduler implements AudioTransportController {
 
     if (wasPlaying) {
       try {
-        this.restartFromTick(this.positionTick);
+        this.restartFromTick(this.positionTick, false, 0);
       } catch (error: unknown) {
         this.handleRuntimeError(error);
       }
@@ -237,6 +239,14 @@ export class LookaheadScheduler implements AudioTransportController {
     this.emitStatus();
   }
 
+  public previewMasterGain(gain: number): void {
+    this.assertUsable();
+    this.engine.configure({
+      ...this.engine.config,
+      masterGain: gain,
+    });
+  }
+
   public pulse(): void {
     if (
       this.disposed
@@ -270,7 +280,11 @@ export class LookaheadScheduler implements AudioTransportController {
     await this.engine.dispose();
   }
 
-  private restartFromTick(tick: Tick): void {
+  private restartFromTick(
+    tick: Tick,
+    includeHeldNotes = true,
+    restartLeadSeconds?: number,
+  ): void {
     this.generation += 1;
     this.positionTick = clampTick(
       tick,
@@ -282,14 +296,19 @@ export class LookaheadScheduler implements AudioTransportController {
       && this.positionTick <= this.transport.loop.endTick;
     this.anchorAudioTimeSeconds =
       this.engine.currentTimeSeconds
-      + Math.max(
-        MINIMUM_RESTART_LEAD_SECONDS,
-        this.engine.config.latencyCompensationSeconds,
+      + (
+        restartLeadSeconds
+        ?? Math.max(
+          MINIMUM_RESTART_LEAD_SECONDS,
+          this.engine.config.latencyCompensationSeconds,
+        )
       );
     this.scheduledThroughAudioTimeSeconds =
       this.anchorAudioTimeSeconds;
 
-    this.scheduleHeldNotesAtAnchor();
+    if (includeHeldNotes) {
+      this.scheduleHeldNotesAtAnchor();
+    }
     this.scheduleNextWindow();
 
     if (this.currentStatus === "playing") {

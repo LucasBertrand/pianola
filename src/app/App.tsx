@@ -17,6 +17,7 @@ import {
   type UpdateVoiceChanges,
 } from "../domain/commands";
 import type {
+  AdsrEnvelope,
   LoopRegion,
   Note,
   NoteId,
@@ -30,8 +31,10 @@ import type {
 import {
   getProjectDurationTicks,
   getTicksPerMeasure,
+  MAXIMUM_MASTER_GAIN,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
+  MINIMUM_MASTER_GAIN,
   MAXIMUM_VOICE_NAME_LENGTH,
 } from "../domain/model";
 import {
@@ -262,6 +265,7 @@ export function App(): React.JSX.Element {
     stopPlayback,
     returnToStart,
     seek: seekPlayback,
+    previewMasterGain,
     beginSeekGesture,
     previewSeek,
     commitSeekGesture,
@@ -1339,6 +1343,80 @@ export function App(): React.JSX.Element {
       );
     },
     [dispatchVoiceCommand],
+  );
+  const handleEnvelopeParameterCommit = useCallback(
+    (
+      voiceId: VoiceId,
+      parameter: keyof AdsrEnvelope,
+      value: number,
+    ): void => {
+      const voice =
+        scene.projectStore.getState().voicesById[voiceId];
+
+      if (voice === undefined) {
+        return;
+      }
+
+      handleUpdateVoice(
+        voiceId,
+        {
+          instrument: {
+            ...voice.instrument,
+            envelope: {
+              ...voice.instrument.envelope,
+              [parameter]: value,
+            },
+          },
+        },
+        `Update ${parameter}`,
+      );
+    },
+    [
+      handleUpdateVoice,
+      scene,
+    ],
+  );
+  const handleWaveformCommit = useCallback(
+    (
+      voiceId: VoiceId,
+      oscillatorWaveform: OscillatorWaveform,
+    ): void => {
+      const voice =
+        scene.projectStore.getState().voicesById[voiceId];
+
+      if (voice === undefined) {
+        return;
+      }
+
+      handleUpdateVoice(
+        voiceId,
+        {
+          instrument: {
+            ...voice.instrument,
+            oscillatorWaveform,
+          },
+        },
+        "Update oscillator waveform",
+      );
+    },
+    [
+      handleUpdateVoice,
+      scene,
+    ],
+  );
+  const handleMasterGainCommit = useCallback(
+    (gain: number): void => {
+      dispatchEditCommands(
+        [
+          {
+            type: "UpdateMasterGain",
+            gain,
+          },
+        ],
+        "Update master gain",
+      );
+    },
+    [dispatchEditCommands],
   );
   const handleSelectVoiceNotes = useCallback(
     (voiceId: VoiceId): void => {
@@ -2497,6 +2575,35 @@ export function App(): React.JSX.Element {
                     </button>
                     <button
                       className={
+                        voice.solo
+                          ? "voice-solo-button is-active"
+                          : "voice-solo-button"
+                      }
+                      type="button"
+                      aria-label={`${voice.solo ? "Disable solo for" : "Solo"} ${voice.name}`}
+                      aria-pressed={voice.solo}
+                      title={
+                        voice.solo
+                          ? "Disable solo"
+                          : "Solo voice"
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleUpdateVoice(
+                          voice.id,
+                          {
+                            solo: !voice.solo,
+                          },
+                          voice.solo
+                            ? "Disable voice solo"
+                            : "Solo voice",
+                        );
+                      }}
+                    >
+                      S
+                    </button>
+                    <button
+                      className={
                         voice.locked
                           ? "voice-lock-button is-active"
                           : "voice-lock-button"
@@ -2592,9 +2699,24 @@ export function App(): React.JSX.Element {
                     {getVoiceInstrumentLabel()}
                   </strong>
                 </div>
-                <span className="live-pill">
-                  {getVoiceWaveform(selectedVoice)}
-                </span>
+                <select
+                  className="waveform-select"
+                  value={
+                    selectedVoice.instrument.oscillatorWaveform
+                  }
+                  aria-label="Oscillator waveform"
+                  onChange={(event) => {
+                    handleWaveformCommit(
+                      selectedVoice.id,
+                      event.currentTarget.value as OscillatorWaveform,
+                    );
+                  }}
+                >
+                  <option value="sine">Sine</option>
+                  <option value="triangle">Triangle</option>
+                  <option value="sawtooth">Saw</option>
+                  <option value="square">Square</option>
+                </select>
               </div>
 
               <div className="wave-display" aria-hidden="true">
@@ -2605,66 +2727,86 @@ export function App(): React.JSX.Element {
 
               <div className="parameter-grid">
                 <ParameterDial
+                  key={`${selectedVoice.id}-attack`}
                   label="Attack"
-                  value={formatEnvelopeTime(
-                    selectedVoice.instrument.envelope.attackSeconds,
-                  )}
-                  level={formatParameterLevel(
-                    selectedVoice.instrument.envelope.attackSeconds,
-                    2,
-                  )}
+                  value={
+                    selectedVoice.instrument.envelope.attackSeconds
+                  }
+                  minimum={0}
+                  maximum={2}
+                  step={0.005}
+                  formatValue={formatEnvelopeTime}
+                  onCommit={(value) => {
+                    handleEnvelopeParameterCommit(
+                      selectedVoice.id,
+                      "attackSeconds",
+                      value,
+                    );
+                  }}
                 />
                 <ParameterDial
+                  key={`${selectedVoice.id}-decay`}
                   label="Decay"
-                  value={formatEnvelopeTime(
-                    selectedVoice.instrument.envelope.decaySeconds,
-                  )}
-                  level={formatParameterLevel(
-                    selectedVoice.instrument.envelope.decaySeconds,
-                    2,
-                  )}
+                  value={
+                    selectedVoice.instrument.envelope.decaySeconds
+                  }
+                  minimum={0}
+                  maximum={2}
+                  step={0.005}
+                  formatValue={formatEnvelopeTime}
+                  onCommit={(value) => {
+                    handleEnvelopeParameterCommit(
+                      selectedVoice.id,
+                      "decaySeconds",
+                      value,
+                    );
+                  }}
                 />
                 <ParameterDial
+                  key={`${selectedVoice.id}-sustain`}
                   label="Sustain"
                   value={
-                    `${Math.round(
-                      selectedVoice.instrument.envelope.sustainLevel
-                      * 100,
-                    )}%`
+                    selectedVoice.instrument.envelope.sustainLevel
                   }
-                  level={
-                    `${Math.round(
-                      selectedVoice.instrument.envelope.sustainLevel
-                      * 100,
-                    )}%`
-                  }
+                  minimum={0}
+                  maximum={1}
+                  step={0.01}
+                  formatValue={formatPercentage}
+                  onCommit={(value) => {
+                    handleEnvelopeParameterCommit(
+                      selectedVoice.id,
+                      "sustainLevel",
+                      value,
+                    );
+                  }}
                 />
                 <ParameterDial
+                  key={`${selectedVoice.id}-release`}
                   label="Release"
-                  value={formatEnvelopeTime(
-                    selectedVoice.instrument.envelope.releaseSeconds,
-                  )}
-                  level={formatParameterLevel(
-                    selectedVoice.instrument.envelope.releaseSeconds,
-                    2,
-                  )}
+                  value={
+                    selectedVoice.instrument.envelope.releaseSeconds
+                  }
+                  minimum={0}
+                  maximum={2}
+                  step={0.005}
+                  formatValue={formatEnvelopeTime}
+                  onCommit={(value) => {
+                    handleEnvelopeParameterCommit(
+                      selectedVoice.id,
+                      "releaseSeconds",
+                      value,
+                    );
+                  }}
                 />
               </div>
             </section>
           )}
 
-          <section className="routing-card">
-            <div className="section-title">
-              <div>
-                <small>Output</small>
-                <strong>Master bus</strong>
-              </div>
-              <span>−3.2 dB</span>
-            </div>
-            <div className="meter">
-              <span style={{ width: "68%" }} />
-            </div>
-          </section>
+          <MasterGainControl
+            gain={projectState.masterBus.gain}
+            onPreview={previewMasterGain}
+            onCommit={handleMasterGainCommit}
+          />
 
           <div className="project-summary">
             <span>
@@ -3269,13 +3411,8 @@ function formatEnvelopeTime(seconds: number): string {
   return `${seconds.toFixed(2)} s`;
 }
 
-function formatParameterLevel(
-  value: number,
-  maximum: number,
-): string {
-  return `${Math.round(
-    Math.min(1, Math.max(0, value / maximum)) * 100,
-  )}%`;
+function formatPercentage(value: number): string {
+  return `${Math.round(value * 100)}%`;
 }
 
 interface PianoKeyboardProps {
@@ -4600,31 +4737,228 @@ function PianoKeyboard(
 
 interface ParameterDialProps {
   readonly label: string;
-  readonly value: string;
-  readonly level: string;
+  readonly value: number;
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly step: number;
+  readonly formatValue: (value: number) => string;
+  readonly onCommit: (value: number) => void;
 }
 
 function ParameterDial(props: ParameterDialProps): React.JSX.Element {
   const {
     label,
     value,
-    level,
+    minimum,
+    maximum,
+    step,
+    formatValue,
+    onCommit,
   } = props;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const valueRef = useRef<HTMLElement | null>(null);
+  const lastCommittedValueRef = useRef(value);
+
+  const updateVisual = useCallback((nextValue: number): void => {
+    const ratio = Math.min(
+      1,
+      Math.max(
+        0,
+        (nextValue - minimum) / (maximum - minimum),
+      ),
+    );
+
+    if (trackRef.current !== null) {
+      trackRef.current.style.setProperty(
+        "--parameter-level",
+        `${ratio * 75}%`,
+      );
+      trackRef.current.style.setProperty(
+        "--parameter-angle",
+        `${-135 + ratio * 270}deg`,
+      );
+    }
+
+    if (valueRef.current !== null) {
+      valueRef.current.textContent = formatValue(nextValue);
+    }
+  }, [
+    formatValue,
+    maximum,
+    minimum,
+  ]);
+
+  useEffect(() => {
+    if (inputRef.current !== null) {
+      inputRef.current.value = String(value);
+    }
+
+    lastCommittedValueRef.current = value;
+    updateVisual(value);
+  }, [
+    updateVisual,
+    value,
+  ]);
+
+  const commitValue = (): void => {
+    const nextValue = Number(inputRef.current?.value);
+
+    if (
+      !Number.isFinite(nextValue)
+      || nextValue === lastCommittedValueRef.current
+    ) {
+      return;
+    }
+
+    lastCommittedValueRef.current = nextValue;
+    onCommit(nextValue);
+  };
 
   return (
-    <div className="parameter">
+    <label className="parameter">
       <div
+        ref={trackRef}
         className="parameter-track"
         style={{
-          "--parameter-level": level,
+          "--parameter-level": `${
+            (value - minimum) / (maximum - minimum) * 75
+          }%`,
+          "--parameter-angle": `${
+            -135
+            + (value - minimum) / (maximum - minimum) * 270
+          }deg`,
         } as React.CSSProperties}
+        aria-hidden="true"
       >
         <i />
       </div>
-      <strong>{value}</strong>
+      <strong ref={valueRef}>{formatValue(value)}</strong>
       <span>{label}</span>
-    </div>
+      <input
+        ref={inputRef}
+        className="parameter-input"
+        type="range"
+        min={minimum}
+        max={maximum}
+        step={step}
+        defaultValue={value}
+        aria-label={label}
+        onInput={(event) => {
+          updateVisual(Number(event.currentTarget.value));
+        }}
+        onPointerUp={commitValue}
+        onPointerCancel={commitValue}
+        onBlur={commitValue}
+        onKeyUp={commitValue}
+      />
+    </label>
   );
+}
+
+interface MasterGainControlProps {
+  readonly gain: number;
+  readonly onPreview: (gain: number) => void;
+  readonly onCommit: (gain: number) => void;
+}
+
+function MasterGainControl(
+  props: MasterGainControlProps,
+): React.JSX.Element {
+  const {
+    gain,
+    onPreview,
+    onCommit,
+  } = props;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const outputRef = useRef<HTMLOutputElement | null>(null);
+  const meterRef = useRef<HTMLSpanElement | null>(null);
+  const lastCommittedGainRef = useRef(gain);
+
+  const updateVisual = useCallback((nextGain: number): void => {
+    if (outputRef.current !== null) {
+      outputRef.current.value =
+        formatMasterGainDecibels(nextGain);
+    }
+
+    if (meterRef.current !== null) {
+      meterRef.current.style.width = `${nextGain * 100}%`;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (inputRef.current !== null) {
+      inputRef.current.value = String(gain);
+    }
+
+    lastCommittedGainRef.current = gain;
+    updateVisual(gain);
+  }, [
+    gain,
+    updateVisual,
+  ]);
+
+  const commitGain = (): void => {
+    const nextGain = Number(inputRef.current?.value);
+
+    if (
+      !Number.isFinite(nextGain)
+      || nextGain === lastCommittedGainRef.current
+    ) {
+      return;
+    }
+
+    lastCommittedGainRef.current = nextGain;
+    onCommit(nextGain);
+  };
+
+  return (
+    <section className="routing-card">
+      <div className="section-title">
+        <div>
+          <small>Output</small>
+          <strong>Master bus</strong>
+        </div>
+        <output ref={outputRef}>
+          {formatMasterGainDecibels(gain)}
+        </output>
+      </div>
+      <input
+        ref={inputRef}
+        className="master-gain-input"
+        type="range"
+        min={MINIMUM_MASTER_GAIN}
+        max={MAXIMUM_MASTER_GAIN}
+        step="0.01"
+        defaultValue={gain}
+        aria-label="Master gain"
+        onInput={(event) => {
+          const nextGain = Number(event.currentTarget.value);
+
+          updateVisual(nextGain);
+          onPreview(nextGain);
+        }}
+        onPointerUp={commitGain}
+        onPointerCancel={commitGain}
+        onBlur={commitGain}
+        onKeyUp={commitGain}
+      />
+      <div className="meter" aria-hidden="true">
+        <span
+          ref={meterRef}
+          style={{ width: `${gain * 100}%` }}
+        />
+      </div>
+    </section>
+  );
+}
+
+function formatMasterGainDecibels(gain: number): string {
+  if (gain <= 0) {
+    return "−∞ dB";
+  }
+
+  return `${(20 * Math.log10(gain)).toFixed(1)} dB`;
 }
 
 function createPianoKeys(): readonly React.JSX.Element[] {

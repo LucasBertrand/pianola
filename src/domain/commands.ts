@@ -18,7 +18,9 @@ import {
   getProjectDurationTicks,
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
+  MAXIMUM_MASTER_GAIN,
   MINIMUM_MEASURE_COUNT,
+  MINIMUM_MASTER_GAIN,
   MAXIMUM_PROJECT_NOTE_COUNT,
   MAXIMUM_PROJECT_TITLE_LENGTH,
   MAXIMUM_PROJECT_VOICE_COUNT,
@@ -69,6 +71,11 @@ export interface ReorderVoicesCommand {
 export interface UpdateProjectTitleCommand {
   readonly type: "UpdateProjectTitle";
   readonly title: string;
+}
+
+export interface UpdateMasterGainCommand {
+  readonly type: "UpdateMasterGain";
+  readonly gain: number;
 }
 
 export interface UpdateMeasureCountCommand {
@@ -151,6 +158,7 @@ export type PianoRollCommand =
   | DeleteVoiceCommand
   | ReorderVoicesCommand
   | UpdateProjectTitleCommand
+  | UpdateMasterGainCommand
   | UpdateMeasureCountCommand
   | InsertMeasureCommand
   | RemoveMeasureCommand
@@ -258,6 +266,8 @@ function applyCommand(
       return applyReorderVoices(state, command);
     case "UpdateProjectTitle":
       return applyUpdateProjectTitle(state, command);
+    case "UpdateMasterGain":
+      return applyUpdateMasterGain(state, command);
     case "UpdateMeasureCount":
       return applyUpdateMeasureCount(state, command);
     case "InsertMeasure":
@@ -437,6 +447,34 @@ function applyUpdateProjectTitle(
   return {
     ...state,
     title,
+  };
+}
+
+function applyUpdateMasterGain(
+  state: ProjectState,
+  command: UpdateMasterGainCommand,
+): ProjectState {
+  if (
+    !Number.isFinite(command.gain)
+    || command.gain < MINIMUM_MASTER_GAIN
+    || command.gain > MAXIMUM_MASTER_GAIN
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Master gain must be between ${MINIMUM_MASTER_GAIN} and ${MAXIMUM_MASTER_GAIN}.`,
+      command.type,
+    );
+  }
+
+  if (command.gain === state.masterBus.gain) {
+    return state;
+  }
+
+  return {
+    ...state,
+    masterBus: {
+      gain: command.gain,
+    },
   };
 }
 

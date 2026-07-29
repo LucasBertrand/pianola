@@ -7,6 +7,8 @@ import type {
 } from "../domain/model";
 import {
   getProjectDurationTicks,
+  MAXIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_GAIN,
 } from "../domain/model";
 import type {
   PackedVoiceEvents,
@@ -32,6 +34,16 @@ export function compilePlaybackSnapshot(
   assertPositiveFiniteNumber(transport.bpm, "Project BPM");
 
   const durationTicks = getProjectDurationTicks(projectState);
+
+  if (
+    !Number.isFinite(projectState.masterBus.gain)
+    || projectState.masterBus.gain < MINIMUM_MASTER_GAIN
+    || projectState.masterBus.gain > MAXIMUM_MASTER_GAIN
+  ) {
+    throw new PlaybackSnapshotCompilationError(
+      "Master gain is outside the supported range.",
+    );
+  }
 
   if (!Number.isSafeInteger(durationTicks) || durationTicks <= 0) {
     throw new PlaybackSnapshotCompilationError(
@@ -88,6 +100,7 @@ export function compilePlaybackSnapshot(
     projectRevision: projectState.revision,
     ppqn: transport.ppqn,
     durationTicks,
+    masterGain: projectState.masterBus.gain,
     tempoMap: createSingleTempoMapSnapshot(
       transport.bpm,
       transport.timeSignature,

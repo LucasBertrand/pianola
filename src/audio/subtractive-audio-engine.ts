@@ -51,7 +51,10 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     snapshot: PlaybackSnapshot,
     contextFactory: AudioContextFactory = createBrowserAudioContext,
   ) {
-    this.currentConfig = config;
+    this.currentConfig = {
+      ...config,
+      masterGain: snapshot.masterGain,
+    };
     this.currentSnapshot = snapshot;
     this.contextFactory = contextFactory;
   }
@@ -83,6 +86,10 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
   public replacePlaybackSnapshot(snapshot: PlaybackSnapshot): void {
     this.assertUsable();
     this.currentSnapshot = snapshot;
+    this.currentConfig = {
+      ...this.currentConfig,
+      masterGain: snapshot.masterGain,
+    };
 
     if (this.audioContext !== null) {
       this.synchronizeVoiceBuses();
@@ -233,6 +240,52 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     );
   }
 
+  public cancelScheduledAfter(
+    atAudioTimeSeconds: number,
+  ): void {
+    const context = this.audioContext;
+
+    if (context === null) {
+      return;
+    }
+
+    const cancellationTime = Math.max(
+      context.currentTime,
+      atAudioTimeSeconds,
+    );
+
+    for (const activeVoices of this.activeVoicesByVoiceId.values()) {
+      let writeIndex = 0;
+
+      for (
+        let readIndex = 0;
+        readIndex < activeVoices.length;
+        readIndex += 1
+      ) {
+        const activeVoice = activeVoices[readIndex];
+
+        if (activeVoice === undefined || activeVoice.ended) {
+          continue;
+        }
+
+        if (
+          activeVoice.startAudioTimeSeconds >= cancellationTime
+        ) {
+          cancelFutureVoice(activeVoice, cancellationTime);
+          this.scheduledOccurrenceIds.delete(
+            activeVoice.occurrenceId,
+          );
+          continue;
+        }
+
+        activeVoices[writeIndex] = activeVoice;
+        writeIndex += 1;
+      }
+
+      activeVoices.length = writeIndex;
+    }
+  }
+
   public cancelAll(atAudioTimeSeconds: number): void {
     const context = this.audioContext;
 
@@ -321,6 +374,12 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     if (context === null || masterGain === null) {
       return;
     }
+
+    setAudioParamSmoothly(
+      masterGain.gain,
+      this.currentSnapshot.masterGain,
+      context.currentTime,
+    );
 
     const retainedVoiceIds = new Set<VoiceId>();
     let hasSoloVoice = false;
@@ -590,6 +649,26 @@ function stopActiveVoice(
     activeVoice.oscillator.stop(
       stopTime + MINIMUM_NOTE_SECONDS,
     );
+  } catch {
+    activeVoice.ended = true;
+  }
+
+  activeVoice.stopAudioTimeSeconds = stopTime;
+}
+
+function cancelFutureVoice(
+  activeVoice: ActiveVoice,
+  atAudioTimeSeconds: number,
+): void {
+  const stopTime =
+    atAudioTimeSeconds + MINIMUM_NOTE_SECONDS;
+  const gain = activeVoice.envelopeGain.gain;
+
+  gain.cancelScheduledValues(atAudioTimeSeconds);
+  gain.setValueAtTime(0, atAudioTimeSeconds);
+
+  try {
+    activeVoice.oscillator.stop(stopTime);
   } catch {
     activeVoice.ended = true;
   }

@@ -40,6 +40,7 @@ export interface AudioPlaybackActions {
   readonly stopPlayback: () => void;
   readonly returnToStart: () => void;
   readonly seek: (tick: Tick) => void;
+  readonly previewMasterGain: (gain: number) => void;
   readonly beginSeekGesture: () => void;
   readonly previewSeek: (tick: Tick) => void;
   readonly commitSeekGesture: (tick: Tick) => void;
@@ -97,6 +98,13 @@ export function useAudioPlayback(
 
     const unsubscribe = projectStore.subscribe(
       (state, previousState) => {
+        if (
+          state.masterBus.gain
+          !== previousState.masterBus.gain
+        ) {
+          scheduler.previewMasterGain(state.masterBus.gain);
+        }
+
         if (!didPlaybackStateChange(state, previousState)) {
           return;
         }
@@ -190,6 +198,10 @@ export function useAudioPlayback(
     schedulerRef.current?.seek(tick);
   }, []);
 
+  const previewMasterGain = useCallback((gain: number): void => {
+    schedulerRef.current?.previewMasterGain(gain);
+  }, []);
+
   const beginSeekGesture = useCallback((): void => {
     const scheduler = schedulerRef.current;
 
@@ -233,6 +245,7 @@ export function useAudioPlayback(
     stopPlayback,
     returnToStart,
     seek,
+    previewMasterGain,
     beginSeekGesture,
     previewSeek,
     commitSeekGesture,

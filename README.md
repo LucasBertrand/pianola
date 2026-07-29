@@ -52,14 +52,19 @@ persistence, application, and UI before creating the Vite production bundle.
 - immutable, voice-oriented project model;
 - atomic command transactions with bounded snapshot-based Undo/Redo;
 - native versioned `.pianoroll` save and load format;
-- two default voices, editable names and colors, mute and lock controls;
+- two default voices, editable names and colors, mute, solo, and lock
+  controls;
 - voice ordering, note selection by voice, and selection transfer;
 - 16-measure initial project with insertion and removal at any measure;
 - interactive ruler, snapped playhead, and adjustable loop region;
 - play, pause, stop, return, seek, and loop-aware playback controls;
-- one polyphonic subtractive synthesizer per voice with ADSR, low-pass
-  filtering, gain, pan, mute, solo, and bounded voice stealing;
+- one polyphonic subtractive synthesizer per voice with editable waveform
+  and ADSR controls, low-pass filtering, gain, pan, and bounded voice
+  stealing;
+- an editable, project-persistent master output level;
 - a 25 ms lookahead scheduler that queues events 120 ms ahead;
+- non-destructive live rescheduling that preserves already sounding notes
+  when notes, voices, or the loop region are edited;
 - straight, triplet, and dotted grid subdivisions;
 - horizontal and vertical scrolling and zooming;
 - pitch-based or voice-based note colors;
@@ -117,6 +122,12 @@ does not acquire audio resources. Each project voice owns one subtractive
 instrument and a persistent output bus. Notes are scheduled with absolute Web
 Audio times from an immutable playback snapshot, while the moving playhead
 remains outside the undoable project state.
+
+Live project edits cancel and rebuild only events that have not started yet.
+Already sounding oscillator and envelope nodes finish naturally, which keeps
+loop, note, instrument, mute, and solo edits from restarting the transport.
+Master output changes are smoothed directly on the persistent audio graph and
+commit a single undoable transaction at the end of each slider gesture.
 
 This first audio baseline deliberately bypasses effect descriptors, generative
 rules, and voice interpretation. Keeping those stages outside the live graph

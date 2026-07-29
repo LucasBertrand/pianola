@@ -8,6 +8,7 @@ import type {
   VoiceId,
 } from "../domain/model";
 import {
+  createDefaultMasterBusState,
   createDefaultTransportState,
   DEFAULT_MEASURE_COUNT,
   getProjectDurationTicks,
@@ -404,6 +405,7 @@ function createProjectState(
       ...createDefaultTransportState(),
       bpm: 112,
     },
+    masterBus: createDefaultMasterBusState(),
   };
 }
 

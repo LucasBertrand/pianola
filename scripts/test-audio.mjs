@@ -20,6 +20,7 @@ try {
   } = await vite.ssrLoadModule("/src/domain/commands.ts");
   const {
     PROJECT_SCHEMA_VERSION,
+    createDefaultMasterBusState,
     createDefaultTransportState,
   } = await vite.ssrLoadModule("/src/domain/model.ts");
   const {
@@ -34,6 +35,12 @@ try {
     DEFAULT_AUDIO_ENGINE_CONFIG,
     LookaheadScheduler,
   } = await vite.ssrLoadModule("/src/audio/lookahead-scheduler.ts");
+  const {
+    parseNativeProjectFile,
+    serializeNativeProjectFile,
+  } = await vite.ssrLoadModule(
+    "/src/persistence/native-project-file.ts",
+  );
 
   let transactionSequence = 0;
 
@@ -95,6 +102,7 @@ try {
       measureCount = 4,
       notesByVoiceId = {},
       revision = 0,
+      masterGain = createDefaultMasterBusState().gain,
       transport: transportChanges = {},
       voiceOrder = ["voice-a"],
     } = options;
@@ -148,6 +156,9 @@ try {
       voiceOrder: [...voiceOrder],
       tracksByVoiceId,
       transportSettings,
+      masterBus: {
+        gain: masterGain,
+      },
     };
   }
 
@@ -190,6 +201,8 @@ try {
       };
       this.currentTimeSeconds = 0;
       this.cancelledAt = [];
+      this.cancelledFutureAt = [];
+      this.configurations = [];
       this.disposed = false;
       this.events = [];
       this.resumeGate = null;
@@ -200,6 +213,7 @@ try {
 
     configure(config) {
       this.config = config;
+      this.configurations.push(config);
     }
 
     replacePlaybackSnapshot(snapshot) {
@@ -228,6 +242,10 @@ try {
 
     cancelAll(atAudioTimeSeconds) {
       this.cancelledAt.push(atAudioTimeSeconds);
+    }
+
+    cancelScheduledAfter(atAudioTimeSeconds) {
+      this.cancelledFutureAt.push(atAudioTimeSeconds);
     }
 
     async dispose() {
@@ -289,6 +307,7 @@ try {
     assert.equal(snapshot.projectRevision, 7);
     assert.equal(snapshot.ppqn, 960);
     assert.equal(snapshot.durationTicks, 15_360);
+    assert.equal(snapshot.masterGain, 0.72);
     assert.deepEqual(
       snapshot.voices.map((voice) => voice.voiceId),
       ["voice-b", "voice-a"],
@@ -305,6 +324,101 @@ try {
       voiceA.instrument,
       state.voicesById["voice-a"].instrument,
     );
+  });
+
+  test("updates and validates the persistent master gain", () => {
+    const state = createProject();
+    const updatedState = dispatch(state, {
+      type: "UpdateMasterGain",
+      gain: 0.35,
+    });
+    const unchangedState = dispatch(updatedState, {
+      type: "UpdateMasterGain",
+      gain: 0.35,
+    });
+
+    assert.equal(updatedState.masterBus.gain, 0.35);
+    assert.equal(updatedState.revision, state.revision + 1);
+    assert.equal(unchangedState, updatedState);
+    assert.throws(
+      () => dispatch(state, {
+        type: "UpdateMasterGain",
+        gain: 1.1,
+      }),
+      (error) => (
+        error instanceof CommandRejectedError
+        && error.code === "INVALID_COMMAND"
+        && error.commandType === "UpdateMasterGain"
+      ),
+    );
+  });
+
+  test("updates subtractive waveform and envelope immutably", () => {
+    const state = createProject();
+    const voice = state.voicesById["voice-a"];
+    const updatedState = dispatch(state, {
+      type: "UpdateVoice",
+      voiceId: voice.id,
+      changes: {
+        instrument: {
+          ...voice.instrument,
+          oscillatorWaveform: "square",
+          envelope: {
+            ...voice.instrument.envelope,
+            attackSeconds: 0.42,
+            sustainLevel: 0.55,
+          },
+        },
+      },
+    });
+
+    assert.equal(
+      updatedState.voicesById["voice-a"]
+        .instrument.oscillatorWaveform,
+      "square",
+    );
+    assert.equal(
+      updatedState.voicesById["voice-a"]
+        .instrument.envelope.attackSeconds,
+      0.42,
+    );
+    assert.equal(
+      updatedState.voicesById["voice-a"]
+        .instrument.envelope.sustainLevel,
+      0.55,
+    );
+    assert.equal(
+      state.voicesById["voice-a"]
+        .instrument.oscillatorWaveform,
+      "sawtooth",
+    );
+  });
+
+  test("round-trips master gain and migrates version two files", () => {
+    const state = createProject({
+      masterGain: 0.41,
+    });
+    const metadata = {
+      documentId: "audio-test-document",
+      createdAt: "2026-07-29T10:00:00.000Z",
+      savedAt: "2026-07-29T10:01:00.000Z",
+    };
+    const serialized = serializeNativeProjectFile(state, metadata);
+    const loaded = parseNativeProjectFile(serialized);
+
+    assert.equal(loaded.projectState.masterBus.gain, 0.41);
+    assert.equal(loaded.projectState.schemaVersion, 3);
+
+    const versionTwoDocument = JSON.parse(serialized);
+    versionTwoDocument.formatVersion = 2;
+    versionTwoDocument.project.schemaVersion = 2;
+    delete versionTwoDocument.project.masterBus;
+    const migrated = parseNativeProjectFile(
+      JSON.stringify(versionTwoDocument),
+    );
+
+    assert.equal(migrated.projectState.masterBus.gain, 0.72);
+    assert.equal(migrated.projectState.schemaVersion, 3);
   });
 
   test("round-trips ticks and seconds across tempo segments", () => {
@@ -510,6 +624,110 @@ try {
       engine.events[1].startAudioTimeSeconds,
     );
     assert.equal(timer.pendingCount, 1);
+
+    await scheduler.dispose();
+  });
+
+  test("keeps active notes sounding while refreshing future events", async () => {
+    const state = createProject({
+      measureCount: 1,
+      notesByVoiceId: {
+        "voice-a": [
+          createNote("held", "voice-a", 60, 0, 960),
+          createNote("future", "voice-a", 67, 480, 120),
+        ],
+      },
+      revision: 1,
+    });
+    const snapshot = compilePlaybackSnapshot(state);
+    const engine = new FakeAudioEngine({
+      scheduleAheadSeconds: 0.4,
+    });
+    const timer = new FakeSchedulerTimer();
+    const scheduler = new LookaheadScheduler(
+      engine,
+      snapshot,
+      state.transportSettings,
+      {},
+      timer,
+      240,
+    );
+
+    await scheduler.play();
+    const firstFutureEvent = engine.events.find(
+      (event) => event.pitch === 67,
+    );
+    assert.ok(firstFutureEvent !== undefined);
+
+    engine.currentTimeSeconds = 0.05;
+    const refreshedState = {
+      ...state,
+      revision: 2,
+    };
+    scheduler.replacePlaybackState(
+      compilePlaybackSnapshot(refreshedState),
+      refreshedState.transportSettings,
+    );
+
+    const refreshedEvents = engine.events.filter(
+      (event) => event.generation === 2,
+    );
+
+    assert.deepEqual(engine.cancelledFutureAt, [0.05]);
+    assert.deepEqual(engine.cancelledAt, []);
+    assert.equal(refreshedEvents.length, 1);
+    assert.equal(refreshedEvents[0].pitch, 67);
+    assertClose(
+      refreshedEvents[0].startAudioTimeSeconds,
+      firstFutureEvent.startAudioTimeSeconds,
+    );
+    assert.equal(timer.pendingCount, 1);
+
+    scheduler.previewMasterGain(0.29);
+    assert.equal(engine.config.masterGain, 0.29);
+    assert.equal(engine.configurations.length, 1);
+    assert.deepEqual(engine.cancelledAt, []);
+
+    await scheduler.dispose();
+  });
+
+  test("schedules only soloed voices when solo is active", async () => {
+    const state = createProject({
+      measureCount: 1,
+      notesByVoiceId: {
+        "voice-a": [
+          createNote("solo-note", "voice-a", 60, 0, 120),
+        ],
+        "voice-b": [
+          createNote("other-note", "voice-b", 67, 0, 120),
+        ],
+      },
+      voiceOrder: ["voice-a", "voice-b"],
+    });
+    const soloState = {
+      ...state,
+      voicesById: {
+        ...state.voicesById,
+        "voice-a": {
+          ...state.voicesById["voice-a"],
+          solo: true,
+        },
+      },
+    };
+    const snapshot = compilePlaybackSnapshot(soloState);
+    const engine = new FakeAudioEngine();
+    const scheduler = new LookaheadScheduler(
+      engine,
+      snapshot,
+      soloState.transportSettings,
+    );
+
+    await scheduler.play();
+
+    assert.deepEqual(
+      engine.events.map((event) => event.pitch),
+      [60],
+    );
 
     await scheduler.dispose();
   });
