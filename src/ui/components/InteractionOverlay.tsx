@@ -24,6 +24,7 @@ import {
 } from "../hooks/useInteractionManager";
 import {
   usePianoRollEvents,
+  type NoteCollisionResolutionRequest,
   type PianoRollEventController,
 } from "../hooks/usePianoRollEvents";
 import type {
@@ -63,6 +64,9 @@ export interface InteractionOverlayProps {
     PianoRollEventController | null
   >;
   readonly onSelectionChange: (hasSelection: boolean) => void;
+  readonly onNoteCollision: (
+    request: NoteCollisionResolutionRequest,
+  ) => void;
 }
 
 const INTERACTION_LAYER_STYLE: CSSProperties = {
@@ -117,6 +121,7 @@ export function InteractionOverlay(
     editingNoteIds,
     eventControllerRef,
     onSelectionChange,
+    onNoteCollision,
   } = props;
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const selectionLayerRef = useRef<HTMLDivElement | null>(null);
@@ -369,6 +374,7 @@ export function InteractionOverlay(
     gridResolutionTicks,
     voiceSelectionRequest,
     onSelectionChange,
+    onNoteCollision,
   });
 
   useEffect(

@@ -7,7 +7,9 @@ import type {
 } from "../domain/model";
 import {
   getProjectDurationTicks,
+  MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
+  MINIMUM_INSTRUMENT_POLYPHONY,
   MINIMUM_MASTER_GAIN,
 } from "../domain/model";
 import type {
@@ -42,6 +44,12 @@ export function compilePlaybackSnapshot(
   ) {
     throw new PlaybackSnapshotCompilationError(
       "Master gain is outside the supported range.",
+    );
+  }
+
+  if (typeof projectState.masterBus.muted !== "boolean") {
+    throw new PlaybackSnapshotCompilationError(
+      "Master mute state must be a boolean.",
     );
   }
 
@@ -101,6 +109,7 @@ export function compilePlaybackSnapshot(
     ppqn: transport.ppqn,
     durationTicks,
     masterGain: projectState.masterBus.gain,
+    masterMuted: projectState.masterBus.muted,
     tempoMap: createSingleTempoMapSnapshot(
       transport.bpm,
       transport.timeSignature,
@@ -120,6 +129,16 @@ function compileVoiceSnapshot(
     throw new PlaybackSnapshotCompilationError(
       `Voice "${voice.id}" uses unsupported instrument kind`
         + ` "${voice.instrument.kind}".`,
+    );
+  }
+
+  if (
+    !Number.isSafeInteger(voice.instrument.polyphony)
+    || voice.instrument.polyphony < MINIMUM_INSTRUMENT_POLYPHONY
+    || voice.instrument.polyphony > MAXIMUM_INSTRUMENT_POLYPHONY
+  ) {
+    throw new PlaybackSnapshotCompilationError(
+      `Voice "${voice.id}" polyphony must be between ${MINIMUM_INSTRUMENT_POLYPHONY} and ${MAXIMUM_INSTRUMENT_POLYPHONY}.`,
     );
   }
 
@@ -224,6 +243,7 @@ function cloneInstrument(
   return Object.freeze({
     kind: "subtractive",
     oscillatorWaveform: instrument.oscillatorWaveform,
+    polyphony: instrument.polyphony,
     oscillatorDetuneCents: instrument.oscillatorDetuneCents,
     envelope,
     filterCutoffHz: instrument.filterCutoffHz,

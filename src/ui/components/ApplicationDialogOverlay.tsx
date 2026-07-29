@@ -6,14 +6,17 @@ export interface ApplicationDialogState {
   readonly title: string;
   readonly message: string;
   readonly confirmLabel: string;
+  readonly alternateLabel: string | null;
   readonly cancelLabel: string | null;
   readonly tone: ApplicationDialogTone;
   readonly onConfirm: (() => void) | null;
+  readonly onAlternate: (() => void) | null;
 }
 
 export interface ApplicationDialogOverlayProps {
   readonly dialog: ApplicationDialogState | null;
   readonly onConfirm: () => void;
+  readonly onAlternate: () => void;
   readonly onCancel: () => void;
 }
 
@@ -23,6 +26,7 @@ export function ApplicationDialogOverlay(
   const {
     dialog,
     onConfirm,
+    onAlternate,
     onCancel,
   } = props;
 
@@ -51,7 +55,13 @@ export function ApplicationDialogOverlay(
         <p id="application-dialog-message">
           {dialog.message}
         </p>
-        <div className="application-dialog-actions">
+        <div
+          className={
+            dialog.alternateLabel === null
+              ? "application-dialog-actions"
+              : "application-dialog-actions has-alternate"
+          }
+        >
           {dialog.cancelLabel === null
             ? null
             : (
@@ -61,6 +71,17 @@ export function ApplicationDialogOverlay(
                   onClick={onCancel}
                 >
                   {dialog.cancelLabel}
+                </button>
+              )}
+          {dialog.alternateLabel === null
+            ? null
+            : (
+                <button
+                  className="application-dialog-button is-secondary"
+                  type="button"
+                  onClick={onAlternate}
+                >
+                  {dialog.alternateLabel}
                 </button>
               )}
           <button

@@ -53,15 +53,15 @@ persistence, application, and UI before creating the Vite production bundle.
 - atomic command transactions with bounded snapshot-based Undo/Redo;
 - native versioned `.pianoroll` save and load format;
 - two default voices, editable names and colors, mute, solo, and lock
-  controls;
+  controls, and directly adjustable output levels;
 - voice ordering, note selection by voice, and selection transfer;
 - 16-measure initial project with insertion and removal at any measure;
 - interactive ruler, snapped playhead, and adjustable loop region;
 - play, pause, stop, return, seek, and loop-aware playback controls;
-- one polyphonic subtractive synthesizer per voice with editable waveform
-  and ADSR controls, low-pass filtering, gain, pan, and bounded voice
-  stealing;
-- an editable, project-persistent master output level;
+- one subtractive synthesizer per voice with editable waveform, ADSR, and
+  1–16 voice polyphony defaulting to monophonic operation, low-pass
+  filtering, gain, pan, and oldest-voice stealing;
+- a header-mounted, project-persistent master output level with mute;
 - a 25 ms lookahead scheduler that queues events 120 ms ahead;
 - non-destructive live rescheduling that preserves already sounding notes
   when notes, voices, or the loop region are edited;
@@ -76,6 +76,8 @@ persistence, application, and UI before creating the Vite production bundle.
 - copy, cut, paste, delete, Undo, Redo, New, Save, and Load tools;
 - custom in-application confirmation and error dialogs that preserve
   fullscreen mode;
+- collision resolution for move, resize, draw, paste, and voice transfer
+  with cancel, merge, or slice-at-anchor strategies;
 - responsive landscape and portrait inspector layouts.
 
 The initial scene contains 100 deterministic notes. Spatial queries and
@@ -91,13 +93,21 @@ than a fixed marketing number.
 - Drag a visible selection handle to resize selected notes.
 - Long-press an empty grid cell and drag to draw a note.
 - Double-click or double-tap a note to delete it.
-- Tap a piano key to add or remove all editable notes of that pitch from the
-  current selection.
+- Tap a piano key to audition its pitch with the selected instrument when
+  the keyboard preview toggle is enabled.
+- Long-press a piano key to add or remove all editable notes of that pitch
+  from the current selection.
 - Use two fingers over the piano roll to pan and zoom without changing the
-  project state during the gesture.
+  project state during the gesture. A horizontal finger arrangement locks
+  zoom to time, a vertical arrangement locks it to pitch, and a diagonal
+  arrangement scales both axes.
 
 All note edits are previewed through mutable interaction drafts. A gesture
 dispatches at most one domain transaction when it is committed.
+When an edit overlaps notes on the same pitch and voice, the application can
+cancel it, merge each connected overlap into one note, or keep the edited
+notes while slicing existing notes at the edited start and end anchors. A
+resolved collision remains one atomic Undo step.
 
 ## Project structure
 
@@ -128,6 +138,9 @@ Already sounding oscillator and envelope nodes finish naturally, which keeps
 loop, note, instrument, mute, and solo edits from restarting the transport.
 Master output changes are smoothed directly on the persistent audio graph and
 commit a single undoable transaction at the end of each slider gesture.
+Envelope sliders use an exponential response curve so low values occupy more
+physical travel. Scheduled gain envelopes use smooth exponential attack,
+decay, and release approaches with exact segment endpoints.
 
 This first audio baseline deliberately bypasses effect descriptors, generative
 rules, and voice interpretation. Keeping those stages outside the live graph

@@ -35,7 +35,10 @@ export interface UseInteractionManagerOptions {
 
 interface MutableGestureState {
   active: boolean;
+  zoomAxis: "horizontal" | "vertical" | "both";
   previousDistance: number;
+  previousSpanX: number;
+  previousSpanY: number;
   previousMidpointX: number;
   previousMidpointY: number;
 }
@@ -44,6 +47,10 @@ const LONG_PRESS_DELAY_MS = 560;
 const PEN_LONG_PRESS_DELAY_MS = 280;
 const LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS = 12;
 const MINIMUM_PINCH_DISTANCE_CSS_PIXELS = 8;
+const PINCH_AXIS_LOCK_RATIO = 1.35;
+const MINIMUM_PINCH_SCALE = 0.82;
+const MAXIMUM_PINCH_SCALE = 1.22;
+const PINCH_SCALE_DEAD_ZONE = 0.003;
 
 export function useInteractionManager(
   options: UseInteractionManagerOptions,
@@ -79,7 +86,10 @@ export function useInteractionManager(
     const gestureEvents: PointerEvent[] = [];
     const gestureState: MutableGestureState = {
       active: false,
+      zoomAxis: "both",
       previousDistance: 1,
+      previousSpanX: 1,
+      previousSpanY: 1,
       previousMidpointX: 0,
       previousMidpointY: 0,
     };
@@ -138,11 +148,25 @@ export function useInteractionManager(
         (first.clientY + second.clientY) / 2 - bounds.top;
       const deltaX = second.clientX - first.clientX;
       const deltaY = second.clientY - first.clientY;
+      const spanX = Math.max(
+        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
+        Math.abs(deltaX),
+      );
+      const spanY = Math.max(
+        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
+        Math.abs(deltaY),
+      );
       gestureState.active = true;
+      gestureState.zoomAxis = classifyPinchZoomAxis(
+        Math.abs(deltaX),
+        Math.abs(deltaY),
+      );
       gestureState.previousDistance = Math.max(
         MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
         Math.hypot(deltaX, deltaY),
       );
+      gestureState.previousSpanX = spanX;
+      gestureState.previousSpanY = spanY;
       gestureState.previousMidpointX = midpointX;
       gestureState.previousMidpointY = midpointY;
       strategyRef.current?.onGesture(gestureEvents);
@@ -174,8 +198,34 @@ export function useInteractionManager(
         MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
         Math.hypot(deltaX, deltaY),
       );
+      const spanX = Math.max(
+        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
+        Math.abs(deltaX),
+      );
+      const spanY = Math.max(
+        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
+        Math.abs(deltaY),
+      );
       const currentViewport = viewport.get();
-      const scale = distance / gestureState.previousDistance;
+      const uniformScale = normalizePinchScale(
+        distance / gestureState.previousDistance,
+      );
+      const scaleX =
+        gestureState.zoomAxis === "vertical"
+          ? 1
+          : gestureState.zoomAxis === "horizontal"
+            ? normalizePinchScale(
+                spanX / gestureState.previousSpanX,
+              )
+            : uniformScale;
+      const scaleY =
+        gestureState.zoomAxis === "horizontal"
+          ? 1
+          : gestureState.zoomAxis === "vertical"
+            ? normalizePinchScale(
+                spanY / gestureState.previousSpanY,
+              )
+            : uniformScale;
       const currentPitchHeight =
         currentViewport.pitchHeight * currentViewport.zoomY;
       const anchorTick =
@@ -192,12 +242,12 @@ export function useInteractionManager(
         )
         / currentPitchHeight;
       const zoomX = clamp(
-        currentViewport.zoomX * scale,
+        currentViewport.zoomX * scaleX,
         MINIMUM_HORIZONTAL_ZOOM,
         MAXIMUM_HORIZONTAL_ZOOM,
       );
       const zoomY = clamp(
-        currentViewport.zoomY * scale,
+        currentViewport.zoomY * scaleY,
         MINIMUM_VERTICAL_ZOOM,
         MAXIMUM_VERTICAL_ZOOM,
       );
@@ -227,6 +277,8 @@ export function useInteractionManager(
       );
 
       gestureState.previousDistance = distance;
+      gestureState.previousSpanX = spanX;
+      gestureState.previousSpanY = spanY;
       gestureState.previousMidpointX = midpointX;
       gestureState.previousMidpointY = midpointY;
       setViewport({
@@ -494,4 +546,34 @@ function clamp(
   maximum: number,
 ): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function classifyPinchZoomAxis(
+  spanX: number,
+  spanY: number,
+): MutableGestureState["zoomAxis"] {
+  if (spanX >= spanY * PINCH_AXIS_LOCK_RATIO) {
+    return "horizontal";
+  }
+
+  if (spanY >= spanX * PINCH_AXIS_LOCK_RATIO) {
+    return "vertical";
+  }
+
+  return "both";
+}
+
+function normalizePinchScale(scale: number): number {
+  if (
+    !Number.isFinite(scale)
+    || Math.abs(scale - 1) <= PINCH_SCALE_DEAD_ZONE
+  ) {
+    return 1;
+  }
+
+  return clamp(
+    scale,
+    MINIMUM_PINCH_SCALE,
+    MAXIMUM_PINCH_SCALE,
+  );
 }

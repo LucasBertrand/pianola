@@ -8,6 +8,10 @@ import type {
   PlaybackVoiceSnapshot,
   ScheduledNoteEvent,
 } from "./contracts";
+import {
+  countOverlappingVoiceWindows,
+  findOldestOverlappingVoiceIndex,
+} from "./voice-allocation";
 
 export type AudioContextFactory = (
   config: AudioEngineConfig,
@@ -32,6 +36,7 @@ interface ActiveVoice {
 const MINIMUM_NOTE_SECONDS = 0.002;
 const CANCELLATION_FADE_SECONDS = 0.006;
 const BUS_RAMP_SECONDS = 0.008;
+const ENVELOPE_TIME_CONSTANT_DIVISOR = 5;
 
 export class SubtractiveAudioEngine implements AudioEnginePort {
   private currentConfig: AudioEngineConfig;
@@ -77,7 +82,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     if (context !== null && masterGain !== null) {
       setAudioParamSmoothly(
         masterGain.gain,
-        config.masterGain,
+        this.currentSnapshot.masterMuted ? 0 : config.masterGain,
         context.currentTime,
       );
     }
@@ -151,6 +156,10 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
       event.voice.voiceId,
       startAudioTimeSeconds,
       noteEndAudioTimeSeconds,
+      Math.min(
+        event.voice.instrument.polyphony,
+        this.currentConfig.maxPolyphonyPerVoice,
+      ),
     );
 
     const oscillator = context.createOscillator();
@@ -237,6 +246,57 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     oscillator.start(startAudioTimeSeconds);
     oscillator.stop(
       stopAudioTimeSeconds + MINIMUM_NOTE_SECONDS,
+    );
+  }
+
+  public previewVoiceGain(
+    voiceId: VoiceId,
+    gain: number,
+  ): void {
+    this.assertUsable();
+
+    if (!Number.isFinite(gain) || gain < 0 || gain > 1) {
+      throw new RangeError("Voice gain must be between 0 and 1.");
+    }
+
+    const context = this.audioContext;
+    const voiceBus = this.voiceBuses.get(voiceId);
+
+    if (context === null || voiceBus === undefined) {
+      return;
+    }
+
+    let selectedVoice: PlaybackVoiceSnapshot | undefined;
+    let hasSoloVoice = false;
+
+    for (
+      let voiceIndex = 0;
+      voiceIndex < this.currentSnapshot.voices.length;
+      voiceIndex += 1
+    ) {
+      const voice = this.currentSnapshot.voices[voiceIndex];
+
+      if (voice?.voiceId === voiceId) {
+        selectedVoice = voice;
+      }
+
+      if (voice?.solo === true) {
+        hasSoloVoice = true;
+      }
+    }
+
+    if (selectedVoice === undefined) {
+      return;
+    }
+
+    const audible =
+      !selectedVoice.muted
+      && (!hasSoloVoice || selectedVoice.solo);
+
+    setAudioParamSmoothly(
+      voiceBus.gainNode.gain,
+      audible ? gain : 0,
+      context.currentTime,
     );
   }
 
@@ -358,7 +418,10 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     const context = this.contextFactory(this.currentConfig);
     const masterGain = context.createGain();
 
-    masterGain.gain.value = this.currentConfig.masterGain;
+    masterGain.gain.value =
+      this.currentSnapshot.masterMuted
+        ? 0
+        : this.currentConfig.masterGain;
     masterGain.connect(context.destination);
     this.audioContext = context;
     this.masterGainNode = masterGain;
@@ -377,7 +440,9 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
 
     setAudioParamSmoothly(
       masterGain.gain,
-      this.currentSnapshot.masterGain,
+      this.currentSnapshot.masterMuted
+        ? 0
+        : this.currentSnapshot.masterGain,
       context.currentTime,
     );
 
@@ -472,6 +537,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     voiceId: VoiceId,
     startAudioTimeSeconds: number,
     endAudioTimeSeconds: number,
+    maximumPolyphony: number,
   ): void {
     const activeVoices = this.activeVoicesByVoiceId.get(voiceId);
 
@@ -502,28 +568,30 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     activeVoices.length = writeIndex;
 
     while (
-      countOverlappingVoices(
+      countOverlappingVoiceWindows(
         activeVoices,
         startAudioTimeSeconds,
         endAudioTimeSeconds,
-      ) >= this.currentConfig.maxPolyphonyPerVoice
+      ) >= maximumPolyphony
     ) {
-      const voiceToSteal = findVoiceToSteal(
+      const voiceIndex = findOldestOverlappingVoiceIndex(
         activeVoices,
         startAudioTimeSeconds,
         endAudioTimeSeconds,
       );
+
+      if (voiceIndex < 0) {
+        break;
+      }
+
+      const voiceToSteal = activeVoices[voiceIndex];
 
       if (voiceToSteal === undefined) {
         break;
       }
 
       stopActiveVoice(voiceToSteal, startAudioTimeSeconds);
-      const voiceIndex = activeVoices.indexOf(voiceToSteal);
-
-      if (voiceIndex >= 0) {
-        activeVoices.splice(voiceIndex, 1);
-      }
+      activeVoices.splice(voiceIndex, 1);
     }
   }
 
@@ -565,19 +633,28 @@ function scheduleEnvelope(
   parameter.setValueAtTime(0, startAudioTimeSeconds);
 
   if (attackSeconds > 0) {
-    if (noteEndAudioTimeSeconds <= attackEnd) {
-      noteOffGain =
-        peakLevel
-        * (
-          (noteEndAudioTimeSeconds - startAudioTimeSeconds)
-          / attackSeconds
-        );
-      parameter.linearRampToValueAtTime(
+    const attackTimeConstant =
+      attackSeconds / ENVELOPE_TIME_CONSTANT_DIVISOR;
+
+    parameter.setTargetAtTime(
+      peakLevel,
+      startAudioTimeSeconds,
+      attackTimeConstant,
+    );
+
+    if (noteEndAudioTimeSeconds < attackEnd) {
+      noteOffGain = calculateExponentialApproach(
+        0,
+        peakLevel,
+        noteEndAudioTimeSeconds - startAudioTimeSeconds,
+        attackTimeConstant,
+      );
+      parameter.setValueAtTime(
         noteOffGain,
         noteEndAudioTimeSeconds,
       );
     } else {
-      parameter.linearRampToValueAtTime(peakLevel, attackEnd);
+      parameter.setValueAtTime(peakLevel, attackEnd);
     }
   } else {
     parameter.setValueAtTime(peakLevel, startAudioTimeSeconds);
@@ -588,22 +665,32 @@ function scheduleEnvelope(
       decaySeconds > 0
       && noteEndAudioTimeSeconds < decayEnd
     ) {
-      const decayProgress =
-        (noteEndAudioTimeSeconds - attackEnd) / decaySeconds;
+      const decayTimeConstant =
+        decaySeconds / ENVELOPE_TIME_CONSTANT_DIVISOR;
 
-      noteOffGain =
-        peakLevel
-        + (sustainGain - peakLevel) * decayProgress;
-      parameter.linearRampToValueAtTime(
+      parameter.setTargetAtTime(
+        sustainGain,
+        attackEnd,
+        decayTimeConstant,
+      );
+      noteOffGain = calculateExponentialApproach(
+        peakLevel,
+        sustainGain,
+        noteEndAudioTimeSeconds - attackEnd,
+        decayTimeConstant,
+      );
+      parameter.setValueAtTime(
         noteOffGain,
         noteEndAudioTimeSeconds,
       );
     } else {
       if (decaySeconds > 0) {
-        parameter.linearRampToValueAtTime(
+        parameter.setTargetAtTime(
           sustainGain,
-          decayEnd,
+          attackEnd,
+          decaySeconds / ENVELOPE_TIME_CONSTANT_DIVISOR,
         );
+        parameter.setValueAtTime(sustainGain, decayEnd);
       } else {
         parameter.setValueAtTime(sustainGain, attackEnd);
       }
@@ -621,13 +708,31 @@ function scheduleEnvelope(
   );
 
   if (releaseSeconds > 0) {
-    parameter.linearRampToValueAtTime(
+    parameter.setTargetAtTime(
+      0,
+      noteEndAudioTimeSeconds,
+      releaseSeconds / ENVELOPE_TIME_CONSTANT_DIVISOR,
+    );
+    parameter.setValueAtTime(
       0,
       noteEndAudioTimeSeconds + releaseSeconds,
     );
   } else {
     parameter.setValueAtTime(0, noteEndAudioTimeSeconds);
   }
+}
+
+function calculateExponentialApproach(
+  initialValue: number,
+  targetValue: number,
+  elapsedSeconds: number,
+  timeConstantSeconds: number,
+): number {
+  return (
+    targetValue
+    + (initialValue - targetValue)
+      * Math.exp(-elapsedSeconds / timeConstantSeconds)
+  );
 }
 
 function stopActiveVoice(
@@ -674,72 +779,6 @@ function cancelFutureVoice(
   }
 
   activeVoice.stopAudioTimeSeconds = stopTime;
-}
-
-function countOverlappingVoices(
-  activeVoices: readonly ActiveVoice[],
-  startAudioTimeSeconds: number,
-  endAudioTimeSeconds: number,
-): number {
-  let count = 0;
-
-  for (
-    let voiceIndex = 0;
-    voiceIndex < activeVoices.length;
-    voiceIndex += 1
-  ) {
-    const activeVoice = activeVoices[voiceIndex];
-
-    if (
-      activeVoice !== undefined
-      && activeVoice.startAudioTimeSeconds < endAudioTimeSeconds
-      && activeVoice.stopAudioTimeSeconds > startAudioTimeSeconds
-    ) {
-      count += 1;
-    }
-  }
-
-  return count;
-}
-
-function findVoiceToSteal(
-  activeVoices: readonly ActiveVoice[],
-  startAudioTimeSeconds: number,
-  endAudioTimeSeconds: number,
-): ActiveVoice | undefined {
-  let selectedVoice: ActiveVoice | undefined;
-
-  for (
-    let voiceIndex = 0;
-    voiceIndex < activeVoices.length;
-    voiceIndex += 1
-  ) {
-    const activeVoice = activeVoices[voiceIndex];
-
-    if (
-      activeVoice === undefined
-      || activeVoice.startAudioTimeSeconds >= endAudioTimeSeconds
-      || activeVoice.stopAudioTimeSeconds <= startAudioTimeSeconds
-    ) {
-      continue;
-    }
-
-    if (
-      selectedVoice === undefined
-      || activeVoice.stopAudioTimeSeconds
-        < selectedVoice.stopAudioTimeSeconds
-      || (
-        activeVoice.stopAudioTimeSeconds
-          === selectedVoice.stopAudioTimeSeconds
-        && activeVoice.startAudioTimeSeconds
-          < selectedVoice.startAudioTimeSeconds
-      )
-    ) {
-      selectedVoice = activeVoice;
-    }
-  }
-
-  return selectedVoice;
 }
 
 function setAudioParamSmoothly(

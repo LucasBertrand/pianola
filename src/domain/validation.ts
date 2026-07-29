@@ -10,10 +10,12 @@ import type {
 } from "./model";
 import {
   getTicksPerMeasure,
+  MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_VOICE_DESCRIPTOR_COUNT,
   MAXIMUM_VOICE_NAME_LENGTH,
+  MINIMUM_INSTRUMENT_POLYPHONY,
 } from "./model";
 
 export type ValidationCode =
@@ -450,6 +452,17 @@ function validateInstrument(
     "instrument.oscillatorWaveform",
     issues,
   );
+  if (
+    !Number.isSafeInteger(instrument.polyphony)
+    || instrument.polyphony < MINIMUM_INSTRUMENT_POLYPHONY
+    || instrument.polyphony > MAXIMUM_INSTRUMENT_POLYPHONY
+  ) {
+    pushVoiceIssue(
+      issues,
+      "instrument.polyphony",
+      `Instrument polyphony must be an integer between ${MINIMUM_INSTRUMENT_POLYPHONY} and ${MAXIMUM_INSTRUMENT_POLYPHONY}.`,
+    );
+  }
   validateFiniteNumber(
     instrument.oscillatorDetuneCents,
     "instrument.oscillatorDetuneCents",

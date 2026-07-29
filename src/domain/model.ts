@@ -7,11 +7,14 @@ export type MidiPitch = number;
 export type MidiVelocity = number;
 
 export const DEFAULT_PPQN = 960 as const;
-export const PROJECT_SCHEMA_VERSION = 3 as const;
+export const PROJECT_SCHEMA_VERSION = 5 as const;
 export const DEFAULT_MEASURE_COUNT = 16 as const;
 export const DEFAULT_MASTER_GAIN = 0.72 as const;
 export const MINIMUM_MASTER_GAIN = 0 as const;
 export const MAXIMUM_MASTER_GAIN = 1 as const;
+export const DEFAULT_INSTRUMENT_POLYPHONY = 1 as const;
+export const MINIMUM_INSTRUMENT_POLYPHONY = 1 as const;
+export const MAXIMUM_INSTRUMENT_POLYPHONY = 16 as const;
 export const MINIMUM_MEASURE_COUNT = 1 as const;
 export const MAXIMUM_MEASURE_COUNT = 256 as const;
 export const MAXIMUM_ENTITY_ID_LENGTH = 160 as const;
@@ -47,6 +50,7 @@ export type OscillatorWaveform =
 export interface SubtractiveSynthConfig {
   readonly kind: "subtractive";
   readonly oscillatorWaveform: OscillatorWaveform;
+  readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
   readonly envelope: AdsrEnvelope;
   readonly filterCutoffHz: number;
@@ -121,6 +125,7 @@ export interface TransportState {
 
 export interface MasterBusState {
   readonly gain: number;
+  readonly muted: boolean;
 }
 
 export interface ProjectState {
@@ -169,6 +174,7 @@ export function createDefaultTransportState(): TransportState {
 export function createDefaultMasterBusState(): MasterBusState {
   return {
     gain: DEFAULT_MASTER_GAIN,
+    muted: false,
   };
 }
 

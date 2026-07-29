@@ -34,6 +34,7 @@ export interface PlaybackEnvelope {
 export interface SubtractivePlaybackInstrument {
   readonly kind: "subtractive";
   readonly oscillatorWaveform: OscillatorWaveform;
+  readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
   readonly envelope: PlaybackEnvelope;
   readonly filterCutoffHz: number;
@@ -53,6 +54,7 @@ export interface PlaybackSnapshot {
   readonly ppqn: number;
   readonly durationTicks: Tick;
   readonly masterGain: number;
+  readonly masterMuted: boolean;
   readonly tempoMap: TempoMapSnapshot;
   readonly voices: readonly PlaybackVoiceSnapshot[];
 }
@@ -76,6 +78,7 @@ export interface AudioEnginePort {
   replacePlaybackSnapshot(snapshot: PlaybackSnapshot): void;
   resume(): Promise<void>;
   scheduleNote(event: ScheduledNoteEvent): void;
+  previewVoiceGain(voiceId: VoiceId, gain: number): void;
   cancelScheduledAfter(atAudioTimeSeconds: number): void;
   cancelAll(atAudioTimeSeconds: number): void;
   dispose(): Promise<void>;
@@ -92,6 +95,8 @@ export interface AudioTransportController {
   pause(): void;
   stop(): void;
   seek(tick: Tick): void;
+  auditionPitch(voiceId: VoiceId, pitch: number): Promise<void>;
+  previewVoiceGain(voiceId: VoiceId, gain: number): void;
   previewMasterGain(gain: number): void;
   pulse(): void;
   dispose(): Promise<void>;

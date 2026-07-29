@@ -14,6 +14,10 @@ import type {
   ProjectState,
   VoiceId,
 } from "../../domain/model";
+import {
+  countNoteEditCollisions,
+  type NoteEditIntent,
+} from "../../domain/note-collision";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -67,9 +71,22 @@ export interface UsePianoRollEventsOptions {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly onSelectionChange?: (hasSelection: boolean) => void;
+  readonly onNoteCollision?:
+    | ((request: NoteCollisionResolutionRequest) => void)
+    | undefined;
   readonly onTransactionRejected?:
     | ((error: unknown) => void)
     | undefined;
+}
+
+export interface NoteCollisionResolutionRequest
+  extends NoteEditIntent {
+  readonly label: string;
+  readonly collisionCount: number;
+  readonly onResolved: (
+    state: ProjectState,
+    selectedNoteIds: readonly NoteId[],
+  ) => void;
 }
 
 export interface PianoRollEventController {
@@ -115,6 +132,7 @@ export function usePianoRollEvents(
     gridResolutionTicks,
     voiceSelectionRequest,
     onSelectionChange,
+    onNoteCollision,
     onTransactionRejected,
   } = options;
   const draftRef = useRef<InteractionDraft | null>(null);
@@ -272,6 +290,68 @@ export function usePianoRollEvents(
       }
 
       selection.notes.length = targetIndex;
+    };
+
+    const replaceSelectionByNoteIds = (
+      projectState: ProjectState,
+      noteIds: readonly NoteId[],
+    ): void => {
+      selection.noteIds.clear();
+      selection.notes.length = 0;
+
+      for (const noteId of noteIds) {
+        for (const voiceId of projectState.voiceOrder) {
+          const note =
+            projectState
+              .tracksByVoiceId[voiceId]
+              ?.notesById[noteId];
+
+          if (
+            note !== undefined
+            && !isVoiceLocked(note.voiceId)
+          ) {
+            selection.noteIds.add(note.id);
+            selection.notes.push(note);
+            break;
+          }
+        }
+      }
+
+      showSelection();
+    };
+
+    const requestNoteCollisionResolution = (
+      originalNotes: readonly Note[],
+      proposedNotes: readonly Note[],
+      label: string,
+    ): void => {
+      const requestState = projectStore.getState();
+      const originalSnapshot = originalNotes.slice();
+      const proposedSnapshot = proposedNotes.slice();
+      const collisionCount = countNoteEditCollisions(
+        requestState,
+        {
+          originalNotes: originalSnapshot,
+          proposedNotes: proposedSnapshot,
+        },
+      );
+
+      if (collisionCount === 0) {
+        return;
+      }
+
+      onNoteCollision?.({
+        label,
+        collisionCount,
+        originalNotes: originalSnapshot,
+        proposedNotes: proposedSnapshot,
+        onResolved(projectState, selectedNoteIds): void {
+          replaceSelectionByNoteIds(
+            projectState,
+            selectedNoteIds,
+          );
+        },
+      });
     };
 
     const endGestureVisual = (): void => {
@@ -731,28 +811,41 @@ export function usePianoRollEvents(
         ) <= TAP_MOVEMENT_TOLERANCE_CSS_PIXELS;
 
       if (completedMode === "DRAGGING") {
-        const movementIsValid =
-          (draft.deltaTicks !== 0 || draft.deltaPitch !== 0)
-          && !hasMoveCollision(
-            selection,
-            draft.deltaTicks,
-            draft.deltaPitch,
-            spatialIndex,
-            collisionBuffer,
-          );
-
-        if (movementIsValid) {
-          const nextState = dispatchTransaction(
-            buildMoveCommands(
-              selection.notes,
+        if (
+          draft.deltaTicks !== 0
+          || draft.deltaPitch !== 0
+        ) {
+          if (
+            hasMoveCollision(
+              selection,
               draft.deltaTicks,
               draft.deltaPitch,
-            ),
-            "Move notes",
-          );
+              spatialIndex,
+              collisionBuffer,
+            )
+          ) {
+            requestNoteCollisionResolution(
+              selection.notes,
+              buildMovedNotes(
+                selection.notes,
+                draft.deltaTicks,
+                draft.deltaPitch,
+              ),
+              "Move notes",
+            );
+          } else {
+            const nextState = dispatchTransaction(
+              buildMoveCommands(
+                selection.notes,
+                draft.deltaTicks,
+                draft.deltaPitch,
+              ),
+              "Move notes",
+            );
 
-          if (nextState !== null) {
-            refreshSelection(nextState);
+            if (nextState !== null) {
+              refreshSelection(nextState);
+            }
           }
         }
 
@@ -766,28 +859,39 @@ export function usePianoRollEvents(
           completedMode === "RESIZING_START"
             ? "start"
             : "end";
-        const resizeIsValid =
-          draft.deltaTicks !== 0
-          && !hasResizeCollision(
-            selection,
-            draft.deltaTicks,
-            resizeEdge,
-            spatialIndex,
-            collisionBuffer,
-          );
 
-        if (resizeIsValid) {
-          const nextState = dispatchTransaction(
-            buildResizeCommands(
-              selection.notes,
+        if (draft.deltaTicks !== 0) {
+          if (
+            hasResizeCollision(
+              selection,
               draft.deltaTicks,
               resizeEdge,
-            ),
-            "Resize notes",
-          );
+              spatialIndex,
+              collisionBuffer,
+            )
+          ) {
+            requestNoteCollisionResolution(
+              selection.notes,
+              buildResizedNotes(
+                selection.notes,
+                draft.deltaTicks,
+                resizeEdge,
+              ),
+              "Resize notes",
+            );
+          } else {
+            const nextState = dispatchTransaction(
+              buildResizeCommands(
+                selection.notes,
+                draft.deltaTicks,
+                resizeEdge,
+              ),
+              "Resize notes",
+            );
 
-          if (nextState !== null) {
-            refreshSelection(nextState);
+            if (nextState !== null) {
+              refreshSelection(nextState);
+            }
           }
         }
 
@@ -795,17 +899,7 @@ export function usePianoRollEvents(
         showSelection();
       } else if (completedMode === "DRAWING") {
         const voiceId = draft.drawVoiceId;
-        if (
-          voiceId !== null
-          && !hasVoiceCollision(
-            voiceId,
-            draft.drawStartTick,
-            draft.drawStartTick + draft.drawDurationTicks,
-            draft.drawPitch,
-            spatialIndex,
-            collisionBuffer,
-          )
-        ) {
+        if (voiceId !== null) {
           const note: Note = {
             id:
               `note-${Date.now()}-${transactionSequenceRef.current + 1}`,
@@ -815,29 +909,46 @@ export function usePianoRollEvents(
             velocity: 100,
             voiceId,
           };
-          const command: PianoRollCommand = {
-            type: "AddNotes",
-            trackVoiceId: voiceId,
-            notes: [note],
-          };
-          const nextState = dispatchTransaction(
-            [command],
-            "Draw note",
-          );
 
-          if (nextState !== null) {
-            const addedNote =
-              nextState
-                .tracksByVoiceId[voiceId]
-                ?.notesById[note.id];
+          if (
+            hasVoiceCollision(
+              voiceId,
+              draft.drawStartTick,
+              draft.drawStartTick + draft.drawDurationTicks,
+              draft.drawPitch,
+              spatialIndex,
+              collisionBuffer,
+            )
+          ) {
+            requestNoteCollisionResolution(
+              [],
+              [note],
+              "Draw note",
+            );
+          } else {
+            const command: PianoRollCommand = {
+              type: "AddNotes",
+              trackVoiceId: voiceId,
+              notes: [note],
+            };
+            const nextState = dispatchTransaction(
+              [command],
+              "Draw note",
+            );
 
-            clearSelection();
+            if (nextState !== null) {
+              const addedNote =
+                nextState
+                  .tracksByVoiceId[voiceId]
+                  ?.notesById[note.id];
 
-            if (addedNote !== undefined) {
-              selection.noteIds.add(addedNote.id);
-              selection.notes.push(addedNote);
+              clearSelection();
+
+              if (addedNote !== undefined) {
+                selection.noteIds.add(addedNote.id);
+                selection.notes.push(addedNote);
+              }
             }
-
           }
         }
 
@@ -1147,6 +1258,7 @@ export function usePianoRollEvents(
     draft,
     getActiveTool,
     gridResolutionTicks,
+    onNoteCollision,
     onTransactionRejected,
     onSelectionChange,
     overlayRef,
@@ -1674,6 +1786,48 @@ function findSelectedNote(
   }
 
   return undefined;
+}
+
+function buildMovedNotes(
+  notes: readonly Note[],
+  deltaTicks: number,
+  deltaPitch: number,
+): readonly Note[] {
+  const movedNotes: Note[] = [];
+
+  for (const note of notes) {
+    movedNotes.push({
+      ...note,
+      startTick: note.startTick + deltaTicks,
+      pitch: note.pitch + deltaPitch,
+    });
+  }
+
+  return movedNotes;
+}
+
+function buildResizedNotes(
+  notes: readonly Note[],
+  deltaTicks: number,
+  edge: ResizeEdge,
+): readonly Note[] {
+  const resizedNotes: Note[] = [];
+
+  for (const note of notes) {
+    resizedNotes.push({
+      ...note,
+      startTick:
+        edge === "start"
+          ? note.startTick + deltaTicks
+          : note.startTick,
+      durationTicks:
+        edge === "start"
+          ? note.durationTicks - deltaTicks
+          : note.durationTicks + deltaTicks,
+    });
+  }
+
+  return resizedNotes;
 }
 
 function buildMoveCommands(

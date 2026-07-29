@@ -10,6 +10,7 @@ import type {
 import {
   createDefaultMasterBusState,
   createDefaultTransportState,
+  DEFAULT_INSTRUMENT_POLYPHONY,
   DEFAULT_MEASURE_COUNT,
   getProjectDurationTicks,
   PROJECT_SCHEMA_VERSION,
@@ -425,6 +426,7 @@ function createDomainVoice(
     instrument: {
       kind: "subtractive",
       oscillatorWaveform: getOscillatorWaveform(voiceIndex),
+      polyphony: DEFAULT_INSTRUMENT_POLYPHONY,
       oscillatorDetuneCents: 0,
       envelope: {
         attackSeconds: 0.012,

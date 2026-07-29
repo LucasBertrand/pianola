@@ -28,6 +28,7 @@ import {
   type CanvasFrame,
 } from "../hooks/useCanvasRenderer";
 import type {
+  NoteCollisionResolutionRequest,
   PianoRollEventController,
 } from "../hooks/usePianoRollEvents";
 import type {
@@ -93,6 +94,9 @@ export interface PianoRollLayersProps extends CanvasLayerProps {
     PianoRollEventController | null
   >;
   readonly onSelectionChange: (hasSelection: boolean) => void;
+  readonly onNoteCollision: (
+    request: NoteCollisionResolutionRequest,
+  ) => void;
 }
 
 const LAYER_STACK_STYLE: CSSProperties = {
@@ -146,6 +150,7 @@ export function PianoRollLayers(
     voiceSelectionRequest,
     eventControllerRef,
     onSelectionChange,
+    onNoteCollision,
   } = props;
   const editingNoteIdsRef = useRef<Set<NoteId> | null>(null);
 
@@ -186,6 +191,7 @@ export function PianoRollLayers(
         editingNoteIds={editingNoteIds}
         eventControllerRef={eventControllerRef}
         onSelectionChange={onSelectionChange}
+        onNoteCollision={onNoteCollision}
       />
     </div>
   );

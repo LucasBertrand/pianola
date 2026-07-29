@@ -31,12 +31,21 @@ import type {
 import {
   getProjectDurationTicks,
   getTicksPerMeasure,
+  DEFAULT_INSTRUMENT_POLYPHONY,
+  MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MEASURE_COUNT,
+  MINIMUM_INSTRUMENT_POLYPHONY,
   MINIMUM_MEASURE_COUNT,
   MINIMUM_MASTER_GAIN,
   MAXIMUM_VOICE_NAME_LENGTH,
 } from "../domain/model";
+import {
+  countNoteEditCollisions,
+  createNoteCollisionResolutionPlan,
+  hasNoteEditCollisions,
+  type NoteCollisionResolutionMode,
+} from "../domain/note-collision";
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
@@ -69,6 +78,7 @@ import {
   useAudioPlayback,
 } from "../ui/hooks/useAudioPlayback";
 import type {
+  NoteCollisionResolutionRequest,
   PianoRollEventController,
 } from "../ui/hooks/usePianoRollEvents";
 import type {
@@ -89,7 +99,6 @@ import {
   calculateVisibleRegion,
   createBlankProjectState,
   createDemoScene,
-  DEMO_NOTE_COUNT,
   INITIAL_MAX_VISIBLE_PITCH,
   INITIAL_PITCH_HEIGHT,
   type DemoScene,
@@ -129,12 +138,27 @@ const PITCH_CLASS_NAMES = [
   "B",
 ] as const;
 const PIANO_KEYS = createPianoKeys();
+const INSTRUMENT_POLYPHONY_OPTIONS = Object.freeze(
+  Array.from(
+    {
+      length:
+        MAXIMUM_INSTRUMENT_POLYPHONY
+        - MINIMUM_INSTRUMENT_POLYPHONY
+        + 1,
+    },
+    (_, index) => MINIMUM_INSTRUMENT_POLYPHONY + index,
+  ),
+);
 const VIEW_INPUT_HORIZONTAL_SCROLL = 1;
 const VIEW_INPUT_HORIZONTAL_ZOOM = 2;
 const VIEW_INPUT_VERTICAL_SCROLL = 4;
 const VIEW_INPUT_VERTICAL_ZOOM = 8;
 const RULER_HEIGHT_CSS_PIXELS = 28;
 const LOOP_REGION_HEIGHT_CSS_PIXELS = 22;
+const PIANO_KEY_LONG_PRESS_DELAY_MS = 520;
+const PIANO_KEY_PEN_LONG_PRESS_DELAY_MS = 280;
+const PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE = 10;
+const ENVELOPE_SLIDER_CURVE_EXPONENT = 2.6;
 const TIMELINE_HEADER_HEIGHT_CSS_PIXELS =
   RULER_HEIGHT_CSS_PIXELS + LOOP_REGION_HEIGHT_CSS_PIXELS;
 
@@ -153,7 +177,6 @@ export function App(): React.JSX.Element {
   const barLabelRef = useRef<HTMLOutputElement | null>(null);
   const playheadPositionLabelRef =
     useRef<HTMLOutputElement | null>(null);
-  const noteCountLabelRef = useRef<HTMLSpanElement | null>(null);
   const pianoRollEventControllerRef =
     useRef<PianoRollEventController | null>(null);
   const clipboardRef = useRef<PianoRollClipboard | null>(null);
@@ -197,6 +220,8 @@ export function App(): React.JSX.Element {
     useState<NoteColorMode>(
       () => scene.noteColorMode.get(),
     );
+  const [pitchPreviewEnabled, setPitchPreviewEnabled] =
+    useState(true);
   const [applicationDialog, setApplicationDialog] =
     useState<ApplicationDialogState | null>(null);
   const selectedVoice =
@@ -228,9 +253,11 @@ export function App(): React.JSX.Element {
         title,
         message,
         confirmLabel: "OK",
+        alternateLabel: null,
         cancelLabel: null,
         tone,
         onConfirm: null,
+        onAlternate: null,
       });
     },
     [],
@@ -241,9 +268,11 @@ export function App(): React.JSX.Element {
         title: options.title,
         message: options.message,
         confirmLabel: options.confirmLabel,
+        alternateLabel: null,
         cancelLabel: options.cancelLabel ?? "Cancel",
         tone: options.tone ?? "default",
         onConfirm: options.onConfirm,
+        onAlternate: null,
       });
     },
     [],
@@ -259,12 +288,21 @@ export function App(): React.JSX.Element {
       setApplicationDialog(null);
       action?.();
     }, [applicationDialog]);
+  const handleApplicationDialogAlternate =
+    useCallback((): void => {
+      const action = applicationDialog?.onAlternate;
+
+      setApplicationDialog(null);
+      action?.();
+    }, [applicationDialog]);
   const {
     status: playbackStatus,
     togglePlayback,
     stopPlayback,
     returnToStart,
     seek: seekPlayback,
+    auditionPitch,
+    previewVoiceGain,
     previewMasterGain,
     beginSeekGesture,
     previewSeek,
@@ -280,6 +318,14 @@ export function App(): React.JSX.Element {
       );
     },
   });
+  const handlePitchAudition = useCallback((pitch: number): void => {
+    if (selectedVoiceId !== null) {
+      auditionPitch(selectedVoiceId, pitch);
+    }
+  }, [
+    auditionPitch,
+    selectedVoiceId,
+  ]);
 
   useEffect(
     () => scene.projectStore.subscribe((state) => {
@@ -442,7 +488,6 @@ export function App(): React.JSX.Element {
       }
 
       const state = currentScene.projectStore.getState();
-      const noteCount = countProjectNotes(state);
       const totalTicks = getProjectDurationTicks(state);
       const viewport = currentScene.viewport.get();
       const maximumHorizontalScroll =
@@ -455,11 +500,6 @@ export function App(): React.JSX.Element {
         maximumHorizontalScroll,
         viewport.scrollX,
       );
-
-      if (noteCountLabelRef.current !== null) {
-        noteCountLabelRef.current.textContent =
-          `${noteCount.toLocaleString()} indexed notes`;
-      }
 
       if (appShellRef.current !== null) {
         appShellRef.current.dataset["projectRevision"] =
@@ -1122,6 +1162,74 @@ export function App(): React.JSX.Element {
     },
     [scene],
   );
+  const handleNoteCollision = useCallback(
+    (request: NoteCollisionResolutionRequest): void => {
+      const resolveCollision = (
+        mode: NoteCollisionResolutionMode,
+      ): void => {
+        const timestamp = Date.now();
+        const plan = createNoteCollisionResolutionPlan(
+          scene.projectStore.getState(),
+          {
+            originalNotes: request.originalNotes,
+            proposedNotes: request.proposedNotes,
+          },
+          mode,
+          `${timestamp}-${editTransactionSequenceRef.current + 1}`,
+        );
+
+        try {
+          const nextState = dispatchEditCommands(
+            plan.commands,
+            mode === "merge"
+              ? `${request.label}: merge collisions`
+              : `${request.label}: slice collisions`,
+          );
+
+          if (nextState !== null) {
+            request.onResolved(
+              nextState,
+              plan.resultingSelectionNoteIds,
+            );
+          }
+        } catch (error: unknown) {
+          showApplicationAlert(
+            "Collision resolution unavailable",
+            error instanceof Error
+              ? error.message
+              : "The note collision could not be resolved.",
+            "danger",
+          );
+        }
+      };
+
+      const collisionLabel =
+        request.collisionCount === 1
+          ? "one collision"
+          : `${request.collisionCount} collisions`;
+
+      setApplicationDialog({
+        title: "Resolve note collision",
+        message:
+          `This edit creates ${collisionLabel}. Merge creates continuous notes covering each overlap. Slice keeps the edited notes and cuts existing notes at their start and end anchors.`,
+        confirmLabel: "Merge notes",
+        alternateLabel: "Slice at anchors",
+        cancelLabel: "Cancel",
+        tone: "default",
+        onConfirm(): void {
+          resolveCollision("merge");
+        },
+        onAlternate(): void {
+          resolveCollision("slice");
+        },
+      });
+    },
+    [
+      dispatchEditCommands,
+      scene,
+      showApplicationAlert,
+    ],
+  );
   const prepareStructuralEdit = useCallback((): void => {
     const controller = pianoRollEventControllerRef.current;
 
@@ -1404,6 +1512,34 @@ export function App(): React.JSX.Element {
       scene,
     ],
   );
+  const handleInstrumentPolyphonyCommit = useCallback(
+    (
+      voiceId: VoiceId,
+      polyphony: number,
+    ): void => {
+      const voice =
+        scene.projectStore.getState().voicesById[voiceId];
+
+      if (voice === undefined) {
+        return;
+      }
+
+      handleUpdateVoice(
+        voiceId,
+        {
+          instrument: {
+            ...voice.instrument,
+            polyphony,
+          },
+        },
+        "Update instrument polyphony",
+      );
+    },
+    [
+      handleUpdateVoice,
+      scene,
+    ],
+  );
   const handleMasterGainCommit = useCallback(
     (gain: number): void => {
       dispatchEditCommands(
@@ -1418,6 +1554,23 @@ export function App(): React.JSX.Element {
     },
     [dispatchEditCommands],
   );
+  const handleMasterMuteToggle = useCallback((): void => {
+    const muted =
+      scene.projectStore.getState().masterBus.muted;
+
+    dispatchEditCommands(
+      [
+        {
+          type: "SetMasterMuted",
+          muted: !muted,
+        },
+      ],
+      muted ? "Unmute master bus" : "Mute master bus",
+    );
+  }, [
+    dispatchEditCommands,
+    scene,
+  ]);
   const handleSelectVoiceNotes = useCallback(
     (voiceId: VoiceId): void => {
       if (
@@ -1572,11 +1725,31 @@ export function App(): React.JSX.Element {
     );
     const state = scene.projectStore.getState();
 
-    if (!canPasteNotes(state, pastedNotes)) {
+    if (!canPlacePastedNotes(state, pastedNotes)) {
       showApplicationAlert(
         "Paste unavailable",
-        "Paste is unavailable because it would overlap notes, exceed the timeline, or target a locked voice.",
+        "Paste is unavailable because it would exceed the timeline or target an unavailable or locked voice.",
       );
+      return;
+    }
+
+    const pasteIntent = {
+      originalNotes: [],
+      proposedNotes: pastedNotes,
+    } as const;
+
+    if (hasNoteEditCollisions(state, pasteIntent)) {
+      handleNoteCollision({
+        label: "Paste notes",
+        collisionCount:
+          countNoteEditCollisions(state, pasteIntent),
+        ...pasteIntent,
+        onResolved(nextState, selectedNoteIds): void {
+          pianoRollEventControllerRef.current?.replaceSelection(
+            findNotesByIds(nextState, selectedNoteIds),
+          );
+        },
+      });
       return;
     }
 
@@ -1617,6 +1790,7 @@ export function App(): React.JSX.Element {
     );
   }, [
     dispatchEditCommands,
+    handleNoteCollision,
     scene,
     showApplicationAlert,
   ]);
@@ -1645,6 +1819,38 @@ export function App(): React.JSX.Element {
       }
 
       if (transferPlan.commands.length === 0) {
+        return;
+      }
+
+      const transferIntent = {
+        originalNotes: transferPlan.originalNotes,
+        proposedNotes: transferPlan.proposedNotes,
+      };
+      const state = scene.projectStore.getState();
+
+      if (hasNoteEditCollisions(state, transferIntent)) {
+        const retainedTargetNoteIds: NoteId[] = [];
+
+        for (const selectedNote of selectedNotes) {
+          if (selectedNote.voiceId === targetVoiceId) {
+            retainedTargetNoteIds.push(selectedNote.id);
+          }
+        }
+
+        handleNoteCollision({
+          label: "Transfer notes to voice",
+          collisionCount:
+            countNoteEditCollisions(state, transferIntent),
+          ...transferIntent,
+          onResolved(nextState, selectedNoteIds): void {
+            controller.replaceSelection(
+              findNotesByIds(
+                nextState,
+                selectedNoteIds.concat(retainedTargetNoteIds),
+              ),
+            );
+          },
+        });
         return;
       }
 
@@ -1698,6 +1904,7 @@ export function App(): React.JSX.Element {
       }
     }, [
       dispatchEditCommands,
+      handleNoteCollision,
       scene,
       selectedVoiceId,
       showApplicationAlert,
@@ -1961,10 +2168,63 @@ export function App(): React.JSX.Element {
     >
       <header className="topbar">
         <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+          <div
+            className="topbar-actions"
+            aria-label="Project file actions"
+          >
+            <div
+              className="project-file-actions"
+              role="group"
+              aria-label="Create, save, and load project"
+            >
+              <button
+                className="project-file-button"
+                type="button"
+                title="New project"
+                aria-label="New project"
+                onClick={handleNewProject}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 3h8l4 4v14H6z" />
+                  <path d="M14 3v5h5M9 14h6M12 11v6" />
+                </svg>
+              </button>
+              <button
+                className="project-file-button"
+                type="button"
+                title="Save project"
+                aria-label="Save project"
+                onClick={handleSaveProject}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 3h12l2 2v16H5z" />
+                  <path d="M8 3v6h8V3M8 21v-8h8v8" />
+                </svg>
+              </button>
+              <button
+                className="project-file-button"
+                type="button"
+                title="Load project"
+                aria-label="Load project"
+                onClick={handleOpenProject}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 7h7l2 2h9v11H3z" />
+                  <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
+                </svg>
+              </button>
+              <input
+                ref={loadProjectInputRef}
+                className="native-project-file-input"
+                type="file"
+                accept=".pianoroll,application/json"
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={(event) => {
+                  void handleProjectFileChange(event);
+                }}
+              />
+            </div>
           </div>
           <div>
             <input
@@ -1994,7 +2254,10 @@ export function App(): React.JSX.Element {
             aria-label="Return to start"
             onClick={returnToStart}
           >
-            <span aria-hidden="true">↤</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 5v14" />
+              <path d="m18 6-8 6 8 6Z" />
+            </svg>
           </button>
           <button
             className={
@@ -2018,9 +2281,26 @@ export function App(): React.JSX.Element {
             aria-pressed={playbackStatus === "playing"}
             onClick={togglePlayback}
           >
-            <span aria-hidden="true">
-              {playbackStatus === "playing" ? "Ⅱ" : "▶"}
-            </span>
+            {playbackStatus === "playing"
+              ? (
+                  <svg
+                    className="pause-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <rect x="7" y="5.5" width="3.5" height="13" rx="1" />
+                    <rect x="13.5" y="5.5" width="3.5" height="13" rx="1" />
+                  </svg>
+                )
+              : (
+                  <svg
+                    className="play-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="M8 5.75v12.5L18 12Z" />
+                  </svg>
+                )}
           </button>
           <button
             className="icon-button"
@@ -2069,64 +2349,13 @@ export function App(): React.JSX.Element {
           gridSettings={scene.gridSettings}
         />
 
-        <div
-          className="topbar-actions"
-          aria-label="Project file actions"
-        >
-          <div
-            className="project-file-actions"
-            role="group"
-            aria-label="Create, save, and load project"
-          >
-            <button
-              className="project-file-button"
-              type="button"
-              title="New project"
-              aria-label="New project"
-              onClick={handleNewProject}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 3h8l4 4v14H6z" />
-                <path d="M14 3v5h5M9 14h6M12 11v6" />
-              </svg>
-            </button>
-            <button
-              className="project-file-button"
-              type="button"
-              title="Save project"
-              aria-label="Save project"
-              onClick={handleSaveProject}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 3h12l2 2v16H5z" />
-                <path d="M8 3v6h8V3M8 21v-8h8v8" />
-              </svg>
-            </button>
-            <button
-              className="project-file-button"
-              type="button"
-              title="Load project"
-              aria-label="Load project"
-              onClick={handleOpenProject}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M3 7h7l2 2h9v11H3z" />
-                <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
-              </svg>
-            </button>
-            <input
-              ref={loadProjectInputRef}
-              className="native-project-file-input"
-              type="file"
-              accept=".pianoroll,application/json"
-              aria-hidden="true"
-              tabIndex={-1}
-              onChange={(event) => {
-                void handleProjectFileChange(event);
-              }}
-            />
-          </div>
-        </div>
+        <MasterGainControl
+          gain={projectState.masterBus.gain}
+          muted={projectState.masterBus.muted}
+          onPreview={previewMasterGain}
+          onCommit={handleMasterGainCommit}
+          onMuteToggle={handleMasterMuteToggle}
+        />
       </header>
 
       <section
@@ -2309,7 +2538,12 @@ export function App(): React.JSX.Element {
           <div className="roll-frame">
             <PianoKeyboard
               viewport={scene.viewport}
-              onPitchSelect={handlePitchSelect}
+              previewEnabled={pitchPreviewEnabled}
+              onPreviewToggle={() => {
+                setPitchPreviewEnabled((enabled) => !enabled);
+              }}
+              onPitchAudition={handlePitchAudition}
+              onPitchLongPress={handlePitchSelect}
             />
             <div ref={stageRef} className="roll-stage">
               <BarRuler
@@ -2353,6 +2587,7 @@ export function App(): React.JSX.Element {
                     pianoRollEventControllerRef
                   }
                   onSelectionChange={handleSelectionChange}
+                  onNoteCollision={handleNoteCollision}
                 />
               </div>
               <RollPlayhead
@@ -2554,11 +2789,23 @@ export function App(): React.JSX.Element {
                         );
                       }}
                     />
-                    <span>{getVoiceInstrumentLabel()}</span>
                   </div>
-                  <div className="voice-wave">
-                    {getVoiceWaveform(voice)}
-                  </div>
+                  <VoiceGainSlider
+                    gain={voice.gain}
+                    voiceName={voice.name}
+                    onPreview={(gain) => {
+                      previewVoiceGain(voice.id, gain);
+                    }}
+                    onCommit={(gain) => {
+                      handleUpdateVoice(
+                        voice.id,
+                        {
+                          gain,
+                        },
+                        "Update voice volume",
+                      );
+                    }}
+                  />
                   <div className="voice-actions">
                     <button
                       className="voice-select-all-button"
@@ -2572,35 +2819,6 @@ export function App(): React.JSX.Element {
                       }}
                     >
                       All
-                    </button>
-                    <button
-                      className={
-                        voice.solo
-                          ? "voice-solo-button is-active"
-                          : "voice-solo-button"
-                      }
-                      type="button"
-                      aria-label={`${voice.solo ? "Disable solo for" : "Solo"} ${voice.name}`}
-                      aria-pressed={voice.solo}
-                      title={
-                        voice.solo
-                          ? "Disable solo"
-                          : "Solo voice"
-                      }
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleUpdateVoice(
-                          voice.id,
-                          {
-                            solo: !voice.solo,
-                          },
-                          voice.solo
-                            ? "Disable voice solo"
-                            : "Solo voice",
-                        );
-                      }}
-                    >
-                      S
                     </button>
                     <button
                       className={
@@ -2655,6 +2873,35 @@ export function App(): React.JSX.Element {
                       M
                     </button>
                     <button
+                      className={
+                        voice.solo
+                          ? "voice-solo-button is-active"
+                          : "voice-solo-button"
+                      }
+                      type="button"
+                      aria-label={`${voice.solo ? "Disable solo for" : "Solo"} ${voice.name}`}
+                      aria-pressed={voice.solo}
+                      title={
+                        voice.solo
+                          ? "Disable solo"
+                          : "Solo voice"
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleUpdateVoice(
+                          voice.id,
+                          {
+                            solo: !voice.solo,
+                          },
+                          voice.solo
+                            ? "Disable voice solo"
+                            : "Solo voice",
+                        );
+                      }}
+                    >
+                      S
+                    </button>
+                    <button
                       className="voice-delete-button"
                       type="button"
                       aria-label={`Delete ${voice.name}`}
@@ -2694,29 +2941,48 @@ export function App(): React.JSX.Element {
             >
               <div className="section-title">
                 <div>
-                  <small>Instrument · {selectedVoice.name}</small>
                   <strong>
-                    {getVoiceInstrumentLabel()}
+                    <small>{selectedVoice.name}</small>
                   </strong>
                 </div>
-                <select
-                  className="waveform-select"
-                  value={
-                    selectedVoice.instrument.oscillatorWaveform
-                  }
-                  aria-label="Oscillator waveform"
-                  onChange={(event) => {
-                    handleWaveformCommit(
-                      selectedVoice.id,
-                      event.currentTarget.value as OscillatorWaveform,
-                    );
-                  }}
-                >
-                  <option value="sine">Sine</option>
-                  <option value="triangle">Triangle</option>
-                  <option value="sawtooth">Saw</option>
-                  <option value="square">Square</option>
-                </select>
+                <div className="instrument-selectors">
+                  <select
+                    className="waveform-select"
+                    value={
+                      selectedVoice.instrument.oscillatorWaveform
+                    }
+                    aria-label="Oscillator waveform"
+                    onChange={(event) => {
+                      handleWaveformCommit(
+                        selectedVoice.id,
+                        event.currentTarget.value as OscillatorWaveform,
+                      );
+                    }}
+                  >
+                    <option value="sine">Sine</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Saw</option>
+                    <option value="square">Square</option>
+                  </select>
+                  <select
+                    className="polyphony-select"
+                    value={selectedVoice.instrument.polyphony}
+                    aria-label="Instrument polyphony"
+                    title="Instrument polyphony"
+                    onChange={(event) => {
+                      handleInstrumentPolyphonyCommit(
+                        selectedVoice.id,
+                        Number(event.currentTarget.value),
+                      );
+                    }}
+                  >
+                    {INSTRUMENT_POLYPHONY_OPTIONS.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="wave-display" aria-hidden="true">
@@ -2726,7 +2992,7 @@ export function App(): React.JSX.Element {
               </div>
 
               <div className="parameter-grid">
-                <ParameterDial
+                <ParameterSlider
                   key={`${selectedVoice.id}-attack`}
                   label="Attack"
                   value={
@@ -2734,7 +3000,7 @@ export function App(): React.JSX.Element {
                   }
                   minimum={0}
                   maximum={2}
-                  step={0.005}
+                  step={0.001}
                   formatValue={formatEnvelopeTime}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -2744,7 +3010,7 @@ export function App(): React.JSX.Element {
                     );
                   }}
                 />
-                <ParameterDial
+                <ParameterSlider
                   key={`${selectedVoice.id}-decay`}
                   label="Decay"
                   value={
@@ -2752,7 +3018,7 @@ export function App(): React.JSX.Element {
                   }
                   minimum={0}
                   maximum={2}
-                  step={0.005}
+                  step={0.001}
                   formatValue={formatEnvelopeTime}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -2762,7 +3028,7 @@ export function App(): React.JSX.Element {
                     );
                   }}
                 />
-                <ParameterDial
+                <ParameterSlider
                   key={`${selectedVoice.id}-sustain`}
                   label="Sustain"
                   value={
@@ -2770,7 +3036,7 @@ export function App(): React.JSX.Element {
                   }
                   minimum={0}
                   maximum={1}
-                  step={0.01}
+                  step={0.005}
                   formatValue={formatPercentage}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -2780,7 +3046,7 @@ export function App(): React.JSX.Element {
                     );
                   }}
                 />
-                <ParameterDial
+                <ParameterSlider
                   key={`${selectedVoice.id}-release`}
                   label="Release"
                   value={
@@ -2788,7 +3054,7 @@ export function App(): React.JSX.Element {
                   }
                   minimum={0}
                   maximum={2}
-                  step={0.005}
+                  step={0.001}
                   formatValue={formatEnvelopeTime}
                   onCommit={(value) => {
                     handleEnvelopeParameterCommit(
@@ -2802,27 +3068,12 @@ export function App(): React.JSX.Element {
             </section>
           )}
 
-          <MasterGainControl
-            gain={projectState.masterBus.gain}
-            onPreview={previewMasterGain}
-            onCommit={handleMasterGainCommit}
-          />
-
-          <div className="project-summary">
-            <span>
-              <i className="summary-dot" />
-              <span ref={noteCountLabelRef}>
-                {DEMO_NOTE_COUNT.toLocaleString()} indexed notes
-              </span>
-            </span>
-            <span>960 PPQN</span>
-          </div>
-
         </aside>
       </section>
       <ApplicationDialogOverlay
         dialog={applicationDialog}
         onConfirm={handleApplicationDialogConfirm}
+        onAlternate={handleApplicationDialogAlternate}
         onCancel={handleApplicationDialogCancel}
       />
     </main>
@@ -3101,7 +3352,7 @@ function createPastedNotes(
   return notes;
 }
 
-function canPasteNotes(
+function canPlacePastedNotes(
   state: ProjectState,
   notes: readonly Note[],
 ): boolean {
@@ -3131,31 +3382,6 @@ function canPasteNotes(
       return false;
     }
 
-    for (const existingNoteId in track.notesById) {
-      const existingNote = track.notesById[existingNoteId];
-
-      if (
-        existingNote !== undefined
-        && notesOverlap(note, existingNote)
-      ) {
-        return false;
-      }
-    }
-
-    for (
-      let candidateIndex = 0;
-      candidateIndex < noteIndex;
-      candidateIndex += 1
-    ) {
-      const candidate = notes[candidateIndex];
-
-      if (
-        candidate !== undefined
-        && notesOverlap(note, candidate)
-      ) {
-        return false;
-      }
-    }
   }
 
   return notes.length > 0;
@@ -3165,6 +3391,8 @@ type VoiceTransferPlan =
   | {
       readonly valid: true;
       readonly commands: readonly PianoRollCommand[];
+      readonly originalNotes: readonly Note[];
+      readonly proposedNotes: readonly Note[];
     }
   | {
       readonly valid: false;
@@ -3194,6 +3422,7 @@ function createVoiceTransferPlan(
   }
 
   const transferredNotes: Note[] = [];
+  const originalNotes: Note[] = [];
   const noteIdsBySourceVoice = new Map<VoiceId, NoteId[]>();
 
   for (
@@ -3244,39 +3473,7 @@ function createVoiceTransferPlan(
       voiceId: targetVoiceId,
     };
 
-    for (const existingNoteId in targetTrack.notesById) {
-      const existingNote =
-        targetTrack.notesById[existingNoteId];
-
-      if (
-        existingNote !== undefined
-        && notesOverlap(transferredNote, existingNote)
-      ) {
-        return {
-          valid: false,
-          message: `Transfer cancelled because note "${selectedNote.id}" overlaps an existing note in "${targetVoice.name}".`,
-        };
-      }
-    }
-
-    for (
-      let candidateIndex = 0;
-      candidateIndex < transferredNotes.length;
-      candidateIndex += 1
-    ) {
-      const candidate = transferredNotes[candidateIndex];
-
-      if (
-        candidate !== undefined
-        && notesOverlap(transferredNote, candidate)
-      ) {
-        return {
-          valid: false,
-          message: "Transfer cancelled because selected notes would overlap in the target voice.",
-        };
-      }
-    }
-
+    originalNotes.push(selectedNote);
     transferredNotes.push(transferredNote);
     let sourceNoteIds =
       noteIdsBySourceVoice.get(selectedNote.voiceId);
@@ -3308,18 +3505,36 @@ function createVoiceTransferPlan(
   return {
     valid: true,
     commands,
+    originalNotes,
+    proposedNotes: transferredNotes,
   };
 }
 
-function notesOverlap(left: Note, right: Note): boolean {
-  return (
-    left.voiceId === right.voiceId
-    && left.pitch === right.pitch
-    && left.startTick
-      < right.startTick + right.durationTicks
-    && right.startTick
-      < left.startTick + left.durationTicks
-  );
+function findNotesByIds(
+  state: ProjectState,
+  noteIds: readonly NoteId[],
+): readonly Note[] {
+  const notes: Note[] = [];
+  const acceptedNoteIds = new Set<NoteId>();
+
+  for (const noteId of noteIds) {
+    if (acceptedNoteIds.has(noteId)) {
+      continue;
+    }
+
+    for (const voiceId of state.voiceOrder) {
+      const note =
+        state.tracksByVoiceId[voiceId]?.notesById[noteId];
+
+      if (note !== undefined) {
+        acceptedNoteIds.add(note.id);
+        notes.push(note);
+        break;
+      }
+    }
+  }
+
+  return notes;
 }
 
 const USER_VOICE_COLORS = [
@@ -3360,6 +3575,7 @@ function createUserVoice(
     instrument: {
       kind: "subtractive",
       oscillatorWaveform,
+      polyphony: DEFAULT_INSTRUMENT_POLYPHONY,
       oscillatorDetuneCents: 0,
       envelope: {
         attackSeconds: 0.012,
@@ -3383,7 +3599,7 @@ function createUserVoice(
 }
 
 function getVoiceInstrumentLabel(): string {
-  return "Subtractive";
+  return "Oscillator";
 }
 
 function getVoiceWaveform(voice: Voice): OscillatorWaveform {
@@ -3417,7 +3633,10 @@ function formatPercentage(value: number): string {
 
 interface PianoKeyboardProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
-  readonly onPitchSelect?: (pitch: number) => void;
+  readonly previewEnabled: boolean;
+  readonly onPreviewToggle: () => void;
+  readonly onPitchAudition?: (pitch: number) => void;
+  readonly onPitchLongPress?: (pitch: number) => void;
 }
 
 interface TransportMetricsProps {
@@ -3711,7 +3930,8 @@ function parseTimeSignature(
   }
 }
 
-interface BarRulerProps extends PianoKeyboardProps {
+interface BarRulerProps {
+  readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: DemoScene["projectStore"];
   readonly gridResolutionTicks: DemoScene["gridResolutionTicks"];
   readonly onSeekStart: () => void;
@@ -4659,7 +4879,10 @@ function PianoKeyboard(
 ): React.JSX.Element {
   const {
     viewport,
-    onPitchSelect,
+    previewEnabled,
+    onPreviewToggle,
+    onPitchAudition,
+    onPitchLongPress,
   } = props;
   const keysElementRef = useRef<HTMLDivElement | null>(null);
 
@@ -4691,12 +4914,30 @@ function PianoKeyboard(
   useEffect(() => {
     const element = keysElementRef.current;
 
-    if (element === null || onPitchSelect === undefined) {
+    if (
+      element === null
+      || (
+        onPitchAudition === undefined
+        && onPitchLongPress === undefined
+      )
+    ) {
       return undefined;
     }
 
+    let activePointerId = -1;
+    let activePitch = -1;
+    let originClientX = 0;
+    let originClientY = 0;
+    let longPressTimerId: number | null = null;
+
+    const clearLongPress = (): void => {
+      if (longPressTimerId !== null) {
+        window.clearTimeout(longPressTimerId);
+        longPressTimerId = null;
+      }
+    };
     const handlePointerDown = (event: PointerEvent): void => {
-      if (event.button !== 0) {
+      if (event.button !== 0 || activePointerId !== -1) {
         return;
       }
 
@@ -4707,25 +4948,147 @@ function PianoKeyboard(
       const pitch = Number(target?.dataset["pitch"]);
 
       if (Number.isInteger(pitch)) {
-        onPitchSelect(pitch);
+        activePointerId = event.pointerId;
+        activePitch = pitch;
+        originClientX = event.clientX;
+        originClientY = event.clientY;
+        element.setPointerCapture(event.pointerId);
+        if (previewEnabled) {
+          onPitchAudition?.(pitch);
+        }
+
+        if (onPitchLongPress !== undefined) {
+          const delay =
+            event.pointerType === "pen"
+              ? PIANO_KEY_PEN_LONG_PRESS_DELAY_MS
+              : PIANO_KEY_LONG_PRESS_DELAY_MS;
+
+          longPressTimerId = window.setTimeout(() => {
+            longPressTimerId = null;
+
+            if (
+              activePointerId === event.pointerId
+              && activePitch === pitch
+            ) {
+              onPitchLongPress(pitch);
+            }
+          }, delay);
+        }
+
         event.preventDefault();
       }
     };
+    const handlePointerMove = (event: PointerEvent): void => {
+      if (event.pointerId !== activePointerId) {
+        return;
+      }
+
+      if (
+        Math.abs(event.clientX - originClientX)
+          > PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE
+        || Math.abs(event.clientY - originClientY)
+          > PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE
+      ) {
+        clearLongPress();
+      }
+
+      event.preventDefault();
+    };
+    const finishPointer = (event: PointerEvent): void => {
+      if (event.pointerId !== activePointerId) {
+        return;
+      }
+
+      clearLongPress();
+      activePointerId = -1;
+      activePitch = -1;
+
+      if (element.hasPointerCapture(event.pointerId)) {
+        element.releasePointerCapture(event.pointerId);
+      }
+
+      event.preventDefault();
+    };
+    const handleContextMenu = (event: MouseEvent): void => {
+      event.preventDefault();
+    };
 
     element.addEventListener("pointerdown", handlePointerDown);
+    element.addEventListener("pointermove", handlePointerMove);
+    element.addEventListener("pointerup", finishPointer);
+    element.addEventListener("pointercancel", finishPointer);
+    element.addEventListener("lostpointercapture", finishPointer);
+    element.addEventListener("contextmenu", handleContextMenu);
 
     return (): void => {
+      clearLongPress();
       element.removeEventListener(
         "pointerdown",
         handlePointerDown,
       );
+      element.removeEventListener(
+        "pointermove",
+        handlePointerMove,
+      );
+      element.removeEventListener("pointerup", finishPointer);
+      element.removeEventListener(
+        "pointercancel",
+        finishPointer,
+      );
+      element.removeEventListener(
+        "lostpointercapture",
+        finishPointer,
+      );
+      element.removeEventListener(
+        "contextmenu",
+        handleContextMenu,
+      );
     };
-  }, [onPitchSelect]);
+  }, [
+    onPitchAudition,
+    onPitchLongPress,
+    previewEnabled,
+  ]);
 
   return (
     <div className="piano-strip" aria-label="Piano keyboard">
       <div className="piano-loop-spacer" aria-hidden="true" />
       <div className="piano-ruler-spacer" aria-hidden="true" />
+      <button
+        className={
+          previewEnabled
+            ? "piano-preview-toggle is-active"
+            : "piano-preview-toggle"
+        }
+        type="button"
+        aria-label={
+          previewEnabled
+            ? "Disable pitch preview"
+            : "Enable pitch preview"
+        }
+        aria-pressed={previewEnabled}
+        title={
+          previewEnabled
+            ? "Disable pitch preview"
+            : "Enable pitch preview"
+        }
+        onClick={onPreviewToggle}
+        onContextMenu={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 10v4h4l5 4V6l-5 4H5Z" />
+          {previewEnabled ? (
+            <>
+              <path d="M17 9.5a4 4 0 0 1 0 5" />
+              <path d="M19 7a7 7 0 0 1 0 10" />
+            </>
+          ) : (
+            <path d="m17 10 4 4m0-4-4 4" />
+          )}
+        </svg>
+      </button>
       <div className="piano-keyboard-viewport">
         <div ref={keysElementRef} className="piano-keys-inner">
           {PIANO_KEYS}
@@ -4735,7 +5098,85 @@ function PianoKeyboard(
   );
 }
 
-interface ParameterDialProps {
+interface VoiceGainSliderProps {
+  readonly gain: number;
+  readonly voiceName: string;
+  readonly onPreview: (gain: number) => void;
+  readonly onCommit: (gain: number) => void;
+}
+
+function VoiceGainSlider(
+  props: VoiceGainSliderProps,
+): React.JSX.Element {
+  const {
+    gain,
+    voiceName,
+    onPreview,
+    onCommit,
+  } = props;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const lastCommittedGainRef = useRef(gain);
+
+  useEffect(() => {
+    if (inputRef.current !== null) {
+      inputRef.current.value = String(gain);
+    }
+
+    lastCommittedGainRef.current = gain;
+  }, [gain]);
+
+  const commitGain = (): void => {
+    const nextGain = Number(inputRef.current?.value);
+
+    if (
+      !Number.isFinite(nextGain)
+      || nextGain === lastCommittedGainRef.current
+    ) {
+      return;
+    }
+
+    lastCommittedGainRef.current = nextGain;
+    onCommit(nextGain);
+  };
+
+  return (
+    <label
+      className="voice-gain-control"
+      title={`Volume for ${voiceName}`}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        defaultValue={gain}
+        aria-label={`Volume for ${voiceName}`}
+        onInput={(event) => {
+          onPreview(Number(event.currentTarget.value));
+        }}
+        onPointerUp={commitGain}
+        onPointerCancel={commitGain}
+        onBlur={commitGain}
+        onKeyUp={commitGain}
+        onContextMenu={(event) => {
+          event.preventDefault();
+        }}
+      />
+    </label>
+  );
+}
+
+interface ParameterSliderProps {
   readonly label: string;
   readonly value: number;
   readonly minimum: number;
@@ -4745,7 +5186,9 @@ interface ParameterDialProps {
   readonly onCommit: (value: number) => void;
 }
 
-function ParameterDial(props: ParameterDialProps): React.JSX.Element {
+function ParameterSlider(
+  props: ParameterSliderProps,
+): React.JSX.Element {
   const {
     label,
     value,
@@ -4756,42 +5199,26 @@ function ParameterDial(props: ParameterDialProps): React.JSX.Element {
     onCommit,
   } = props;
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const trackRef = useRef<HTMLDivElement | null>(null);
   const valueRef = useRef<HTMLElement | null>(null);
   const lastCommittedValueRef = useRef(value);
 
   const updateVisual = useCallback((nextValue: number): void => {
-    const ratio = Math.min(
-      1,
-      Math.max(
-        0,
-        (nextValue - minimum) / (maximum - minimum),
-      ),
-    );
-
-    if (trackRef.current !== null) {
-      trackRef.current.style.setProperty(
-        "--parameter-level",
-        `${ratio * 75}%`,
-      );
-      trackRef.current.style.setProperty(
-        "--parameter-angle",
-        `${-135 + ratio * 270}deg`,
-      );
-    }
-
     if (valueRef.current !== null) {
       valueRef.current.textContent = formatValue(nextValue);
     }
   }, [
     formatValue,
-    maximum,
-    minimum,
   ]);
 
   useEffect(() => {
     if (inputRef.current !== null) {
-      inputRef.current.value = String(value);
+      inputRef.current.value = String(
+        parameterValueToSliderPosition(
+          value,
+          minimum,
+          maximum,
+        ),
+      );
     }
 
     lastCommittedValueRef.current = value;
@@ -4802,7 +5229,18 @@ function ParameterDial(props: ParameterDialProps): React.JSX.Element {
   ]);
 
   const commitValue = (): void => {
-    const nextValue = Number(inputRef.current?.value);
+    const sliderPosition = Number(inputRef.current?.value);
+
+    if (!Number.isFinite(sliderPosition)) {
+      return;
+    }
+
+    const nextValue = sliderPositionToParameterValue(
+      sliderPosition,
+      minimum,
+      maximum,
+      step,
+    );
 
     if (
       !Number.isFinite(nextValue)
@@ -4816,50 +5254,104 @@ function ParameterDial(props: ParameterDialProps): React.JSX.Element {
   };
 
   return (
-    <label className="parameter">
-      <div
-        ref={trackRef}
-        className="parameter-track"
-        style={{
-          "--parameter-level": `${
-            (value - minimum) / (maximum - minimum) * 75
-          }%`,
-          "--parameter-angle": `${
-            -135
-            + (value - minimum) / (maximum - minimum) * 270
-          }deg`,
-        } as React.CSSProperties}
-        aria-hidden="true"
-      >
-        <i />
+    <label
+      className="parameter"
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <div className="parameter-copy">
+        <span>{label}</span>
+        <strong ref={valueRef}>{formatValue(value)}</strong>
       </div>
-      <strong ref={valueRef}>{formatValue(value)}</strong>
-      <span>{label}</span>
-      <input
-        ref={inputRef}
-        className="parameter-input"
-        type="range"
-        min={minimum}
-        max={maximum}
-        step={step}
-        defaultValue={value}
-        aria-label={label}
-        onInput={(event) => {
-          updateVisual(Number(event.currentTarget.value));
-        }}
-        onPointerUp={commitValue}
-        onPointerCancel={commitValue}
-        onBlur={commitValue}
-        onKeyUp={commitValue}
-      />
+      <div className="parameter-input-vertical">
+        <input
+          ref={inputRef}
+          className="parameter-input"
+          type="range"
+          min="0"
+          max="1"
+          step="0.001"
+          defaultValue={parameterValueToSliderPosition(
+            value,
+            minimum,
+            maximum,
+          )}
+          aria-label={label}
+          onInput={(event) => {
+            updateVisual(
+              sliderPositionToParameterValue(
+                Number(event.currentTarget.value),
+                minimum,
+                maximum,
+                step,
+              ),
+            );
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+          }}
+          onPointerUp={commitValue}
+          onPointerCancel={commitValue}
+          onBlur={commitValue}
+          onKeyUp={commitValue}
+        />
+      </div>
     </label>
+  );
+}
+
+function parameterValueToSliderPosition(
+  value: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const range = maximum - minimum;
+
+  if (range <= 0) {
+    return 0;
+  }
+
+  const normalizedValue = Math.min(
+    1,
+    Math.max(0, (value - minimum) / range),
+  );
+
+  return normalizedValue ** (
+    1 / ENVELOPE_SLIDER_CURVE_EXPONENT
+  );
+}
+
+function sliderPositionToParameterValue(
+  position: number,
+  minimum: number,
+  maximum: number,
+  step: number,
+): number {
+  const normalizedPosition = Math.min(
+    1,
+    Math.max(0, Number.isFinite(position) ? position : 0),
+  );
+  const rawValue =
+    minimum
+    + (maximum - minimum)
+      * normalizedPosition ** ENVELOPE_SLIDER_CURVE_EXPONENT;
+  const steppedValue =
+    minimum
+    + Math.round((rawValue - minimum) / step) * step;
+
+  return Math.min(
+    maximum,
+    Math.max(minimum, Number(steppedValue.toFixed(6))),
   );
 }
 
 interface MasterGainControlProps {
   readonly gain: number;
+  readonly muted: boolean;
   readonly onPreview: (gain: number) => void;
   readonly onCommit: (gain: number) => void;
+  readonly onMuteToggle: () => void;
 }
 
 function MasterGainControl(
@@ -4867,12 +5359,13 @@ function MasterGainControl(
 ): React.JSX.Element {
   const {
     gain,
+    muted,
     onPreview,
     onCommit,
+    onMuteToggle,
   } = props;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const outputRef = useRef<HTMLOutputElement | null>(null);
-  const meterRef = useRef<HTMLSpanElement | null>(null);
   const lastCommittedGainRef = useRef(gain);
 
   const updateVisual = useCallback((nextGain: number): void => {
@@ -4881,9 +5374,6 @@ function MasterGainControl(
         formatMasterGainDecibels(nextGain);
     }
 
-    if (meterRef.current !== null) {
-      meterRef.current.style.width = `${nextGain * 100}%`;
-    }
   }, []);
 
   useEffect(() => {
@@ -4913,41 +5403,63 @@ function MasterGainControl(
   };
 
   return (
-    <section className="routing-card">
-      <div className="section-title">
-        <div>
-          <small>Output</small>
-          <strong>Master bus</strong>
-        </div>
+    <section
+      className={
+        muted
+          ? "master-bus-control is-muted"
+          : "master-bus-control"
+      }
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
+    >
+      <div className="master-bus-heading">
+        <small>Master</small>
         <output ref={outputRef}>
           {formatMasterGainDecibels(gain)}
         </output>
       </div>
-      <input
-        ref={inputRef}
-        className="master-gain-input"
-        type="range"
-        min={MINIMUM_MASTER_GAIN}
-        max={MAXIMUM_MASTER_GAIN}
-        step="0.01"
-        defaultValue={gain}
-        aria-label="Master gain"
-        onInput={(event) => {
-          const nextGain = Number(event.currentTarget.value);
+      <div className="master-bus-controls">
+        <input
+          ref={inputRef}
+          className="master-gain-input"
+          type="range"
+          min={MINIMUM_MASTER_GAIN}
+          max={MAXIMUM_MASTER_GAIN}
+          step="0.01"
+          defaultValue={gain}
+          aria-label="Master gain"
+          onInput={(event) => {
+            const nextGain = Number(event.currentTarget.value);
 
-          updateVisual(nextGain);
-          onPreview(nextGain);
-        }}
-        onPointerUp={commitGain}
-        onPointerCancel={commitGain}
-        onBlur={commitGain}
-        onKeyUp={commitGain}
-      />
-      <div className="meter" aria-hidden="true">
-        <span
-          ref={meterRef}
-          style={{ width: `${gain * 100}%` }}
+            updateVisual(nextGain);
+            onPreview(nextGain);
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+          }}
+          onPointerUp={commitGain}
+          onPointerCancel={commitGain}
+          onBlur={commitGain}
+          onKeyUp={commitGain}
         />
+        <button
+          className="master-mute-button"
+          type="button"
+          aria-label={muted ? "Unmute master bus" : "Mute master bus"}
+          aria-pressed={muted}
+          title={muted ? "Unmute master bus" : "Mute master bus"}
+          onClick={onMuteToggle}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 10v4h4l5 4V6l-5 4H4Z" />
+            {muted ? (
+              <path d="m16.5 9.5 4 5m0-5-4 5" />
+            ) : (
+              <path d="M16.5 9.5a4 4 0 0 1 0 5" />
+            )}
+          </svg>
+        </button>
       </div>
     </section>
   );
@@ -5101,30 +5613,6 @@ function getMaximumVerticalScroll(
     0,
     128 * viewport.pitchHeight * viewport.zoomY - viewportHeight,
   );
-}
-
-function countProjectNotes(
-  state: ReturnType<DemoScene["projectStore"]["getState"]>,
-): number {
-  let count = 0;
-
-  for (
-    let voiceIndex = 0;
-    voiceIndex < state.voiceOrder.length;
-    voiceIndex += 1
-  ) {
-    const voiceId = state.voiceOrder[voiceIndex];
-
-    if (voiceId !== undefined) {
-      const track = state.tracksByVoiceId[voiceId];
-
-      if (track !== undefined) {
-        count += Object.keys(track.notesById).length;
-      }
-    }
-  }
-
-  return count;
 }
 
 function createNativeProjectFileMetadata():

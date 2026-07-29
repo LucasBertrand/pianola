@@ -2,6 +2,10 @@ import type {
   AudioEngineConfig,
   Tick,
   TransportState,
+  VoiceId,
+} from "../domain/model";
+import {
+  MAXIMUM_INSTRUMENT_POLYPHONY,
 } from "../domain/model";
 import type {
   AudioEnginePort,
@@ -24,7 +28,7 @@ export const DEFAULT_AUDIO_ENGINE_CONFIG: AudioEngineConfig =
     lateEventToleranceSeconds: 0.035,
     latencyCompensationSeconds: 0.012,
     masterGain: 0.72,
-    maxPolyphonyPerVoice: 32,
+    maxPolyphonyPerVoice: MAXIMUM_INSTRUMENT_POLYPHONY,
     releaseTailSeconds: 2,
   });
 
@@ -52,6 +56,8 @@ const DEFAULT_SCHEDULER_TIMER: SchedulerTimerPort = {
 
 const MINIMUM_RESTART_LEAD_SECONDS = 0.012;
 const SCHEDULING_EPSILON_TICKS = 1e-7;
+const AUDITION_NOTE_DURATION_SECONDS = 0.4;
+const AUDITION_NOTE_VELOCITY = 104;
 
 export class LookaheadScheduler implements AudioTransportController {
   private currentStatus: PlaybackStatus = "stopped";
@@ -70,6 +76,7 @@ export class LookaheadScheduler implements AudioTransportController {
   private starting = false;
   private loopingForAnchor = false;
   private disposed = false;
+  private auditionSequence = 0;
 
   public constructor(
     engine: AudioEnginePort,
@@ -244,6 +251,48 @@ export class LookaheadScheduler implements AudioTransportController {
     this.engine.configure({
       ...this.engine.config,
       masterGain: gain,
+    });
+  }
+
+  public previewVoiceGain(
+    voiceId: VoiceId,
+    gain: number,
+  ): void {
+    this.assertUsable();
+    this.engine.previewVoiceGain(voiceId, gain);
+  }
+
+  public async auditionPitch(
+    voiceId: VoiceId,
+    pitch: number,
+  ): Promise<void> {
+    this.assertUsable();
+
+    if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
+      throw new RangeError("Audition pitch must be between 0 and 127.");
+    }
+
+    const voice = findPlaybackVoice(this.snapshot, voiceId);
+
+    if (voice === undefined) {
+      throw new Error(`Voice "${voiceId}" is unavailable for audition.`);
+    }
+
+    await this.engine.resume();
+    this.assertUsable();
+    this.auditionSequence += 1;
+    const startAudioTimeSeconds = this.engine.currentTimeSeconds;
+
+    this.engine.scheduleNote({
+      occurrenceId:
+        `audition:${this.auditionSequence}:${voiceId}:${pitch}`,
+      generation: this.generation,
+      voice,
+      pitch,
+      velocity: AUDITION_NOTE_VELOCITY,
+      startAudioTimeSeconds,
+      endAudioTimeSeconds:
+        startAudioTimeSeconds + AUDITION_NOTE_DURATION_SECONDS,
     });
   }
 
@@ -774,6 +823,25 @@ function snapshotHasSoloVoice(snapshot: PlaybackSnapshot): boolean {
   }
 
   return false;
+}
+
+function findPlaybackVoice(
+  snapshot: PlaybackSnapshot,
+  voiceId: VoiceId,
+): PlaybackVoiceSnapshot | undefined {
+  for (
+    let voiceIndex = 0;
+    voiceIndex < snapshot.voices.length;
+    voiceIndex += 1
+  ) {
+    const voice = snapshot.voices[voiceIndex];
+
+    if (voice?.voiceId === voiceId) {
+      return voice;
+    }
+  }
+
+  return undefined;
 }
 
 function isVoiceAudible(

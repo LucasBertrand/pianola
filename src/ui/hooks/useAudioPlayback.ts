@@ -7,6 +7,7 @@ import {
 import type {
   ProjectState,
   Tick,
+  VoiceId,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
@@ -40,6 +41,14 @@ export interface AudioPlaybackActions {
   readonly stopPlayback: () => void;
   readonly returnToStart: () => void;
   readonly seek: (tick: Tick) => void;
+  readonly auditionPitch: (
+    voiceId: VoiceId,
+    pitch: number,
+  ) => void;
+  readonly previewVoiceGain: (
+    voiceId: VoiceId,
+    gain: number,
+  ) => void;
   readonly previewMasterGain: (gain: number) => void;
   readonly beginSeekGesture: () => void;
   readonly previewSeek: (tick: Tick) => void;
@@ -198,6 +207,32 @@ export function useAudioPlayback(
     schedulerRef.current?.seek(tick);
   }, []);
 
+  const auditionPitch = useCallback((
+    voiceId: VoiceId,
+    pitch: number,
+  ): void => {
+    const scheduler = schedulerRef.current;
+
+    if (scheduler === null) {
+      return;
+    }
+
+    void scheduler.auditionPitch(voiceId, pitch).catch((error: unknown) => {
+      onErrorRef.current(error);
+    });
+  }, []);
+
+  const previewVoiceGain = useCallback((
+    voiceId: VoiceId,
+    gain: number,
+  ): void => {
+    try {
+      schedulerRef.current?.previewVoiceGain(voiceId, gain);
+    } catch (error: unknown) {
+      onErrorRef.current(error);
+    }
+  }, []);
+
   const previewMasterGain = useCallback((gain: number): void => {
     schedulerRef.current?.previewMasterGain(gain);
   }, []);
@@ -245,6 +280,8 @@ export function useAudioPlayback(
     stopPlayback,
     returnToStart,
     seek,
+    auditionPitch,
+    previewVoiceGain,
     previewMasterGain,
     beginSeekGesture,
     previewSeek,
@@ -260,6 +297,7 @@ function didPlaybackStateChange(
     state.measureCount !== previousState.measureCount
     || state.tracksByVoiceId !== previousState.tracksByVoiceId
     || state.transportSettings !== previousState.transportSettings
+    || state.masterBus.muted !== previousState.masterBus.muted
   ) {
     return true;
   }

@@ -19,6 +19,18 @@ try {
     projectReducer,
   } = await vite.ssrLoadModule("/src/domain/commands.ts");
   const {
+    countNoteEditCollisions,
+    createNoteCollisionResolutionPlan,
+  } = await vite.ssrLoadModule(
+    "/src/domain/note-collision.ts",
+  );
+  const {
+    ProjectStore,
+  } = await vite.ssrLoadModule(
+    "/src/domain/project-store.ts",
+  );
+  const {
+    DEFAULT_INSTRUMENT_POLYPHONY,
     PROJECT_SCHEMA_VERSION,
     createDefaultMasterBusState,
     createDefaultTransportState,
@@ -35,6 +47,10 @@ try {
     DEFAULT_AUDIO_ENGINE_CONFIG,
     LookaheadScheduler,
   } = await vite.ssrLoadModule("/src/audio/lookahead-scheduler.ts");
+  const {
+    countOverlappingVoiceWindows,
+    findOldestOverlappingVoiceIndex,
+  } = await vite.ssrLoadModule("/src/audio/voice-allocation.ts");
   const {
     parseNativeProjectFile,
     serializeNativeProjectFile,
@@ -57,6 +73,7 @@ try {
       instrument: {
         kind: "subtractive",
         oscillatorWaveform: voiceIndex % 2 === 0 ? "sawtooth" : "sine",
+        polyphony: DEFAULT_INSTRUMENT_POLYPHONY,
         oscillatorDetuneCents: 0,
         envelope: {
           attackSeconds: 0.01,
@@ -103,6 +120,7 @@ try {
       notesByVoiceId = {},
       revision = 0,
       masterGain = createDefaultMasterBusState().gain,
+      masterMuted = createDefaultMasterBusState().muted,
       transport: transportChanges = {},
       voiceOrder = ["voice-a"],
     } = options;
@@ -158,6 +176,7 @@ try {
       transportSettings,
       masterBus: {
         gain: masterGain,
+        muted: masterMuted,
       },
     };
   }
@@ -170,6 +189,17 @@ try {
       label: command.type,
       createdAt: transactionSequence,
       commands: [command],
+    });
+  }
+
+  function dispatchCommands(state, commands, label) {
+    transactionSequence += 1;
+
+    return projectReducer(state, {
+      transactionId: `audio-test-${transactionSequence}`,
+      label,
+      createdAt: transactionSequence,
+      commands,
     });
   }
 
@@ -209,6 +239,7 @@ try {
       this.resumeCount = 0;
       this.scheduleFailureAfterEventCount = null;
       this.snapshots = [];
+      this.voiceGainPreviews = [];
     }
 
     configure(config) {
@@ -238,6 +269,13 @@ try {
       }
 
       this.events.push(event);
+    }
+
+    previewVoiceGain(voiceId, gain) {
+      this.voiceGainPreviews.push({
+        voiceId,
+        gain,
+      });
     }
 
     cancelAll(atAudioTimeSeconds) {
@@ -308,6 +346,7 @@ try {
     assert.equal(snapshot.ppqn, 960);
     assert.equal(snapshot.durationTicks, 15_360);
     assert.equal(snapshot.masterGain, 0.72);
+    assert.equal(snapshot.masterMuted, false);
     assert.deepEqual(
       snapshot.voices.map((voice) => voice.voiceId),
       ["voice-b", "voice-a"],
@@ -320,6 +359,10 @@ try {
     assert.deepEqual([...voiceA.pitches], [60, 72, 50]);
     assert.deepEqual([...voiceA.durationTicks], [480, 120, 240]);
     assert.equal(voiceA.instrument.kind, "subtractive");
+    assert.equal(
+      voiceA.instrument.polyphony,
+      DEFAULT_INSTRUMENT_POLYPHONY,
+    );
     assert.notEqual(
       voiceA.instrument,
       state.voicesById["voice-a"].instrument,
@@ -340,6 +383,11 @@ try {
     assert.equal(updatedState.masterBus.gain, 0.35);
     assert.equal(updatedState.revision, state.revision + 1);
     assert.equal(unchangedState, updatedState);
+    const mutedState = dispatch(updatedState, {
+      type: "SetMasterMuted",
+      muted: true,
+    });
+    assert.equal(mutedState.masterBus.muted, true);
     assert.throws(
       () => dispatch(state, {
         type: "UpdateMasterGain",
@@ -353,7 +401,7 @@ try {
     );
   });
 
-  test("updates subtractive waveform and envelope immutably", () => {
+  test("updates subtractive waveform, envelope, and polyphony immutably", () => {
     const state = createProject();
     const voice = state.voicesById["voice-a"];
     const updatedState = dispatch(state, {
@@ -363,6 +411,7 @@ try {
         instrument: {
           ...voice.instrument,
           oscillatorWaveform: "square",
+          polyphony: 1,
           envelope: {
             ...voice.instrument.envelope,
             attackSeconds: 0.42,
@@ -388,13 +437,34 @@ try {
       0.55,
     );
     assert.equal(
+      updatedState.voicesById["voice-a"].instrument.polyphony,
+      1,
+    );
+    assert.equal(
       state.voicesById["voice-a"]
         .instrument.oscillatorWaveform,
       "sawtooth",
     );
+    assert.throws(
+      () => dispatch(state, {
+        type: "UpdateVoice",
+        voiceId: voice.id,
+        changes: {
+          instrument: {
+            ...voice.instrument,
+            polyphony: 17,
+          },
+        },
+      }),
+      (error) => (
+        error instanceof CommandRejectedError
+        && error.code === "INVALID_COMMAND"
+        && error.commandType === "UpdateVoice"
+      ),
+    );
   });
 
-  test("round-trips master gain and migrates version two files", () => {
+  test("round-trips audio settings and migrates version two through four files", () => {
     const state = createProject({
       masterGain: 0.41,
     });
@@ -407,18 +477,93 @@ try {
     const loaded = parseNativeProjectFile(serialized);
 
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
-    assert.equal(loaded.projectState.schemaVersion, 3);
+    assert.equal(loaded.projectState.schemaVersion, 5);
+    assert.equal(
+      loaded.projectState.voicesById["voice-a"]
+        .instrument.polyphony,
+      DEFAULT_INSTRUMENT_POLYPHONY,
+    );
 
     const versionTwoDocument = JSON.parse(serialized);
     versionTwoDocument.formatVersion = 2;
     versionTwoDocument.project.schemaVersion = 2;
     delete versionTwoDocument.project.masterBus;
+
+    for (
+      const voice of Object.values(
+        versionTwoDocument.project.voicesById,
+      )
+    ) {
+      delete voice.instrument.polyphony;
+    }
+
     const migrated = parseNativeProjectFile(
       JSON.stringify(versionTwoDocument),
     );
 
     assert.equal(migrated.projectState.masterBus.gain, 0.72);
-    assert.equal(migrated.projectState.schemaVersion, 3);
+    assert.equal(migrated.projectState.masterBus.muted, false);
+    assert.equal(migrated.projectState.schemaVersion, 5);
+    assert.equal(
+      migrated.projectState.voicesById["voice-a"]
+        .instrument.polyphony,
+      DEFAULT_INSTRUMENT_POLYPHONY,
+    );
+
+    const versionThreeDocument = JSON.parse(serialized);
+    versionThreeDocument.formatVersion = 3;
+    versionThreeDocument.project.schemaVersion = 3;
+    delete versionThreeDocument.project.masterBus.muted;
+
+    for (
+      const voice of Object.values(
+        versionThreeDocument.project.voicesById,
+      )
+    ) {
+      delete voice.instrument.polyphony;
+    }
+
+    const migratedVersionThree = parseNativeProjectFile(
+      JSON.stringify(versionThreeDocument),
+    );
+
+    assert.equal(migratedVersionThree.projectState.masterBus.gain, 0.41);
+    assert.equal(
+      migratedVersionThree.projectState.masterBus.muted,
+      false,
+    );
+    assert.equal(
+      migratedVersionThree.projectState.voicesById["voice-a"]
+        .instrument.polyphony,
+      DEFAULT_INSTRUMENT_POLYPHONY,
+    );
+
+    const versionFourDocument = JSON.parse(serialized);
+    versionFourDocument.formatVersion = 4;
+    versionFourDocument.project.schemaVersion = 4;
+    delete versionFourDocument.project.masterBus.muted;
+    const migratedVersionFour = parseNativeProjectFile(
+      JSON.stringify(versionFourDocument),
+    );
+
+    assert.equal(migratedVersionFour.projectState.masterBus.gain, 0.41);
+    assert.equal(
+      migratedVersionFour.projectState.masterBus.muted,
+      false,
+    );
+
+    const invalidCurrentDocument = JSON.parse(serialized);
+    delete invalidCurrentDocument.project.voicesById["voice-a"]
+      .instrument.polyphony;
+    assert.throws(
+      () => parseNativeProjectFile(
+        JSON.stringify(invalidCurrentDocument),
+      ),
+      (error) => (
+        error.code === "INVALID_DATA"
+        && error.path.endsWith(".instrument.polyphony")
+      ),
+    );
   });
 
   test("round-trips ticks and seconds across tempo segments", () => {
@@ -587,6 +732,312 @@ try {
     );
   });
 
+  test("merges transitive same-pitch collisions atomically", () => {
+    const existing = createNote(
+      "existing",
+      "voice-a",
+      60,
+      0,
+      480,
+      70,
+    );
+    const selected = createNote(
+      "selected",
+      "voice-a",
+      60,
+      600,
+      240,
+      110,
+    );
+    const proposed = {
+      ...selected,
+      startTick: 360,
+    };
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [
+          existing,
+          selected,
+        ],
+      },
+    });
+    const intent = {
+      originalNotes: [selected],
+      proposedNotes: [proposed],
+    };
+
+    assert.equal(countNoteEditCollisions(state, intent), 1);
+
+    const plan = createNoteCollisionResolutionPlan(
+      state,
+      intent,
+      "merge",
+      "merge-test",
+    );
+    const nextState = dispatchCommands(
+      state,
+      plan.commands,
+      "Merge collisions",
+    );
+    const notes = Object.values(
+      nextState.tracksByVoiceId["voice-a"].notesById,
+    );
+
+    assert.equal(notes.length, 1);
+    assert.deepEqual(notes[0], {
+      ...selected,
+      startTick: 0,
+      durationTicks: 600,
+    });
+    assert.deepEqual(
+      plan.resultingSelectionNoteIds,
+      ["selected"],
+    );
+  });
+
+  test("slices existing notes at edited-note anchors", () => {
+    const existing = createNote(
+      "existing",
+      "voice-a",
+      60,
+      0,
+      960,
+      75,
+    );
+    const selected = createNote(
+      "selected",
+      "voice-a",
+      60,
+      1_200,
+      240,
+      105,
+    );
+    const proposed = {
+      ...selected,
+      startTick: 360,
+    };
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [
+          existing,
+          selected,
+        ],
+      },
+    });
+    const plan = createNoteCollisionResolutionPlan(
+      state,
+      {
+        originalNotes: [selected],
+        proposedNotes: [proposed],
+      },
+      "slice",
+      "slice-test",
+    );
+    const nextState = dispatchCommands(
+      state,
+      plan.commands,
+      "Slice collisions",
+    );
+    const notes = Object.values(
+      nextState.tracksByVoiceId["voice-a"].notesById,
+    ).sort((left, right) => left.startTick - right.startTick);
+
+    assert.equal(notes.length, 3);
+    assert.deepEqual(
+      notes.map((note) => [
+        note.startTick,
+        note.durationTicks,
+        note.velocity,
+      ]),
+      [
+        [0, 360, 75],
+        [360, 240, 105],
+        [600, 360, 75],
+      ],
+    );
+    assert.equal(notes[0].id, "existing");
+    assert.match(notes[2].id, /^existing-slice-/);
+    assert.deepEqual(
+      plan.resultingSelectionNoteIds,
+      ["selected"],
+    );
+  });
+
+  test("consolidates colliding edited notes before slicing", () => {
+    const existing = createNote(
+      "existing",
+      "voice-a",
+      60,
+      0,
+      360,
+    );
+    const selectedA = createNote(
+      "selected-a",
+      "voice-a",
+      60,
+      960,
+      120,
+    );
+    const selectedB = createNote(
+      "selected-b",
+      "voice-a",
+      60,
+      1_200,
+      120,
+    );
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [
+          existing,
+          selectedA,
+          selectedB,
+        ],
+      },
+    });
+    const intent = {
+      originalNotes: [
+        selectedA,
+        selectedB,
+      ],
+      proposedNotes: [
+        {
+          ...selectedA,
+          startTick: 300,
+          durationTicks: 300,
+        },
+        {
+          ...selectedB,
+          startTick: 480,
+          durationTicks: 300,
+        },
+      ],
+    };
+    const plan = createNoteCollisionResolutionPlan(
+      state,
+      intent,
+      "slice",
+      "consolidate-test",
+    );
+    const nextState = dispatchCommands(
+      state,
+      plan.commands,
+      "Consolidate and slice",
+    );
+    const notes = Object.values(
+      nextState.tracksByVoiceId["voice-a"].notesById,
+    ).sort((left, right) => left.startTick - right.startTick);
+
+    assert.deepEqual(
+      notes.map((note) => [
+        note.id,
+        note.startTick,
+        note.durationTicks,
+      ]),
+      [
+        ["existing", 0, 300],
+        ["selected-a", 300, 480],
+      ],
+    );
+    assert.deepEqual(
+      plan.resultingSelectionNoteIds,
+      ["selected-a"],
+    );
+  });
+
+  test("keeps collision planning inert and undoes resolution once", () => {
+    const existing = createNote(
+      "existing",
+      "voice-a",
+      60,
+      0,
+      960,
+    );
+    const selected = createNote(
+      "selected",
+      "voice-a",
+      60,
+      1_200,
+      240,
+    );
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [
+          existing,
+          selected,
+        ],
+      },
+    });
+    const originalTracks = structuredClone(
+      state.tracksByVoiceId,
+    );
+    const plan = createNoteCollisionResolutionPlan(
+      state,
+      {
+        originalNotes: [selected],
+        proposedNotes: [
+          {
+            ...selected,
+            startTick: 360,
+          },
+        ],
+      },
+      "slice",
+      "undo-test",
+    );
+
+    assert.deepEqual(state.tracksByVoiceId, originalTracks);
+
+    const store = new ProjectStore(state);
+    store.dispatch({
+      transactionId: "collision-resolution",
+      label: "Slice collisions",
+      createdAt: 1,
+      commands: plan.commands,
+    });
+
+    assert.equal(store.canUndo(), true);
+    store.undo();
+    assert.deepEqual(
+      store.getState().tracksByVoiceId,
+      originalTracks,
+    );
+    assert.equal(store.canUndo(), false);
+  });
+
+  test("steals the oldest overlapping voice when polyphony is exhausted", () => {
+    const voices = [
+      {
+        startAudioTimeSeconds: 0.4,
+        stopAudioTimeSeconds: 2.2,
+      },
+      {
+        startAudioTimeSeconds: 0.1,
+        stopAudioTimeSeconds: 3,
+      },
+      {
+        startAudioTimeSeconds: 0.8,
+        stopAudioTimeSeconds: 1,
+      },
+      {
+        startAudioTimeSeconds: 4,
+        stopAudioTimeSeconds: 5,
+      },
+    ];
+
+    assert.equal(
+      countOverlappingVoiceWindows(voices, 0.9, 1.5),
+      3,
+    );
+    assert.equal(
+      findOldestOverlappingVoiceIndex(voices, 0.9, 1.5),
+      1,
+    );
+    assert.equal(
+      findOldestOverlappingVoiceIndex(voices, 3.2, 3.8),
+      -1,
+    );
+  });
+
   test("schedules same-time polyphony with a fake engine", async () => {
     const state = createProject({
       measureCount: 1,
@@ -624,6 +1075,46 @@ try {
       engine.events[1].startAudioTimeSeconds,
     );
     assert.equal(timer.pendingCount, 1);
+
+    await scheduler.dispose();
+  });
+
+  test("auditions a pitch with the selected voice instrument", async () => {
+    const state = createProject({
+      voiceOrder: ["voice-a", "voice-b"],
+    });
+    const snapshot = compilePlaybackSnapshot(state);
+    const engine = new FakeAudioEngine();
+    const scheduler = new LookaheadScheduler(
+      engine,
+      snapshot,
+      state.transportSettings,
+    );
+
+    engine.currentTimeSeconds = 1.25;
+    await scheduler.auditionPitch("voice-b", 73);
+
+    assert.equal(engine.resumeCount, 1);
+    assert.equal(engine.events.length, 1);
+    assert.equal(engine.events[0].pitch, 73);
+    assert.equal(engine.events[0].voice.voiceId, "voice-b");
+    assert.equal(
+      engine.events[0].voice.instrument.oscillatorWaveform,
+      "sine",
+    );
+    assertClose(engine.events[0].startAudioTimeSeconds, 1.25);
+    assertClose(engine.events[0].endAudioTimeSeconds, 1.65);
+    scheduler.previewVoiceGain("voice-b", 0.46);
+    assert.deepEqual(engine.voiceGainPreviews, [
+      {
+        voiceId: "voice-b",
+        gain: 0.46,
+      },
+    ]);
+    await assert.rejects(
+      scheduler.auditionPitch("voice-b", 128),
+      /between 0 and 127/,
+    );
 
     await scheduler.dispose();
   });

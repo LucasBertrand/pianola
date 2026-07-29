@@ -78,6 +78,11 @@ export interface UpdateMasterGainCommand {
   readonly gain: number;
 }
 
+export interface SetMasterMutedCommand {
+  readonly type: "SetMasterMuted";
+  readonly muted: boolean;
+}
+
 export interface UpdateMeasureCountCommand {
   readonly type: "UpdateMeasureCount";
   readonly measureCount: number;
@@ -159,6 +164,7 @@ export type PianoRollCommand =
   | ReorderVoicesCommand
   | UpdateProjectTitleCommand
   | UpdateMasterGainCommand
+  | SetMasterMutedCommand
   | UpdateMeasureCountCommand
   | InsertMeasureCommand
   | RemoveMeasureCommand
@@ -268,6 +274,8 @@ function applyCommand(
       return applyUpdateProjectTitle(state, command);
     case "UpdateMasterGain":
       return applyUpdateMasterGain(state, command);
+    case "SetMasterMuted":
+      return applySetMasterMuted(state, command);
     case "UpdateMeasureCount":
       return applyUpdateMeasureCount(state, command);
     case "InsertMeasure":
@@ -473,7 +481,33 @@ function applyUpdateMasterGain(
   return {
     ...state,
     masterBus: {
+      ...state.masterBus,
       gain: command.gain,
+    },
+  };
+}
+
+function applySetMasterMuted(
+  state: ProjectState,
+  command: SetMasterMutedCommand,
+): ProjectState {
+  if (typeof command.muted !== "boolean") {
+    reject(
+      "INVALID_COMMAND",
+      "Master mute state must be a boolean.",
+      command.type,
+    );
+  }
+
+  if (command.muted === state.masterBus.muted) {
+    return state;
+  }
+
+  return {
+    ...state,
+    masterBus: {
+      ...state.masterBus,
+      muted: command.muted,
     },
   };
 }
