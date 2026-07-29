@@ -150,8 +150,6 @@ const MIN_GRID_LINE_SPACING_CSS_PIXELS =
   RENDERING_CONSTANTS.minimumGridLineSpacingCssPixels;
 const MAX_GRID_LINES_PER_PASS =
   RENDERING_CONSTANTS.maximumGridLinesPerPass;
-const NOTE_LABEL_MINIMUM_WIDTH =
-  RENDERING_CONSTANTS.noteLabelMinimumWidthCssPixels;
 const NOTE_LABEL_MINIMUM_HEIGHT =
   RENDERING_CONSTANTS.noteLabelMinimumHeightCssPixels;
 const NOTE_LABEL_HORIZONTAL_PADDING =
@@ -476,6 +474,8 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         + '"SFMono-Regular", Consolas, monospace';
       context.textAlign = "left";
       context.textBaseline = "middle";
+      const noteLabelWidths =
+        getNoteLabelWidths(context);
 
       for (
         let noteIndex = 0;
@@ -500,9 +500,15 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
           converter.pitchToCssPixelY(note.pitch - 1);
         const width = Math.max(1, endX - x - 1);
         const height = Math.max(1, nextRowY - y - 1);
+        const label = getMidiNoteLabel(note.pitch);
+        const labelWidth =
+          noteLabelWidths[note.pitch] ?? 0;
 
         if (
-          width < NOTE_LABEL_MINIMUM_WIDTH
+          label.length === 0
+          || width
+            < labelWidth
+              + NOTE_LABEL_HORIZONTAL_PADDING * 2
           || height < NOTE_LABEL_MINIMUM_HEIGHT
         ) {
           continue;
@@ -512,10 +518,9 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
 
         context.globalAlpha = voiceStyle?.opacity ?? 1;
         context.fillText(
-          getMidiNoteLabel(note.pitch),
+          label,
           x + NOTE_LABEL_HORIZONTAL_PADDING,
           y + height / 2,
-          width - NOTE_LABEL_HORIZONTAL_PADDING * 2,
         );
       }
 
@@ -548,6 +553,32 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
 
 const lockedNotePatterns =
   new WeakMap<CanvasRenderingContext2D, CanvasPattern>();
+const noteLabelWidthCaches =
+  new WeakMap<CanvasRenderingContext2D, Float32Array>();
+
+function getNoteLabelWidths(
+  context: CanvasRenderingContext2D,
+): Float32Array {
+  const cachedWidths = noteLabelWidthCaches.get(context);
+
+  if (cachedWidths !== undefined) {
+    return cachedWidths;
+  }
+
+  const widths = new Float32Array(MAX_MIDI_PITCH + 1);
+
+  for (
+    let pitch = MIN_MIDI_PITCH;
+    pitch <= MAX_MIDI_PITCH;
+    pitch += 1
+  ) {
+    widths[pitch] =
+      context.measureText(getMidiNoteLabel(pitch)).width;
+  }
+
+  noteLabelWidthCaches.set(context, widths);
+  return widths;
+}
 
 function getLockedNotePattern(
   context: CanvasRenderingContext2D,

@@ -1285,7 +1285,7 @@ input[type="range"]::-webkit-slider-thumb {
 .interaction-note-ghost {
   position: absolute;
   display: flex;
-  padding: 0 4px;
+  padding: 0 2px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.88);
   border-radius: 2px;

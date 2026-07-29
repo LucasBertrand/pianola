@@ -381,9 +381,8 @@ export const EDITOR_CONSTANTS = Object.freeze({
 export const RENDERING_CONSTANTS = Object.freeze({
   applicationSurfaceColor: "#111318",
   defaultNoteColor: "#6ea8fe",
-  noteLabelMinimumWidthCssPixels: 30,
   noteLabelMinimumHeightCssPixels: 11,
-  noteLabelHorizontalPaddingCssPixels: 4,
+  noteLabelHorizontalPaddingCssPixels: 2,
   noteLabelFontSizeCssPixels: 9,
   noteLabelColor: "rgba(18, 22, 29, 0.78)",
   tonalSnapPitchRowColor: "rgba(121, 167, 255, 0.035)",
