@@ -3067,12 +3067,14 @@ export function App(): React.JSX.Element {
                   });
                 }}
               >
-                <span
-                  className="treble-clef-icon"
+                <svg
+                  className="pitch-snap-icon"
+                  viewBox="0 0 24 24"
                   aria-hidden="true"
                 >
-                  𝄞
-                </span>
+                  <path d="M7 4v8a5 5 0 0 0 10 0V4" />
+                  <path d="M7 8h4v4a1 1 0 0 0 2 0V8h4" />
+                </svg>
               </button>
               <select
                 className="pitch-snap-tonic-select"

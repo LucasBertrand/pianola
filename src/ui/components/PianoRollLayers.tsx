@@ -37,8 +37,9 @@ import type {
 import type {
   InteractionToolSignal,
 } from "../interactions/types";
-import type {
-  PitchSnapSettings,
+import {
+  isPitchAllowedByTonalPattern,
+  type PitchSnapSettings,
 } from "../interactions/pitch-snap";
 import type {
   ReadonlyRenderSignal,
@@ -53,6 +54,9 @@ import {
 import {
   APPLICATION_SURFACE_COLOR,
 } from "../rendering/theme";
+import {
+  getMidiNoteLabel,
+} from "../rendering/pitch-label";
 import {
   InteractionOverlay,
 } from "./InteractionOverlay";
@@ -71,6 +75,7 @@ export interface CanvasLayerProps {
 
 export interface GridCanvasProps extends CanvasLayerProps {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly projectStore: ProjectStorePort;
 }
 
@@ -155,7 +160,10 @@ const NOTE_LABEL_FONT_SIZE =
   RENDERING_CONSTANTS.noteLabelFontSizeCssPixels;
 const NOTE_LABEL_COLOR =
   RENDERING_CONSTANTS.noteLabelColor;
-const MIDI_NOTE_LABELS = createMidiNoteLabels();
+const TONAL_SNAP_PITCH_ROW_COLOR =
+  RENDERING_CONSTANTS.tonalSnapPitchRowColor;
+const TONAL_SNAP_TONIC_ROW_COLOR =
+  RENDERING_CONSTANTS.tonalSnapTonicRowColor;
 
 export function PianoRollLayers(
   props: PianoRollLayersProps,
@@ -192,6 +200,7 @@ export function PianoRollLayers(
         viewport={viewport}
         visibleRegion={visibleRegion}
         gridResolutionTicks={gridResolutionTicks}
+        pitchSnapSettings={pitchSnapSettings}
         projectStore={projectStore}
       />
       <NotesCanvas
@@ -229,6 +238,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
     viewport,
     visibleRegion,
     gridResolutionTicks,
+    pitchSnapSettings,
     projectStore,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
@@ -258,11 +268,13 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         converter,
         visibleRegion.get(),
         gridResolutionTicks.get(),
+        pitchSnapSettings.get(),
         projectStore.getState().transportSettings,
       );
     },
     [
       gridResolutionTicks,
+      pitchSnapSettings,
       projectStore,
       viewport,
       visibleRegion,
@@ -278,6 +290,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
   useSignalInvalidation(viewport, renderer.invalidate);
   useSignalInvalidation(visibleRegion, renderer.invalidate);
   useSignalInvalidation(gridResolutionTicks, renderer.invalidate);
+  useSignalInvalidation(pitchSnapSettings, renderer.invalidate);
   useEffect(
     () => projectStore.subscribe(renderer.invalidate),
     [
@@ -499,7 +512,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
 
         context.globalAlpha = voiceStyle?.opacity ?? 1;
         context.fillText(
-          MIDI_NOTE_LABELS[note.pitch] ?? "",
+          getMidiNoteLabel(note.pitch),
           x + NOTE_LABEL_HORIZONTAL_PADDING,
           y + height / 2,
           width - NOTE_LABEL_HORIZONTAL_PADDING * 2,
@@ -531,38 +544,6 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       aria-hidden="true"
     />
   );
-}
-
-function createMidiNoteLabels(): readonly string[] {
-  const pitchClassNames = [
-    "C",
-    "C#",
-    "D",
-    "D#",
-    "E",
-    "F",
-    "F#",
-    "G",
-    "G#",
-    "A",
-    "A#",
-    "B",
-  ] as const;
-  const labels: string[] = [];
-
-  for (
-    let pitch = MIN_MIDI_PITCH;
-    pitch <= MAX_MIDI_PITCH;
-    pitch += 1
-  ) {
-    const pitchClass = pitch % 12;
-    const octave = Math.floor(pitch / 12) - 1;
-
-    labels[pitch] =
-      `${pitchClassNames[pitchClass] ?? "?"}${octave}`;
-  }
-
-  return Object.freeze(labels);
 }
 
 const lockedNotePatterns =
@@ -624,6 +605,7 @@ function paintGrid(
   converter: CoordinateConverter,
   region: Rect,
   gridResolutionTicks: number,
+  pitchSnapSettings: PitchSnapSettings,
   transport: ProjectState["transportSettings"],
 ): void {
   const width = frame.widthCssPixels;
@@ -647,6 +629,38 @@ function paintGrid(
     if (isBlackKey(pitch)) {
       const y = converter.pitchToCssPixelY(pitch);
       const nextY = converter.pitchToCssPixelY(pitch - 1);
+      context.fillRect(0, y, width, nextY - y);
+    }
+  }
+
+  if (pitchSnapSettings.enabled) {
+    for (
+      let pitch = firstPitch;
+      pitch <= lastPitch;
+      pitch += 1
+    ) {
+      if (
+        !isPitchAllowedByTonalPattern(
+          pitch,
+          pitchSnapSettings,
+        )
+      ) {
+        continue;
+      }
+
+      const y = converter.pitchToCssPixelY(pitch);
+      const nextY = converter.pitchToCssPixelY(pitch - 1);
+      const pitchClass =
+        (
+          pitch
+          - pitchSnapSettings.tonicPitchClass
+          + 12
+        ) % 12;
+
+      context.fillStyle =
+        pitchClass === 0
+          ? TONAL_SNAP_TONIC_ROW_COLOR
+          : TONAL_SNAP_PITCH_ROW_COLOR;
       context.fillRect(0, y, width, nextY - y);
     }
   }

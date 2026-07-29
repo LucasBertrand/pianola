@@ -48,6 +48,9 @@ import {
   type NoteColorMode,
   type VoiceRenderStyle,
 } from "../rendering/note-style";
+import {
+  getMidiNoteLabel,
+} from "../rendering/pitch-label";
 
 export interface InteractionOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
@@ -213,13 +216,12 @@ export function InteractionOverlay(
           selectionLayer.style.transform = transform;
         }
 
-        if (noteColorMode.get() === "pitch") {
-          updateGhostPitchColors(
-            ghostElementsRef.current,
-            ghostBasePitchRef.current,
-            deltaPitch,
-          );
-        }
+        updateGhostPitchPresentation(
+          ghostElementsRef.current,
+          ghostBasePitchRef.current,
+          deltaPitch,
+          noteColorMode.get() === "pitch",
+        );
       },
       endDrag(): void {
         editingNoteIds.clear();
@@ -315,6 +317,7 @@ export function InteractionOverlay(
           noteColorMode.get() === "pitch"
             ? getPitchNoteColor(pitch)
             : style?.fillStyle ?? "#79a7ff";
+        element.textContent = getMidiNoteLabel(pitch);
         drawGhostElementRef.current = element;
         ghostLayer.appendChild(element);
       },
@@ -525,6 +528,7 @@ function populateGhostLayer(
       `${Math.max(1, nextY - y - 1)}px`;
     element.style.background =
       getNoteFillStyle(note, stylesByVoiceId, colorMode);
+    element.textContent = getMidiNoteLabel(note.pitch);
     baseLeft[elements.length] = x;
     baseWidth[elements.length] = width;
     basePitch[elements.length] = note.pitch;
@@ -538,10 +542,11 @@ function populateGhostLayer(
   ghostLayer.appendChild(fragment);
 }
 
-function updateGhostPitchColors(
+function updateGhostPitchPresentation(
   elements: readonly HTMLElement[],
   basePitches: Int16Array | null,
   deltaPitch: number,
+  updatePitchColor: boolean,
 ): void {
   if (basePitches === null) {
     return;
@@ -559,9 +564,13 @@ function updateGhostPitchColors(
       continue;
     }
 
-    element.style.background = getPitchNoteColor(
-      basePitch + deltaPitch,
-    );
+    const pitch = basePitch + deltaPitch;
+
+    element.textContent = getMidiNoteLabel(pitch);
+
+    if (updatePitchColor) {
+      element.style.background = getPitchNoteColor(pitch);
+    }
   }
 }
 
@@ -604,6 +613,7 @@ function updatePitchSnappedDrag(
 
     element.style.transform =
       `translate3d(${deltaXCssPixels}px, ${deltaYCssPixels}px, 0)`;
+    element.textContent = getMidiNoteLabel(snappedPitch);
 
     if (updatePitchColor) {
       element.style.background =

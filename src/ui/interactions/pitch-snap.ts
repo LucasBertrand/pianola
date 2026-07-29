@@ -40,7 +40,7 @@ export function snapPitchToTonalPattern(
     return boundedPitch;
   }
 
-  if (isPitchAllowed(boundedPitch, settings)) {
+  if (isPitchAllowedByTonalPattern(boundedPitch, settings)) {
     return boundedPitch;
   }
 
@@ -49,10 +49,10 @@ export function snapPitchToTonalPattern(
     const upperPitch = boundedPitch + distance;
     const lowerAllowed =
       lowerPitch >= PROJECT_CONSTANTS.minimumMidiPitch
-      && isPitchAllowed(lowerPitch, settings);
+      && isPitchAllowedByTonalPattern(lowerPitch, settings);
     const upperAllowed =
       upperPitch <= PROJECT_CONSTANTS.maximumMidiPitch
-      && isPitchAllowed(upperPitch, settings);
+      && isPitchAllowedByTonalPattern(upperPitch, settings);
 
     if (lowerAllowed && upperAllowed) {
       return movementDirection > 0
@@ -81,7 +81,7 @@ export function isTonalPatternId(
   );
 }
 
-function isPitchAllowed(
+export function isPitchAllowedByTonalPattern(
   pitch: number,
   settings: PitchSnapSettings,
 ): boolean {

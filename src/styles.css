@@ -1245,13 +1245,14 @@ input[type="range"]::-webkit-slider-thumb {
   color: #a8c5f7;
 }
 
-.treble-clef-icon {
-  display: block;
-  font-family: "Noto Music", "Segoe UI Symbol", serif;
-  font-size: 23px;
-  font-weight: 400;
-  line-height: 1;
-  transform: translateY(-1px);
+.pitch-snap-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
 }
 
 .pitch-snap-control select {
@@ -1283,9 +1284,20 @@ input[type="range"]::-webkit-slider-thumb {
 
 .interaction-note-ghost {
   position: absolute;
+  display: flex;
+  padding: 0 4px;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.88);
   border-radius: 2px;
   opacity: 0.78;
+  color: rgba(18, 22, 29, 0.78);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
+  align-items: center;
   box-shadow:
     0 0 0 1px rgba(20, 25, 34, 0.8),
     0 5px 14px rgba(0, 0, 0, 0.32);
@@ -1790,8 +1802,11 @@ input[type="range"]::-webkit-slider-thumb {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
   -webkit-touch-callout: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .parameter-copy {
@@ -1830,8 +1845,10 @@ input[type="range"]::-webkit-slider-thumb {
   accent-color: var(--voice-color, #79a7ff);
   cursor: pointer;
   touch-action: none;
+  -webkit-user-select: none;
   -webkit-touch-callout: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .parameter-input-vertical {
@@ -1840,6 +1857,11 @@ input[type="range"]::-webkit-slider-thumb {
   height: 92px;
   margin: 4px auto 0;
   flex: 0 0 92px;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .parameter-input {
