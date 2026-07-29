@@ -172,6 +172,131 @@ export const INTERACTION_CONSTANTS = Object.freeze({
   contextActionEventName: "piano-roll-context-action",
 } as const);
 
+/**
+ * Tonal pitch-snap presets.
+ *
+ * Intervals are semitone offsets from the selected tonic. Keeping the
+ * interval formulas here makes the musical vocabulary easy to extend without
+ * changing the interaction algorithm.
+ */
+export const TONAL_SNAP_CONSTANTS = Object.freeze({
+  defaultEnabled: false,
+  defaultTonicPitchClass: 0,
+  defaultPatternId: "ionian",
+  tonicOptions: Object.freeze([
+    Object.freeze({ value: 0, label: "C" }),
+    Object.freeze({ value: 1, label: "C#" }),
+    Object.freeze({ value: 2, label: "D" }),
+    Object.freeze({ value: 3, label: "D#" }),
+    Object.freeze({ value: 4, label: "E" }),
+    Object.freeze({ value: 5, label: "F" }),
+    Object.freeze({ value: 6, label: "F#" }),
+    Object.freeze({ value: 7, label: "G" }),
+    Object.freeze({ value: 8, label: "G#" }),
+    Object.freeze({ value: 9, label: "A" }),
+    Object.freeze({ value: 10, label: "A#" }),
+    Object.freeze({ value: 11, label: "B" }),
+  ] as const),
+  patterns: Object.freeze([
+    Object.freeze({
+      id: "ionian",
+      label: "Ionian",
+      category: "scale",
+      intervals: Object.freeze([0, 2, 4, 5, 7, 9, 11]),
+    }),
+    Object.freeze({
+      id: "dorian",
+      label: "Dorian",
+      category: "scale",
+      intervals: Object.freeze([0, 2, 3, 5, 7, 9, 10]),
+    }),
+    Object.freeze({
+      id: "phrygian",
+      label: "Phrygian",
+      category: "scale",
+      intervals: Object.freeze([0, 1, 3, 5, 7, 8, 10]),
+    }),
+    Object.freeze({
+      id: "lydian",
+      label: "Lydian",
+      category: "scale",
+      intervals: Object.freeze([0, 2, 4, 6, 7, 9, 11]),
+    }),
+    Object.freeze({
+      id: "mixolydian",
+      label: "Mixolydian",
+      category: "scale",
+      intervals: Object.freeze([0, 2, 4, 5, 7, 9, 10]),
+    }),
+    Object.freeze({
+      id: "aeolian",
+      label: "Aeolian",
+      category: "scale",
+      intervals: Object.freeze([0, 2, 3, 5, 7, 8, 10]),
+    }),
+    Object.freeze({
+      id: "locrian",
+      label: "Locrian",
+      category: "scale",
+      intervals: Object.freeze([0, 1, 3, 5, 6, 8, 10]),
+    }),
+    Object.freeze({
+      id: "major-triad",
+      label: "Major triad",
+      category: "chord",
+      intervals: Object.freeze([0, 4, 7]),
+    }),
+    Object.freeze({
+      id: "minor-triad",
+      label: "Minor triad",
+      category: "chord",
+      intervals: Object.freeze([0, 3, 7]),
+    }),
+    Object.freeze({
+      id: "diminished-triad",
+      label: "Diminished triad",
+      category: "chord",
+      intervals: Object.freeze([0, 3, 6]),
+    }),
+    Object.freeze({
+      id: "augmented-triad",
+      label: "Augmented triad",
+      category: "chord",
+      intervals: Object.freeze([0, 4, 8]),
+    }),
+    Object.freeze({
+      id: "major-seventh",
+      label: "Major seventh",
+      category: "chord",
+      intervals: Object.freeze([0, 4, 7, 11]),
+    }),
+    Object.freeze({
+      id: "dominant-seventh",
+      label: "Dominant seventh",
+      category: "chord",
+      intervals: Object.freeze([0, 4, 7, 10]),
+    }),
+    Object.freeze({
+      id: "minor-seventh",
+      label: "Minor seventh",
+      category: "chord",
+      intervals: Object.freeze([0, 3, 7, 10]),
+    }),
+    Object.freeze({
+      id: "half-diminished-seventh",
+      label: "Half-diminished seventh",
+      category: "chord",
+      intervals: Object.freeze([0, 3, 6, 10]),
+    }),
+    Object.freeze({
+      id: "diminished-seventh",
+      label: "Diminished seventh",
+      category: "chord",
+      intervals: Object.freeze([0, 3, 6, 9]),
+    }),
+  ] as const),
+} as const);
+
 /** Piano-roll layout and control response values. */
 export const EDITOR_CONSTANTS = Object.freeze({
   rulerHeightCssPixels: 28,

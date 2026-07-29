@@ -43,6 +43,10 @@ import type {
   InteractionModeState,
 } from "../ui/interactions/types";
 import {
+  DEFAULT_PITCH_SNAP_SETTINGS,
+  type PitchSnapSettings,
+} from "../ui/interactions/pitch-snap";
+import {
   DEFAULT_GRID_SETTINGS,
   type GridSettings,
 } from "../ui/rendering/grid-settings";
@@ -78,6 +82,7 @@ export interface DemoScene {
   readonly voiceSelectionRequest: MutableRenderSignal<VoiceId | null>;
   readonly playheadTick: MutableRenderSignal<number>;
   readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
+  readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
   readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
 }
@@ -162,6 +167,9 @@ export function createDemoScene(): DemoScene {
     interactionToolState: new MutableRenderSignal({
       activeTool: EDITOR_CONSTANTS.defaultInteractionTool,
     }),
+    pitchSnapSettings: new MutableRenderSignal(
+      DEFAULT_PITCH_SNAP_SETTINGS,
+    ),
     gridSettings,
     gridResolutionTicks: new MappedRenderSignal(
       gridSettings,

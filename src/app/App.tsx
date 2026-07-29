@@ -17,6 +17,7 @@ import {
   MIDI_CONSTANTS,
   PROJECT_CONSTANTS,
   RENDERING_CONSTANTS,
+  TONAL_SNAP_CONSTANTS,
   VIEWPORT_CONSTANTS,
   VOICE_CONSTANTS,
 } from "../config/program-constants";
@@ -111,6 +112,10 @@ import type {
   NoteCollisionResolutionRequest,
   PianoRollEventController,
 } from "../ui/hooks/usePianoRollEvents";
+import {
+  isTonalPatternId,
+  type PitchSnapSettings,
+} from "../ui/interactions/pitch-snap";
 import type {
   ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
@@ -267,6 +272,10 @@ export function App(): React.JSX.Element {
     useState<boolean>(
       EDITOR_CONSTANTS.defaultPitchPreviewEnabled,
     );
+  const [pitchSnapSettings, setPitchSnapSettings] =
+    useState<PitchSnapSettings>(
+      () => scene.pitchSnapSettings.get(),
+    );
   const [projectFileMenuOpen, setProjectFileMenuOpen] =
     useState(false);
   const [applicationDialog, setApplicationDialog] =
@@ -312,6 +321,18 @@ export function App(): React.JSX.Element {
     };
   }, [projectFileMenuOpen]);
   const totalTicks = getProjectDurationTicks(projectState);
+  const updatePitchSnapSettings = useCallback(
+    (changes: Partial<PitchSnapSettings>): void => {
+      const nextSettings: PitchSnapSettings = {
+        ...scene.pitchSnapSettings.get(),
+        ...changes,
+      };
+
+      scene.pitchSnapSettings.set(nextSettings);
+      setPitchSnapSettings(nextSettings);
+    },
+    [scene],
+  );
   const handleSelectionChange = useCallback(
     (hasSelection: boolean): void => {
       setSelectionAvailable(hasSelection);
@@ -2915,6 +2936,7 @@ export function App(): React.JSX.Element {
                   totalTicks={totalTicks}
                   setViewport={publishViewport}
                   gridResolutionTicks={scene.gridResolutionTicks}
+                  pitchSnapSettings={scene.pitchSnapSettings}
                   voiceSelectionRequest={
                     scene.voiceSelectionRequest
                   }
@@ -3015,13 +3037,121 @@ export function App(): React.JSX.Element {
                 )}%
               </output>
             </div>
-            <button
-              className="reset-button"
-              type="button"
-              onClick={handleResetView}
+            <div
+              className={
+                `pitch-snap-control${
+                  pitchSnapSettings.enabled
+                    ? " is-active"
+                    : ""
+                }`
+              }
+              aria-label="Tonal pitch snapping"
             >
-              Reset view
-            </button>
+              <button
+                className="pitch-snap-toggle"
+                type="button"
+                title={
+                  pitchSnapSettings.enabled
+                    ? "Disable tonal pitch snapping"
+                    : "Enable tonal pitch snapping"
+                }
+                aria-label={
+                  pitchSnapSettings.enabled
+                    ? "Disable tonal pitch snapping"
+                    : "Enable tonal pitch snapping"
+                }
+                aria-pressed={pitchSnapSettings.enabled}
+                onClick={() => {
+                  updatePitchSnapSettings({
+                    enabled: !pitchSnapSettings.enabled,
+                  });
+                }}
+              >
+                <span
+                  className="treble-clef-icon"
+                  aria-hidden="true"
+                >
+                  𝄞
+                </span>
+              </button>
+              <select
+                className="pitch-snap-tonic-select"
+                value={pitchSnapSettings.tonicPitchClass}
+                aria-label="Pitch snap tonic"
+                onChange={(event) => {
+                  const tonicPitchClass =
+                    Number(event.currentTarget.value);
+
+                  if (
+                    Number.isInteger(tonicPitchClass)
+                    && tonicPitchClass >= 0
+                    && tonicPitchClass < 12
+                  ) {
+                    updatePitchSnapSettings({
+                      tonicPitchClass,
+                    });
+                  }
+                }}
+              >
+                {TONAL_SNAP_CONSTANTS.tonicOptions.map(
+                  (option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                    >
+                      {option.label}
+                    </option>
+                  ),
+                )}
+              </select>
+              <select
+                className="pitch-snap-pattern-select"
+                value={pitchSnapSettings.patternId}
+                aria-label="Pitch snap scale or chord"
+                onChange={(event) => {
+                  const patternId = event.currentTarget.value;
+
+                  if (isTonalPatternId(patternId)) {
+                    updatePitchSnapSettings({
+                      patternId,
+                    });
+                  }
+                }}
+              >
+                <optgroup label="Modes">
+                  {TONAL_SNAP_CONSTANTS.patterns.map(
+                    (pattern) => (
+                      pattern.category === "scale"
+                        ? (
+                            <option
+                              key={pattern.id}
+                              value={pattern.id}
+                            >
+                              {pattern.label}
+                            </option>
+                          )
+                        : null
+                    ),
+                  )}
+                </optgroup>
+                <optgroup label="Chords">
+                  {TONAL_SNAP_CONSTANTS.patterns.map(
+                    (pattern) => (
+                      pattern.category === "chord"
+                        ? (
+                            <option
+                              key={pattern.id}
+                              value={pattern.id}
+                            >
+                              {pattern.label}
+                            </option>
+                          )
+                        : null
+                    ),
+                  )}
+                </optgroup>
+              </select>
+            </div>
           </div>
         </div>
 

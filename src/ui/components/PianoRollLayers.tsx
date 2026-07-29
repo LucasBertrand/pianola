@@ -38,6 +38,9 @@ import type {
   InteractionToolSignal,
 } from "../interactions/types";
 import type {
+  PitchSnapSettings,
+} from "../interactions/pitch-snap";
+import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
 import {
@@ -92,6 +95,7 @@ export interface PianoRollLayersProps extends CanvasLayerProps {
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
@@ -168,6 +172,7 @@ export function PianoRollLayers(
     totalTicks,
     setViewport,
     gridResolutionTicks,
+    pitchSnapSettings,
     voiceSelectionRequest,
     eventControllerRef,
     onSelectionChange,
@@ -208,6 +213,7 @@ export function PianoRollLayers(
         totalTicks={totalTicks}
         setViewport={setViewport}
         gridResolutionTicks={gridResolutionTicks}
+        pitchSnapSettings={pitchSnapSettings}
         voiceSelectionRequest={voiceSelectionRequest}
         editingNoteIds={editingNoteIds}
         eventControllerRef={eventControllerRef}

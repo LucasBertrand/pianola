@@ -57,6 +57,12 @@ try {
   } = await vite.ssrLoadModule(
     "/src/persistence/native-project-file.ts",
   );
+  const {
+    DEFAULT_PITCH_SNAP_SETTINGS,
+    snapPitchToTonalPattern,
+  } = await vite.ssrLoadModule(
+    "/src/ui/interactions/pitch-snap.ts",
+  );
 
   let transactionSequence = 0;
 
@@ -730,6 +736,93 @@ try {
         .notesById["third"].durationTicks,
       600,
     );
+  });
+
+  test("snaps pitches to the nearest scale or chord tone", () => {
+    const cIonian = {
+      ...DEFAULT_PITCH_SNAP_SETTINGS,
+      enabled: true,
+      tonicPitchClass: 0,
+      patternId: "ionian",
+    };
+    const cMajorTriad = {
+      ...cIonian,
+      patternId: "major-triad",
+    };
+
+    assert.equal(
+      snapPitchToTonalPattern(61, cIonian, -1),
+      60,
+    );
+    assert.equal(
+      snapPitchToTonalPattern(61, cIonian, 1),
+      62,
+    );
+    assert.equal(
+      snapPitchToTonalPattern(62, cMajorTriad, -1),
+      60,
+    );
+    assert.equal(
+      snapPitchToTonalPattern(62, cMajorTriad, 1),
+      64,
+    );
+    assert.equal(
+      snapPitchToTonalPattern(
+        61,
+        DEFAULT_PITCH_SNAP_SETTINGS,
+        1,
+      ),
+      61,
+    );
+  });
+
+  test("repositions a note group atomically", () => {
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [
+          createNote("first", "voice-a", 60, 0, 240),
+          createNote("second", "voice-a", 62, 0, 240),
+        ],
+      },
+    });
+    const repositionedState = dispatch(state, {
+      type: "RepositionNotes",
+      trackVoiceId: "voice-a",
+      changes: [
+        {
+          noteId: "first",
+          startTick: 240,
+          pitch: 64,
+        },
+        {
+          noteId: "second",
+          startTick: 240,
+          pitch: 67,
+        },
+      ],
+    });
+
+    assert.equal(
+      repositionedState.tracksByVoiceId["voice-a"]
+        .notesById["first"].pitch,
+      64,
+    );
+    assert.equal(
+      repositionedState.tracksByVoiceId["voice-a"]
+        .notesById["second"].startTick,
+      240,
+    );
+    assertOverlapRejected(repositionedState, {
+      type: "RepositionNotes",
+      trackVoiceId: "voice-a",
+      changes: [
+        {
+          noteId: "first",
+          startTick: 240,
+          pitch: 67,
+        },
+      ],
+    });
   });
 
   test("merges transitive same-pitch collisions atomically", () => {

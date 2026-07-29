@@ -113,6 +113,18 @@ export interface MoveNotesCommand {
   readonly deltaPitch: number;
 }
 
+export interface NotePositionChange {
+  readonly noteId: NoteId;
+  readonly startTick: Tick;
+  readonly pitch: number;
+}
+
+export interface RepositionNotesCommand {
+  readonly type: "RepositionNotes";
+  readonly trackVoiceId: VoiceId;
+  readonly changes: readonly NotePositionChange[];
+}
+
 export interface NoteDurationChange {
   readonly noteId: NoteId;
   readonly startTick?: Tick;
@@ -170,6 +182,7 @@ export type PianoRollCommand =
   | RemoveMeasureCommand
   | AddNotesCommand
   | MoveNotesCommand
+  | RepositionNotesCommand
   | ResizeNotesCommand
   | DeleteNotesCommand
   | UpdateTempoCommand
@@ -286,6 +299,8 @@ function applyCommand(
       return applyAddNotes(state, command);
     case "MoveNotes":
       return applyMoveNotes(state, command);
+    case "RepositionNotes":
+      return applyRepositionNotes(state, command);
     case "ResizeNotes":
       return applyResizeNotes(state, command);
     case "DeleteNotes":
@@ -902,6 +917,135 @@ function applyMoveNotes(
       },
     },
   };
+}
+
+function applyRepositionNotes(
+  state: ProjectState,
+  command: RepositionNotesCommand,
+): ProjectState {
+  const track = requireTrack(
+    state,
+    command.trackVoiceId,
+    command.type,
+  );
+
+  assertVoiceEditable(
+    state,
+    command.trackVoiceId,
+    command.type,
+  );
+
+  const changedNoteIds = new Set<NoteId>();
+  const updatedNotes: Note[] = [];
+  let hasChanges = false;
+
+  for (const change of command.changes) {
+    if (changedNoteIds.has(change.noteId)) {
+      reject(
+        "DUPLICATE_NOTE_ID",
+        `Note "${change.noteId}" appears more than once in the command.`,
+        command.type,
+      );
+    }
+
+    if (
+      !Number.isSafeInteger(change.startTick)
+      || !Number.isInteger(change.pitch)
+    ) {
+      reject(
+        "INVALID_COMMAND",
+        "Repositioned note coordinates must be integers.",
+        command.type,
+      );
+    }
+
+    const note = requireNote(
+      track,
+      change.noteId,
+      command.type,
+    );
+    const updatedNote: Note = {
+      ...note,
+      startTick: change.startTick,
+      pitch: change.pitch,
+    };
+
+    assertValidNoteForTrack(updatedNote, track.voiceId);
+    assertNoteWithinProject(state, updatedNote, command.type);
+    changedNoteIds.add(change.noteId);
+    updatedNotes.push(updatedNote);
+
+    if (
+      updatedNote.startTick !== note.startTick
+      || updatedNote.pitch !== note.pitch
+    ) {
+      hasChanges = true;
+    }
+  }
+
+  if (updatedNotes.length === 0 || !hasChanges) {
+    return state;
+  }
+
+  for (
+    let updatedIndex = 0;
+    updatedIndex < updatedNotes.length;
+    updatedIndex += 1
+  ) {
+    const updatedNote = updatedNotes[updatedIndex];
+
+    if (updatedNote === undefined) {
+      continue;
+    }
+
+    for (const candidateId in track.notesById) {
+      const candidate = track.notesById[candidateId];
+
+      if (
+        candidate !== undefined
+        && !changedNoteIds.has(candidate.id)
+        && notesOverlapInVoice(updatedNote, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Note "${updatedNote.id}" overlaps note "${candidate.id}" in voice "${command.trackVoiceId}".`,
+          command.type,
+        );
+      }
+    }
+
+    for (
+      let candidateIndex = 0;
+      candidateIndex < updatedIndex;
+      candidateIndex += 1
+    ) {
+      const candidate = updatedNotes[candidateIndex];
+
+      if (
+        candidate !== undefined
+        && notesOverlapInVoice(updatedNote, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Repositioned notes "${updatedNote.id}" and "${candidate.id}" overlap.`,
+          command.type,
+        );
+      }
+    }
+  }
+
+  const notesById: Record<NoteId, Note> = {
+    ...track.notesById,
+  };
+
+  for (const note of updatedNotes) {
+    notesById[note.id] = note;
+  }
+
+  return replaceTrack(state, {
+    ...track,
+    notesById,
+  });
 }
 
 function applyResizeNotes(

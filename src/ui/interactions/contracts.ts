@@ -12,6 +12,10 @@ import type {
 import type {
   InteractionTool,
 } from "./types";
+import {
+  DEFAULT_PITCH_SNAP_SETTINGS,
+  type PitchSnapSettings,
+} from "./pitch-snap";
 
 export type InteractionMode =
   | "IDLE"
@@ -50,6 +54,7 @@ export interface InteractionDraft {
   drawDurationTicks: number;
   drawVoiceId: VoiceId | null;
   snapResolutionTicks: number;
+  pitchSnapSettings: PitchSnapSettings;
   additiveSelection: boolean;
 }
 
@@ -66,8 +71,9 @@ export interface InteractionVisualController {
   ): void;
   updateDrag(
     deltaXCssPixels: number,
-    deltaYCssPixels: number,
+    pitchStepCssPixels: number,
     deltaPitch: number,
+    pitchSnapSettings: PitchSnapSettings,
   ): void;
   endDrag(): void;
   beginResize(
@@ -131,6 +137,7 @@ export function createInteractionDraft(): InteractionDraft {
     drawDurationTicks: 0,
     drawVoiceId: null,
     snapResolutionTicks: 240,
+    pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
     additiveSelection: false,
   };
 }

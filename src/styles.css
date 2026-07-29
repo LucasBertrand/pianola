@@ -513,14 +513,6 @@ input:focus-visible {
   gap: 6px;
 }
 
-.reset-button {
-  border: 1px solid #353b47;
-  border-radius: 8px;
-  background: #1a1d23;
-  color: #b5bdca;
-  cursor: pointer;
-}
-
 .project-file-menu {
   position: relative;
 }
@@ -1116,9 +1108,17 @@ input:focus-visible {
   padding: 0 12px 0 16px;
   border-top: 1px solid #252a33;
   background: var(--app-surface-color);
-  grid-template-columns: 108px minmax(130px, 1fr) 200px 300px auto;
+  grid-template-columns:
+    88px
+    minmax(100px, 1fr)
+    180px
+    260px
+    174px;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .timeline-position {
@@ -1175,16 +1175,16 @@ input[type="range"]::-webkit-slider-thumb {
 
 .zoom-control {
   display: grid;
-  width: 200px;
+  width: 180px;
   color: #717b8a;
   font-size: 11px;
-  grid-template-columns: 12px 110px 12px 42px;
+  grid-template-columns: 12px 90px 12px 42px;
   align-items: center;
   gap: 6px;
 }
 
 .zoom-control input {
-  width: 110px;
+  width: 90px;
 }
 
 .zoom-control output {
@@ -1195,22 +1195,90 @@ input[type="range"]::-webkit-slider-thumb {
   display: grid;
   color: #717b8a;
   font-size: 10px;
-  grid-template-columns: 30px 92px 10px 92px 42px;
+  grid-template-columns: 28px 72px 10px 72px 42px;
   align-items: center;
   gap: 6px;
 }
 
 .pitch-control input {
-  width: 92px;
+  width: 72px;
 }
 
 .pitch-control output {
   text-align: right;
 }
 
-.reset-button {
-  padding: 6px 10px;
-  font-size: 10px;
+.pitch-snap-control {
+  display: grid;
+  width: 174px;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid #303642;
+  border-radius: 8px;
+  background: #15181e;
+  grid-template-columns: 30px 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 3px;
+}
+
+.pitch-snap-toggle {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #353b47;
+  border-radius: 6px;
+  background: #1a1d23;
+  color: #737d8c;
+  place-items: center;
+  cursor: pointer;
+}
+
+.pitch-snap-control.is-active {
+  border-color: rgba(121, 167, 255, 0.45);
+  background: rgba(74, 107, 161, 0.13);
+}
+
+.pitch-snap-control.is-active .pitch-snap-toggle {
+  border-color: rgba(121, 167, 255, 0.58);
+  background: rgba(121, 167, 255, 0.14);
+  color: #a8c5f7;
+}
+
+.treble-clef-icon {
+  display: block;
+  font-family: "Noto Music", "Segoe UI Symbol", serif;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.pitch-snap-control select {
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px;
+  overflow: hidden;
+  border: 1px solid #303642;
+  border-radius: 5px;
+  outline: 0;
+  background: #121419;
+  color: #9da7b5;
+  color-scheme: dark;
+  font-size: 9px;
+  text-overflow: ellipsis;
+}
+
+.pitch-snap-control select:focus-visible {
+  border-color: #5575aa;
+}
+
+.pitch-snap-tonic-select {
+  width: 42px;
+}
+
+.pitch-snap-pattern-select {
+  width: 100%;
 }
 
 .interaction-note-ghost {

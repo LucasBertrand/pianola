@@ -35,6 +35,10 @@ import type {
   InteractionToolSignal,
   TouchAwareInteractionStrategy,
 } from "../interactions/types";
+import {
+  snapPitchToTonalPattern,
+  type PitchSnapSettings,
+} from "../interactions/pitch-snap";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
@@ -58,6 +62,7 @@ export interface InteractionOverlayProps {
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly editingNoteIds: Set<NoteId>;
   readonly eventControllerRef: MutableRefObject<
@@ -117,6 +122,7 @@ export function InteractionOverlay(
     totalTicks,
     setViewport,
     gridResolutionTicks,
+    pitchSnapSettings,
     voiceSelectionRequest,
     editingNoteIds,
     eventControllerRef,
@@ -134,6 +140,7 @@ export function InteractionOverlay(
   const selectionElementsRef = useRef<HTMLElement[]>([]);
   const selectionBaseLeftRef = useRef<Float64Array | null>(null);
   const selectionBaseWidthRef = useRef<Float64Array | null>(null);
+  const selectionBasePitchRef = useRef<Int16Array | null>(null);
   const drawGhostElementRef = useRef<HTMLElement | null>(null);
   const visualsRef = useRef<InteractionVisualController | null>(
     null,
@@ -162,11 +169,39 @@ export function InteractionOverlay(
       },
       updateDrag(
         deltaXCssPixels,
-        deltaYCssPixels,
+        pitchStepCssPixels,
         deltaPitch,
+        activePitchSnapSettings,
       ): void {
         const ghostLayer = ghostLayerRef.current;
         const selectionLayer = selectionLayerRef.current;
+
+        if (activePitchSnapSettings.enabled) {
+          resetLayerTransform(ghostLayer);
+          resetLayerTransform(selectionLayer);
+          updatePitchSnappedDrag(
+            ghostElementsRef.current,
+            ghostBasePitchRef.current,
+            deltaXCssPixels,
+            pitchStepCssPixels,
+            deltaPitch,
+            activePitchSnapSettings,
+            noteColorMode.get() === "pitch",
+          );
+          updatePitchSnappedDrag(
+            selectionElementsRef.current,
+            selectionBasePitchRef.current,
+            deltaXCssPixels,
+            pitchStepCssPixels,
+            deltaPitch,
+            activePitchSnapSettings,
+            false,
+          );
+          return;
+        }
+
+        const deltaYCssPixels =
+          -deltaPitch * pitchStepCssPixels;
         const transform =
           `translate3d(${deltaXCssPixels}px, ${deltaYCssPixels}px, 0)`;
 
@@ -341,6 +376,7 @@ export function InteractionOverlay(
           selectionElementsRef.current,
           selectionBaseLeftRef,
           selectionBaseWidthRef,
+          selectionBasePitchRef,
         );
       },
       clearSelection(): void {
@@ -372,6 +408,7 @@ export function InteractionOverlay(
     totalTicks,
     getActiveTool: interactionManager.getActiveTool,
     gridResolutionTicks,
+    pitchSnapSettings,
     voiceSelectionRequest,
     onSelectionChange,
     onNoteCollision,
@@ -528,6 +565,53 @@ function updateGhostPitchColors(
   }
 }
 
+function updatePitchSnappedDrag(
+  elements: readonly HTMLElement[],
+  basePitches: Int16Array | null,
+  deltaXCssPixels: number,
+  pitchStepCssPixels: number,
+  deltaPitch: number,
+  pitchSnapSettings: PitchSnapSettings,
+  updatePitchColor: boolean,
+): void {
+  if (basePitches === null) {
+    return;
+  }
+
+  for (
+    let elementIndex = 0;
+    elementIndex < elements.length;
+    elementIndex += 1
+  ) {
+    const element = elements[elementIndex];
+    const basePitch = basePitches[elementIndex];
+
+    if (element === undefined || basePitch === undefined) {
+      continue;
+    }
+
+    const snappedPitch =
+      deltaPitch === 0
+        ? basePitch
+        : snapPitchToTonalPattern(
+            basePitch + deltaPitch,
+            pitchSnapSettings,
+            deltaPitch,
+          );
+    const snappedDeltaPitch = snappedPitch - basePitch;
+    const deltaYCssPixels =
+      -snappedDeltaPitch * pitchStepCssPixels;
+
+    element.style.transform =
+      `translate3d(${deltaXCssPixels}px, ${deltaYCssPixels}px, 0)`;
+
+    if (updatePitchColor) {
+      element.style.background =
+        getPitchNoteColor(snappedPitch);
+    }
+  }
+}
+
 function clearGhostLayer(
   ghostLayer: HTMLDivElement | null,
   elements: HTMLElement[],
@@ -613,6 +697,7 @@ function populateSelectionLayer(
   elements: HTMLElement[],
   baseLeftRef: React.MutableRefObject<Float64Array | null>,
   baseWidthRef: React.MutableRefObject<Float64Array | null>,
+  basePitchRef: React.MutableRefObject<Int16Array | null>,
 ): void {
   if (selectionLayer === null) {
     return;
@@ -623,6 +708,7 @@ function populateSelectionLayer(
   elements.length = 0;
   const baseLeft = new Float64Array(notes.length);
   const baseWidth = new Float64Array(notes.length);
+  const basePitch = new Int16Array(notes.length);
   const fragment = document.createDocumentFragment();
 
   for (
@@ -662,11 +748,13 @@ function populateSelectionLayer(
       `${Math.max(1, nextY - y - 1)}px`;
     baseLeft[elements.length] = x;
     baseWidth[elements.length] = Math.max(1, endX - x);
+    basePitch[elements.length] = note.pitch;
     elements.push(element);
     fragment.appendChild(element);
   }
 
   baseLeftRef.current = baseLeft;
   baseWidthRef.current = baseWidth;
+  basePitchRef.current = basePitch;
   selectionLayer.appendChild(fragment);
 }

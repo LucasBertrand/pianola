@@ -9,6 +9,7 @@ import {
 } from "../../config/program-constants";
 import type {
   NoteDurationChange,
+  NotePositionChange,
   PianoRollCommand,
   Transaction,
 } from "../../domain/commands";
@@ -51,6 +52,10 @@ import type {
   TouchAwareInteractionStrategy,
 } from "../interactions/types";
 import {
+  snapPitchToTonalPattern,
+  type PitchSnapSettings,
+} from "../interactions/pitch-snap";
+import {
   isSupportedPointerActivation,
 } from "../interactions/types";
 import type {
@@ -73,6 +78,7 @@ export interface UsePianoRollEventsOptions {
   readonly totalTicks: number;
   readonly getActiveTool: () => InteractionTool;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly onSelectionChange?: (hasSelection: boolean) => void;
   readonly onNoteCollision?:
@@ -141,6 +147,7 @@ export function usePianoRollEvents(
     activeVoiceId,
     getActiveTool,
     gridResolutionTicks,
+    pitchSnapSettings,
     voiceSelectionRequest,
     onSelectionChange,
     onNoteCollision,
@@ -606,6 +613,7 @@ export function usePianoRollEvents(
 
       draft.activeTool = activeTool;
       draft.snapResolutionTicks = resolutionTicks;
+      draft.pitchSnapSettings = pitchSnapSettings.get();
       draft.pointerId = event.pointerId;
       draft.overlayLeft = bounds.left;
       draft.overlayTop = bounds.top;
@@ -721,14 +729,15 @@ export function usePianoRollEvents(
           const deltaX =
             converter.tickToCssPixelX(deltaTicks)
             - converter.tickToCssPixelX(0);
-          const deltaY =
-            converter.pitchToCssPixelY(deltaPitch)
-            - converter.pitchToCssPixelY(0);
+          const pitchStepCssPixels =
+            converter.pitchToCssPixelY(0)
+            - converter.pitchToCssPixelY(1);
 
           visualsRef.current?.updateDrag(
             deltaX,
-            deltaY,
+            pitchStepCssPixels,
             deltaPitch,
+            draft.pitchSnapSettings,
           );
         }
       } else if (
@@ -826,31 +835,31 @@ export function usePianoRollEvents(
           draft.deltaTicks !== 0
           || draft.deltaPitch !== 0
         ) {
+          const proposedNotes = buildRepositionedNotes(
+            selection.notes,
+            draft.deltaTicks,
+            draft.deltaPitch,
+            draft.pitchSnapSettings,
+          );
+          const moveIntent = {
+            originalNotes: selection.notes,
+            proposedNotes,
+          } as const;
+
           if (
-            hasMoveCollision(
-              selection,
-              draft.deltaTicks,
-              draft.deltaPitch,
-              spatialIndex,
-              collisionBuffer,
-            )
+            countNoteEditCollisions(
+              projectStore.getState(),
+              moveIntent,
+            ) > 0
           ) {
             requestNoteCollisionResolution(
               selection.notes,
-              buildMovedNotes(
-                selection.notes,
-                draft.deltaTicks,
-                draft.deltaPitch,
-              ),
+              proposedNotes,
               "Move notes",
             );
           } else {
             const nextState = dispatchTransaction(
-              buildMoveCommands(
-                selection.notes,
-                draft.deltaTicks,
-                draft.deltaPitch,
-              ),
+              buildRepositionCommands(proposedNotes),
               "Move notes",
             );
 
@@ -1115,6 +1124,13 @@ export function usePianoRollEvents(
         0,
         snapTickToCellStart(tick, resolutionTicks),
       );
+      const activePitchSnapSettings =
+        pitchSnapSettings.get();
+      const drawPitch = snapPitchToTonalPattern(
+        pitch,
+        activePitchSnapSettings,
+        0,
+      );
 
       if (startTick + resolutionTicks > totalTicks) {
         return;
@@ -1122,6 +1138,7 @@ export function usePianoRollEvents(
 
       draft.activeTool = "select";
       draft.snapResolutionTicks = resolutionTicks;
+      draft.pitchSnapSettings = activePitchSnapSettings;
       draft.pointerId = event.pointerId;
       draft.overlayLeft = bounds.left;
       draft.overlayTop = bounds.top;
@@ -1136,13 +1153,13 @@ export function usePianoRollEvents(
       draft.targetNoteId = null;
       draft.mode = "DRAWING";
       draft.drawStartTick = startTick;
-      draft.drawPitch = pitch;
+      draft.drawPitch = drawPitch;
       draft.drawDurationTicks = resolutionTicks;
       draft.drawVoiceId = activeVoiceId;
       clearSelection();
       visualsRef.current?.beginDraw(
         startTick,
-        pitch,
+        drawPitch,
         resolutionTicks,
         activeVoiceId,
         converter,
@@ -1269,6 +1286,7 @@ export function usePianoRollEvents(
     draft,
     getActiveTool,
     gridResolutionTicks,
+    pitchSnapSettings,
     onNoteCollision,
     onTransactionRejected,
     onSelectionChange,
@@ -1679,56 +1697,6 @@ function hasVoiceCollision(
   return false;
 }
 
-function hasMoveCollision(
-  selection: InteractionSelection,
-  deltaTicks: number,
-  deltaPitch: number,
-  spatialIndex: SpatialIndex,
-  collisionBuffer: Note[],
-): boolean {
-  for (
-    let noteIndex = 0;
-    noteIndex < selection.notes.length;
-    noteIndex += 1
-  ) {
-    const note = selection.notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    const movedStartTick = note.startTick + deltaTicks;
-    const movedEndTick = movedStartTick + note.durationTicks;
-    const movedPitch = note.pitch + deltaPitch;
-
-    spatialIndex.queryRect(
-      movedStartTick,
-      movedEndTick,
-      movedPitch,
-      movedPitch,
-      collisionBuffer,
-    );
-
-    for (
-      let candidateIndex = 0;
-      candidateIndex < collisionBuffer.length;
-      candidateIndex += 1
-    ) {
-      const candidate = collisionBuffer[candidateIndex];
-
-      if (
-        candidate !== undefined
-        && candidate.voiceId === note.voiceId
-        && !selection.noteIds.has(candidate.id)
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 function hasResizeCollision(
   selection: InteractionSelection,
   deltaTicks: number,
@@ -1799,22 +1767,30 @@ function findSelectedNote(
   return undefined;
 }
 
-function buildMovedNotes(
+function buildRepositionedNotes(
   notes: readonly Note[],
   deltaTicks: number,
   deltaPitch: number,
+  pitchSnapSettings: PitchSnapSettings,
 ): readonly Note[] {
-  const movedNotes: Note[] = [];
+  const repositionedNotes: Note[] = [];
 
   for (const note of notes) {
-    movedNotes.push({
+    repositionedNotes.push({
       ...note,
       startTick: note.startTick + deltaTicks,
-      pitch: note.pitch + deltaPitch,
+      pitch:
+        deltaPitch === 0
+          ? note.pitch
+          : snapPitchToTonalPattern(
+              note.pitch + deltaPitch,
+              pitchSnapSettings,
+              deltaPitch,
+            ),
     });
   }
 
-  return movedNotes;
+  return repositionedNotes;
 }
 
 function buildResizedNotes(
@@ -1841,10 +1817,8 @@ function buildResizedNotes(
   return resizedNotes;
 }
 
-function buildMoveCommands(
+function buildRepositionCommands(
   notes: readonly Note[],
-  deltaTicks: number,
-  deltaPitch: number,
 ): readonly PianoRollCommand[] {
   const commands: PianoRollCommand[] = [];
   const processedVoiceIds = new Set<VoiceId>();
@@ -1860,7 +1834,7 @@ function buildMoveCommands(
     }
 
     processedVoiceIds.add(note.voiceId);
-    const noteIds: NoteId[] = [];
+    const changes: NotePositionChange[] = [];
 
     for (
       let selectedIndex = noteIndex;
@@ -1870,17 +1844,18 @@ function buildMoveCommands(
       const selectedNote = notes[selectedIndex];
 
       if (selectedNote?.voiceId === note.voiceId) {
-        noteIds.push(selectedNote.id);
+        changes.push({
+          noteId: selectedNote.id,
+          startTick: selectedNote.startTick,
+          pitch: selectedNote.pitch,
+        });
       }
     }
 
     commands.push({
-      type: "MoveNotes",
-      sourceVoiceId: note.voiceId,
-      targetVoiceId: note.voiceId,
-      noteIds,
-      deltaTicks,
-      deltaPitch,
+      type: "RepositionNotes",
+      trackVoiceId: note.voiceId,
+      changes,
     });
   }
 
