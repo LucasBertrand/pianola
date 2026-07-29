@@ -12,7 +12,7 @@ paths.
 
 - Node.js 20 or newer
 - npm
-- A modern browser with Pointer Events and Canvas 2D support
+- A modern browser with Pointer Events, Canvas 2D, and Web Audio support
 
 ## Development
 
@@ -40,6 +40,7 @@ New-NetFirewallRule -DisplayName "Piano Roll Vite 5173" -Direction Inbound -Acti
 
 ```bash
 npm run typecheck
+npm run test:audio
 npm run build
 ```
 
@@ -55,6 +56,10 @@ persistence, application, and UI before creating the Vite production bundle.
 - voice ordering, note selection by voice, and selection transfer;
 - 16-measure initial project with insertion and removal at any measure;
 - interactive ruler, snapped playhead, and adjustable loop region;
+- play, pause, stop, return, seek, and loop-aware playback controls;
+- one polyphonic subtractive synthesizer per voice with ADSR, low-pass
+  filtering, gain, pan, mute, solo, and bounded voice stealing;
+- a 25 ms lookahead scheduler that queues events 120 ms ahead;
 - straight, triplet, and dotted grid subdivisions;
 - horizontal and vertical scrolling and zooming;
 - pitch-based or voice-based note colors;
@@ -94,7 +99,7 @@ dispatches at most one domain transaction when it is committed.
 ```text
 src/
   app/          Application composition and the deterministic initial scene
-  audio/        Contracts reserved for the future audio engine
+  audio/        Playback snapshots, time math, scheduler, and Web Audio engine
   domain/       Immutable model, validation, commands, reducer, and store
   geometry/     Coordinate conversion and the spatial note index
   persistence/  Native project file parsing, migration, and serialization
@@ -107,6 +112,13 @@ a future tabbed multi-project interface.
 
 ## Audio status
 
-No Web Audio graph, scheduler, or playback engine is implemented yet. The
-audio contracts are intentionally retained as a boundary for the dedicated
-audio and lookahead phase.
+Playback uses a lazily created `AudioContext`; opening the application alone
+does not acquire audio resources. Each project voice owns one subtractive
+instrument and a persistent output bus. Notes are scheduled with absolute Web
+Audio times from an immutable playback snapshot, while the moving playhead
+remains outside the undoable project state.
+
+This first audio baseline deliberately bypasses effect descriptors, generative
+rules, and voice interpretation. Keeping those stages outside the live graph
+for now makes transport, polyphony, looping, mute, and solo behavior easier to
+debug before the signal chain grows.

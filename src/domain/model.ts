@@ -50,16 +50,7 @@ export interface SubtractiveSynthConfig {
   readonly filterResonance: number;
 }
 
-export interface FmSynthConfig {
-  readonly kind: "fm";
-  readonly carrierWaveform: OscillatorWaveform;
-  readonly modulatorWaveform: OscillatorWaveform;
-  readonly modulationRatio: number;
-  readonly modulationIndex: number;
-  readonly envelope: AdsrEnvelope;
-}
-
-export type InstrumentConfig = SubtractiveSynthConfig | FmSynthConfig;
+export type InstrumentConfig = SubtractiveSynthConfig;
 
 export type EffectParameterValue = number | boolean | string;
 

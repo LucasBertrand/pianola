@@ -1,6 +1,7 @@
 import type {
   AudioEngineConfig,
   NoteId,
+  OscillatorWaveform,
   Tick,
   TimeSignature,
   TransportState,
@@ -18,55 +19,77 @@ export interface PackedVoiceEvents {
 
 export interface TempoMapSnapshot {
   readonly startTicks: Float64Array;
+  readonly startSeconds: Float64Array;
   readonly bpms: Float64Array;
   readonly timeSignatures: readonly TimeSignature[];
+}
+
+export interface PlaybackEnvelope {
+  readonly attackSeconds: number;
+  readonly decaySeconds: number;
+  readonly sustainLevel: number;
+  readonly releaseSeconds: number;
+}
+
+export interface SubtractivePlaybackInstrument {
+  readonly kind: "subtractive";
+  readonly oscillatorWaveform: OscillatorWaveform;
+  readonly oscillatorDetuneCents: number;
+  readonly envelope: PlaybackEnvelope;
+  readonly filterCutoffHz: number;
+  readonly filterResonance: number;
+}
+
+export interface PlaybackVoiceSnapshot extends PackedVoiceEvents {
+  readonly gain: number;
+  readonly pan: number;
+  readonly muted: boolean;
+  readonly solo: boolean;
+  readonly instrument: SubtractivePlaybackInstrument;
 }
 
 export interface PlaybackSnapshot {
   readonly projectRevision: number;
   readonly ppqn: number;
+  readonly durationTicks: Tick;
   readonly tempoMap: TempoMapSnapshot;
-  readonly voices: readonly PackedVoiceEvents[];
+  readonly voices: readonly PlaybackVoiceSnapshot[];
 }
 
-export interface TransportPosition {
-  readonly tick: Tick;
-  readonly audioTimeSeconds: number;
+export type PlaybackStatus = "stopped" | "playing" | "paused";
+
+export interface ScheduledNoteEvent {
+  readonly occurrenceId: string;
+  readonly generation: number;
+  readonly voice: PlaybackVoiceSnapshot;
+  readonly pitch: number;
+  readonly velocity: number;
+  readonly startAudioTimeSeconds: number;
+  readonly endAudioTimeSeconds: number;
 }
 
 export interface AudioEnginePort {
-  readonly context: AudioContext;
   readonly config: AudioEngineConfig;
+  readonly currentTimeSeconds: number;
   configure(config: AudioEngineConfig): void;
   replacePlaybackSnapshot(snapshot: PlaybackSnapshot): void;
-  schedule(
-    generation: number,
-    fromAudioTimeSeconds: number,
-    toAudioTimeSeconds: number,
-    transport: TransportState,
-  ): void;
-  start(position: TransportPosition): Promise<void>;
-  pause(): void;
-  stop(): void;
-  seek(tick: Tick): void;
-  panic(): void;
+  resume(): Promise<void>;
+  scheduleNote(event: ScheduledNoteEvent): void;
+  cancelAll(atAudioTimeSeconds: number): void;
   dispose(): Promise<void>;
 }
 
-export interface SchedulerClock {
-  readonly currentTimeSeconds: number;
-  readonly audibleTimeSeconds: number;
-}
-
-export interface SchedulerController {
-  start(): Promise<void>;
+export interface AudioTransportController {
+  readonly status: PlaybackStatus;
+  getPositionTick(): Tick;
+  replacePlaybackState(
+    snapshot: PlaybackSnapshot,
+    transport: TransportState,
+  ): void;
+  play(startTick?: Tick): Promise<void>;
   pause(): void;
   stop(): void;
   seek(tick: Tick): void;
   pulse(): void;
-  dispose(): void;
-}
-
-export interface PlaybackSnapshotProvider {
-  getCurrentSnapshot(): PlaybackSnapshot;
+  dispose(): Promise<void>;
 }

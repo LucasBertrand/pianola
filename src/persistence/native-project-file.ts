@@ -2,7 +2,6 @@ import type {
   AdsrEnvelope,
   EffectDescriptor,
   EffectParameterValue,
-  FmSynthConfig,
   GenerativeRuleDescriptor,
   InstrumentConfig,
   LoopRegion,
@@ -527,18 +526,16 @@ function parseInstrument(
     MAXIMUM_NAME_LENGTH,
   );
 
-  switch (kind) {
-    case "subtractive":
-      return parseSubtractiveSynth(instrument, path);
-    case "fm":
-      return parseFmSynth(instrument, path);
-    default:
-      return fail(
-        "INVALID_DATA",
-        `${path}.kind`,
-        `Instrument kind "${kind}" is not supported.`,
-      );
+  if (kind !== "subtractive") {
+    return fail(
+      "INVALID_DATA",
+      `${path}.kind`,
+      `Instrument kind "${kind}" is not supported.`
+        + " Only subtractive instruments are supported.",
+    );
   }
+
+  return parseSubtractiveSynth(instrument, path);
 }
 
 function parseSubtractiveSynth(
@@ -566,35 +563,6 @@ function parseSubtractiveSynth(
     filterResonance: readNonNegativeNumber(
       instrument["filterResonance"],
       `${path}.filterResonance`,
-    ),
-  };
-}
-
-function parseFmSynth(
-  instrument: UnknownRecord,
-  path: string,
-): FmSynthConfig {
-  return {
-    kind: "fm",
-    carrierWaveform: parseWaveform(
-      instrument["carrierWaveform"],
-      `${path}.carrierWaveform`,
-    ),
-    modulatorWaveform: parseWaveform(
-      instrument["modulatorWaveform"],
-      `${path}.modulatorWaveform`,
-    ),
-    modulationRatio: readPositiveNumber(
-      instrument["modulationRatio"],
-      `${path}.modulationRatio`,
-    ),
-    modulationIndex: readNonNegativeNumber(
-      instrument["modulationIndex"],
-      `${path}.modulationIndex`,
-    ),
-    envelope: parseEnvelope(
-      instrument["envelope"],
-      `${path}.envelope`,
     ),
   };
 }

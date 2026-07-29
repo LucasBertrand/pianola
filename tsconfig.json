@@ -20,6 +20,9 @@
     "noEmit": true
   },
   "include": [
+    "src/audio/contracts.ts",
+    "src/audio/playback-snapshot.ts",
+    "src/audio/time-math.ts",
     "src/domain/**/*.ts",
     "src/geometry/**/*.ts",
     "src/persistence/**/*.ts"

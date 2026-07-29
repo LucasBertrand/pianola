@@ -12,6 +12,7 @@
     ]
   },
   "include": [
+    "src/audio/**/*.ts",
     "src/domain/**/*.ts",
     "src/geometry/**/*.ts",
     "src/persistence/**/*.ts",

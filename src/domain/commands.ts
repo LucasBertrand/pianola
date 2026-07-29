@@ -572,6 +572,7 @@ function applyAddNotes(
   const track = requireTrack(state, command.trackVoiceId, command.type);
   assertVoiceEditable(state, command.trackVoiceId, command.type);
   const commandNoteIds = new Set<NoteId>();
+  const acceptedNotes: Note[] = [];
 
   if (
     command.notes.length
@@ -606,7 +607,42 @@ function applyAddNotes(
       );
     }
 
+    for (const candidateId in track.notesById) {
+      const candidate = track.notesById[candidateId];
+
+      if (
+        candidate !== undefined
+        && notesOverlapInVoice(note, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Note "${note.id}" overlaps note "${candidate.id}" in voice "${command.trackVoiceId}".`,
+          command.type,
+        );
+      }
+    }
+
+    for (
+      let candidateIndex = 0;
+      candidateIndex < acceptedNotes.length;
+      candidateIndex += 1
+    ) {
+      const candidate = acceptedNotes[candidateIndex];
+
+      if (
+        candidate !== undefined
+        && notesOverlapInVoice(note, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Added notes "${note.id}" and "${candidate.id}" overlap.`,
+          command.type,
+        );
+      }
+    }
+
     commandNoteIds.add(note.id);
+    acceptedNotes.push(note);
   }
 
   if (command.notes.length === 0) {
@@ -829,6 +865,53 @@ function applyResizeNotes(
 
   if (updatedNotes.length === 0) {
     return state;
+  }
+
+  for (
+    let updatedIndex = 0;
+    updatedIndex < updatedNotes.length;
+    updatedIndex += 1
+  ) {
+    const updatedNote = updatedNotes[updatedIndex];
+
+    if (updatedNote === undefined) {
+      continue;
+    }
+
+    for (const candidateId in track.notesById) {
+      const candidate = track.notesById[candidateId];
+
+      if (
+        candidate !== undefined
+        && !changedNoteIds.has(candidate.id)
+        && notesOverlapInVoice(updatedNote, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Note "${updatedNote.id}" overlaps note "${candidate.id}" in voice "${command.trackVoiceId}".`,
+          command.type,
+        );
+      }
+    }
+
+    for (
+      let candidateIndex = 0;
+      candidateIndex < updatedIndex;
+      candidateIndex += 1
+    ) {
+      const candidate = updatedNotes[candidateIndex];
+
+      if (
+        candidate !== undefined
+        && notesOverlapInVoice(updatedNote, candidate)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Resized notes "${updatedNote.id}" and "${candidate.id}" overlap.`,
+          command.type,
+        );
+      }
+    }
   }
 
   const notesById: Record<NoteId, Note> = {

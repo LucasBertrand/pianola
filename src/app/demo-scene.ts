@@ -235,7 +235,7 @@ function createDemoNotes(noteCount: number): readonly Note[] {
 
   for (let noteIndex = 0; noteIndex < noteCount; noteIndex += 1) {
     randomState = nextRandomState(randomState);
-    const startStep =
+    const initialStartStep =
       (randomState >>> 1)
       % (DEMO_INITIAL_NOTE_SPAN_TICKS / 120);
     randomState = nextRandomState(randomState);
@@ -252,10 +252,57 @@ function createDemoNotes(noteCount: number): readonly Note[] {
       throw new Error("A demo voice is required.");
     }
 
+    const maximumStartStep =
+      (DEMO_INITIAL_NOTE_SPAN_TICKS - durationTicks) / 120;
+    let startTick = Math.min(
+      initialStartStep,
+      maximumStartStep,
+    ) * 120;
+    let placementFound = false;
+
+    for (
+      let placementAttempt = 0;
+      placementAttempt <= maximumStartStep;
+      placementAttempt += 1
+    ) {
+      placementFound = true;
+
+      for (
+        let candidateIndex = 0;
+        candidateIndex < noteIndex;
+        candidateIndex += 1
+      ) {
+        const candidate = notes[candidateIndex];
+
+        if (
+          candidate !== undefined
+          && candidate.voiceId === voice.id
+          && candidate.pitch === pitch
+          && startTick
+            < candidate.startTick + candidate.durationTicks
+          && candidate.startTick < startTick + durationTicks
+        ) {
+          placementFound = false;
+          break;
+        }
+      }
+
+      if (placementFound) {
+        break;
+      }
+
+      startTick =
+        ((startTick / 120 + 1) % (maximumStartStep + 1)) * 120;
+    }
+
+    if (!placementFound) {
+      throw new Error("A collision-free demo note could not be placed.");
+    }
+
     notes[noteIndex] = {
       id: `demo-note-${noteIndex}`,
       pitch,
-      startTick: startStep * 120,
+      startTick,
       durationTicks,
       velocity: 52 + (randomState >>> 12) % 76,
       voiceId: voice.id,

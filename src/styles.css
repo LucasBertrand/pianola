@@ -276,6 +276,10 @@ input:focus-visible {
   font-size: 13px;
 }
 
+.play-button.is-playing {
+  padding-left: 0;
+}
+
 .icon-button:active,
 .play-button:active {
   border-color: #79a7ff;

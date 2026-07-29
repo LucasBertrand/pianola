@@ -62,6 +62,9 @@ import {
   useCanvasRenderer,
   type CanvasFrame,
 } from "../ui/hooks/useCanvasRenderer";
+import {
+  useAudioPlayback,
+} from "../ui/hooks/useAudioPlayback";
 import type {
   PianoRollEventController,
 } from "../ui/hooks/usePianoRollEvents";
@@ -253,6 +256,26 @@ export function App(): React.JSX.Element {
       setApplicationDialog(null);
       action?.();
     }, [applicationDialog]);
+  const {
+    status: playbackStatus,
+    togglePlayback,
+    stopPlayback,
+    returnToStart,
+    seek: seekPlayback,
+    beginSeekGesture,
+    previewSeek,
+    commitSeekGesture,
+  } = useAudioPlayback({
+    projectStore: scene.projectStore,
+    playheadTick: scene.playheadTick,
+    onError(error) {
+      showApplicationAlert(
+        "Playback unavailable",
+        formatAudioPlaybackError(error),
+        "danger",
+      );
+    },
+  });
 
   useEffect(
     () => scene.projectStore.subscribe((state) => {
@@ -458,7 +481,7 @@ export function App(): React.JSX.Element {
       const currentPlayheadTick = currentScene.playheadTick.get();
 
       if (currentPlayheadTick > totalTicks) {
-        currentScene.playheadTick.set(totalTicks);
+        seekPlayback(totalTicks);
       }
 
       if (scrollX !== viewport.scrollX) {
@@ -494,6 +517,7 @@ export function App(): React.JSX.Element {
   }, [
     publishViewport,
     scene,
+    seekPlayback,
   ]);
 
   useEffect(() => {
@@ -1130,7 +1154,7 @@ export function App(): React.JSX.Element {
         nextState !== null
         && currentPlayheadTick >= insertionTick
       ) {
-        scene.playheadTick.set(
+        seekPlayback(
           currentPlayheadTick + measureTicks,
         );
       }
@@ -1139,6 +1163,7 @@ export function App(): React.JSX.Element {
       dispatchEditCommands,
       prepareStructuralEdit,
       scene,
+      seekPlayback,
     ],
   );
   const handleRemoveMeasure = useCallback(
@@ -1168,7 +1193,7 @@ export function App(): React.JSX.Element {
       );
 
       if (nextState !== null) {
-        scene.playheadTick.set(
+        seekPlayback(
           collapseTickForRemovedMeasure(
             currentPlayheadTick,
             removalStartTick,
@@ -1181,6 +1206,7 @@ export function App(): React.JSX.Element {
       dispatchEditCommands,
       prepareStructuralEdit,
       scene,
+      seekPlayback,
     ],
   );
   const handleVoiceSelect = useCallback(
@@ -1681,7 +1707,7 @@ export function App(): React.JSX.Element {
         ...state,
         transportSettings: {
           ...state.transportSettings,
-          anchorTick: scene.playheadTick.get(),
+          anchorTick: Math.round(scene.playheadTick.get()),
           anchorAudioTimeSeconds: null,
         },
       };
@@ -1736,6 +1762,7 @@ export function App(): React.JSX.Element {
     const controller = pianoRollEventControllerRef.current;
     const blankProject = createBlankProjectState();
 
+    stopPlayback();
     controller?.cancel();
     controller?.clearSelection();
     clipboardRef.current = null;
@@ -1750,11 +1777,13 @@ export function App(): React.JSX.Element {
       "Create project",
     );
     setSelectedVoiceId(blankProject.voiceOrder[0] ?? null);
-    scene.playheadTick.set(0);
+    seekPlayback(0);
     handleResetView();
   }, [
     handleResetView,
     scene,
+    seekPlayback,
+    stopPlayback,
   ]);
   const handleNewProject = useCallback((): void => {
     showApplicationConfirmation({
@@ -1803,6 +1832,7 @@ export function App(): React.JSX.Element {
         const controller =
           pianoRollEventControllerRef.current;
 
+        stopPlayback();
         controller?.cancel();
         controller?.clearSelection();
         clipboardRef.current = null;
@@ -1818,7 +1848,7 @@ export function App(): React.JSX.Element {
         setSelectedVoiceId(
           loadedProject.projectState.voiceOrder[0] ?? null,
         );
-        scene.playheadTick.set(
+        seekPlayback(
           loadedProject.projectState
             .transportSettings.anchorTick,
         );
@@ -1839,7 +1869,9 @@ export function App(): React.JSX.Element {
     [
       handleResetView,
       scene,
+      seekPlayback,
       showApplicationAlert,
+      stopPlayback,
     ],
   );
 
@@ -1881,20 +1913,43 @@ export function App(): React.JSX.Element {
             className="icon-button"
             type="button"
             title="Return to start"
+            aria-label="Return to start"
+            onClick={returnToStart}
           >
             <span aria-hidden="true">↤</span>
           </button>
           <button
-            className="play-button"
+            className={
+              `play-button${
+                playbackStatus === "playing"
+                  ? " is-playing"
+                  : ""
+              }`
+            }
             type="button"
-            title="Audio engine arrives in Phase 5"
+            title={
+              playbackStatus === "playing"
+                ? "Pause"
+                : "Play"
+            }
+            aria-label={
+              playbackStatus === "playing"
+                ? "Pause"
+                : "Play"
+            }
+            aria-pressed={playbackStatus === "playing"}
+            onClick={togglePlayback}
           >
-            <span aria-hidden="true">▶</span>
+            <span aria-hidden="true">
+              {playbackStatus === "playing" ? "Ⅱ" : "▶"}
+            </span>
           </button>
           <button
             className="icon-button"
             type="button"
             title="Stop"
+            aria-label="Stop"
+            onClick={stopPlayback}
           >
             <span className="stop-icon" aria-hidden="true" />
           </button>
@@ -2183,7 +2238,9 @@ export function App(): React.JSX.Element {
                 viewport={scene.viewport}
                 projectStore={scene.projectStore}
                 gridResolutionTicks={scene.gridResolutionTicks}
-                playheadTick={scene.playheadTick}
+                onSeekStart={beginSeekGesture}
+                onSeekPreview={previewSeek}
+                onSeekCommit={commitSeekGesture}
               />
               <TimelineLoopRegion
                 viewport={scene.viewport}
@@ -2419,7 +2476,7 @@ export function App(): React.JSX.Element {
                         );
                       }}
                     />
-                    <span>{getVoiceInstrumentLabel(voice)}</span>
+                    <span>{getVoiceInstrumentLabel()}</span>
                   </div>
                   <div className="voice-wave">
                     {getVoiceWaveform(voice)}
@@ -2532,7 +2589,7 @@ export function App(): React.JSX.Element {
                 <div>
                   <small>Instrument · {selectedVoice.name}</small>
                   <strong>
-                    {getVoiceInstrumentLabel(selectedVoice)}
+                    {getVoiceInstrumentLabel()}
                   </strong>
                 </div>
                 <span className="live-pill">
@@ -3183,16 +3240,12 @@ function createUserVoice(
   };
 }
 
-function getVoiceInstrumentLabel(voice: Voice): string {
-  return voice.instrument.kind === "subtractive"
-    ? "Subtractive"
-    : "FM";
+function getVoiceInstrumentLabel(): string {
+  return "Subtractive";
 }
 
 function getVoiceWaveform(voice: Voice): OscillatorWaveform {
-  return voice.instrument.kind === "subtractive"
-    ? voice.instrument.oscillatorWaveform
-    : voice.instrument.carrierWaveform;
+  return voice.instrument.oscillatorWaveform;
 }
 
 function getWaveformPath(voice: Voice): string {
@@ -3524,7 +3577,9 @@ function parseTimeSignature(
 interface BarRulerProps extends PianoKeyboardProps {
   readonly projectStore: DemoScene["projectStore"];
   readonly gridResolutionTicks: DemoScene["gridResolutionTicks"];
-  readonly playheadTick: DemoScene["playheadTick"];
+  readonly onSeekStart: () => void;
+  readonly onSeekPreview: (tick: number) => void;
+  readonly onSeekCommit: (tick: number) => void;
 }
 
 type LoopGestureMode =
@@ -3963,7 +4018,9 @@ function BarRuler(
     viewport,
     projectStore,
     gridResolutionTicks,
-    playheadTick,
+    onSeekStart,
+    onSeekPreview,
+    onSeekCommit,
   } = props;
   const paintRuler = useCallback(
     (frame: CanvasFrame): void => {
@@ -4109,8 +4166,9 @@ function BarRuler(
     }
 
     let activePointerId = -1;
+    let draftTick = 0;
 
-    const updatePlayhead = (clientX: number): void => {
+    const updatePlayhead = (clientX: number): number => {
       const bounds = canvas.getBoundingClientRect();
       const currentViewport = viewport.get();
       const localX = clientX - bounds.left;
@@ -4122,12 +4180,12 @@ function BarRuler(
       const snappedTick =
         Math.round(rawTick / resolutionTicks) * resolutionTicks;
 
-      playheadTick.set(
-        Math.min(
-          getProjectDurationTicks(projectStore.getState()),
-          Math.max(0, snappedTick),
-        ),
+      draftTick = Math.min(
+        getProjectDurationTicks(projectStore.getState()),
+        Math.max(0, snappedTick),
       );
+      onSeekPreview(draftTick);
+      return draftTick;
     };
     const handlePointerDown = (event: PointerEvent): void => {
       if (event.button !== 0) {
@@ -4136,6 +4194,7 @@ function BarRuler(
 
       activePointerId = event.pointerId;
       canvas.setPointerCapture(event.pointerId);
+      onSeekStart();
       updatePlayhead(event.clientX);
       event.preventDefault();
     };
@@ -4152,18 +4211,20 @@ function BarRuler(
         return;
       }
 
-      updatePlayhead(event.clientX);
+      const committedTick = updatePlayhead(event.clientX);
       activePointerId = -1;
 
       if (canvas.hasPointerCapture(event.pointerId)) {
         canvas.releasePointerCapture(event.pointerId);
       }
 
+      onSeekCommit(committedTick);
       event.preventDefault();
     };
     const cancelPointer = (event: PointerEvent): void => {
       if (event.pointerId === activePointerId) {
         activePointerId = -1;
+        onSeekCommit(draftTick);
       }
     };
 
@@ -4197,7 +4258,9 @@ function BarRuler(
     };
   }, [
     gridResolutionTicks,
-    playheadTick,
+    onSeekCommit,
+    onSeekPreview,
+    onSeekStart,
     projectStore,
     renderer.canvasRef,
     viewport,
@@ -4764,4 +4827,12 @@ function formatNativeProjectError(
   }
 
   return prefix;
+}
+
+function formatAudioPlaybackError(error: unknown): string {
+  if (error instanceof Error && error.message.length > 0) {
+    return error.message;
+  }
+
+  return "The browser could not initialize the audio engine.";
 }

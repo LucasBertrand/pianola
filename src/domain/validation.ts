@@ -445,60 +445,27 @@ function validateInstrument(
 ): void {
   const instrument = voice.instrument;
 
-  switch (instrument.kind) {
-    case "subtractive":
-      validateWaveform(
-        instrument.oscillatorWaveform,
-        "instrument.oscillatorWaveform",
-        issues,
-      );
-      validateFiniteNumber(
-        instrument.oscillatorDetuneCents,
-        "instrument.oscillatorDetuneCents",
-        issues,
-      );
-      validateEnvelope(instrument.envelope, "instrument.envelope", issues);
-      validatePositiveNumber(
-        instrument.filterCutoffHz,
-        "instrument.filterCutoffHz",
-        issues,
-      );
-      validateNonNegativeNumber(
-        instrument.filterResonance,
-        "instrument.filterResonance",
-        issues,
-      );
-      return;
-    case "fm":
-      validateWaveform(
-        instrument.carrierWaveform,
-        "instrument.carrierWaveform",
-        issues,
-      );
-      validateWaveform(
-        instrument.modulatorWaveform,
-        "instrument.modulatorWaveform",
-        issues,
-      );
-      validatePositiveNumber(
-        instrument.modulationRatio,
-        "instrument.modulationRatio",
-        issues,
-      );
-      validateNonNegativeNumber(
-        instrument.modulationIndex,
-        "instrument.modulationIndex",
-        issues,
-      );
-      validateEnvelope(instrument.envelope, "instrument.envelope", issues);
-      return;
-    default:
-      pushVoiceIssue(
-        issues,
-        "instrument.kind",
-        "Voice instrument kind is not supported.",
-      );
-  }
+  validateWaveform(
+    instrument.oscillatorWaveform,
+    "instrument.oscillatorWaveform",
+    issues,
+  );
+  validateFiniteNumber(
+    instrument.oscillatorDetuneCents,
+    "instrument.oscillatorDetuneCents",
+    issues,
+  );
+  validateEnvelope(instrument.envelope, "instrument.envelope", issues);
+  validatePositiveNumber(
+    instrument.filterCutoffHz,
+    "instrument.filterCutoffHz",
+    issues,
+  );
+  validateNonNegativeNumber(
+    instrument.filterResonance,
+    "instrument.filterResonance",
+    issues,
+  );
 }
 
 function validateEnvelope(
