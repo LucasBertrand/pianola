@@ -189,6 +189,7 @@ export function InteractionOverlay(
             pitchStepCssPixels,
             deltaPitch,
             activePitchSnapSettings,
+            true,
             noteColorMode.get() === "pitch",
           );
           updatePitchSnappedDrag(
@@ -198,6 +199,7 @@ export function InteractionOverlay(
             pitchStepCssPixels,
             deltaPitch,
             activePitchSnapSettings,
+            false,
             false,
           );
           return;
@@ -581,6 +583,7 @@ function updatePitchSnappedDrag(
   pitchStepCssPixels: number,
   deltaPitch: number,
   pitchSnapSettings: PitchSnapSettings,
+  updatePitchLabel: boolean,
   updatePitchColor: boolean,
 ): void {
   if (basePitches === null) {
@@ -613,7 +616,10 @@ function updatePitchSnappedDrag(
 
     element.style.transform =
       `translate3d(${deltaXCssPixels}px, ${deltaYCssPixels}px, 0)`;
-    element.textContent = getMidiNoteLabel(snappedPitch);
+
+    if (updatePitchLabel) {
+      element.textContent = getMidiNoteLabel(snappedPitch);
+    }
 
     if (updatePitchColor) {
       element.style.background =
