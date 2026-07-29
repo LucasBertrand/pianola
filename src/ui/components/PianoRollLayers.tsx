@@ -141,6 +141,17 @@ const MIN_GRID_LINE_SPACING_CSS_PIXELS =
   RENDERING_CONSTANTS.minimumGridLineSpacingCssPixels;
 const MAX_GRID_LINES_PER_PASS =
   RENDERING_CONSTANTS.maximumGridLinesPerPass;
+const NOTE_LABEL_MINIMUM_WIDTH =
+  RENDERING_CONSTANTS.noteLabelMinimumWidthCssPixels;
+const NOTE_LABEL_MINIMUM_HEIGHT =
+  RENDERING_CONSTANTS.noteLabelMinimumHeightCssPixels;
+const NOTE_LABEL_HORIZONTAL_PADDING =
+  RENDERING_CONSTANTS.noteLabelHorizontalPaddingCssPixels;
+const NOTE_LABEL_FONT_SIZE =
+  RENDERING_CONSTANTS.noteLabelFontSizeCssPixels;
+const NOTE_LABEL_COLOR =
+  RENDERING_CONSTANTS.noteLabelColor;
+const MIDI_NOTE_LABELS = createMidiNoteLabels();
 
 export function PianoRollLayers(
   props: PianoRollLayersProps,
@@ -440,6 +451,55 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         }
       }
 
+      context.fillStyle = NOTE_LABEL_COLOR;
+      context.font =
+        `600 ${NOTE_LABEL_FONT_SIZE}px `
+        + '"SFMono-Regular", Consolas, monospace';
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+
+      for (
+        let noteIndex = 0;
+        noteIndex < visibleNotes.length;
+        noteIndex += 1
+      ) {
+        const note = visibleNotes[noteIndex];
+
+        if (
+          note === undefined
+          || editingNoteIds.has(note.id)
+        ) {
+          continue;
+        }
+
+        const x = converter.tickToCssPixelX(note.startTick);
+        const endX = converter.tickToCssPixelX(
+          note.startTick + note.durationTicks,
+        );
+        const y = converter.pitchToCssPixelY(note.pitch);
+        const nextRowY =
+          converter.pitchToCssPixelY(note.pitch - 1);
+        const width = Math.max(1, endX - x - 1);
+        const height = Math.max(1, nextRowY - y - 1);
+
+        if (
+          width < NOTE_LABEL_MINIMUM_WIDTH
+          || height < NOTE_LABEL_MINIMUM_HEIGHT
+        ) {
+          continue;
+        }
+
+        const voiceStyle = stylesByVoiceId[note.voiceId];
+
+        context.globalAlpha = voiceStyle?.opacity ?? 1;
+        context.fillText(
+          MIDI_NOTE_LABELS[note.pitch] ?? "",
+          x + NOTE_LABEL_HORIZONTAL_PADDING,
+          y + height / 2,
+          width - NOTE_LABEL_HORIZONTAL_PADDING * 2,
+        );
+      }
+
       context.globalAlpha = 1;
     },
     [
@@ -465,6 +525,38 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       aria-hidden="true"
     />
   );
+}
+
+function createMidiNoteLabels(): readonly string[] {
+  const pitchClassNames = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ] as const;
+  const labels: string[] = [];
+
+  for (
+    let pitch = MIN_MIDI_PITCH;
+    pitch <= MAX_MIDI_PITCH;
+    pitch += 1
+  ) {
+    const pitchClass = pitch % 12;
+    const octave = Math.floor(pitch / 12) - 1;
+
+    labels[pitch] =
+      `${pitchClassNames[pitchClass] ?? "?"}${octave}`;
+  }
+
+  return Object.freeze(labels);
 }
 
 const lockedNotePatterns =

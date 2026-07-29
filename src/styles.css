@@ -510,7 +510,7 @@ input:focus-visible {
   min-width: 0;
   justify-content: flex-start;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
 }
 
 .reset-button {
@@ -521,13 +521,11 @@ input:focus-visible {
   cursor: pointer;
 }
 
-.project-file-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.project-file-menu {
+  position: relative;
 }
 
-.project-file-button {
+.topbar-icon-button {
   display: grid;
   width: 34px;
   height: 34px;
@@ -540,12 +538,18 @@ input:focus-visible {
   cursor: pointer;
 }
 
-.project-file-button:active {
+.topbar-icon-button:active:not(:disabled) {
   border-color: #79a7ff;
   background: #212733;
 }
 
-.project-file-button svg {
+.topbar-icon-button:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
+.topbar-icon-button svg,
+.project-file-menu-item svg {
   width: 17px;
   height: 17px;
   fill: none;
@@ -553,6 +557,57 @@ input:focus-visible {
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.project-file-menu-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  width: max-content;
+  min-width: 184px;
+  padding: 6px;
+  border: 1px solid #353b47;
+  border-radius: 10px;
+  background: #171a20;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+  gap: 2px;
+}
+
+.project-file-menu-popover[hidden] {
+  display: none;
+}
+
+.project-file-menu-item {
+  display: grid;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #aeb8c8;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.project-file-menu-item:active {
+  border-color: #46566e;
+  background: #242a34;
+  color: #e3e9f2;
+}
+
+.topbar-history-actions {
+  display: grid;
+  padding-left: 6px;
+  border-left: 1px solid #303642;
+  grid-template-columns: repeat(2, 34px);
+  gap: 6px;
 }
 
 .project-file-input {
@@ -1094,8 +1149,10 @@ input[type="range"] {
   background: #303642;
   cursor: pointer;
   touch-action: none;
+  -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -1106,6 +1163,10 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   background: #8eaeeb;
   box-shadow: 0 0 0 1px #4b638e;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .timeline-range {
@@ -1171,12 +1232,12 @@ input[type="range"]::-webkit-slider-thumb {
 
 .interaction-note-selection {
   position: absolute;
-  border: 2px solid #f8fbff;
+  border: 1px solid rgba(218, 227, 239, 0.72);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(205, 217, 235, 0.08);
   box-shadow:
-    0 0 0 2px rgba(71, 139, 255, 0.95),
-    0 0 14px rgba(96, 164, 255, 0.72);
+    0 0 0 1px rgba(109, 157, 232, 0.42),
+    0 0 8px rgba(96, 145, 220, 0.28);
   box-sizing: border-box;
 }
 
@@ -1185,13 +1246,13 @@ input[type="range"]::-webkit-slider-thumb {
   position: absolute;
   z-index: 1;
   top: 50%;
-  width: 10px;
+  width: 9px;
   height: 82%;
   min-height: 10px;
-  border: 1px solid #172033;
+  border: 1px solid #273143;
   border-radius: 3px;
-  background: #ffffff;
-  box-shadow: 0 0 5px rgba(84, 151, 255, 0.9);
+  background: #cbd5e3;
+  box-shadow: 0 0 4px rgba(84, 135, 213, 0.55);
   content: "";
   transform: translateY(-50%);
 }
@@ -1475,9 +1536,21 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .voice-card .voice-select-all-button {
-  width: auto;
-  min-width: 44px;
-  padding: 0 7px;
+  display: grid;
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  place-items: center;
+}
+
+.voice-select-all-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
 }
 
 .voice-card button.is-active {
@@ -1897,7 +1970,7 @@ input[type="range"]::-webkit-slider-thumb {
   .edit-tool-group {
     grid-column: 1;
     grid-row: 1;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .general-inspector

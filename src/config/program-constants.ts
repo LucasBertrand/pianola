@@ -149,7 +149,7 @@ export const VIEWPORT_CONSTANTS = Object.freeze({
 
 /** Touch, pointer, keyboard-preview, and pinch gesture tuning. */
 export const INTERACTION_CONSTANTS = Object.freeze({
-  longPressDelayMs: 560,
+  longPressDelayMs: 300,
   penLongPressDelayMs: 280,
   longPressMovementToleranceCssPixels: 12,
   pianoKeyLongPressDelayMs: 520,
@@ -176,6 +176,7 @@ export const INTERACTION_CONSTANTS = Object.freeze({
 export const EDITOR_CONSTANTS = Object.freeze({
   rulerHeightCssPixels: 28,
   loopRegionHeightCssPixels: 22,
+  defaultPitchPreviewEnabled: false,
   envelopeSliderCurveExponent: 2.6,
   tempoMinimumBpm: 30,
   tempoMaximumBpm: 240,
@@ -255,6 +256,11 @@ export const EDITOR_CONSTANTS = Object.freeze({
 export const RENDERING_CONSTANTS = Object.freeze({
   applicationSurfaceColor: "#111318",
   defaultNoteColor: "#6ea8fe",
+  noteLabelMinimumWidthCssPixels: 30,
+  noteLabelMinimumHeightCssPixels: 11,
+  noteLabelHorizontalPaddingCssPixels: 4,
+  noteLabelFontSizeCssPixels: 9,
+  noteLabelColor: "rgba(18, 22, 29, 0.78)",
   gridBlackKeyRowColor: "#121419",
   gridPitchLineColor: "#252a33",
   gridSubdivisionLineColor: "#242933",

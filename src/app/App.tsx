@@ -213,6 +213,8 @@ export function App(): React.JSX.Element {
     useRef<HTMLInputElement | null>(null);
   const importMidiInputRef =
     useRef<HTMLInputElement | null>(null);
+  const projectFileMenuRef =
+    useRef<HTMLDivElement | null>(null);
   const barLabelRef = useRef<HTMLOutputElement | null>(null);
   const playheadPositionLabelRef =
     useRef<HTMLOutputElement | null>(null);
@@ -262,7 +264,11 @@ export function App(): React.JSX.Element {
       () => scene.noteColorMode.get(),
     );
   const [pitchPreviewEnabled, setPitchPreviewEnabled] =
-    useState(true);
+    useState<boolean>(
+      EDITOR_CONSTANTS.defaultPitchPreviewEnabled,
+    );
+  const [projectFileMenuOpen, setProjectFileMenuOpen] =
+    useState(false);
   const [applicationDialog, setApplicationDialog] =
     useState<ApplicationDialogState | null>(null);
   const selectedVoice =
@@ -273,6 +279,38 @@ export function App(): React.JSX.Element {
     selectedVoiceId === null
       ? -1
       : projectState.voiceOrder.indexOf(selectedVoiceId);
+
+  useEffect(() => {
+    if (!projectFileMenuOpen) {
+      return undefined;
+    }
+
+    const handleOutsidePointerDown = (
+      event: PointerEvent,
+    ): void => {
+      const menu = projectFileMenuRef.current;
+
+      if (
+        menu !== null
+        && event.target instanceof Node
+        && !menu.contains(event.target)
+      ) {
+        setProjectFileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "pointerdown",
+      handleOutsidePointerDown,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pointerdown",
+        handleOutsidePointerDown,
+      );
+    };
+  }, [projectFileMenuOpen]);
   const totalTicks = getProjectDurationTicks(projectState);
   const handleSelectionChange = useCallback(
     (hasSelection: boolean): void => {
@@ -2380,73 +2418,111 @@ export function App(): React.JSX.Element {
         <div className="brand">
           <div
             className="topbar-actions"
-            aria-label="Project file actions"
+            aria-label="Project and history actions"
           >
             <div
-              className="project-file-actions"
-              role="group"
-              aria-label="Create, save, load, import, and export project"
+              ref={projectFileMenuRef}
+              className="project-file-menu"
             >
               <button
-                className="project-file-button"
+                className="topbar-icon-button"
                 type="button"
-                title="New project"
-                aria-label="New project"
-                onClick={handleNewProject}
+                title="File menu"
+                aria-label="File menu"
+                aria-haspopup="menu"
+                aria-expanded={projectFileMenuOpen}
+                aria-controls="project-file-menu"
+                onClick={() => {
+                  setProjectFileMenuOpen((open) => !open);
+                }}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 3h8l4 4v14H6z" />
-                  <path d="M14 3v5h5M9 14h6M12 11v6" />
+                  <path d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
               </button>
-              <button
-                className="project-file-button"
-                type="button"
-                title="Save project"
-                aria-label="Save project"
-                onClick={handleSaveProject}
+              <div
+                id="project-file-menu"
+                className="project-file-menu-popover"
+                role="menu"
+                aria-label="File"
+                hidden={!projectFileMenuOpen}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 3h12l2 2v16H5z" />
-                  <path d="M8 3v6h8V3M8 21v-8h8v8" />
-                </svg>
-              </button>
-              <button
-                className="project-file-button"
-                type="button"
-                title="Load project"
-                aria-label="Load project"
-                onClick={handleOpenProject}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M3 7h7l2 2h9v11H3z" />
-                  <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
-                </svg>
-              </button>
-              <button
-                className="project-file-button"
-                type="button"
-                title="Import MIDI"
-                aria-label="Import MIDI"
-                onClick={handleOpenMidiImport}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 3h8l4 4v14H6z" />
-                  <path d="M14 3v5h5M12 11v7M9 15l3 3 3-3" />
-                </svg>
-              </button>
-              <button
-                className="project-file-button"
-                type="button"
-                title="Export MIDI"
-                aria-label="Export MIDI"
-                onClick={handleExportMidi}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 3h8l4 4v14H6z" />
-                  <path d="M14 3v5h5M12 18v-7M9 14l3-3 3 3" />
-                </svg>
-              </button>
+                <button
+                  className="project-file-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProjectFileMenuOpen(false);
+                    handleNewProject();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3h8l4 4v14H6z" />
+                    <path d="M14 3v5h5M9 14h6M12 11v6" />
+                  </svg>
+                  <span>New project</span>
+                </button>
+                <button
+                  className="project-file-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProjectFileMenuOpen(false);
+                    handleSaveProject();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 3h12l2 2v16H5z" />
+                    <path d="M8 3v6h8V3M8 21v-8h8v8" />
+                  </svg>
+                  <span>Save project</span>
+                </button>
+                <button
+                  className="project-file-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProjectFileMenuOpen(false);
+                    handleOpenProject();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 7h7l2 2h9v11H3z" />
+                    <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
+                  </svg>
+                  <span>Load project</span>
+                </button>
+                <button
+                  className="project-file-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProjectFileMenuOpen(false);
+                    handleOpenMidiImport();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3h8l4 4v14H6z" />
+                    <path d="M14 3v5h5M12 11v7M9 15l3 3 3-3" />
+                  </svg>
+                  <span>Import MIDI</span>
+                </button>
+                <button
+                  className="project-file-menu-item"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProjectFileMenuOpen(false);
+                    handleExportMidi();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3h8l4 4v14H6z" />
+                    <path d="M14 3v5h5M12 18v-7M9 14l3-3 3 3" />
+                  </svg>
+                  <span>Export MIDI</span>
+                </button>
+              </div>
               <input
                 ref={loadProjectInputRef}
                 className="project-file-input"
@@ -2475,6 +2551,38 @@ export function App(): React.JSX.Element {
                   void handleMidiFileChange(event);
                 }}
               />
+            </div>
+            <div
+              className="topbar-history-actions"
+              role="group"
+              aria-label="History"
+            >
+              <button
+                className="topbar-icon-button"
+                type="button"
+                title="Undo"
+                aria-label="Undo"
+                disabled={!scene.projectStore.canUndo()}
+                onClick={handleUndo}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 7-5 5 5 5" />
+                  <path d="M5 12h8a6 6 0 0 1 6 6" />
+                </svg>
+              </button>
+              <button
+                className="topbar-icon-button"
+                type="button"
+                title="Redo"
+                aria-label="Redo"
+                disabled={!scene.projectStore.canRedo()}
+                onClick={handleRedo}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 7 5 5-5 5" />
+                  <path d="M19 12h-8a6 6 0 0 0-6 6" />
+                </svg>
+              </button>
             </div>
           </div>
           <div>
@@ -2647,30 +2755,6 @@ export function App(): React.JSX.Element {
                 role="toolbar"
                 aria-label="Edit commands"
               >
-                <button
-                  type="button"
-                  title="Undo"
-                  aria-label="Undo"
-                  disabled={!scene.projectStore.canUndo()}
-                  onClick={handleUndo}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m9 7-5 5 5 5" />
-                    <path d="M5 12h8a6 6 0 0 1 6 6" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  title="Redo"
-                  aria-label="Redo"
-                  disabled={!scene.projectStore.canRedo()}
-                  onClick={handleRedo}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m15 7 5 5-5 5" />
-                    <path d="M19 12h-8a6 6 0 0 0-6 6" />
-                  </svg>
-                </button>
                 <button
                   type="button"
                   title="Copy selected notes"
@@ -3094,7 +3178,15 @@ export function App(): React.JSX.Element {
                         handleSelectVoiceNotes(voice.id);
                       }}
                     >
-                      All
+                      <svg
+                        className="voice-select-all-icon"
+                        viewBox="0 0 20 20"
+                        aria-hidden="true"
+                      >
+                        <circle cx="10" cy="10" r="7" />
+                        <circle cx="10" cy="10" r="3" />
+                        <path d="M10 1v3M10 16v3M1 10h3M16 10h3" />
+                      </svg>
                     </button>
                     <button
                       className={
