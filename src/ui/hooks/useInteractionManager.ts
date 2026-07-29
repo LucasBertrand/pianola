@@ -35,11 +35,9 @@ export interface UseInteractionManagerOptions {
 
 interface MutableGestureState {
   active: boolean;
-  initialDistance: number;
-  anchorTick: number;
-  anchorPitchRow: number;
-  initialZoomX: number;
-  initialZoomY: number;
+  previousDistance: number;
+  previousMidpointX: number;
+  previousMidpointY: number;
 }
 
 const LONG_PRESS_DELAY_MS = 560;
@@ -81,11 +79,9 @@ export function useInteractionManager(
     const gestureEvents: PointerEvent[] = [];
     const gestureState: MutableGestureState = {
       active: false,
-      initialDistance: 1,
-      anchorTick: 0,
-      anchorPitchRow: 0,
-      initialZoomX: 1,
-      initialZoomY: 1,
+      previousDistance: 1,
+      previousMidpointX: 0,
+      previousMidpointY: 0,
     };
     let suppressSinglePointer = false;
     let gestureAnimationFrameId: number | null = null;
@@ -142,23 +138,13 @@ export function useInteractionManager(
         (first.clientY + second.clientY) / 2 - bounds.top;
       const deltaX = second.clientX - first.clientX;
       const deltaY = second.clientY - first.clientY;
-      const currentViewport = viewport.get();
-      const pitchHeight =
-        currentViewport.pitchHeight * currentViewport.zoomY;
-
       gestureState.active = true;
-      gestureState.initialDistance = Math.max(
+      gestureState.previousDistance = Math.max(
         MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
         Math.hypot(deltaX, deltaY),
       );
-      gestureState.initialZoomX = currentViewport.zoomX;
-      gestureState.initialZoomY = currentViewport.zoomY;
-      gestureState.anchorTick =
-        (currentViewport.scrollX + midpointX)
-        * currentViewport.ticksPerPixel
-        / currentViewport.zoomX;
-      gestureState.anchorPitchRow =
-        (currentViewport.scrollY + midpointY) / pitchHeight;
+      gestureState.previousMidpointX = midpointX;
+      gestureState.previousMidpointY = midpointY;
       strategyRef.current?.onGesture(gestureEvents);
     };
 
@@ -188,15 +174,30 @@ export function useInteractionManager(
         MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
         Math.hypot(deltaX, deltaY),
       );
-      const scale = distance / gestureState.initialDistance;
       const currentViewport = viewport.get();
+      const scale = distance / gestureState.previousDistance;
+      const currentPitchHeight =
+        currentViewport.pitchHeight * currentViewport.zoomY;
+      const anchorTick =
+        (
+          currentViewport.scrollX
+          + gestureState.previousMidpointX
+        )
+        * currentViewport.ticksPerPixel
+        / currentViewport.zoomX;
+      const anchorPitchRow =
+        (
+          currentViewport.scrollY
+          + gestureState.previousMidpointY
+        )
+        / currentPitchHeight;
       const zoomX = clamp(
-        gestureState.initialZoomX * scale,
+        currentViewport.zoomX * scale,
         MINIMUM_HORIZONTAL_ZOOM,
         MAXIMUM_HORIZONTAL_ZOOM,
       );
       const zoomY = clamp(
-        gestureState.initialZoomY * scale,
+        currentViewport.zoomY * scale,
         MINIMUM_VERTICAL_ZOOM,
         MAXIMUM_VERTICAL_ZOOM,
       );
@@ -212,7 +213,7 @@ export function useInteractionManager(
         128 * pitchHeight - overlay.clientHeight,
       );
       const scrollX = clamp(
-        gestureState.anchorTick
+        anchorTick
           * zoomX
           / currentViewport.ticksPerPixel
           - midpointX,
@@ -220,11 +221,14 @@ export function useInteractionManager(
         maximumScrollX,
       );
       const scrollY = clamp(
-        gestureState.anchorPitchRow * pitchHeight - midpointY,
+        anchorPitchRow * pitchHeight - midpointY,
         0,
         maximumScrollY,
       );
 
+      gestureState.previousDistance = distance;
+      gestureState.previousMidpointX = midpointX;
+      gestureState.previousMidpointY = midpointY;
       setViewport({
         ...currentViewport,
         zoomX,

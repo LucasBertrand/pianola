@@ -50,6 +50,11 @@ import {
   type NativeProjectFileMetadata,
 } from "../persistence/native-project-file";
 import {
+  ApplicationDialogOverlay,
+  type ApplicationDialogState,
+  type ApplicationDialogTone,
+} from "../ui/components/ApplicationDialogOverlay";
+import {
   PianoRollLayers,
   type NoteColorMode,
 } from "../ui/components/PianoRollLayers";
@@ -84,6 +89,15 @@ interface ViewportDimensions {
 interface PianoRollClipboard {
   readonly notes: readonly Note[];
   readonly originTick: number;
+}
+
+interface ApplicationConfirmationOptions {
+  readonly title: string;
+  readonly message: string;
+  readonly confirmLabel: string;
+  readonly cancelLabel?: string;
+  readonly tone?: ApplicationDialogTone;
+  readonly onConfirm: () => void;
 }
 
 const PITCH_CLASS_NAMES = [
@@ -155,10 +169,11 @@ export function App(): React.JSX.Element {
     useState<VoiceId | null>(
       () => scene.projectStore.getState().voiceOrder[0] ?? null,
     );
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [generalInspectorOpen, setGeneralInspectorOpen] =
+    useState(false);
   const [
-    inspectorToolbarHost,
-    setInspectorToolbarHost,
+    generalInspectorToolbarHost,
+    setGeneralInspectorToolbarHost,
   ] = useState<HTMLDivElement | null>(null);
   const [clipboardAvailable, setClipboardAvailable] =
     useState(false);
@@ -168,6 +183,8 @@ export function App(): React.JSX.Element {
     useState<NoteColorMode>(
       () => scene.noteColorMode.get(),
     );
+  const [applicationDialog, setApplicationDialog] =
+    useState<ApplicationDialogState | null>(null);
   const selectedVoice =
     selectedVoiceId === null
       ? undefined
@@ -187,6 +204,47 @@ export function App(): React.JSX.Element {
     pianoRollEventControllerRef.current
       ?.togglePitchSelection(pitch);
   }, []);
+  const showApplicationAlert = useCallback(
+    (
+      title: string,
+      message: string,
+      tone: ApplicationDialogTone = "default",
+    ): void => {
+      setApplicationDialog({
+        title,
+        message,
+        confirmLabel: "OK",
+        cancelLabel: null,
+        tone,
+        onConfirm: null,
+      });
+    },
+    [],
+  );
+  const showApplicationConfirmation = useCallback(
+    (options: ApplicationConfirmationOptions): void => {
+      setApplicationDialog({
+        title: options.title,
+        message: options.message,
+        confirmLabel: options.confirmLabel,
+        cancelLabel: options.cancelLabel ?? "Cancel",
+        tone: options.tone ?? "default",
+        onConfirm: options.onConfirm,
+      });
+    },
+    [],
+  );
+  const handleApplicationDialogCancel =
+    useCallback((): void => {
+      setApplicationDialog(null);
+    }, []);
+  const handleApplicationDialogConfirm =
+    useCallback((): void => {
+      const action = applicationDialog?.onConfirm;
+
+      setApplicationDialog(null);
+      action?.();
+    }, [applicationDialog]);
 
   useEffect(
     () => scene.projectStore.subscribe((state) => {
@@ -336,7 +394,7 @@ export function App(): React.JSX.Element {
       resizeObserver.disconnect();
     };
   }, [
-    inspectorOpen,
+    generalInspectorOpen,
     publishViewport,
   ]);
 
@@ -1189,39 +1247,46 @@ export function App(): React.JSX.Element {
       const state = scene.projectStore.getState();
       const voice = state.voicesById[voiceId];
 
-      if (
-        voice === undefined
-        || !window.confirm(
-          `Delete "${voice.name}" and all of its notes?`,
-        )
-      ) {
+      if (voice === undefined) {
         return;
       }
 
-      const voiceIndex = state.voiceOrder.indexOf(voiceId);
-      const nextVoiceId =
-        state.voiceOrder[voiceIndex + 1]
-        ?? state.voiceOrder[voiceIndex - 1]
-        ?? null;
+      showApplicationConfirmation({
+        title: "Delete voice?",
+        message:
+          `Delete "${voice.name}" and all of its notes?`,
+        confirmLabel: "Delete",
+        tone: "danger",
+        onConfirm: () => {
+          const currentState = scene.projectStore.getState();
+          const voiceIndex =
+            currentState.voiceOrder.indexOf(voiceId);
+          const nextVoiceId =
+            currentState.voiceOrder[voiceIndex + 1]
+            ?? currentState.voiceOrder[voiceIndex - 1]
+            ?? null;
 
-      dispatchVoiceCommand(
-        {
-          type: "DeleteVoice",
-          voiceId,
+          dispatchVoiceCommand(
+            {
+              type: "DeleteVoice",
+              voiceId,
+            },
+            "Delete voice",
+          );
+          pianoRollEventControllerRef.current
+            ?.removeVoiceFromSelection(voiceId);
+
+          if (selectedVoiceId === voiceId) {
+            setSelectedVoiceId(nextVoiceId);
+          }
         },
-        "Delete voice",
-      );
-      pianoRollEventControllerRef.current
-        ?.removeVoiceFromSelection(voiceId);
-
-      if (selectedVoiceId === voiceId) {
-        setSelectedVoiceId(nextVoiceId);
-      }
+      });
     },
     [
       dispatchVoiceCommand,
       scene,
       selectedVoiceId,
+      showApplicationConfirmation,
     ],
   );
   const handleUpdateVoice = useCallback(
@@ -1396,7 +1461,8 @@ export function App(): React.JSX.Element {
     const state = scene.projectStore.getState();
 
     if (!canPasteNotes(state, pastedNotes)) {
-      window.alert(
+      showApplicationAlert(
+        "Paste unavailable",
         "Paste is unavailable because it would overlap notes, exceed the timeline, or target a locked voice.",
       );
       return;
@@ -1440,6 +1506,7 @@ export function App(): React.JSX.Element {
   }, [
     dispatchEditCommands,
     scene,
+    showApplicationAlert,
   ]);
   const handleTransferSelectionToVoice =
     useCallback((): void => {
@@ -1458,7 +1525,10 @@ export function App(): React.JSX.Element {
       );
 
       if (!transferPlan.valid) {
-        window.alert(transferPlan.message);
+        showApplicationAlert(
+          "Transfer unavailable",
+          transferPlan.message,
+        );
         return;
       }
 
@@ -1508,12 +1578,17 @@ export function App(): React.JSX.Element {
             ? error.message
             : "The selected notes could not be transferred.";
 
-        window.alert(`Transfer cancelled. ${message}`);
+        showApplicationAlert(
+          "Transfer cancelled",
+          message,
+          "danger",
+        );
       }
     }, [
       dispatchEditCommands,
       scene,
       selectedVoiceId,
+      showApplicationAlert,
     ]);
   const handleProjectTitleCommit = useCallback(
     (input: HTMLInputElement): void => {
@@ -1636,21 +1711,20 @@ export function App(): React.JSX.Element {
         URL.revokeObjectURL(downloadUrl);
       }, 1_000);
     } catch (error: unknown) {
-      window.alert(formatNativeProjectError(
-        "Unable to save the project.",
-        error,
-      ));
+      showApplicationAlert(
+        "Save failed",
+        formatNativeProjectError(
+          "Unable to save the project.",
+          error,
+        ),
+        "danger",
+      );
     }
-  }, [scene]);
-  const handleNewProject = useCallback((): void => {
-    const confirmed = window.confirm(
-      "Create a new project? Unsaved changes will be lost.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+  }, [
+    scene,
+    showApplicationAlert,
+  ]);
+  const createNewProject = useCallback((): void => {
     const controller = pianoRollEventControllerRef.current;
     const blankProject = createBlankProjectState();
 
@@ -1673,6 +1747,19 @@ export function App(): React.JSX.Element {
   }, [
     handleResetView,
     scene,
+  ]);
+  const handleNewProject = useCallback((): void => {
+    showApplicationConfirmation({
+      title: "Create a new project?",
+      message:
+        "Unsaved changes in the current project will be lost.",
+      confirmLabel: "Create project",
+      tone: "danger",
+      onConfirm: createNewProject,
+    });
+  }, [
+    createNewProject,
+    showApplicationConfirmation,
   ]);
   const handleOpenProject = useCallback((): void => {
     const input = loadProjectInputRef.current;
@@ -1728,10 +1815,14 @@ export function App(): React.JSX.Element {
         );
         handleResetView();
       } catch (error: unknown) {
-        window.alert(formatNativeProjectError(
-          "Unable to load the project.",
-          error,
-        ));
+        showApplicationAlert(
+          "Load failed",
+          formatNativeProjectError(
+            "Unable to load the project.",
+            error,
+          ),
+          "danger",
+        );
       } finally {
         input.value = "";
       }
@@ -1739,6 +1830,7 @@ export function App(): React.JSX.Element {
     [
       handleResetView,
       scene,
+      showApplicationAlert,
     ],
   );
 
@@ -1897,22 +1989,28 @@ export function App(): React.JSX.Element {
 
       <section
         className={
-          `workspace${inspectorOpen ? " is-inspector-open" : ""}`
+          `workspace${
+            generalInspectorOpen
+              ? " is-general-inspector-open"
+              : ""
+          }`
         }
       >
         <div className="editor-panel">
-          {inspectorToolbarHost === null
+          {generalInspectorToolbarHost === null
             ? null
             : createPortal(
           <div className="editor-toolbar">
             <div className="editor-toolbar-actions">
               <button
-                className="inspector-toggle-button"
+                className="general-inspector-toggle-button"
                 type="button"
-                aria-expanded={inspectorOpen}
-                aria-controls="voice-inspector"
+                aria-expanded={generalInspectorOpen}
+                aria-controls="general-inspector"
                 onClick={() => {
-                  setInspectorOpen((current) => !current);
+                  setGeneralInspectorOpen(
+                    (current) => !current,
+                  );
                 }}
               >
                 <span className="menu-icon" aria-hidden="true">
@@ -2063,7 +2161,7 @@ export function App(): React.JSX.Element {
               </div>
             </div>
           </div>,
-          inspectorToolbarHost,
+          generalInspectorToolbarHost,
         )}
 
           <div className="roll-frame">
@@ -2189,19 +2287,23 @@ export function App(): React.JSX.Element {
         </div>
 
         <aside
-          id="voice-inspector"
-          className={`inspector${inspectorOpen ? " is-open" : ""}`}
+          id="general-inspector"
+          className={
+            `general-inspector${
+              generalInspectorOpen ? " is-open" : ""
+            }`
+          }
         >
           <div
-            ref={setInspectorToolbarHost}
-            className="inspector-toolbar-host"
+            ref={setGeneralInspectorToolbarHost}
+            className="general-inspector-toolbar-host"
           />
-          <div className="inspector-heading">
+          <div className="general-inspector-heading">
             <div>
               <small>Arrangement</small>
               <h1>Voices</h1>
             </div>
-            <div className="inspector-heading-actions">
+            <div className="general-inspector-heading-actions">
               <button
                 className="voice-order-button"
                 type="button"
@@ -2231,10 +2333,10 @@ export function App(): React.JSX.Element {
                 </svg>
               </button>
               <button
-                className="inspector-close-button"
+                className="general-inspector-close-button"
                 type="button"
                 aria-label="Close voices"
-                onClick={() => setInspectorOpen(false)}
+                onClick={() => setGeneralInspectorOpen(false)}
               >
                 ×
               </button>
@@ -2510,6 +2612,11 @@ export function App(): React.JSX.Element {
 
         </aside>
       </section>
+      <ApplicationDialogOverlay
+        dialog={applicationDialog}
+        onConfirm={handleApplicationDialogConfirm}
+        onCancel={handleApplicationDialogCancel}
+      />
     </main>
   );
 }

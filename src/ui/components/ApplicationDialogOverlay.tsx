@@ -1,0 +1,77 @@
+import React from "react";
+
+export type ApplicationDialogTone = "default" | "danger";
+
+export interface ApplicationDialogState {
+  readonly title: string;
+  readonly message: string;
+  readonly confirmLabel: string;
+  readonly cancelLabel: string | null;
+  readonly tone: ApplicationDialogTone;
+  readonly onConfirm: (() => void) | null;
+}
+
+export interface ApplicationDialogOverlayProps {
+  readonly dialog: ApplicationDialogState | null;
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+}
+
+export function ApplicationDialogOverlay(
+  props: ApplicationDialogOverlayProps,
+): React.JSX.Element | null {
+  const {
+    dialog,
+    onConfirm,
+    onCancel,
+  } = props;
+
+  if (dialog === null) {
+    return null;
+  }
+
+  return (
+    <div className="application-dialog-backdrop">
+      <section
+        className="application-dialog"
+        data-tone={dialog.tone}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="application-dialog-title"
+        aria-describedby="application-dialog-message"
+      >
+        <div className="application-dialog-heading">
+          <span className="application-dialog-mark" aria-hidden="true">
+            {dialog.tone === "danger" ? "!" : "i"}
+          </span>
+          <h2 id="application-dialog-title">
+            {dialog.title}
+          </h2>
+        </div>
+        <p id="application-dialog-message">
+          {dialog.message}
+        </p>
+        <div className="application-dialog-actions">
+          {dialog.cancelLabel === null
+            ? null
+            : (
+                <button
+                  className="application-dialog-button is-secondary"
+                  type="button"
+                  onClick={onCancel}
+                >
+                  {dialog.cancelLabel}
+                </button>
+              )}
+          <button
+            className="application-dialog-button is-primary"
+            type="button"
+            onClick={onConfirm}
+          >
+            {dialog.confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
