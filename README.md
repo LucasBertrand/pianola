@@ -843,11 +843,10 @@ Avant chaque mise en production :
 - la vélocité est stockée et exportée, mais pas appliquée au volume de lecture ;
 - MIDI ne représente pas toutes les données du format natif ;
 - les interactions Canvas/tactiles reposent surtout sur des tests manuels ;
-- aucune licence n’est fournie actuellement.
+- le dépôt est publié sous la licence Unlicense, décrite dans `LICENSE`.
 
-Avant de rendre le dépôt GitHub public, choisir explicitement une licence. Sans
-fichier `LICENSE`, le code reste protégé par le droit d’auteur par défaut, même
-si le dépôt est visible.
+La licence Unlicense place le code dans le domaine public dans la mesure
+permise par la juridiction applicable et fournit le logiciel sans garantie.
 
 Les extensions futures les plus naturelles sont l’auto-save local, les onglets
 de projets, des tests navigateur automatisés, des effets audio, l’automation et
