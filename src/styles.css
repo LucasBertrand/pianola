@@ -172,7 +172,7 @@ input:focus-visible {
 
 .topbar {
   position: relative;
-  z-index: 5;
+  z-index: 15;
   display: grid;
   min-height: 72px;
   padding: 0 0 0 15px;
@@ -596,8 +596,6 @@ input:focus-visible {
 
 .topbar-history-actions {
   display: grid;
-  padding-left: 6px;
-  border-left: 1px solid #303642;
   grid-template-columns: repeat(2, 34px);
   gap: 6px;
 }
@@ -1105,7 +1103,7 @@ input:focus-visible {
 .view-controls {
   display: grid;
   min-height: 44px;
-  padding: 0 12px 0 16px;
+  padding: 0 0px 0 16px;
   border-top: 1px solid #252a33;
   background: var(--app-surface-color);
   grid-template-columns:
@@ -1212,19 +1210,18 @@ input[type="range"]::-webkit-slider-thumb {
   display: grid;
   width: 174px;
   min-width: 0;
-  padding: 3px;
-  border: 1px solid #303642;
+  padding: 3px 0px 3px 3px;
+  border: 0cap solid #303642;
   border-radius: 8px;
-  background: #15181e;
-  grid-template-columns: 30px 42px minmax(0, 1fr);
+  grid-template-columns: 27px 42px minmax(0, 1fr);
   align-items: center;
   gap: 3px;
 }
 
 .pitch-snap-toggle {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 27px;
+  height: 27px;
   padding: 0;
   border: 1px solid #353b47;
   border-radius: 6px;
@@ -1232,11 +1229,6 @@ input[type="range"]::-webkit-slider-thumb {
   color: #737d8c;
   place-items: center;
   cursor: pointer;
-}
-
-.pitch-snap-control.is-active {
-  border-color: rgba(121, 167, 255, 0.45);
-  background: rgba(74, 107, 161, 0.13);
 }
 
 .pitch-snap-control.is-active .pitch-snap-toggle {

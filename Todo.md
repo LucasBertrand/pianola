@@ -1,1 +1,0 @@
-Implémenter TempoMap et TimeSignatureMap (conséquences sur le scheduler, le ruler, le playhead et l’affichage des mesures)
