@@ -1,4 +1,28 @@
+# Dependencies and generated output
 node_modules/
 dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Local deployment metadata
+.vercel/
+
+# Environment files and local overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors and operating systems
+.idea/
+.vscode/
 .DS_Store
+Thumbs.db

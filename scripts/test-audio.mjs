@@ -475,7 +475,7 @@ try {
     );
   });
 
-  test("round-trips audio settings and migrates version two through four files", () => {
+  test("round-trips current Pianola audio settings and rejects stale documents", () => {
     const state = createProject({
       masterGain: 0.41,
     });
@@ -495,72 +495,14 @@ try {
       DEFAULT_INSTRUMENT_POLYPHONY,
     );
 
-    const versionTwoDocument = JSON.parse(serialized);
-    versionTwoDocument.formatVersion = 2;
-    versionTwoDocument.project.schemaVersion = 2;
-    delete versionTwoDocument.project.masterBus;
-
-    for (
-      const voice of Object.values(
-        versionTwoDocument.project.voicesById,
-      )
-    ) {
-      delete voice.instrument.polyphony;
-    }
-
-    const migrated = parseNativeProjectFile(
-      JSON.stringify(versionTwoDocument),
-    );
-
-    assert.equal(migrated.projectState.masterBus.gain, 0.72);
-    assert.equal(migrated.projectState.masterBus.muted, false);
-    assert.equal(migrated.projectState.schemaVersion, 5);
-    assert.equal(
-      migrated.projectState.voicesById["voice-a"]
-        .instrument.polyphony,
-      DEFAULT_INSTRUMENT_POLYPHONY,
-    );
-
-    const versionThreeDocument = JSON.parse(serialized);
-    versionThreeDocument.formatVersion = 3;
-    versionThreeDocument.project.schemaVersion = 3;
-    delete versionThreeDocument.project.masterBus.muted;
-
-    for (
-      const voice of Object.values(
-        versionThreeDocument.project.voicesById,
-      )
-    ) {
-      delete voice.instrument.polyphony;
-    }
-
-    const migratedVersionThree = parseNativeProjectFile(
-      JSON.stringify(versionThreeDocument),
-    );
-
-    assert.equal(migratedVersionThree.projectState.masterBus.gain, 0.41);
-    assert.equal(
-      migratedVersionThree.projectState.masterBus.muted,
-      false,
-    );
-    assert.equal(
-      migratedVersionThree.projectState.voicesById["voice-a"]
-        .instrument.polyphony,
-      DEFAULT_INSTRUMENT_POLYPHONY,
-    );
-
-    const versionFourDocument = JSON.parse(serialized);
-    versionFourDocument.formatVersion = 4;
-    versionFourDocument.project.schemaVersion = 4;
-    delete versionFourDocument.project.masterBus.muted;
-    const migratedVersionFour = parseNativeProjectFile(
-      JSON.stringify(versionFourDocument),
-    );
-
-    assert.equal(migratedVersionFour.projectState.masterBus.gain, 0.41);
-    assert.equal(
-      migratedVersionFour.projectState.masterBus.muted,
-      false,
+    const staleDocument = JSON.parse(serialized);
+    staleDocument.formatVersion = 2;
+    assert.throws(
+      () => parseNativeProjectFile(JSON.stringify(staleDocument)),
+      (error) => (
+        error.code === "UNSUPPORTED_VERSION"
+        && error.path === "$.formatVersion"
+      ),
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);

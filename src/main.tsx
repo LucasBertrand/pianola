@@ -7,7 +7,12 @@ import {
 import {
   App,
 } from "./app/App";
+import {
+  APPLICATION_CONSTANTS,
+} from "./config/program-constants";
 import "./styles.css";
+
+document.title = APPLICATION_CONSTANTS.productName;
 
 const rootElement = document.getElementById("root");
 

@@ -1,4 +1,5 @@
 import {
+  APPLICATION_CONSTANTS,
   MIDI_CONSTANTS,
   PROJECT_CONSTANTS,
 } from "../config/program-constants";
@@ -201,7 +202,7 @@ export function createMidiFileName(projectTitle: string): string {
   const baseName =
     sanitizedTitle.length > 0
       ? sanitizedTitle
-      : "Untitled project";
+      : APPLICATION_CONSTANTS.defaultProjectTitle;
 
   return `${baseName}${MIDI_CONSTANTS.fileExtension}`;
 }

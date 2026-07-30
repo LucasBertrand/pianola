@@ -11,6 +11,7 @@ import {
   createPortal,
 } from "react-dom";
 import {
+  APPLICATION_CONSTANTS,
   EDITOR_CONSTANTS,
   FILE_CONSTANTS,
   INTERACTION_CONSTANTS,
@@ -2430,6 +2431,7 @@ export function App(): React.JSX.Element {
     <main
       ref={appShellRef}
       className="app-shell"
+      aria-label={APPLICATION_CONSTANTS.productName}
       data-project-revision="0"
       style={{
         "--app-surface-color": APPLICATION_SURFACE_COLOR,

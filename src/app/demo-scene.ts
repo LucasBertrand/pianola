@@ -7,6 +7,7 @@ import type {
   VoiceId,
 } from "../domain/model";
 import {
+  APPLICATION_CONSTANTS,
   EDITOR_CONSTANTS,
   PROJECT_CONSTANTS,
   VIEWPORT_CONSTANTS,
@@ -183,7 +184,10 @@ function getGridResolutionTicks(settings: GridSettings): number {
 }
 
 export function createBlankProjectState(): ProjectState {
-  return createProjectState([], "Untitled project");
+  return createProjectState(
+    [],
+    APPLICATION_CONSTANTS.defaultProjectTitle,
+  );
 }
 
 function createVoiceRenderStyles(

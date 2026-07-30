@@ -18,11 +18,10 @@ import type {
   VoiceInterpretation,
 } from "../domain/model";
 import {
+  APPLICATION_CONSTANTS,
   FILE_CONSTANTS,
 } from "../config/program-constants";
 import {
-  createDefaultMasterBusState,
-  DEFAULT_INSTRUMENT_POLYPHONY,
   getProjectDurationTicks,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
@@ -63,21 +62,9 @@ const MAXIMUM_NAME_LENGTH = MAXIMUM_VOICE_NAME_LENGTH;
 const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
 const MAXIMUM_DESCRIPTOR_COUNT = MAXIMUM_VOICE_DESCRIPTOR_COUNT;
 const MAXIMUM_PARAMETER_COUNT = MAXIMUM_DESCRIPTOR_PARAMETER_COUNT;
-const LEGACY_NATIVE_PROJECT_FILE_VERSION = 1 as const;
-const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-const PREVIOUS_NATIVE_PROJECT_FILE_VERSION = 2 as const;
-const PREVIOUS_PROJECT_SCHEMA_VERSION = 2;
-const MASTER_BUS_NATIVE_PROJECT_FILE_VERSION = 3 as const;
-const MASTER_BUS_PROJECT_SCHEMA_VERSION = 3;
-const POLYPHONY_NATIVE_PROJECT_FILE_VERSION = 4 as const;
-const POLYPHONY_PROJECT_SCHEMA_VERSION = 4;
 
 type JsonPrimitive = string | number | boolean;
 type UnknownRecord = Readonly<Record<string, unknown>>;
-type NativeVoiceV1ToV3 = Omit<Voice, "instrument"> & {
-  readonly instrument: Omit<SubtractiveSynthConfig, "polyphony">;
-};
-type NativeMasterBusV3ToV4 = Omit<MasterBusState, "muted">;
 
 export interface NativeProjectFileMetadata {
   readonly documentId: string;
@@ -85,89 +72,29 @@ export interface NativeProjectFileMetadata {
   readonly savedAt: string;
 }
 
-export type NativeTransportStateV1 = Omit<
-  TransportState,
-  "anchorAudioTimeSeconds" | "loop" | "loopEnabled"
-> & {
-  readonly loop: LoopRegion | null;
-  readonly anchorAudioTimeSeconds: null;
-};
-
-export type NativeTransportStateV2 = Omit<
+export type NativeTransportState = Omit<
   TransportState,
   "anchorAudioTimeSeconds"
 > & {
   readonly anchorAudioTimeSeconds: null;
 };
 
-export interface NativeProjectSnapshotV1 {
+export interface NativeProjectSnapshot {
   readonly schemaVersion: number;
   readonly title: string;
   readonly measureCount: number;
-  readonly voicesById: Readonly<Record<VoiceId, NativeVoiceV1ToV3>>;
+  readonly voicesById: Readonly<Record<VoiceId, Voice>>;
   readonly voiceOrder: readonly VoiceId[];
   readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
-  readonly transportSettings: NativeTransportStateV1;
-}
-
-export interface NativeProjectFileV1 {
-  readonly format: typeof NATIVE_PROJECT_FILE_FORMAT;
-  readonly formatVersion: typeof LEGACY_NATIVE_PROJECT_FILE_VERSION;
-  readonly metadata: NativeProjectFileMetadata;
-  readonly project: NativeProjectSnapshotV1;
-}
-
-export interface NativeProjectSnapshotV2 extends Omit<
-  NativeProjectSnapshotV1,
-  "transportSettings"
-> {
-  readonly transportSettings: NativeTransportStateV2;
-}
-
-export interface NativeProjectFileV2 {
-  readonly format: typeof NATIVE_PROJECT_FILE_FORMAT;
-  readonly formatVersion: typeof PREVIOUS_NATIVE_PROJECT_FILE_VERSION;
-  readonly metadata: NativeProjectFileMetadata;
-  readonly project: NativeProjectSnapshotV2;
-}
-
-export interface NativeProjectSnapshotV3 extends NativeProjectSnapshotV2 {
-  readonly masterBus: NativeMasterBusV3ToV4;
-}
-
-export interface NativeProjectFileV3 {
-  readonly format: typeof NATIVE_PROJECT_FILE_FORMAT;
-  readonly formatVersion: typeof MASTER_BUS_NATIVE_PROJECT_FILE_VERSION;
-  readonly metadata: NativeProjectFileMetadata;
-  readonly project: NativeProjectSnapshotV3;
-}
-
-export interface NativeProjectSnapshotV4 extends Omit<
-  NativeProjectSnapshotV3,
-  "voicesById"
-> {
-  readonly voicesById: Readonly<Record<VoiceId, Voice>>;
-}
-
-export interface NativeProjectFileV4 {
-  readonly format: typeof NATIVE_PROJECT_FILE_FORMAT;
-  readonly formatVersion: typeof POLYPHONY_NATIVE_PROJECT_FILE_VERSION;
-  readonly metadata: NativeProjectFileMetadata;
-  readonly project: NativeProjectSnapshotV4;
-}
-
-export interface NativeProjectSnapshotV5 extends Omit<
-  NativeProjectSnapshotV4,
-  "masterBus"
-> {
+  readonly transportSettings: NativeTransportState;
   readonly masterBus: MasterBusState;
 }
 
-export interface NativeProjectFileV5 {
+export interface NativeProjectFile {
   readonly format: typeof NATIVE_PROJECT_FILE_FORMAT;
   readonly formatVersion: typeof NATIVE_PROJECT_FILE_VERSION;
   readonly metadata: NativeProjectFileMetadata;
-  readonly project: NativeProjectSnapshotV5;
+  readonly project: NativeProjectSnapshot;
 }
 
 export interface LoadedNativeProject {
@@ -201,7 +128,7 @@ export function serializeNativeProjectFile(
   state: ProjectState,
   metadata: NativeProjectFileMetadata,
 ): string {
-  const document: NativeProjectFileV5 = {
+  const document: NativeProjectFile = {
     format: NATIVE_PROJECT_FILE_FORMAT,
     formatVersion: NATIVE_PROJECT_FILE_VERSION,
     metadata,
@@ -251,7 +178,7 @@ export function parseNativeProjectFile(
     fail(
       "INVALID_FORMAT",
       "$.format",
-      "The selected file is not a native Piano Roll project.",
+      "The selected file is not a native Pianola project.",
     );
   }
 
@@ -260,13 +187,7 @@ export function parseNativeProjectFile(
     "$.formatVersion",
   );
 
-  if (
-    formatVersion !== LEGACY_NATIVE_PROJECT_FILE_VERSION
-    && formatVersion !== PREVIOUS_NATIVE_PROJECT_FILE_VERSION
-    && formatVersion !== MASTER_BUS_NATIVE_PROJECT_FILE_VERSION
-    && formatVersion !== POLYPHONY_NATIVE_PROJECT_FILE_VERSION
-    && formatVersion !== NATIVE_PROJECT_FILE_VERSION
-  ) {
+  if (formatVersion !== NATIVE_PROJECT_FILE_VERSION) {
     fail(
       "UNSUPPORTED_VERSION",
       "$.formatVersion",
@@ -281,7 +202,6 @@ export function parseNativeProjectFile(
   const projectState = parseProjectSnapshot(
     document["project"],
     "$.project",
-    formatVersion,
   );
 
   return {
@@ -300,7 +220,11 @@ export function createNativeProjectFileName(
     .slice(0, 80);
 
   return (
-    `${baseName.length > 0 ? baseName : "untitled-project"}`
+    `${
+      baseName.length > 0
+        ? baseName
+        : `${APPLICATION_CONSTANTS.productSlug}-project`
+    }`
     + NATIVE_PROJECT_FILE_EXTENSION
   );
 }
@@ -342,7 +266,6 @@ function parseMetadata(
 function parseProjectSnapshot(
   source: unknown,
   path: string,
-  formatVersion: number,
 ): ProjectState {
   const project = readRecord(source, path);
   const schemaVersion = readSafeInteger(
@@ -350,18 +273,7 @@ function parseProjectSnapshot(
     `${path}.schemaVersion`,
   );
 
-  const expectedSchemaVersion =
-    formatVersion === LEGACY_NATIVE_PROJECT_FILE_VERSION
-      ? LEGACY_PROJECT_SCHEMA_VERSION
-      : formatVersion === PREVIOUS_NATIVE_PROJECT_FILE_VERSION
-        ? PREVIOUS_PROJECT_SCHEMA_VERSION
-        : formatVersion === MASTER_BUS_NATIVE_PROJECT_FILE_VERSION
-          ? MASTER_BUS_PROJECT_SCHEMA_VERSION
-          : formatVersion === POLYPHONY_NATIVE_PROJECT_FILE_VERSION
-            ? POLYPHONY_PROJECT_SCHEMA_VERSION
-            : PROJECT_SCHEMA_VERSION;
-
-  if (schemaVersion !== expectedSchemaVersion) {
+  if (schemaVersion !== PROJECT_SCHEMA_VERSION) {
     fail(
       "INVALID_DATA",
       `${path}.schemaVersion`,
@@ -388,21 +300,15 @@ function parseProjectSnapshot(
     project["voicesById"],
     voiceOrder,
     `${path}.voicesById`,
-    formatVersion,
   );
   const transportSettings = parseTransport(
     project["transportSettings"],
     `${path}.transportSettings`,
-    formatVersion,
   );
-  const masterBus =
-    formatVersion >= MASTER_BUS_NATIVE_PROJECT_FILE_VERSION
-      ? parseMasterBus(
-          project["masterBus"],
-          `${path}.masterBus`,
-          formatVersion,
-        )
-      : createDefaultMasterBusState();
+  const masterBus = parseMasterBus(
+    project["masterBus"],
+    `${path}.masterBus`,
+  );
   const partialState: ProjectState = {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
@@ -490,7 +396,6 @@ function parseVoices(
   source: unknown,
   voiceOrder: readonly VoiceId[],
   path: string,
-  formatVersion: number,
 ): Readonly<Record<VoiceId, Voice>> {
   const sourceVoices = readRecord(source, path);
   assertExactRecordKeys(sourceVoices, voiceOrder, path);
@@ -509,7 +414,6 @@ function parseVoices(
         sourceVoices[voiceId],
         voiceId,
         `${path}.${voiceId}`,
-        formatVersion,
       );
     }
   }
@@ -521,7 +425,6 @@ function parseVoice(
   source: unknown,
   expectedVoiceId: VoiceId,
   path: string,
-  formatVersion: number,
 ): Voice {
   const voice = readRecord(source, path);
   const id = readNonEmptyString(
@@ -573,7 +476,6 @@ function parseVoice(
     instrument: parseInstrument(
       voice["instrument"],
       `${path}.instrument`,
-      formatVersion,
     ),
     effects: parseEffects(voice["effects"], `${path}.effects`),
     generativeRules: parseGenerativeRules(
@@ -603,7 +505,6 @@ function parseVoice(
 function parseInstrument(
   source: unknown,
   path: string,
-  formatVersion: number,
 ): InstrumentConfig {
   const instrument = readRecord(source, path);
   const kind = readString(
@@ -621,13 +522,12 @@ function parseInstrument(
     );
   }
 
-  return parseSubtractiveSynth(instrument, path, formatVersion);
+  return parseSubtractiveSynth(instrument, path);
 }
 
 function parseSubtractiveSynth(
   instrument: UnknownRecord,
   path: string,
-  formatVersion: number,
 ): SubtractiveSynthConfig {
   return {
     kind: "subtractive",
@@ -635,15 +535,12 @@ function parseSubtractiveSynth(
       instrument["oscillatorWaveform"],
       `${path}.oscillatorWaveform`,
     ),
-    polyphony:
-      formatVersion >= POLYPHONY_NATIVE_PROJECT_FILE_VERSION
-        ? readIntegerInRange(
-            instrument["polyphony"],
-            `${path}.polyphony`,
-            MINIMUM_INSTRUMENT_POLYPHONY,
-            MAXIMUM_INSTRUMENT_POLYPHONY,
-          )
-        : DEFAULT_INSTRUMENT_POLYPHONY,
+    polyphony: readIntegerInRange(
+      instrument["polyphony"],
+      `${path}.polyphony`,
+      MINIMUM_INSTRUMENT_POLYPHONY,
+      MAXIMUM_INSTRUMENT_POLYPHONY,
+    ),
     oscillatorDetuneCents: readFiniteNumber(
       instrument["oscillatorDetuneCents"],
       `${path}.oscillatorDetuneCents`,
@@ -907,7 +804,6 @@ function parseVoiceInterpretation(
 function parseTransport(
   source: unknown,
   path: string,
-  formatVersion: number,
 ): TransportState {
   const transport = readRecord(source, path);
   const timeSignature = readRecord(
@@ -935,40 +831,11 @@ function parseTransport(
     transport["ppqn"],
     `${path}.ppqn`,
   );
-  const loopSource = transport["loop"];
-  let loop: LoopRegion;
-  let loopEnabled: boolean;
-
-  if (formatVersion === LEGACY_NATIVE_PROJECT_FILE_VERSION) {
-    loopEnabled = loopSource !== null;
-
-    if (loopSource === null) {
-      const endTick = (
-        ppqn * 4 * numerator / denominator
-      );
-
-      if (!Number.isSafeInteger(endTick) || endTick <= 0) {
-        fail(
-          "INVALID_DATA",
-          `${path}.loop`,
-          "The default loop region cannot be represented in ticks.",
-        );
-      }
-
-      loop = {
-        startTick: 0,
-        endTick,
-      };
-    } else {
-      loop = parseLoop(loopSource, `${path}.loop`);
-    }
-  } else {
-    loop = parseLoop(loopSource, `${path}.loop`);
-    loopEnabled = readBoolean(
-      transport["loopEnabled"],
-      `${path}.loopEnabled`,
-    );
-  }
+  const loop = parseLoop(transport["loop"], `${path}.loop`);
+  const loopEnabled = readBoolean(
+    transport["loopEnabled"],
+    `${path}.loopEnabled`,
+  );
 
   const anchorAudioTimeSource =
     transport["anchorAudioTimeSeconds"];
@@ -1019,7 +886,6 @@ function parseTransport(
 function parseMasterBus(
   source: unknown,
   path: string,
-  formatVersion: number,
 ): MasterBusState {
   const masterBus = readRecord(source, path);
 
@@ -1030,10 +896,7 @@ function parseMasterBus(
       MINIMUM_MASTER_GAIN,
       MAXIMUM_MASTER_GAIN,
     ),
-    muted:
-      formatVersion >= NATIVE_PROJECT_FILE_VERSION
-        ? readBoolean(masterBus["muted"], `${path}.muted`)
-        : false,
+    muted: readBoolean(masterBus["muted"], `${path}.muted`),
   };
 }
 

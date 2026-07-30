@@ -16,12 +16,22 @@ const USER_VOICE_COLOR_PALETTE = Object.freeze([
   "#f17ca8",
 ] as const);
 
+/** Product identity shared by runtime features and generated file names. */
+export const APPLICATION_CONSTANTS = Object.freeze({
+  productName: "Pianola",
+  productSlug: "pianola",
+  productDescription:
+    "A touch-first polyphonic piano-roll sequencer for the browser.",
+  defaultProjectTitle: "Pianola Project",
+  demoProjectTitle: "Pianola Demo",
+} as const);
+
 /** Persistent project defaults and hard domain limits. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
   schemaVersion: 5,
   defaultMeasureCount: 16,
-  demoProjectTitle: "Untitled exploration",
+  demoProjectTitle: APPLICATION_CONSTANTS.demoProjectTitle,
   defaultTempoBpm: 120,
   demoTempoBpm: 112,
   defaultTimeSignatureNumerator: 4,
@@ -414,9 +424,9 @@ export const RENDERING_CONSTANTS = Object.freeze({
 
 /** Native document limits and browser download behavior. */
 export const FILE_CONSTANTS = Object.freeze({
-  nativeProjectFormat: "com.piano-roll.native-project",
-  nativeProjectVersion: 5,
-  nativeProjectExtension: ".pianoroll",
+  nativeProjectFormat: "app.pianola.native-project",
+  nativeProjectVersion: 1,
+  nativeProjectExtension: ".pianola",
   nativeProjectMaximumBytes: 32 * 1024 * 1024,
   objectUrlRevokeDelayMs: 1_000,
 } as const);
