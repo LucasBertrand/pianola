@@ -63,6 +63,11 @@ try {
   } = await vite.ssrLoadModule(
     "/src/ui/interactions/pitch-snap.ts",
   );
+  const {
+    resolveNoteEnvelopePeakLevel,
+  } = await vite.ssrLoadModule(
+    "/src/audio/note-dynamics.ts",
+  );
 
   let transactionSequence = 0;
 
@@ -774,6 +779,16 @@ try {
       ),
       61,
     );
+  });
+
+  test("keeps playback level independent from stored velocity", () => {
+    const quietLevel = resolveNoteEnvelopePeakLevel(1);
+    const drawnLevel = resolveNoteEnvelopePeakLevel(100);
+    const loudLevel = resolveNoteEnvelopePeakLevel(127);
+
+    assert.equal(quietLevel, drawnLevel);
+    assert.equal(loudLevel, drawnLevel);
+    assert.equal(drawnLevel, 100 / 127);
   });
 
   test("repositions a note group atomically", () => {

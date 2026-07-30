@@ -15,6 +15,9 @@ import {
   countOverlappingVoiceWindows,
   findOldestOverlappingVoiceIndex,
 } from "./voice-allocation";
+import {
+  resolveNoteEnvelopePeakLevel,
+} from "./note-dynamics";
 
 export type AudioContextFactory = (
   config: AudioEngineConfig,
@@ -127,7 +130,6 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     if (
       event.endAudioTimeSeconds
       <= event.startAudioTimeSeconds
-      || event.velocity <= 0
       || this.scheduledOccurrenceIds.has(event.occurrenceId)
     ) {
       return;
@@ -206,7 +208,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
 
     scheduleEnvelope(
       envelopeGain.gain,
-      event.velocity / 127,
+      resolveNoteEnvelopePeakLevel(event.velocity),
       startAudioTimeSeconds,
       noteEndAudioTimeSeconds,
       instrument.envelope.attackSeconds,

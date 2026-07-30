@@ -121,6 +121,7 @@ export const AUDIO_CONSTANTS = Object.freeze({
   minimumRestartLeadSeconds: 0.012,
   auditionNoteDurationSeconds: 0.4,
   auditionNoteVelocity: 104,
+  fixedNoteEnvelopePeakLevel: 100 / 127,
   minimumNoteSeconds: 0.002,
   cancellationFadeSeconds: 0.006,
   busRampSeconds: 0.008,
