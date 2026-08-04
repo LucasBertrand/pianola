@@ -594,12 +594,6 @@ input:focus-visible {
   color: #e3e9f2;
 }
 
-.topbar-history-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 34px);
-  gap: 6px;
-}
-
 .project-file-input {
   display: none;
 }
@@ -688,8 +682,10 @@ input:focus-visible {
   opacity: 0.32;
 }
 
-.edit-tool-group .note-color-toggle {
-  min-width: 42px;
+.edit-tool-group .selection-mode-button.is-active {
+  border-color: rgba(121, 167, 255, 0.62);
+  background: rgba(121, 167, 255, 0.16);
+  color: #a8c5f7;
 }
 
 .note-color-toggle svg {
@@ -1008,61 +1004,6 @@ input:focus-visible {
   background: var(--app-surface-color);
   cursor: ew-resize;
   touch-action: none;
-}
-
-.project-length-controls-layer {
-  position: absolute;
-  z-index: 7;
-  inset: 22px 0 auto;
-  height: 28px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.project-length-controls {
-  position: absolute;
-  top: 4px;
-  left: 0;
-  display: flex;
-  height: 20px;
-  padding: 1px;
-  border: 1px solid rgba(90, 101, 119, 0.56);
-  border-radius: 5px;
-  background: rgba(19, 22, 28, 0.76);
-  gap: 1px;
-  opacity: 0.62;
-  pointer-events: auto;
-  will-change: transform;
-}
-
-.project-length-controls button {
-  display: grid;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: #8995a7;
-  font-size: 12px;
-  line-height: 1;
-  place-items: center;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.project-length-controls button:active:not(:disabled) {
-  background: #303846;
-  color: #f2f6ff;
-}
-
-.project-length-controls:focus-within {
-  opacity: 1;
-}
-
-.project-length-controls button:disabled {
-  opacity: 0.28;
-  cursor: default;
 }
 
 .roll-playhead {

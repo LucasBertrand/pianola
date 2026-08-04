@@ -398,6 +398,7 @@ export const RENDERING_CONSTANTS = Object.freeze({
   noteLabelColor: "rgba(18, 22, 29, 0.78)",
   tonalSnapPitchRowColor: "rgba(121, 167, 255, 0.035)",
   tonalSnapTonicRowColor: "rgba(121, 167, 255, 0.075)",
+  activePitchLaneColor: "rgba(121, 167, 255, 0.16)",
   gridBlackKeyRowColor: "#121419",
   gridPitchLineColor: "#252a33",
   gridSubdivisionLineColor: "#242933",

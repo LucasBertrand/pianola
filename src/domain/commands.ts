@@ -90,7 +90,7 @@ export interface UpdateMeasureCountCommand {
 
 export interface InsertMeasureCommand {
   readonly type: "InsertMeasure";
-  readonly afterMeasureIndex: number;
+  readonly measureIndex: number;
 }
 
 export interface RemoveMeasureCommand {
@@ -563,7 +563,7 @@ function applyInsertMeasure(
   command: InsertMeasureCommand,
 ): ProjectState {
   assertMeasureIndex(
-    command.afterMeasureIndex,
+    command.measureIndex,
     state.measureCount,
     command.type,
   );
@@ -585,7 +585,7 @@ function applyInsertMeasure(
     state.transportSettings,
   );
   const insertionTick =
-    (command.afterMeasureIndex + 1) * measureTicks;
+    command.measureIndex * measureTicks;
   const tracksByVoiceId = transformTracksForInsertedTime(
     state,
     insertionTick,

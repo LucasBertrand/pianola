@@ -82,6 +82,7 @@ export interface DemoScene {
   readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
   readonly voiceSelectionRequest: MutableRenderSignal<VoiceId | null>;
   readonly playheadTick: MutableRenderSignal<number>;
+  readonly highlightedPitch: MutableRenderSignal<number | null>;
   readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
   readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
   readonly gridSettings: MutableRenderSignal<GridSettings>;
@@ -165,6 +166,7 @@ export function createDemoScene(): DemoScene {
       * PROJECT_CONSTANTS.defaultTimeSignatureNumerator
       / PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
     ),
+    highlightedPitch: new MutableRenderSignal<number | null>(null),
     interactionToolState: new MutableRenderSignal({
       activeTool: EDITOR_CONSTANTS.defaultInteractionTool,
     }),

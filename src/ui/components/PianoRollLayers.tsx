@@ -36,6 +36,7 @@ import type {
 } from "../hooks/usePianoRollEvents";
 import type {
   InteractionToolSignal,
+  SelectionMode,
 } from "../interactions/types";
 import {
   isPitchAllowedByTonalPattern,
@@ -77,6 +78,7 @@ export interface GridCanvasProps extends CanvasLayerProps {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly projectStore: ProjectStorePort;
+  readonly highlightedPitch: ReadonlyRenderSignal<number | null>;
 }
 
 export interface NotesCanvasProps extends CanvasLayerProps {
@@ -96,16 +98,19 @@ export interface PianoRollLayersProps extends CanvasLayerProps {
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly projectStore: ProjectStorePort;
   readonly toolState: InteractionToolSignal;
+  readonly selectionMode: SelectionMode;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
+  readonly highlightedPitch: ReadonlyRenderSignal<number | null>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
   >;
   readonly onSelectionChange: (hasSelection: boolean) => void;
+  readonly onGridSeek: (tick: number) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -162,6 +167,8 @@ const TONAL_SNAP_PITCH_ROW_COLOR =
   RENDERING_CONSTANTS.tonalSnapPitchRowColor;
 const TONAL_SNAP_TONIC_ROW_COLOR =
   RENDERING_CONSTANTS.tonalSnapTonicRowColor;
+const ACTIVE_PITCH_LANE_COLOR =
+  RENDERING_CONSTANTS.activePitchLaneColor;
 
 export function PianoRollLayers(
   props: PianoRollLayersProps,
@@ -174,14 +181,17 @@ export function PianoRollLayers(
     noteColorMode,
     projectStore,
     toolState,
+    selectionMode,
     activeVoiceId,
     totalTicks,
     setViewport,
     gridResolutionTicks,
     pitchSnapSettings,
+    highlightedPitch,
     voiceSelectionRequest,
     eventControllerRef,
     onSelectionChange,
+    onGridSeek,
     onNoteCollision,
   } = props;
   const editingNoteIdsRef = useRef<Set<NoteId> | null>(null);
@@ -199,6 +209,7 @@ export function PianoRollLayers(
         visibleRegion={visibleRegion}
         gridResolutionTicks={gridResolutionTicks}
         pitchSnapSettings={pitchSnapSettings}
+        highlightedPitch={highlightedPitch}
         projectStore={projectStore}
       />
       <NotesCanvas
@@ -216,6 +227,7 @@ export function PianoRollLayers(
         noteColorMode={noteColorMode}
         projectStore={projectStore}
         toolState={toolState}
+        selectionMode={selectionMode}
         activeVoiceId={activeVoiceId}
         totalTicks={totalTicks}
         setViewport={setViewport}
@@ -225,6 +237,7 @@ export function PianoRollLayers(
         editingNoteIds={editingNoteIds}
         eventControllerRef={eventControllerRef}
         onSelectionChange={onSelectionChange}
+        onGridSeek={onGridSeek}
         onNoteCollision={onNoteCollision}
       />
     </div>
@@ -237,6 +250,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
     visibleRegion,
     gridResolutionTicks,
     pitchSnapSettings,
+    highlightedPitch,
     projectStore,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
@@ -267,12 +281,14 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         visibleRegion.get(),
         gridResolutionTicks.get(),
         pitchSnapSettings.get(),
+        highlightedPitch.get(),
         projectStore.getState().transportSettings,
       );
     },
     [
       gridResolutionTicks,
       pitchSnapSettings,
+      highlightedPitch,
       projectStore,
       viewport,
       visibleRegion,
@@ -289,6 +305,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
   useSignalInvalidation(visibleRegion, renderer.invalidate);
   useSignalInvalidation(gridResolutionTicks, renderer.invalidate);
   useSignalInvalidation(pitchSnapSettings, renderer.invalidate);
+  useSignalInvalidation(highlightedPitch, renderer.invalidate);
   useEffect(
     () => projectStore.subscribe(renderer.invalidate),
     [
@@ -637,6 +654,7 @@ function paintGrid(
   region: Rect,
   gridResolutionTicks: number,
   pitchSnapSettings: PitchSnapSettings,
+  highlightedPitch: number | null,
   transport: ProjectState["transportSettings"],
 ): void {
   const width = frame.widthCssPixels;
@@ -694,6 +712,20 @@ function paintGrid(
           : TONAL_SNAP_PITCH_ROW_COLOR;
       context.fillRect(0, y, width, nextY - y);
     }
+  }
+
+  if (
+    highlightedPitch !== null
+    && highlightedPitch >= firstPitch
+    && highlightedPitch <= lastPitch
+  ) {
+    const y = converter.pitchToCssPixelY(highlightedPitch);
+    const nextY = converter.pitchToCssPixelY(
+      highlightedPitch - 1,
+    );
+
+    context.fillStyle = ACTIVE_PITCH_LANE_COLOR;
+    context.fillRect(0, y, width, nextY - y);
   }
 
   for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {

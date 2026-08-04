@@ -118,6 +118,9 @@ import {
   type PitchSnapSettings,
 } from "../ui/interactions/pitch-snap";
 import type {
+  SelectionMode,
+} from "../ui/interactions/types";
+import type {
   ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
 import {
@@ -265,6 +268,8 @@ export function App(): React.JSX.Element {
     useState(false);
   const [selectionAvailable, setSelectionAvailable] =
     useState(false);
+  const [selectionMode, setSelectionMode] =
+    useState<SelectionMode>("replace");
   const [noteColorMode, setNoteColorMode] =
     useState<NoteColorMode>(
       () => scene.noteColorMode.get(),
@@ -1351,8 +1356,8 @@ export function App(): React.JSX.Element {
     controller?.cancel();
     controller?.clearSelection();
   }, []);
-  const handleInsertMeasure = useCallback(
-    (afterMeasureIndex: number): void => {
+  const handleInsertMeasureAtPlayhead = useCallback(
+    (): void => {
       const state = scene.projectStore.getState();
 
       if (state.measureCount >= MAXIMUM_MEASURE_COUNT) {
@@ -1362,39 +1367,30 @@ export function App(): React.JSX.Element {
       const measureTicks = getTicksPerMeasure(
         state.transportSettings,
       );
-      const insertionTick =
-        (afterMeasureIndex + 1) * measureTicks;
-      const currentPlayheadTick = scene.playheadTick.get();
+      const measureIndex = Math.min(
+        state.measureCount - 1,
+        Math.floor(scene.playheadTick.get() / measureTicks),
+      );
 
       prepareStructuralEdit();
-      const nextState = dispatchEditCommands(
+      dispatchEditCommands(
         [
           {
             type: "InsertMeasure",
-            afterMeasureIndex,
+            measureIndex,
           },
         ],
-        `Insert measure after ${afterMeasureIndex + 1}`,
+        `Insert measure before ${measureIndex + 1}`,
       );
-
-      if (
-        nextState !== null
-        && currentPlayheadTick >= insertionTick
-      ) {
-        seekPlayback(
-          currentPlayheadTick + measureTicks,
-        );
-      }
     },
     [
       dispatchEditCommands,
       prepareStructuralEdit,
       scene,
-      seekPlayback,
     ],
   );
-  const handleRemoveMeasure = useCallback(
-    (measureIndex: number): void => {
+  const handleRemoveMeasureAtPlayhead = useCallback(
+    (): void => {
       const state = scene.projectStore.getState();
 
       if (state.measureCount <= MINIMUM_MEASURE_COUNT) {
@@ -1404,8 +1400,10 @@ export function App(): React.JSX.Element {
       const measureTicks = getTicksPerMeasure(
         state.transportSettings,
       );
-      const removalStartTick = measureIndex * measureTicks;
-      const removalEndTick = removalStartTick + measureTicks;
+      const measureIndex = Math.min(
+        state.measureCount - 1,
+        Math.floor(scene.playheadTick.get() / measureTicks),
+      );
       const currentPlayheadTick = scene.playheadTick.get();
 
       prepareStructuralEdit();
@@ -1420,13 +1418,14 @@ export function App(): React.JSX.Element {
       );
 
       if (nextState !== null) {
-        seekPlayback(
-          collapseTickForRemovedMeasure(
-            currentPlayheadTick,
-            removalStartTick,
-            removalEndTick,
-          ),
+        const boundedPlayheadTick = Math.min(
+          currentPlayheadTick,
+          getProjectDurationTicks(nextState),
         );
+
+        if (boundedPlayheadTick !== currentPlayheadTick) {
+          seekPlayback(boundedPlayheadTick);
+        }
       }
     },
     [
@@ -2575,38 +2574,6 @@ export function App(): React.JSX.Element {
                 }}
               />
             </div>
-            <div
-              className="topbar-history-actions"
-              role="group"
-              aria-label="History"
-            >
-              <button
-                className="topbar-icon-button"
-                type="button"
-                title="Undo"
-                aria-label="Undo"
-                disabled={!scene.projectStore.canUndo()}
-                onClick={handleUndo}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m9 7-5 5 5 5" />
-                  <path d="M5 12h8a6 6 0 0 1 6 6" />
-                </svg>
-              </button>
-              <button
-                className="topbar-icon-button"
-                type="button"
-                title="Redo"
-                aria-label="Redo"
-                disabled={!scene.projectStore.canRedo()}
-                onClick={handleRedo}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m15 7 5 5-5 5" />
-                  <path d="M19 12h-8a6 6 0 0 0-6 6" />
-                </svg>
-              </button>
-            </div>
           </div>
           <div>
             <input
@@ -2780,6 +2747,75 @@ export function App(): React.JSX.Element {
               >
                 <button
                   type="button"
+                  title="Undo"
+                  aria-label="Undo"
+                  disabled={!scene.projectStore.canUndo()}
+                  onClick={handleUndo}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9 7-5 5 5 5" />
+                    <path d="M5 12h8a6 6 0 0 1 6 6" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Redo"
+                  aria-label="Redo"
+                  disabled={!scene.projectStore.canRedo()}
+                  onClick={handleRedo}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m15 7 5 5-5 5" />
+                    <path d="M19 12h-8a6 6 0 0 0-6 6" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Insert a measure before the playhead measure"
+                  aria-label="Insert a measure before the playhead measure"
+                  disabled={
+                    projectState.measureCount
+                    >= MAXIMUM_MEASURE_COUNT
+                  }
+                  onClick={handleInsertMeasureAtPlayhead}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14" />
+                    <path d="M3 5v14M21 5v14" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Remove the measure at the playhead"
+                  aria-label="Remove the measure at the playhead"
+                  disabled={
+                    projectState.measureCount
+                    <= MINIMUM_MEASURE_COUNT
+                  }
+                  onClick={handleRemoveMeasureAtPlayhead}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14" />
+                    <path d="M7 5v14M17 5v14" />
+                  </svg>
+                </button>
+                <button
+                  className="delete-notes-button"
+                  type="button"
+                  title="Delete selected notes"
+                  aria-label="Delete selected notes"
+                  disabled={!selectionAvailable}
+                  onClick={handleDeleteSelection}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h16" />
+                    <path d="m9 7 .7-2h4.6l.7 2" />
+                    <path d="m6.5 7 .8 13h9.4l.8-13" />
+                    <path d="M10 11v5M14 11v5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
                   title="Copy selected notes"
                   aria-label="Copy selected notes"
                   disabled={!selectionAvailable}
@@ -2820,19 +2856,62 @@ export function App(): React.JSX.Element {
                     <rect x="10" y="9" width="10" height="11" rx="2" />
                   </svg>
                 </button>
+
                 <button
-                  className="delete-notes-button"
+                  className={
+                    `selection-mode-button${
+                      selectionMode === "replace"
+                        ? " is-active"
+                        : ""
+                    }`
+                  }
                   type="button"
-                  title="Delete selected notes"
-                  aria-label="Delete selected notes"
-                  disabled={!selectionAvailable}
-                  onClick={handleDeleteSelection}
+                  title="Replace selection"
+                  aria-label="Replace selection"
+                  aria-pressed={selectionMode === "replace"}
+                  onClick={() => setSelectionMode("replace")}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 7h16" />
-                    <path d="m9 7 .7-2h4.6l.7 2" />
-                    <path d="m6.5 7 .8 13h9.4l.8-13" />
-                    <path d="M10 11v5M14 11v5" />
+                    <rect x="4" y="4" width="16" height="16" rx="2" />
+                    <rect x="8" y="8" width="8" height="8" rx="1" />
+                  </svg>
+                </button>
+                <button
+                  className={
+                    `selection-mode-button${
+                      selectionMode === "add"
+                        ? " is-active"
+                        : ""
+                    }`
+                  }
+                  type="button"
+                  title="Add to selection"
+                  aria-label="Add to selection"
+                  aria-pressed={selectionMode === "add"}
+                  onClick={() => setSelectionMode("add")}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="3" width="13" height="13" rx="2" />
+                    <path d="M17 14v7M13.5 17.5h7" />
+                  </svg>
+                </button>
+                <button
+                  className={
+                    `selection-mode-button${
+                      selectionMode === "subtract"
+                        ? " is-active"
+                        : ""
+                    }`
+                  }
+                  type="button"
+                  title="Subtract from selection"
+                  aria-label="Subtract from selection"
+                  aria-pressed={selectionMode === "subtract"}
+                  onClick={() => setSelectionMode("subtract")}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="3" width="13" height="13" rx="2" />
+                    <path d="M13.5 17.5h7" />
                   </svg>
                 </button>
                 <button
@@ -2855,38 +2934,6 @@ export function App(): React.JSX.Element {
                     <path d="M13 12h7M17 8l4 4-4 4" />
                   </svg>
                 </button>
-                <button
-                  className={
-                    `note-color-toggle${
-                      noteColorMode === "pitch"
-                        ? " is-pitch-mode"
-                        : ""
-                    }`
-                  }
-                  type="button"
-                  title={
-                    noteColorMode === "voice"
-                      ? "Color notes by voice"
-                      : "Color notes by pitch"
-                  }
-                  aria-label={
-                    noteColorMode === "voice"
-                      ? "Color notes by voice"
-                      : "Color notes by pitch"
-                  }
-                  aria-pressed={noteColorMode === "pitch"}
-                  onClick={handleNoteColorModeToggle}
-                >
-                  <svg
-                    viewBox="0 0 20 20"
-                    aria-hidden="true"
-                  >
-                    <path d="M10 2a8 8 0 1 0 0 16h1.2a1.8 1.8 0 0 0 0-3.6h-.6a1.3 1.3 0 0 1 0-2.6H13A5 5 0 0 0 18 7c0-2.8-3.6-5-8-5Z" />
-                    <circle cx="6" cy="7" r="1" />
-                    <circle cx="9.5" cy="5" r="1" />
-                    <circle cx="13" cy="6.5" r="1" />
-                  </svg>
-                </button>
               </div>
             </div>
           </div>,
@@ -2902,6 +2949,9 @@ export function App(): React.JSX.Element {
               }}
               onPitchAudition={handlePitchAudition}
               onPitchLongPress={handlePitchSelect}
+              onPitchInteractionChange={(pitch) => {
+                scene.highlightedPitch.set(pitch);
+              }}
             />
             <div ref={stageRef} className="roll-stage">
               <BarRuler
@@ -2918,13 +2968,6 @@ export function App(): React.JSX.Element {
                 gridResolutionTicks={scene.gridResolutionTicks}
                 onCommit={handleLoopRegionCommit}
               />
-              <ProjectLengthControls
-                measureCount={projectState.measureCount}
-                viewport={scene.viewport}
-                projectStore={scene.projectStore}
-                onInsertAfter={handleInsertMeasure}
-                onRemove={handleRemoveMeasure}
-              />
               <div className="canvas-host">
                 <PianoRollLayers
                   viewport={scene.viewport}
@@ -2934,11 +2977,13 @@ export function App(): React.JSX.Element {
                   noteColorMode={scene.noteColorMode}
                   projectStore={scene.projectStore}
                   toolState={scene.interactionToolState}
+                  selectionMode={selectionMode}
                   activeVoiceId={selectedVoiceId ?? ""}
                   totalTicks={totalTicks}
                   setViewport={publishViewport}
                   gridResolutionTicks={scene.gridResolutionTicks}
                   pitchSnapSettings={scene.pitchSnapSettings}
+                  highlightedPitch={scene.highlightedPitch}
                   voiceSelectionRequest={
                     scene.voiceSelectionRequest
                   }
@@ -2946,6 +2991,7 @@ export function App(): React.JSX.Element {
                     pianoRollEventControllerRef
                   }
                   onSelectionChange={handleSelectionChange}
+                  onGridSeek={seekPlayback}
                   onNoteCollision={handleNoteCollision}
                 />
               </div>
@@ -3177,6 +3223,35 @@ export function App(): React.JSX.Element {
               <h1>Voices</h1>
             </div>
             <div className="general-inspector-heading-actions">
+              <button
+                className={
+                  `voice-order-button note-color-toggle${
+                    noteColorMode === "pitch"
+                      ? " is-pitch-mode"
+                      : ""
+                  }`
+                }
+                type="button"
+                title={
+                  noteColorMode === "voice"
+                    ? "Color notes by voice"
+                    : "Color notes by pitch"
+                }
+                aria-label={
+                  noteColorMode === "voice"
+                    ? "Color notes by voice"
+                    : "Color notes by pitch"
+                }
+                aria-pressed={noteColorMode === "pitch"}
+                onClick={handleNoteColorModeToggle}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M10 2a8 8 0 1 0 0 16h1.2a1.8 1.8 0 0 0 0-3.6h-.6a1.3 1.3 0 0 1 0-2.6H13A5 5 0 0 0 18 7c0-2.8-3.6-5-8-5Z" />
+                  <circle cx="6" cy="7" r="1" />
+                  <circle cx="9.5" cy="5" r="1" />
+                  <circle cx="13" cy="6.5" r="1" />
+                </svg>
+              </button>
               <button
                 className="voice-order-button"
                 type="button"
@@ -4117,6 +4192,9 @@ interface PianoKeyboardProps {
   readonly onPreviewToggle: () => void;
   readonly onPitchAudition?: (pitch: number) => void;
   readonly onPitchLongPress?: (pitch: number) => void;
+  readonly onPitchInteractionChange?: (
+    pitch: number | null,
+  ) => void;
 }
 
 interface TransportMetricsProps {
@@ -4463,6 +4541,8 @@ interface BarRulerProps {
 
 type LoopGestureMode =
   | "move"
+  | "pending-layer"
+  | "draw"
   | "set-start"
   | "set-end"
   | "resize-start"
@@ -4523,6 +4603,9 @@ function TimelineLoopRegion(
     let snapResolutionTicks = 1;
     let projectDurationTicks = 1;
     let layerLeft = 0;
+    let drawAnchorTick = 0;
+    let pendingClickMode: "set-start" | "set-end" =
+      "set-start";
 
     const updateElements = (
       startTick: number,
@@ -4583,7 +4666,49 @@ function TimelineLoopRegion(
       );
       const pointerHasMoved = clientX !== originClientX;
 
-      if (gestureMode === "set-start") {
+      if (gestureMode === "pending-layer") {
+        return;
+      }
+
+      if (gestureMode === "draw") {
+        const absolutePointerTick =
+          (
+            currentViewport.scrollX
+            + clientX
+            - layerLeft
+          )
+          * currentViewport.ticksPerPixel
+          / currentViewport.zoomX;
+        const snappedPointerTick =
+          Math.round(
+            absolutePointerTick / snapResolutionTicks,
+          ) * snapResolutionTicks;
+        const boundedPointerTick = Math.min(
+          projectDurationTicks,
+          Math.max(0, snappedPointerTick),
+        );
+        const drawMinimumDurationTicks = Math.min(
+          snapResolutionTicks,
+          projectDurationTicks,
+        );
+
+        if (boundedPointerTick < drawAnchorTick) {
+          draftStartTick = boundedPointerTick;
+          draftEndTick = Math.max(
+            drawAnchorTick,
+            boundedPointerTick + drawMinimumDurationTicks,
+          );
+        } else {
+          draftStartTick = drawAnchorTick;
+          draftEndTick = Math.min(
+            projectDurationTicks,
+            Math.max(
+              drawAnchorTick + drawMinimumDurationTicks,
+              boundedPointerTick,
+            ),
+          );
+        }
+      } else if (gestureMode === "set-start") {
         const absolutePointerTick =
           (
             currentViewport.scrollX
@@ -4707,14 +4832,13 @@ function TimelineLoopRegion(
       const resolvedMode =
         requestedMode === undefined
         && event.target === layer
-          ? absolutePointerTick
-              <= (loop.startTick + loop.endTick) / 2
-            ? "set-start"
-            : "set-end"
+          ? "pending-layer"
           : requestedMode;
 
       if (
         resolvedMode !== "move"
+        && resolvedMode !== "pending-layer"
+        && resolvedMode !== "draw"
         && resolvedMode !== "set-start"
         && resolvedMode !== "set-end"
         && resolvedMode !== "resize-start"
@@ -4736,6 +4860,27 @@ function TimelineLoopRegion(
       );
       projectDurationTicks = getProjectDurationTicks(state);
       layerLeft = layerBounds.left;
+      pendingClickMode =
+        absolutePointerTick
+          <= (loop.startTick + loop.endTick) / 2
+          ? "set-start"
+          : "set-end";
+      const drawMinimumDurationTicks = Math.min(
+        snapResolutionTicks,
+        projectDurationTicks,
+      );
+      drawAnchorTick = Math.min(
+        Math.max(
+          0,
+          projectDurationTicks - drawMinimumDurationTicks,
+        ),
+        Math.max(
+          0,
+          Math.round(
+            absolutePointerTick / snapResolutionTicks,
+          ) * snapResolutionTicks,
+        ),
+      );
       layer.setPointerCapture(event.pointerId);
 
       if (
@@ -4752,12 +4897,24 @@ function TimelineLoopRegion(
         return;
       }
 
+      if (
+        gestureMode === "pending-layer"
+        && Math.abs(event.clientX - originClientX)
+          > INTERACTION_CONSTANTS.tapMovementToleranceCssPixels
+      ) {
+        gestureMode = "draw";
+      }
+
       updateDraft(event.clientX);
       event.preventDefault();
     };
     const finishPointer = (event: PointerEvent): void => {
       if (event.pointerId !== activePointerId) {
         return;
+      }
+
+      if (gestureMode === "pending-layer") {
+        gestureMode = pendingClickMode;
       }
 
       updateDraft(event.clientX);
@@ -5154,138 +5311,6 @@ function BarRuler(
   );
 }
 
-interface ProjectLengthControlsProps {
-  readonly measureCount: number;
-  readonly viewport: DemoScene["viewport"];
-  readonly projectStore: DemoScene["projectStore"];
-  readonly onInsertAfter: (measureIndex: number) => void;
-  readonly onRemove: (measureIndex: number) => void;
-}
-
-function ProjectLengthControls(
-  props: ProjectLengthControlsProps,
-): React.JSX.Element {
-  const {
-    measureCount,
-    viewport,
-    projectStore,
-    onInsertAfter,
-    onRemove,
-  } = props;
-  const controlsRef = useRef<Array<HTMLDivElement | null>>([]);
-
-  useEffect(() => {
-    const updatePositions = (): void => {
-      const currentViewport = viewport.get();
-      const projectState = projectStore.getState();
-      const measureTicks = getTicksPerMeasure(
-        projectState.transportSettings,
-      );
-      const pixelsPerTick =
-        currentViewport.zoomX / currentViewport.ticksPerPixel;
-      const stageWidth =
-        controlsRef.current[0]?.parentElement?.clientWidth
-        ?? Number.POSITIVE_INFINITY;
-
-      for (
-        let measureIndex = 0;
-        measureIndex < controlsRef.current.length;
-        measureIndex += 1
-      ) {
-        const controls = controlsRef.current[measureIndex];
-
-        if (controls === null || controls === undefined) {
-          continue;
-        }
-
-        const x =
-          (measureIndex + 1) * measureTicks * pixelsPerTick
-          - currentViewport.scrollX;
-        const visible = x >= 42 && x <= stageWidth;
-
-        if (visible) {
-          if (controls.style.display === "none") {
-            controls.style.display = "flex";
-          }
-
-          controls.style.transform =
-            `translate3d(${x - 42}px, 0, 0)`;
-        } else if (controls.style.display !== "none") {
-          controls.style.display = "none";
-        }
-      }
-    };
-    const unsubscribeViewport = viewport.subscribe(
-      updatePositions,
-    );
-    const unsubscribeProject =
-      projectStore.subscribe(updatePositions);
-
-    updatePositions();
-
-    return (): void => {
-      unsubscribeViewport();
-      unsubscribeProject();
-    };
-  }, [
-    measureCount,
-    projectStore,
-    viewport,
-  ]);
-
-  controlsRef.current.length = measureCount;
-  const controls: React.JSX.Element[] = [];
-
-  for (
-    let measureIndex = 0;
-    measureIndex < measureCount;
-    measureIndex += 1
-  ) {
-    controls.push(
-      <div
-        key={measureIndex}
-        ref={(element) => {
-          controlsRef.current[measureIndex] = element;
-        }}
-        className="project-length-controls"
-        aria-label={`Measure ${measureIndex + 1} controls`}
-      >
-        <button
-          type="button"
-          aria-label={`Remove measure ${measureIndex + 1}`}
-          title={`Remove measure ${measureIndex + 1}`}
-          disabled={measureCount <= MINIMUM_MEASURE_COUNT}
-          onClick={() => {
-            onRemove(measureIndex);
-          }}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          aria-label={`Insert a measure after measure ${measureIndex + 1}`}
-          title={`Insert after measure ${measureIndex + 1}`}
-          disabled={measureCount >= MAXIMUM_MEASURE_COUNT}
-          onClick={() => {
-            onInsertAfter(measureIndex);
-          }}
-        >
-          +
-        </button>
-      </div>,
-    );
-  }
-
-  return (
-    <div
-      className="project-length-controls-layer"
-      aria-label={`${measureCount} measure timeline controls`}
-    >
-      {controls}
-    </div>
-  );
-}
-
 interface RollPlayheadProps {
   readonly viewport: DemoScene["viewport"];
   readonly playheadTick: DemoScene["playheadTick"];
@@ -5405,6 +5430,7 @@ function PianoKeyboard(
     onPreviewToggle,
     onPitchAudition,
     onPitchLongPress,
+    onPitchInteractionChange,
   } = props;
   const keysElementRef = useRef<HTMLDivElement | null>(null);
 
@@ -5472,6 +5498,7 @@ function PianoKeyboard(
       if (Number.isInteger(pitch)) {
         activePointerId = event.pointerId;
         activePitch = pitch;
+        onPitchInteractionChange?.(pitch);
         originClientX = event.clientX;
         originClientY = event.clientY;
         element.setPointerCapture(event.pointerId);
@@ -5524,6 +5551,7 @@ function PianoKeyboard(
       clearLongPress();
       activePointerId = -1;
       activePitch = -1;
+      onPitchInteractionChange?.(null);
 
       if (element.hasPointerCapture(event.pointerId)) {
         element.releasePointerCapture(event.pointerId);
@@ -5544,6 +5572,7 @@ function PianoKeyboard(
 
     return (): void => {
       clearLongPress();
+      onPitchInteractionChange?.(null);
       element.removeEventListener(
         "pointerdown",
         handlePointerDown,
@@ -5569,6 +5598,7 @@ function PianoKeyboard(
   }, [
     onPitchAudition,
     onPitchLongPress,
+    onPitchInteractionChange,
     previewEnabled,
   ]);
 
@@ -6083,22 +6113,6 @@ function getTicksPerBar(
     * transport.timeSignature.numerator
     / transport.timeSignature.denominator
   );
-}
-
-function collapseTickForRemovedMeasure(
-  tick: number,
-  removalStartTick: number,
-  removalEndTick: number,
-): number {
-  if (tick <= removalStartTick) {
-    return tick;
-  }
-
-  if (tick >= removalEndTick) {
-    return tick - removalEndTick + removalStartTick;
-  }
-
-  return removalStartTick;
 }
 
 function formatMusicalPosition(

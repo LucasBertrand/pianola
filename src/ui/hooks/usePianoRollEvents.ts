@@ -49,6 +49,7 @@ import {
 } from "../interactions/contracts";
 import type {
   InteractionTool,
+  SelectionMode,
   TouchAwareInteractionStrategy,
 } from "../interactions/types";
 import {
@@ -77,9 +78,11 @@ export interface UsePianoRollEventsOptions {
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly getActiveTool: () => InteractionTool;
+  readonly selectionMode: SelectionMode;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
+  readonly onGridSeek?: (tick: number) => void;
   readonly onSelectionChange?: (hasSelection: boolean) => void;
   readonly onNoteCollision?:
     | ((request: NoteCollisionResolutionRequest) => void)
@@ -146,9 +149,11 @@ export function usePianoRollEvents(
     projectStore,
     activeVoiceId,
     getActiveTool,
+    selectionMode,
     gridResolutionTicks,
     pitchSnapSettings,
     voiceSelectionRequest,
+    onGridSeek,
     onSelectionChange,
     onNoteCollision,
     onTransactionRejected,
@@ -259,6 +264,7 @@ export function usePianoRollEvents(
       draft.drawDurationTicks = 0;
       draft.drawVoiceId = null;
       draft.additiveSelection = false;
+      draft.selectionMode = "replace";
     };
 
     const clearSelection = (): void => {
@@ -478,6 +484,35 @@ export function usePianoRollEvents(
       showSelection();
     };
 
+    const removeHitNoteFromSelection = (
+      noteId: NoteId,
+    ): void => {
+      if (!selection.noteIds.delete(noteId)) {
+        return;
+      }
+
+      let retainedNoteCount = 0;
+
+      for (
+        let noteIndex = 0;
+        noteIndex < selection.notes.length;
+        noteIndex += 1
+      ) {
+        const note = selection.notes[noteIndex];
+
+        if (
+          note !== undefined
+          && selection.noteIds.has(note.id)
+        ) {
+          selection.notes[retainedNoteCount] = note;
+          retainedNoteCount += 1;
+        }
+      }
+
+      selection.notes.length = retainedNoteCount;
+      showSelection();
+    };
+
     const deleteHitNote = (
       note: Note,
       includeSelection = true,
@@ -627,9 +662,21 @@ export function usePianoRollEvents(
       draft.deltaPitch = 0;
       draft.targetNoteId = targetNote?.id ?? null;
       draft.additiveSelection = event.shiftKey;
+      draft.selectionMode = event.shiftKey
+        ? "add"
+        : selectionMode;
 
       if (targetNote !== undefined) {
-        selectHitNote(targetNote, event.shiftKey);
+        if (draft.selectionMode === "subtract") {
+          draft.mode = "PENDING_NOTE_SELECTION";
+          event.preventDefault();
+          return;
+        }
+
+        selectHitNote(
+          targetNote,
+          draft.selectionMode === "add",
+        );
         updateSelectedBounds(draft, selection.notes);
 
         const resizeEdge = edgeHit?.edge ?? null;
@@ -665,12 +712,7 @@ export function usePianoRollEvents(
           );
         }
       } else {
-        if (!event.shiftKey) {
-          clearSelection();
-        }
-
-        draft.mode = "LASSO_SELECTING";
-        visualsRef.current?.beginLasso(localX, localY);
+        draft.mode = "PENDING_LASSO";
       }
 
       event.preventDefault();
@@ -688,6 +730,29 @@ export function usePianoRollEvents(
       const localY = event.clientY - draft.overlayTop;
       draft.currentLocalX = localX;
       draft.currentLocalY = localY;
+
+      if (draft.mode === "PENDING_LASSO") {
+        const movedBeyondTapTolerance =
+          Math.abs(localX - draft.originLocalX)
+            > TAP_MOVEMENT_TOLERANCE_CSS_PIXELS
+          || Math.abs(localY - draft.originLocalY)
+            > TAP_MOVEMENT_TOLERANCE_CSS_PIXELS;
+
+        if (!movedBeyondTapTolerance) {
+          event.preventDefault();
+          return;
+        }
+
+        if (draft.selectionMode === "replace") {
+          clearSelection();
+        }
+
+        draft.mode = "LASSO_SELECTING";
+        visualsRef.current?.beginLasso(
+          draft.originLocalX,
+          draft.originLocalY,
+        );
+      }
 
       if (draft.mode === "DRAGGING") {
         const pointerTick = converter.cssPixelXToTick(localX);
@@ -975,7 +1040,7 @@ export function usePianoRollEvents(
         visualsRef.current?.endDraw();
         showSelection();
 
-      } else {
+      } else if (completedMode === "LASSO_SELECTING") {
         const startTick = converter.cssPixelXToTick(
           draft.originLocalX,
         );
@@ -1002,7 +1067,7 @@ export function usePianoRollEvents(
           Math.max(startPitch, endPitch),
         );
 
-        if (!draft.additiveSelection) {
+        if (draft.selectionMode === "replace") {
           clearSelection();
         }
 
@@ -1014,25 +1079,79 @@ export function usePianoRollEvents(
           lassoBuffer,
         );
 
-        for (
-          let noteIndex = 0;
-          noteIndex < lassoBuffer.length;
-          noteIndex += 1
-        ) {
-          const note = lassoBuffer[noteIndex];
-
-          if (
-            note !== undefined
-            && !isVoiceLocked(note.voiceId)
-            && !selection.noteIds.has(note.id)
+        if (draft.selectionMode === "subtract") {
+          for (
+            let noteIndex = 0;
+            noteIndex < lassoBuffer.length;
+            noteIndex += 1
           ) {
-            selection.noteIds.add(note.id);
-            selection.notes.push(note);
+            const note = lassoBuffer[noteIndex];
+
+            if (note !== undefined) {
+              selection.noteIds.delete(note.id);
+            }
+          }
+
+          let retainedNoteCount = 0;
+
+          for (
+            let noteIndex = 0;
+            noteIndex < selection.notes.length;
+            noteIndex += 1
+          ) {
+            const note = selection.notes[noteIndex];
+
+            if (
+              note !== undefined
+              && selection.noteIds.has(note.id)
+            ) {
+              selection.notes[retainedNoteCount] = note;
+              retainedNoteCount += 1;
+            }
+          }
+
+          selection.notes.length = retainedNoteCount;
+        } else {
+          for (
+            let noteIndex = 0;
+            noteIndex < lassoBuffer.length;
+            noteIndex += 1
+          ) {
+            const note = lassoBuffer[noteIndex];
+
+            if (
+              note !== undefined
+              && !isVoiceLocked(note.voiceId)
+              && !selection.noteIds.has(note.id)
+            ) {
+              selection.noteIds.add(note.id);
+              selection.notes.push(note);
+            }
           }
         }
 
         visualsRef.current?.endLasso();
         showSelection();
+      } else if (completedMode === "PENDING_LASSO") {
+        clearSelection();
+
+        const pointerTick = converter.cssPixelXToTick(
+          draft.currentLocalX,
+        );
+        const snappedTick = quantizeTick(
+          pointerTick,
+          draft.snapResolutionTicks,
+        );
+
+        onGridSeek?.(
+          Math.min(totalTicks, Math.max(0, snappedTick)),
+        );
+      } else if (
+        completedMode === "PENDING_NOTE_SELECTION"
+        && pointerWasTap
+        && targetNoteId !== null
+      ) {
+        removeHitNoteFromSelection(targetNoteId);
       }
 
       resetDraft();
@@ -1257,7 +1376,7 @@ export function usePianoRollEvents(
       supportsHover: false,
       onPointerDown: handlePointerDown,
       shouldScheduleLongPress(): boolean {
-        return draft.mode === "LASSO_SELECTING";
+        return draft.mode === "PENDING_LASSO";
       },
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,
@@ -1288,10 +1407,12 @@ export function usePianoRollEvents(
     gridResolutionTicks,
     pitchSnapSettings,
     onNoteCollision,
+    onGridSeek,
     onTransactionRejected,
     onSelectionChange,
     overlayRef,
     projectStore,
+    selectionMode,
     selection,
     spatialIndex,
     strategyRef,

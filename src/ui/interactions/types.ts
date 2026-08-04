@@ -3,6 +3,7 @@ import {
 } from "../../config/program-constants";
 
 export type InteractionTool = "select";
+export type SelectionMode = "replace" | "add" | "subtract";
 
 export interface InteractionModeState {
   readonly activeTool: InteractionTool;

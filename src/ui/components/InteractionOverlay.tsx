@@ -33,6 +33,7 @@ import type {
 } from "../interactions/contracts";
 import type {
   InteractionToolSignal,
+  SelectionMode,
   TouchAwareInteractionStrategy,
 } from "../interactions/types";
 import {
@@ -61,6 +62,7 @@ export interface InteractionOverlayProps {
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly projectStore: ProjectStorePort;
   readonly toolState: InteractionToolSignal;
+  readonly selectionMode: SelectionMode;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
@@ -72,6 +74,7 @@ export interface InteractionOverlayProps {
     PianoRollEventController | null
   >;
   readonly onSelectionChange: (hasSelection: boolean) => void;
+  readonly onGridSeek: (tick: number) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -121,6 +124,7 @@ export function InteractionOverlay(
     noteColorMode,
     projectStore,
     toolState,
+    selectionMode,
     activeVoiceId,
     totalTicks,
     setViewport,
@@ -130,6 +134,7 @@ export function InteractionOverlay(
     editingNoteIds,
     eventControllerRef,
     onSelectionChange,
+    onGridSeek,
     onNoteCollision,
   } = props;
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -412,9 +417,11 @@ export function InteractionOverlay(
     activeVoiceId,
     totalTicks,
     getActiveTool: interactionManager.getActiveTool,
+    selectionMode,
     gridResolutionTicks,
     pitchSnapSettings,
     voiceSelectionRequest,
+    onGridSeek,
     onSelectionChange,
     onNoteCollision,
   });

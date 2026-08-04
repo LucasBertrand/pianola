@@ -11,6 +11,7 @@ import type {
 } from "../rendering/note-style";
 import type {
   InteractionTool,
+  SelectionMode,
 } from "./types";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
@@ -19,6 +20,8 @@ import {
 
 export type InteractionMode =
   | "IDLE"
+  | "PENDING_LASSO"
+  | "PENDING_NOTE_SELECTION"
   | "DRAGGING"
   | "LASSO_SELECTING"
   | "RESIZING_START"
@@ -56,6 +59,7 @@ export interface InteractionDraft {
   snapResolutionTicks: number;
   pitchSnapSettings: PitchSnapSettings;
   additiveSelection: boolean;
+  selectionMode: SelectionMode;
 }
 
 export interface InteractionSelection {
@@ -139,5 +143,6 @@ export function createInteractionDraft(): InteractionDraft {
     snapResolutionTicks: 240,
     pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
     additiveSelection: false,
+    selectionMode: "replace",
   };
 }
