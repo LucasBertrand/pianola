@@ -55,6 +55,7 @@ export interface PlaybackSnapshot {
   readonly durationTicks: Tick;
   readonly masterGain: number;
   readonly masterMuted: boolean;
+  readonly masterTuningFrequencyHz: number;
   readonly tempoMap: TempoMapSnapshot;
   readonly voices: readonly PlaybackVoiceSnapshot[];
 }

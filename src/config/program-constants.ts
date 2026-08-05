@@ -23,7 +23,7 @@ export const APPLICATION_CONSTANTS = Object.freeze({
 /** Persistent project defaults and hard domain limits. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 5,
+  schemaVersion: 6,
   defaultMeasureCount: 16,
   demoProjectTitle: APPLICATION_CONSTANTS.demoProjectTitle,
   defaultTempoBpm: 120,
@@ -34,6 +34,10 @@ export const PROJECT_CONSTANTS = Object.freeze({
   maximumMeasureCount: 256,
   defaultMasterGain: 0.72,
   defaultMasterMuted: false,
+  defaultMasterTuningFrequencyHz: 440,
+  minimumMasterTuningFrequencyHz: 400,
+  maximumMasterTuningFrequencyHz: 480,
+  masterTuningStepHz: 0.1,
   minimumMasterGain: 0,
   maximumMasterGain: 1,
   defaultInstrumentPolyphony: 1,
@@ -186,6 +190,7 @@ export const INTERACTION_CONSTANTS = Object.freeze({
  */
 export const TONAL_SNAP_CONSTANTS = Object.freeze({
   defaultEnabled: false,
+  defaultVisualGuideEnabled: false,
   defaultTonicPitchClass: 0,
   defaultPatternId: "ionian",
   defaultScaleDegreeIndex: null,
@@ -198,6 +203,8 @@ export const TONAL_SNAP_CONSTANTS = Object.freeze({
     "VI",
     "VII",
   ] as const),
+  // Labels are neutral fallbacks; the UI derives the preferred enharmonic
+  // spelling from the selected pattern and its total accidental cost.
   tonicOptions: Object.freeze([
     Object.freeze({ value: 0, label: "C" }),
     Object.freeze({ value: 1, label: "C#" }),
@@ -378,7 +385,7 @@ export const TONAL_SNAP_CONSTANTS = Object.freeze({
 export const EDITOR_CONSTANTS = Object.freeze({
   rulerHeightCssPixels: 28,
   loopRegionHeightCssPixels: 22,
-  defaultPitchPreviewEnabled: false,
+  defaultPitchPreviewEnabled: true,
   envelopeSliderCurveExponent: 2.6,
   tempoMinimumBpm: 30,
   tempoMaximumBpm: 240,
@@ -484,7 +491,7 @@ export const RENDERING_CONSTANTS = Object.freeze({
 /** Native document limits and browser download behavior. */
 export const FILE_CONSTANTS = Object.freeze({
   nativeProjectFormat: "app.pianola.native-project",
-  nativeProjectVersion: 1,
+  nativeProjectVersion: 2,
   nativeProjectExtension: ".pianola",
   nativeProjectMaximumBytes: 32 * 1024 * 1024,
   objectUrlRevokeDelayMs: 1_000,

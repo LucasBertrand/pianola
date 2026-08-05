@@ -371,7 +371,7 @@ input:focus-visible {
   border-radius: 10px;
   background: var(--color-surface-inset);
   grid-area: master;
-  grid-template-rows: 12px 22px;
+  grid-template-rows: 15px 19px;
   justify-self: center;
   gap: 1px;
   -webkit-touch-callout: none;
@@ -407,6 +407,53 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.master-tuning-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  height: 19px;
+  padding: 0 4px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 5px;
+  background: var(--color-surface-control);
+  color: var(--color-text-muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  align-items: center;
+  gap: 2px;
+}
+
+.master-tuning-control input {
+  width: 31px;
+  min-width: 0;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-strong);
+  font-family: inherit;
+  font-size: 8px;
+  text-align: right;
+  touch-action: manipulation;
+  appearance: textfield;
+}
+
+.master-tuning-control input:focus {
+  color: var(--color-accent-primary-bright);
+}
+
+.master-tuning-control:focus-within {
+  border-color: var(--color-primary-strong);
+  box-shadow: 0 0 0 1px var(--color-primary-soft);
+}
+
+.master-tuning-control input::-webkit-inner-spin-button,
+.master-tuning-control input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .master-bus-controls {
   gap: 5px;
 }
@@ -414,7 +461,7 @@ input:focus-visible {
 .master-mute-button {
   display: grid;
   width: 24px;
-  height: 22px;
+  height: 19px;
   padding: 0;
   border: 1px solid var(--color-border-control);
   border-radius: 5px;
@@ -709,7 +756,7 @@ input:focus-visible {
   stroke-width: 1.5;
 }
 
-.note-color-toggle.is-pitch-mode {
+.note-color-toggle.is-voice-mode {
   border-color: var(--color-primary-medium);
   background:
     linear-gradient(
@@ -1081,7 +1128,7 @@ input:focus-visible {
     minmax(100px, 1fr)
     180px
     260px
-    250px;
+    280px;
   align-items: center;
   gap: 8px;
   -webkit-user-select: none;
@@ -1178,18 +1225,24 @@ input[type="range"]::-webkit-slider-thumb {
 
 .pitch-snap-control {
   display: grid;
-  width: 250px;
+  width: 280px;
   min-width: 0;
   padding: 3px;
   border: 1px solid var(--color-tonal-soft);
   border-radius: 8px;
   background: var(--color-tonal-faint);
-  grid-template-columns: 27px 38px minmax(62px, 0.8fr) minmax(100px, 1.2fr);
+  grid-template-columns:
+    27px
+    27px
+    38px
+    minmax(62px, 0.8fr)
+    minmax(100px, 1.2fr);
   align-items: center;
   gap: 3px;
 }
 
-.pitch-snap-toggle {
+.pitch-snap-toggle,
+.pitch-guide-toggle {
   display: grid;
   width: 27px;
   height: 27px;
@@ -1202,13 +1255,15 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
 }
 
-.pitch-snap-control.is-active .pitch-snap-toggle {
+.pitch-snap-control.is-snap-active .pitch-snap-toggle,
+.pitch-snap-control.is-guide-active .pitch-guide-toggle {
   border-color: var(--color-warm-strong);
   background: var(--color-warm-soft);
   color: var(--color-accent-warm);
 }
 
-.pitch-snap-control.is-active {
+.pitch-snap-control.is-snap-active,
+.pitch-snap-control.is-guide-active {
   border-color: var(--color-tonal-medium);
   background:
     linear-gradient(
@@ -1269,6 +1324,11 @@ input[type="range"]::-webkit-slider-thumb {
   );
   color: var(--degree-color, var(--color-text-secondary));
   font-weight: 750;
+}
+
+.pitch-guide-toggle:disabled {
+  cursor: default;
+  opacity: 0.72;
 }
 
 .interaction-note-ghost {
@@ -1395,8 +1455,9 @@ input[type="range"]::-webkit-slider-thumb {
 
 .add-button {
   display: grid;
-  width: 36px;
+  width: 30px;
   height: 36px;
+  padding: 0;
   border: 1px solid var(--color-border-strong);
   border-radius: 8px;
   background: var(--color-surface-raised);
@@ -1651,6 +1712,13 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--color-accent-danger);
 }
 
+.voice-card .voice-mute-button,
+.voice-card .voice-solo-button {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  line-height: 1;
+}
+
 .voice-card .voice-solo-button.is-active {
   border-color: var(--color-success-strong);
   background: var(--color-success-soft);
@@ -1659,6 +1727,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 .voice-card .voice-delete-button {
   color: var(--color-accent-danger);
+  font-size: 19px;
+  line-height: 1;
 }
 
 .voice-empty-state {
@@ -1866,7 +1936,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .master-gain-input {
   min-width: 0;
-  height: 20px;
+  height: 18px;
   margin: 0;
   accent-color: var(--color-accent-success);
   flex: 1;

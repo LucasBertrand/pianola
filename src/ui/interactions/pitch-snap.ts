@@ -9,6 +9,7 @@ export type TonalPatternId = TonalPatternDefinition["id"];
 
 export interface PitchSnapSettings {
   readonly enabled: boolean;
+  readonly visualGuideEnabled: boolean;
   readonly tonicPitchClass: number;
   readonly patternId: TonalPatternId;
   readonly scaleDegreeIndex: number | null;
@@ -17,6 +18,8 @@ export interface PitchSnapSettings {
 export const DEFAULT_PITCH_SNAP_SETTINGS: PitchSnapSettings =
   Object.freeze({
     enabled: TONAL_SNAP_CONSTANTS.defaultEnabled,
+    visualGuideEnabled:
+      TONAL_SNAP_CONSTANTS.defaultVisualGuideEnabled,
     tonicPitchClass:
       TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
     patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,

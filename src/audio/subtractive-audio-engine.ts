@@ -185,7 +185,10 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
 
     oscillator.type = instrument.oscillatorWaveform;
     oscillator.frequency.setValueAtTime(
-      midiPitchToFrequency(event.pitch),
+      midiPitchToFrequency(
+        event.pitch,
+        this.currentSnapshot.masterTuningFrequencyHz,
+      ),
       startAudioTimeSeconds,
     );
     oscillator.detune.setValueAtTime(
@@ -812,8 +815,11 @@ function holdAudioParam(
   }
 }
 
-function midiPitchToFrequency(pitch: number): number {
-  return 440 * 2 ** ((pitch - 69) / 12);
+function midiPitchToFrequency(
+  pitch: number,
+  tuningFrequencyHz: number,
+): number {
+  return tuningFrequencyHz * 2 ** ((pitch - 69) / 12);
 }
 
 function assertValidAudioEngineConfig(

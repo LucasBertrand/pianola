@@ -19,12 +19,32 @@ import type {
 } from "../domain/model";
 import {
   APPLICATION_CONSTANTS,
+  EDITOR_CONSTANTS,
   FILE_CONSTANTS,
+  TONAL_SNAP_CONSTANTS,
+  VIEWPORT_CONSTANTS,
 } from "../config/program-constants";
+import type {
+  ViewportState,
+} from "../geometry/converter";
+import {
+  getTonalPatternDefinition,
+  isTonalPatternId,
+  type PitchSnapSettings,
+} from "../ui/interactions/pitch-snap";
+import {
+  createGridSettings,
+  parseGridSubdivision,
+  type GridSettings,
+} from "../ui/rendering/grid-settings";
+import type {
+  NoteColorMode,
+} from "../ui/rendering/note-style";
 import {
   getProjectDurationTicks,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
+  MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_MEASURE_COUNT,
@@ -34,6 +54,7 @@ import {
   MAXIMUM_VOICE_DESCRIPTOR_COUNT,
   MAXIMUM_VOICE_NAME_LENGTH,
   MINIMUM_MEASURE_COUNT,
+  MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_INSTRUMENT_POLYPHONY,
   MINIMUM_MASTER_GAIN,
   PROJECT_SCHEMA_VERSION,
@@ -95,11 +116,31 @@ export interface NativeProjectFile {
   readonly formatVersion: typeof NATIVE_PROJECT_FILE_VERSION;
   readonly metadata: NativeProjectFileMetadata;
   readonly project: NativeProjectSnapshot;
+  readonly editor: NativeEditorState;
+}
+
+export type NativeViewportState = Pick<
+  ViewportState,
+  "zoomX" | "zoomY" | "scrollX" | "scrollY"
+>;
+
+export type NativeSelectionMode = "replace" | "add" | "subtract";
+
+/** Durable editor preferences that define the user's project workspace. */
+export interface NativeEditorState {
+  readonly selectedVoiceId: VoiceId | null;
+  readonly selectionMode: NativeSelectionMode;
+  readonly noteColorMode: NoteColorMode;
+  readonly pitchPreviewEnabled: boolean;
+  readonly pitchSnapSettings: PitchSnapSettings;
+  readonly gridSettings: GridSettings;
+  readonly viewport: NativeViewportState;
 }
 
 export interface LoadedNativeProject {
   readonly metadata: NativeProjectFileMetadata;
   readonly projectState: ProjectState;
+  readonly editorState: NativeEditorState;
 }
 
 export type NativeProjectFileErrorCode =
@@ -127,6 +168,7 @@ export class NativeProjectFileError extends Error {
 export function serializeNativeProjectFile(
   state: ProjectState,
   metadata: NativeProjectFileMetadata,
+  editorState: NativeEditorState,
 ): string {
   const document: NativeProjectFile = {
     format: NATIVE_PROJECT_FILE_FORMAT,
@@ -145,6 +187,7 @@ export function serializeNativeProjectFile(
         anchorAudioTimeSeconds: null,
       },
     },
+    editor: editorState,
   };
   const serialized = JSON.stringify(document, null, 2);
 
@@ -203,10 +246,16 @@ export function parseNativeProjectFile(
     document["project"],
     "$.project",
   );
+  const editorState = parseEditorState(
+    document["editor"],
+    projectState,
+    "$.editor",
+  );
 
   return {
     metadata,
     projectState,
+    editorState,
   };
 }
 
@@ -260,6 +309,228 @@ function parseMetadata(
     documentId,
     createdAt,
     savedAt,
+  };
+}
+
+function parseEditorState(
+  source: unknown,
+  projectState: ProjectState,
+  path: string,
+): NativeEditorState {
+  const editor = readRecord(source, path);
+  const selectedVoiceSource = editor["selectedVoiceId"];
+  const selectedVoiceId = selectedVoiceSource === null
+    ? null
+    : readNonEmptyString(
+        selectedVoiceSource,
+        `${path}.selectedVoiceId`,
+        MAXIMUM_ID_LENGTH,
+      );
+
+  if (
+    selectedVoiceId !== null
+    && projectState.voicesById[selectedVoiceId] === undefined
+  ) {
+    fail(
+      "INVALID_DATA",
+      `${path}.selectedVoiceId`,
+      "The selected voice does not exist in the project.",
+    );
+  }
+
+  const selectionMode = readString(
+    editor["selectionMode"],
+    `${path}.selectionMode`,
+    16,
+  );
+
+  if (
+    selectionMode !== "replace"
+    && selectionMode !== "add"
+    && selectionMode !== "subtract"
+  ) {
+    fail(
+      "INVALID_DATA",
+      `${path}.selectionMode`,
+      "The selection mode is not supported.",
+    );
+  }
+
+  const noteColorMode = readString(
+    editor["noteColorMode"],
+    `${path}.noteColorMode`,
+    16,
+  );
+
+  if (noteColorMode !== "voice" && noteColorMode !== "pitch") {
+    fail(
+      "INVALID_DATA",
+      `${path}.noteColorMode`,
+      "The note color mode is not supported.",
+    );
+  }
+
+  return {
+    selectedVoiceId,
+    selectionMode,
+    noteColorMode,
+    pitchPreviewEnabled: readBoolean(
+      editor["pitchPreviewEnabled"],
+      `${path}.pitchPreviewEnabled`,
+    ),
+    pitchSnapSettings: parsePitchSnapSettings(
+      editor["pitchSnapSettings"],
+      `${path}.pitchSnapSettings`,
+    ),
+    gridSettings: parseGridSettings(
+      editor["gridSettings"],
+      `${path}.gridSettings`,
+    ),
+    viewport: parseNativeViewport(
+      editor["viewport"],
+      `${path}.viewport`,
+    ),
+  };
+}
+
+function parsePitchSnapSettings(
+  source: unknown,
+  path: string,
+): PitchSnapSettings {
+  const settings = readRecord(source, path);
+  const patternId = readString(
+    settings["patternId"],
+    `${path}.patternId`,
+    64,
+  );
+
+  if (!isTonalPatternId(patternId)) {
+    return fail(
+      "INVALID_DATA",
+      `${path}.patternId`,
+      "The tonal pattern is not supported.",
+    );
+  }
+
+  const scaleDegreeSource = settings["scaleDegreeIndex"];
+  const scaleDegreeIndex = scaleDegreeSource === null
+    ? null
+    : readIntegerInRange(
+        scaleDegreeSource,
+        `${path}.scaleDegreeIndex`,
+        0,
+        getTonalPatternDefinition(patternId).intervals.length - 1,
+      );
+  const enabled = readBoolean(
+    settings["enabled"],
+    `${path}.enabled`,
+  );
+  const visualGuideEnabled = readBoolean(
+    settings["visualGuideEnabled"],
+    `${path}.visualGuideEnabled`,
+  );
+
+  if (enabled && !visualGuideEnabled) {
+    return fail(
+      "INVALID_DATA",
+      `${path}.visualGuideEnabled`,
+      "The tonal guide must be enabled while pitch snapping is active.",
+    );
+  }
+
+  return {
+    enabled,
+    visualGuideEnabled,
+    tonicPitchClass: readIntegerInRange(
+      settings["tonicPitchClass"],
+      `${path}.tonicPitchClass`,
+      0,
+      TONAL_SNAP_CONSTANTS.tonicOptions.length - 1,
+    ),
+    patternId,
+    scaleDegreeIndex,
+  };
+}
+
+function parseGridSettings(
+  source: unknown,
+  path: string,
+): GridSettings {
+  const settings = readRecord(source, path);
+  const baseResolutionTicks = readPositiveSafeInteger(
+    settings["baseResolutionTicks"],
+    `${path}.baseResolutionTicks`,
+  );
+  const subdivisionValue = readString(
+    settings["subdivision"],
+    `${path}.subdivision`,
+    16,
+  );
+  const subdivision = parseGridSubdivision(subdivisionValue);
+  const supportedResolution =
+    EDITOR_CONSTANTS.gridResolutionOptions.some(
+      (option) => option.ticks === baseResolutionTicks,
+    );
+
+  if (subdivision === null || !supportedResolution) {
+    return fail(
+      "INVALID_DATA",
+      path,
+      "The grid configuration is not supported.",
+    );
+  }
+
+  const gridSettings = createGridSettings(
+    baseResolutionTicks,
+    subdivision,
+  );
+  const storedResolutionTicks = readPositiveSafeInteger(
+    settings["resolutionTicks"],
+    `${path}.resolutionTicks`,
+  );
+
+  if (storedResolutionTicks !== gridSettings.resolutionTicks) {
+    return fail(
+      "INVALID_DATA",
+      `${path}.resolutionTicks`,
+      "The derived grid resolution is inconsistent.",
+    );
+  }
+
+  return gridSettings;
+}
+
+function parseNativeViewport(
+  source: unknown,
+  path: string,
+): NativeViewportState {
+  const viewport = readRecord(source, path);
+
+  return {
+    zoomX: readNumberInRange(
+      viewport["zoomX"],
+      `${path}.zoomX`,
+      VIEWPORT_CONSTANTS.minimumHorizontalZoom,
+      VIEWPORT_CONSTANTS.maximumHorizontalZoom,
+    ),
+    zoomY: readNumberInRange(
+      viewport["zoomY"],
+      `${path}.zoomY`,
+      VIEWPORT_CONSTANTS.minimumVerticalZoom,
+      VIEWPORT_CONSTANTS.maximumVerticalZoom,
+    ),
+    scrollX: readNumberInRange(
+      viewport["scrollX"],
+      `${path}.scrollX`,
+      0,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    scrollY: readNumberInRange(
+      viewport["scrollY"],
+      `${path}.scrollY`,
+      0,
+      Number.MAX_SAFE_INTEGER,
+    ),
   };
 }
 
@@ -897,6 +1168,12 @@ function parseMasterBus(
       MAXIMUM_MASTER_GAIN,
     ),
     muted: readBoolean(masterBus["muted"], `${path}.muted`),
+    tuningFrequencyHz: readNumberInRange(
+      masterBus["tuningFrequencyHz"],
+      `${path}.tuningFrequencyHz`,
+      MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
+      MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
+    ),
   };
 }
 

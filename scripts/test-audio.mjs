@@ -70,6 +70,7 @@ try {
   );
   const {
     getMidiNoteLabel,
+    getPreferredTonicLabel,
     getScaleDegreeLabel,
   } = await vite.ssrLoadModule(
     "/src/ui/rendering/pitch-label.ts",
@@ -143,6 +144,8 @@ try {
       revision = 0,
       masterGain = createDefaultMasterBusState().gain,
       masterMuted = createDefaultMasterBusState().muted,
+      masterTuningFrequencyHz =
+        createDefaultMasterBusState().tuningFrequencyHz,
       transport: transportChanges = {},
       voiceOrder = ["voice-a"],
     } = options;
@@ -199,6 +202,7 @@ try {
       masterBus: {
         gain: masterGain,
         muted: masterMuted,
+        tuningFrequencyHz: masterTuningFrequencyHz,
       },
     };
   }
@@ -212,6 +216,33 @@ try {
       createdAt: transactionSequence,
       commands: [command],
     });
+  }
+
+  function createEditorState(overrides = {}) {
+    return {
+      selectedVoiceId: "voice-a",
+      selectionMode: "add",
+      noteColorMode: "pitch",
+      pitchPreviewEnabled: false,
+      pitchSnapSettings: {
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        enabled: true,
+        visualGuideEnabled: true,
+        tonicPitchClass: 2,
+      },
+      gridSettings: {
+        baseResolutionTicks: 480,
+        subdivision: "triplet",
+        resolutionTicks: 320,
+      },
+      viewport: {
+        zoomX: 1.4,
+        zoomY: 1.2,
+        scrollX: 240,
+        scrollY: 360,
+      },
+      ...overrides,
+    };
   }
 
   function dispatchCommands(state, commands, label) {
@@ -391,7 +422,7 @@ try {
     );
   });
 
-  test("updates and validates the persistent master gain", () => {
+  test("updates and validates persistent master controls", () => {
     const state = createProject();
     const updatedState = dispatch(state, {
       type: "UpdateMasterGain",
@@ -410,6 +441,16 @@ try {
       muted: true,
     });
     assert.equal(mutedState.masterBus.muted, true);
+    const tunedState = dispatch(mutedState, {
+      type: "UpdateMasterTuning",
+      tuningFrequencyHz: 442,
+    });
+    assert.equal(tunedState.masterBus.tuningFrequencyHz, 442);
+    assert.equal(
+      compilePlaybackSnapshot(tunedState)
+        .masterTuningFrequencyHz,
+      442,
+    );
     assert.throws(
       () => dispatch(state, {
         type: "UpdateMasterGain",
@@ -419,6 +460,17 @@ try {
         error instanceof CommandRejectedError
         && error.code === "INVALID_COMMAND"
         && error.commandType === "UpdateMasterGain"
+      ),
+    );
+    assert.throws(
+      () => dispatch(state, {
+        type: "UpdateMasterTuning",
+        tuningFrequencyHz: 399.9,
+      }),
+      (error) => (
+        error instanceof CommandRejectedError
+        && error.code === "INVALID_COMMAND"
+        && error.commandType === "UpdateMasterTuning"
       ),
     );
   });
@@ -489,17 +541,28 @@ try {
   test("round-trips current Pianola audio settings and rejects stale documents", () => {
     const state = createProject({
       masterGain: 0.41,
+      masterTuningFrequencyHz: 442,
     });
     const metadata = {
       documentId: "audio-test-document",
       createdAt: "2026-07-29T10:00:00.000Z",
       savedAt: "2026-07-29T10:01:00.000Z",
     };
-    const serialized = serializeNativeProjectFile(state, metadata);
+    const editorState = createEditorState();
+    const serialized = serializeNativeProjectFile(
+      state,
+      metadata,
+      editorState,
+    );
     const loaded = parseNativeProjectFile(serialized);
 
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
-    assert.equal(loaded.projectState.schemaVersion, 5);
+    assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
+    assert.deepEqual(loaded.editorState, editorState);
+    assert.equal(
+      loaded.projectState.schemaVersion,
+      PROJECT_SCHEMA_VERSION,
+    );
     assert.equal(
       loaded.projectState.voicesById["voice-a"]
         .instrument.polyphony,
@@ -507,7 +570,7 @@ try {
     );
 
     const staleDocument = JSON.parse(serialized);
-    staleDocument.formatVersion = 2;
+    staleDocument.formatVersion = 1;
     assert.throws(
       () => parseNativeProjectFile(JSON.stringify(staleDocument)),
       (error) => (
@@ -771,6 +834,16 @@ try {
     };
 
     assert.equal(getMidiNoteLabel(61, cPhrygian), "Db4");
+    assert.equal(getPreferredTonicLabel(1, "ionian"), "Db");
+    assert.equal(getPreferredTonicLabel(1, "dorian"), "C#");
+    assert.equal(
+      getMidiNoteLabel(61, {
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        tonicPitchClass: 1,
+        patternId: "ionian",
+      }),
+      "Db4",
+    );
     assert.equal(minorPentatonic.intervals.length, 5);
     assert.deepEqual(
       [...harmonicMinor.intervals],

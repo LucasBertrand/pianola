@@ -47,6 +47,7 @@ interface SpelledPitchClass {
 const SHARP_FALLBACK = createChromaticFallback(true);
 const FLAT_FALLBACK = createChromaticFallback(false);
 const spellingCache = new Map<string, readonly SpelledPitchClass[]>();
+const tonicLabelCache = new Map<string, string>();
 
 export function getMidiNoteLabel(
   pitch: number,
@@ -89,6 +90,109 @@ export function getPitchClassLabel(
 
   return getPitchClassSpelling(settings)[normalizedPitchClass]?.label
     ?? "";
+}
+
+/**
+ * Chooses the tonic spelling that minimizes accidentals for the complete
+ * selected scale. This favors conventional keys such as Db major over C#
+ * major while still adapting the choice to non-Ionian modes and scales.
+ */
+export function getPreferredTonicLabel(
+  pitchClass: number,
+  patternId: PitchSnapSettings["patternId"],
+): string {
+  const normalizedPitchClass = ((pitchClass % 12) + 12) % 12;
+  const cacheKey = `${normalizedPitchClass}:${patternId}`;
+  const cached = tonicLabelCache.get(cacheKey);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const pattern = getTonalPatternDefinition(patternId);
+  let bestLetterIndex = 0;
+  let bestAccidentalOffset = 0;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (
+    let tonicLetterIndex = 0;
+    tonicLetterIndex < NATURAL_NOTE_NAMES.length;
+    tonicLetterIndex += 1
+  ) {
+    const tonicNaturalPitchClass =
+      NATURAL_PITCH_CLASSES[tonicLetterIndex];
+
+    if (tonicNaturalPitchClass === undefined) {
+      continue;
+    }
+
+    const tonicAccidentalOffset = normalizeAccidentalOffset(
+      normalizedPitchClass - tonicNaturalPitchClass,
+    );
+
+    // Every chromatic tonic has a familiar natural, sharp, or flat name.
+    if (Math.abs(tonicAccidentalOffset) > 1) {
+      continue;
+    }
+
+    let accidentalCount = 0;
+    let complexAccidentalPenalty = 0;
+
+    for (
+      let degreeIndex = 0;
+      degreeIndex < pattern.intervals.length;
+      degreeIndex += 1
+    ) {
+      const interval = pattern.intervals[degreeIndex];
+      const letterOffset = pattern.letterOffsets[degreeIndex];
+
+      if (interval === undefined || letterOffset === undefined) {
+        continue;
+      }
+
+      const degreeLetterIndex =
+        (tonicLetterIndex + letterOffset) % 7;
+      const degreeNaturalPitchClass =
+        NATURAL_PITCH_CLASSES[degreeLetterIndex];
+
+      if (degreeNaturalPitchClass === undefined) {
+        continue;
+      }
+
+      const degreePitchClass =
+        (normalizedPitchClass + interval) % 12;
+      const accidentalOffset = normalizeAccidentalOffset(
+        degreePitchClass - degreeNaturalPitchClass,
+      );
+      const accidentalMagnitude = Math.abs(accidentalOffset);
+
+      accidentalCount += accidentalMagnitude;
+
+      if (accidentalMagnitude > 1) {
+        complexAccidentalPenalty +=
+          (accidentalMagnitude - 1) * 100;
+      }
+    }
+
+    const score =
+      complexAccidentalPenalty
+      + accidentalCount * 10
+      + Math.abs(tonicAccidentalOffset);
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestLetterIndex = tonicLetterIndex;
+      bestAccidentalOffset = tonicAccidentalOffset;
+    }
+  }
+
+  const label = createSpelledPitchClass(
+    bestLetterIndex,
+    bestAccidentalOffset,
+  ).label;
+
+  tonicLabelCache.set(cacheKey, label);
+  return label;
 }
 
 export function getPitchLabelContextKey(
@@ -174,10 +278,11 @@ function getPitchClassSpelling(
   }
 
   const pattern = getTonalPatternDefinition(settings.patternId);
-  const tonicOption = TONAL_SNAP_CONSTANTS.tonicOptions.find(
-    (option) => option.value === settings.tonicPitchClass,
+  const tonicLabel = getPreferredTonicLabel(
+    settings.tonicPitchClass,
+    settings.patternId,
   );
-  const tonicLetter = tonicOption?.label[0] ?? "C";
+  const tonicLetter = tonicLabel[0] ?? "C";
   const tonicLetterIndex = NATURAL_NOTE_NAMES.indexOf(
     tonicLetter as (typeof NATURAL_NOTE_NAMES)[number],
   );

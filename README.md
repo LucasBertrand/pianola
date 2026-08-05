@@ -464,7 +464,11 @@ projet.
 ### Format natif `.pianola`
 
 Le format natif conserve le projet, les voix, les notes, les instruments, le
-master bus, le transport, la boucle et les métadonnées de document.
+master bus, le transport, la boucle et les métadonnées de document. Il restaure
+également le contexte de l’éditeur : voix active, grille, snap tonal, guide
+visuel, preview clavier, mode de sélection, coloration des notes, zoom et
+position de la vue. Les états temporaires comme une sélection de notes ou une
+modale ouverte ne sont volontairement pas sauvegardés.
 
 Son identité et sa version sont définies dans
 `src/config/program-constants.ts`, puis validées dans
@@ -473,6 +477,8 @@ Son identité et sa version sont définies dans
 Le passage officiel à Pianola a créé le format
 `app.pianola.native-project` et l’extension `.pianola`. Les anciens fichiers
 portant l’identité `.pianoroll` ne sont pas pris en charge par cette release.
+La version native 2 ajoute le contexte de l’éditeur et n’accepte pas les
+fichiers des versions précédentes.
 
 Avant de changer le schéma :
 

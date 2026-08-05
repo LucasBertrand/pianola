@@ -83,7 +83,10 @@ export interface UsePianoRollEventsOptions {
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly onGridSeek?: (tick: number) => void;
-  readonly onSelectionChange?: (hasSelection: boolean) => void;
+  readonly onSelectionChange?: (
+    hasSelection: boolean,
+    soleVoiceId: VoiceId | null,
+  ) => void;
   readonly onNoteCollision?:
     | ((request: NoteCollisionResolutionRequest) => void)
     | undefined;
@@ -168,6 +171,9 @@ export function usePianoRollEvents(
   const converterVersionRef = useRef(-1);
   const transactionSequenceRef = useRef(0);
   const tapStateRef = useRef<TapState | null>(null);
+  const activeVoiceIdRef = useRef(activeVoiceId);
+
+  activeVoiceIdRef.current = activeVoiceId;
 
   if (draftRef.current === null) {
     draftRef.current = createInteractionDraft();
@@ -244,7 +250,10 @@ export function usePianoRollEvents(
         selection.notes,
         converter,
       );
-      onSelectionChange?.(selection.notes.length > 0);
+      onSelectionChange?.(
+        selection.notes.length > 0,
+        getSoleSelectionVoiceId(selection.notes),
+      );
     };
 
     const resetDraft = (): void => {
@@ -271,7 +280,7 @@ export function usePianoRollEvents(
       selection.noteIds.clear();
       selection.notes.length = 0;
       visualsRef.current?.clearSelection();
-      onSelectionChange?.(false);
+      onSelectionChange?.(false, null);
     };
 
     const isVoiceLocked = (voiceId: VoiceId): boolean =>
@@ -1224,8 +1233,9 @@ export function usePianoRollEvents(
         return;
       }
 
+      const currentActiveVoiceId = activeVoiceIdRef.current;
       const activeVoice =
-        projectStore.getState().voicesById[activeVoiceId];
+        projectStore.getState().voicesById[currentActiveVoiceId];
 
       if (
         pitch < 0
@@ -1234,7 +1244,7 @@ export function usePianoRollEvents(
         || activeVoice.locked
         || projectStore
           .getState()
-          .tracksByVoiceId[activeVoiceId] === undefined
+          .tracksByVoiceId[currentActiveVoiceId] === undefined
       ) {
         return;
       }
@@ -1274,15 +1284,15 @@ export function usePianoRollEvents(
       draft.drawStartTick = startTick;
       draft.drawPitch = drawPitch;
       draft.drawDurationTicks = resolutionTicks;
-      draft.drawVoiceId = activeVoiceId;
+      draft.drawVoiceId = currentActiveVoiceId;
       clearSelection();
       visualsRef.current?.beginDraw(
         startTick,
         drawPitch,
         resolutionTicks,
-        activeVoiceId,
+        currentActiveVoiceId,
         converter,
-        voiceStyles.get()[activeVoiceId],
+        voiceStyles.get()[currentActiveVoiceId],
       );
     };
 
@@ -1351,6 +1361,52 @@ export function usePianoRollEvents(
         return;
       }
 
+      let voiceNoteCount = 0;
+      let selectedVoiceNoteCount = 0;
+
+      for (const noteId in track.notesById) {
+        const note = track.notesById[noteId];
+
+        if (note === undefined) {
+          continue;
+        }
+
+        voiceNoteCount += 1;
+
+        if (selection.noteIds.has(note.id)) {
+          selectedVoiceNoteCount += 1;
+        }
+      }
+
+      if (
+        voiceNoteCount > 0
+        && selectedVoiceNoteCount === voiceNoteCount
+      ) {
+        let retainedNoteCount = 0;
+
+        for (
+          let noteIndex = 0;
+          noteIndex < selection.notes.length;
+          noteIndex += 1
+        ) {
+          const note = selection.notes[noteIndex];
+
+          if (note === undefined || note.voiceId === voiceId) {
+            if (note !== undefined) {
+              selection.noteIds.delete(note.id);
+            }
+            continue;
+          }
+
+          selection.notes[retainedNoteCount] = note;
+          retainedNoteCount += 1;
+        }
+
+        selection.notes.length = retainedNoteCount;
+        showSelection();
+        return;
+      }
+
       for (const noteId in track.notesById) {
         const note = track.notesById[noteId];
 
@@ -1401,7 +1457,6 @@ export function usePianoRollEvents(
       }
     };
   }, [
-    activeVoiceId,
     draft,
     getActiveTool,
     gridResolutionTicks,
@@ -1463,7 +1518,10 @@ export function usePianoRollEvents(
         );
       }
 
-      onSelectionChange?.(selection.notes.length > 0);
+      onSelectionChange?.(
+        selection.notes.length > 0,
+        getSoleSelectionVoiceId(selection.notes),
+      );
     },
     removeVoiceFromSelection(voiceId: VoiceId): void {
       let targetIndex = 0;
@@ -1498,7 +1556,10 @@ export function usePianoRollEvents(
         );
       }
 
-      onSelectionChange?.(selection.notes.length > 0);
+      onSelectionChange?.(
+        selection.notes.length > 0,
+        getSoleSelectionVoiceId(selection.notes),
+      );
     },
     togglePitchSelection(pitch: number): void {
       if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
@@ -1618,7 +1679,10 @@ export function usePianoRollEvents(
         );
       }
 
-      onSelectionChange?.(selection.notes.length > 0);
+      onSelectionChange?.(
+        selection.notes.length > 0,
+        getSoleSelectionVoiceId(selection.notes),
+      );
     },
     cancel(): void {
       visualsRef.current?.endDrag();
@@ -1641,9 +1705,29 @@ export function usePianoRollEvents(
       selection.noteIds.clear();
       selection.notes.length = 0;
       visualsRef.current?.clearSelection();
-      onSelectionChange?.(false);
+      onSelectionChange?.(false, null);
     },
   };
+}
+
+function getSoleSelectionVoiceId(
+  notes: readonly Note[],
+): VoiceId | null {
+  const firstNote = notes[0];
+
+  if (firstNote === undefined) {
+    return null;
+  }
+
+  const voiceId = firstNote.voiceId;
+
+  for (let noteIndex = 1; noteIndex < notes.length; noteIndex += 1) {
+    if (notes[noteIndex]?.voiceId !== voiceId) {
+      return null;
+    }
+  }
+
+  return voiceId;
 }
 
 export function quantizeTick(

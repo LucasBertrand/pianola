@@ -9,8 +9,10 @@ import {
   getProjectDurationTicks,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
+  MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_INSTRUMENT_POLYPHONY,
   MINIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
 } from "../domain/model";
 import type {
   PackedVoiceEvents,
@@ -50,6 +52,18 @@ export function compilePlaybackSnapshot(
   if (typeof projectState.masterBus.muted !== "boolean") {
     throw new PlaybackSnapshotCompilationError(
       "Master mute state must be a boolean.",
+    );
+  }
+
+  if (
+    !Number.isFinite(projectState.masterBus.tuningFrequencyHz)
+    || projectState.masterBus.tuningFrequencyHz
+      < MINIMUM_MASTER_TUNING_FREQUENCY_HZ
+    || projectState.masterBus.tuningFrequencyHz
+      > MAXIMUM_MASTER_TUNING_FREQUENCY_HZ
+  ) {
+    throw new PlaybackSnapshotCompilationError(
+      "Master tuning is outside the supported range.",
     );
   }
 
@@ -110,6 +124,8 @@ export function compilePlaybackSnapshot(
     durationTicks,
     masterGain: projectState.masterBus.gain,
     masterMuted: projectState.masterBus.muted,
+    masterTuningFrequencyHz:
+      projectState.masterBus.tuningFrequencyHz,
     tempoMap: createSingleTempoMapSnapshot(
       transport.bpm,
       transport.timeSignature,

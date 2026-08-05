@@ -19,8 +19,10 @@ import {
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MAXIMUM_MASTER_GAIN,
+  MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_MEASURE_COUNT,
   MINIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MAXIMUM_PROJECT_NOTE_COUNT,
   MAXIMUM_PROJECT_TITLE_LENGTH,
   MAXIMUM_PROJECT_VOICE_COUNT,
@@ -81,6 +83,11 @@ export interface UpdateMasterGainCommand {
 export interface SetMasterMutedCommand {
   readonly type: "SetMasterMuted";
   readonly muted: boolean;
+}
+
+export interface UpdateMasterTuningCommand {
+  readonly type: "UpdateMasterTuning";
+  readonly tuningFrequencyHz: number;
 }
 
 export interface UpdateMeasureCountCommand {
@@ -177,6 +184,7 @@ export type PianoRollCommand =
   | UpdateProjectTitleCommand
   | UpdateMasterGainCommand
   | SetMasterMutedCommand
+  | UpdateMasterTuningCommand
   | UpdateMeasureCountCommand
   | InsertMeasureCommand
   | RemoveMeasureCommand
@@ -289,6 +297,8 @@ function applyCommand(
       return applyUpdateMasterGain(state, command);
     case "SetMasterMuted":
       return applySetMasterMuted(state, command);
+    case "UpdateMasterTuning":
+      return applyUpdateMasterTuning(state, command);
     case "UpdateMeasureCount":
       return applyUpdateMeasureCount(state, command);
     case "InsertMeasure":
@@ -523,6 +533,40 @@ function applySetMasterMuted(
     masterBus: {
       ...state.masterBus,
       muted: command.muted,
+    },
+  };
+}
+
+function applyUpdateMasterTuning(
+  state: ProjectState,
+  command: UpdateMasterTuningCommand,
+): ProjectState {
+  if (
+    !Number.isFinite(command.tuningFrequencyHz)
+    || command.tuningFrequencyHz
+      < MINIMUM_MASTER_TUNING_FREQUENCY_HZ
+    || command.tuningFrequencyHz
+      > MAXIMUM_MASTER_TUNING_FREQUENCY_HZ
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Master tuning must be between ${MINIMUM_MASTER_TUNING_FREQUENCY_HZ} and ${MAXIMUM_MASTER_TUNING_FREQUENCY_HZ} Hz.`,
+      command.type,
+    );
+  }
+
+  if (
+    command.tuningFrequencyHz
+    === state.masterBus.tuningFrequencyHz
+  ) {
+    return state;
+  }
+
+  return {
+    ...state,
+    masterBus: {
+      ...state.masterBus,
+      tuningFrequencyHz: command.tuningFrequencyHz,
     },
   };
 }

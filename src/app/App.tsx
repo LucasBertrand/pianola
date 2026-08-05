@@ -48,10 +48,12 @@ import {
   getTicksPerMeasure,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
+  MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_INSTRUMENT_POLYPHONY,
   MINIMUM_MEASURE_COUNT,
   MINIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MAXIMUM_VOICE_NAME_LENGTH,
 } from "../domain/model";
 import {
@@ -95,6 +97,7 @@ import {
   NativeProjectFileError,
   parseNativeProjectFile,
   serializeNativeProjectFile,
+  type NativeEditorState,
   type NativeProjectFileMetadata,
 } from "../persistence/native-project-file";
 import {
@@ -117,6 +120,7 @@ import type {
   PianoRollEventController,
 } from "../ui/hooks/usePianoRollEvents";
 import {
+  DEFAULT_PITCH_SNAP_SETTINGS,
   getScaleDegreeColorIndex,
   getTonalPatternDefinition,
   isTonalPatternId,
@@ -124,6 +128,7 @@ import {
   type PitchSnapSettings,
 } from "../ui/interactions/pitch-snap";
 import {
+  getPreferredTonicLabel,
   getScaleDegreeLabel,
 } from "../ui/rendering/pitch-label";
 import type {
@@ -349,8 +354,15 @@ export function App(): React.JSX.Element {
     [scene],
   );
   const handleSelectionChange = useCallback(
-    (hasSelection: boolean): void => {
+    (
+      hasSelection: boolean,
+      soleVoiceId: VoiceId | null,
+    ): void => {
       setSelectionAvailable(hasSelection);
+
+      if (soleVoiceId !== null) {
+        setSelectedVoiceId(soleVoiceId);
+      }
     },
     [],
   );
@@ -1001,86 +1013,6 @@ export function App(): React.JSX.Element {
     [publishViewport],
   );
 
-  const handleResetView = useCallback((): void => {
-    const currentScene = sceneRef.current;
-
-    if (currentScene === null) {
-      return;
-    }
-
-    const viewport: ViewportState = {
-      ...currentScene.viewport.get(),
-      zoomX: VIEWPORT_CONSTANTS.initialHorizontalZoom,
-      zoomY: VIEWPORT_CONSTANTS.initialVerticalZoom,
-      scrollX: 0,
-      scrollY:
-        (
-          VIEWPORT_CONSTANTS.maximumMidiPitch
-          - INITIAL_MAX_VISIBLE_PITCH
-        )
-        * INITIAL_PITCH_HEIGHT,
-    };
-
-    publishViewport(viewport);
-
-    if (zoomInputRef.current !== null) {
-      zoomInputRef.current.value = String(
-        VIEWPORT_CONSTANTS.initialHorizontalZoom,
-      );
-    }
-
-    if (scrollInputRef.current !== null) {
-      scrollInputRef.current.value = "0";
-      scrollInputRef.current.max = String(
-        getMaximumHorizontalScroll(
-          viewport,
-          dimensionsRef.current.width,
-          getProjectDurationTicks(
-            currentScene.projectStore.getState(),
-          ),
-        ),
-      );
-      scrollInputRef.current.step = String(
-        getHorizontalScrollStep(
-          viewport,
-          currentScene.gridResolutionTicks.get(),
-        ),
-      );
-    }
-
-    if (pitchScrollInputRef.current !== null) {
-      pitchScrollInputRef.current.value = String(
-        viewport.scrollY,
-      );
-      pitchScrollInputRef.current.max = String(
-        getMaximumVerticalScroll(
-          viewport,
-          dimensionsRef.current.height,
-        ),
-      );
-    }
-
-    if (pitchZoomInputRef.current !== null) {
-      pitchZoomInputRef.current.value = String(
-        VIEWPORT_CONSTANTS.initialVerticalZoom,
-      );
-    }
-
-    if (zoomLabelRef.current !== null) {
-      zoomLabelRef.current.value =
-        `${Math.round(VIEWPORT_CONSTANTS.initialHorizontalZoom * 100)}%`;
-    }
-
-    if (barLabelRef.current !== null) {
-      barLabelRef.current.value = "Bar 1";
-    }
-
-    if (pitchZoomLabelRef.current !== null) {
-      pitchZoomLabelRef.current.value =
-        `${Math.round(VIEWPORT_CONSTANTS.initialVerticalZoom * 100)}%`;
-    }
-  }, [publishViewport]);
-
   useEffect(() => {
     const horizontalScrollInput = scrollInputRef.current;
     const horizontalZoomInput = zoomInputRef.current;
@@ -1694,6 +1626,20 @@ export function App(): React.JSX.Element {
     dispatchEditCommands,
     scene,
   ]);
+  const handleMasterTuningCommit = useCallback(
+    (tuningFrequencyHz: number): void => {
+      dispatchEditCommands(
+        [
+          {
+            type: "UpdateMasterTuning",
+            tuningFrequencyHz,
+          },
+        ],
+        "Update master tuning",
+      );
+    },
+    [dispatchEditCommands],
+  );
   const handleSelectVoiceNotes = useCallback(
     (voiceId: VoiceId): void => {
       if (
@@ -2122,6 +2068,17 @@ export function App(): React.JSX.Element {
       const serialized = serializeNativeProjectFile(
         stateForSave,
         metadata,
+        {
+          selectedVoiceId,
+          selectionMode,
+          noteColorMode,
+          pitchPreviewEnabled,
+          pitchSnapSettings: scene.pitchSnapSettings.get(),
+          gridSettings: scene.gridSettings.get(),
+          viewport: getNativeViewportState(
+            scene.viewport.get(),
+          ),
+        },
       );
       const projectBlob = new Blob(
         [serialized],
@@ -2154,7 +2111,11 @@ export function App(): React.JSX.Element {
       );
     }
   }, [
+    noteColorMode,
+    pitchPreviewEnabled,
     scene,
+    selectedVoiceId,
+    selectionMode,
     showApplicationAlert,
   ]);
   const replaceActiveProject = useCallback(
@@ -2163,6 +2124,7 @@ export function App(): React.JSX.Element {
       metadata: NativeProjectFileMetadata,
       label: string,
       playheadTick: number,
+      editorState: NativeEditorState,
     ): void => {
       const controller =
         pianoRollEventControllerRef.current;
@@ -2175,15 +2137,46 @@ export function App(): React.JSX.Element {
       setClipboardAvailable(false);
       setSelectionAvailable(false);
       scene.voiceSelectionRequest.set(null);
-      scene.gridSettings.set(DEFAULT_GRID_SETTINGS);
+      scene.gridSettings.set(editorState.gridSettings);
+      scene.noteColorMode.set(editorState.noteColorMode);
+      scene.pitchSnapSettings.set(
+        editorState.pitchSnapSettings,
+      );
+      setSelectionMode(editorState.selectionMode);
+      setNoteColorMode(editorState.noteColorMode);
+      setPitchPreviewEnabled(editorState.pitchPreviewEnabled);
+      setPitchSnapSettings(editorState.pitchSnapSettings);
       documentMetadataRef.current = metadata;
       scene.projectStore.replaceState(nextProject, label);
-      setSelectedVoiceId(nextProject.voiceOrder[0] ?? null);
+      setSelectedVoiceId(editorState.selectedVoiceId);
       seekPlayback(playheadTick);
-      handleResetView();
+      const currentViewport = scene.viewport.get();
+      const restoredViewport: ViewportState = {
+        ...currentViewport,
+        ...editorState.viewport,
+      };
+
+      publishViewport({
+        ...restoredViewport,
+        scrollX: Math.min(
+          editorState.viewport.scrollX,
+          getMaximumHorizontalScroll(
+            restoredViewport,
+            dimensionsRef.current.width,
+            getProjectDurationTicks(nextProject),
+          ),
+        ),
+        scrollY: Math.min(
+          editorState.viewport.scrollY,
+          getMaximumVerticalScroll(
+            restoredViewport,
+            dimensionsRef.current.height,
+          ),
+        ),
+      });
     },
     [
-      handleResetView,
+      publishViewport,
       scene,
       seekPlayback,
       stopPlayback,
@@ -2197,6 +2190,7 @@ export function App(): React.JSX.Element {
       createNativeProjectFileMetadata(),
       "Create project",
       0,
+      createDefaultNativeEditorState(blankProject),
     );
   }, [
     replaceActiveProject,
@@ -2251,6 +2245,7 @@ export function App(): React.JSX.Element {
           "Load project",
           loadedProject.projectState
             .transportSettings.anchorTick,
+          loadedProject.editorState,
         );
       } catch (error: unknown) {
         showApplicationAlert(
@@ -2290,6 +2285,7 @@ export function App(): React.JSX.Element {
           createNativeProjectFileMetadata(),
           "Import MIDI project",
           0,
+          createDefaultNativeEditorState(importedProject),
         );
       } catch (error: unknown) {
         pendingMidiImportRef.current = null;
@@ -2707,9 +2703,13 @@ export function App(): React.JSX.Element {
         <MasterGainControl
           gain={projectState.masterBus.gain}
           muted={projectState.masterBus.muted}
+          tuningFrequencyHz={
+            projectState.masterBus.tuningFrequencyHz
+          }
           onPreview={previewMasterGain}
           onCommit={handleMasterGainCommit}
           onMuteToggle={handleMasterMuteToggle}
+          onTuningCommit={handleMasterTuningCommit}
         />
       </header>
 
@@ -3098,12 +3098,53 @@ export function App(): React.JSX.Element {
               className={
                 `pitch-snap-control${
                   pitchSnapSettings.enabled
-                    ? " is-active"
+                    ? " is-snap-active"
+                    : ""
+                }${
+                  pitchSnapSettings.visualGuideEnabled
+                    ? " is-guide-active"
                     : ""
                 }`
               }
               aria-label="Tonal pitch snapping"
             >
+              <button
+                className="pitch-guide-toggle"
+                type="button"
+                title={
+                  pitchSnapSettings.visualGuideEnabled
+                    ? "Hide tonal guide"
+                    : "Show tonal guide"
+                }
+                aria-label={
+                  pitchSnapSettings.visualGuideEnabled
+                    ? "Hide tonal guide"
+                    : "Show tonal guide"
+                }
+                aria-pressed={
+                  pitchSnapSettings.visualGuideEnabled
+                }
+                disabled={pitchSnapSettings.enabled}
+                onClick={() => {
+                  if (pitchSnapSettings.enabled) {
+                    return;
+                  }
+
+                  updatePitchSnapSettings({
+                    visualGuideEnabled:
+                      !pitchSnapSettings.visualGuideEnabled,
+                  });
+                }}
+              >
+                <svg
+                  className="pitch-snap-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" />
+                  <circle cx="12" cy="12" r="2.5" />
+                </svg>
+              </button>
               <button
                 className="pitch-snap-toggle"
                 type="button"
@@ -3119,9 +3160,16 @@ export function App(): React.JSX.Element {
                 }
                 aria-pressed={pitchSnapSettings.enabled}
                 onClick={() => {
-                  updatePitchSnapSettings({
-                    enabled: !pitchSnapSettings.enabled,
-                  });
+                  const enabled = !pitchSnapSettings.enabled;
+
+                  updatePitchSnapSettings(
+                    enabled
+                      ? {
+                          enabled: true,
+                          visualGuideEnabled: true,
+                        }
+                      : { enabled: false },
+                  );
                 }}
               >
                 <svg
@@ -3129,8 +3177,10 @@ export function App(): React.JSX.Element {
                   viewBox="0 0 24 24"
                   aria-hidden="true"
                 >
-                  <path d="M7 4v8a5 5 0 0 0 10 0V4" />
-                  <path d="M7 8h4v4a1 1 0 0 0 2 0V8h4" />
+                  <path d="M5 4v8a7 7 0 0 0 14 0V4" />
+                  <path d="M5 4h5M14 4h5" />
+                  <path d="M5 8h5M14 8h5" />
+                  <path d="M10 4v8a2 2 0 0 0 4 0V4" />
                 </svg>
               </button>
               <select
@@ -3158,7 +3208,10 @@ export function App(): React.JSX.Element {
                       key={option.value}
                       value={option.value}
                     >
-                      {option.label}
+                      {getPreferredTonicLabel(
+                        option.value,
+                        pitchSnapSettings.patternId,
+                      )}
                     </option>
                   ),
                 )}
@@ -3278,23 +3331,19 @@ export function App(): React.JSX.Element {
               <button
                 className={
                   `voice-order-button note-color-toggle${
-                    noteColorMode === "pitch"
-                      ? " is-pitch-mode"
+                    noteColorMode === "voice"
+                      ? " is-voice-mode"
                       : ""
                   }`
                 }
                 type="button"
                 title={
                   noteColorMode === "voice"
-                    ? "Color notes by voice"
-                    : "Color notes by pitch"
+                    ? "Use pitch colors"
+                    : "Use voice colors"
                 }
-                aria-label={
-                  noteColorMode === "voice"
-                    ? "Color notes by voice"
-                    : "Color notes by pitch"
-                }
-                aria-pressed={noteColorMode === "pitch"}
+                aria-label="Color notes by voice"
+                aria-pressed={noteColorMode === "voice"}
                 onClick={handleNoteColorModeToggle}
               >
                 <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -6108,9 +6157,11 @@ function sliderPositionToParameterValue(
 interface MasterGainControlProps {
   readonly gain: number;
   readonly muted: boolean;
+  readonly tuningFrequencyHz: number;
   readonly onPreview: (gain: number) => void;
   readonly onCommit: (gain: number) => void;
   readonly onMuteToggle: () => void;
+  readonly onTuningCommit: (tuningFrequencyHz: number) => void;
 }
 
 function MasterGainControl(
@@ -6119,12 +6170,15 @@ function MasterGainControl(
   const {
     gain,
     muted,
+    tuningFrequencyHz,
     onPreview,
     onCommit,
     onMuteToggle,
+    onTuningCommit,
   } = props;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const outputRef = useRef<HTMLOutputElement | null>(null);
+  const tuningInputRef = useRef<HTMLInputElement | null>(null);
   const lastCommittedGainRef = useRef(gain);
 
   const updateVisual = useCallback((nextGain: number): void => {
@@ -6147,6 +6201,14 @@ function MasterGainControl(
     updateVisual,
   ]);
 
+  useEffect(() => {
+    if (tuningInputRef.current !== null) {
+      tuningInputRef.current.value = formatMasterTuning(
+        tuningFrequencyHz,
+      );
+    }
+  }, [tuningFrequencyHz]);
+
   const commitGain = (): void => {
     const nextGain = Number(inputRef.current?.value);
 
@@ -6159,6 +6221,32 @@ function MasterGainControl(
 
     lastCommittedGainRef.current = nextGain;
     onCommit(nextGain);
+  };
+  const commitTuning = (): void => {
+    const input = tuningInputRef.current;
+    const parsedFrequencyHz = Number(input?.value);
+
+    if (
+      input === null
+      || !Number.isFinite(parsedFrequencyHz)
+      || parsedFrequencyHz < MINIMUM_MASTER_TUNING_FREQUENCY_HZ
+      || parsedFrequencyHz > MAXIMUM_MASTER_TUNING_FREQUENCY_HZ
+    ) {
+      if (input !== null) {
+        input.value = formatMasterTuning(tuningFrequencyHz);
+      }
+      return;
+    }
+
+    const nextFrequencyHz = Number(
+      parsedFrequencyHz.toFixed(1),
+    );
+
+    input.value = formatMasterTuning(nextFrequencyHz);
+
+    if (nextFrequencyHz !== tuningFrequencyHz) {
+      onTuningCommit(nextFrequencyHz);
+    }
   };
 
   return (
@@ -6219,6 +6307,30 @@ function MasterGainControl(
             )}
           </svg>
         </button>
+        <label
+          className="master-tuning-control"
+          title="Master tuning frequency"
+        >
+          <input
+            ref={tuningInputRef}
+            type="number"
+            min={MINIMUM_MASTER_TUNING_FREQUENCY_HZ}
+            max={MAXIMUM_MASTER_TUNING_FREQUENCY_HZ}
+            step={PROJECT_CONSTANTS.masterTuningStepHz}
+            defaultValue={formatMasterTuning(
+              tuningFrequencyHz,
+            )}
+            inputMode="decimal"
+            aria-label="Master tuning frequency"
+            onBlur={commitTuning}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
+          />
+          <span>Hz</span>
+        </label>
       </div>
     </section>
   );
@@ -6230,6 +6342,48 @@ function formatMasterGainDecibels(gain: number): string {
   }
 
   return `${(20 * Math.log10(gain)).toFixed(1)} dB`;
+}
+
+function formatMasterTuning(frequencyHz: number): string {
+  return Number.isInteger(frequencyHz)
+    ? frequencyHz.toFixed(0)
+    : frequencyHz.toFixed(1);
+}
+
+function getNativeViewportState(
+  viewport: ViewportState,
+): NativeEditorState["viewport"] {
+  return {
+    zoomX: viewport.zoomX,
+    zoomY: viewport.zoomY,
+    scrollX: viewport.scrollX,
+    scrollY: viewport.scrollY,
+  };
+}
+
+function createDefaultNativeEditorState(
+  projectState: ProjectState,
+): NativeEditorState {
+  return {
+    selectedVoiceId: projectState.voiceOrder[0] ?? null,
+    selectionMode: "replace",
+    noteColorMode: EDITOR_CONSTANTS.defaultNoteColorMode,
+    pitchPreviewEnabled:
+      EDITOR_CONSTANTS.defaultPitchPreviewEnabled,
+    pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+    gridSettings: DEFAULT_GRID_SETTINGS,
+    viewport: {
+      zoomX: VIEWPORT_CONSTANTS.initialHorizontalZoom,
+      zoomY: VIEWPORT_CONSTANTS.initialVerticalZoom,
+      scrollX: 0,
+      scrollY:
+        (
+          VIEWPORT_CONSTANTS.maximumMidiPitch
+          - INITIAL_MAX_VISIBLE_PITCH
+        )
+        * INITIAL_PITCH_HEIGHT,
+    },
+  };
 }
 
 function createPianoKeys(): readonly React.JSX.Element[] {

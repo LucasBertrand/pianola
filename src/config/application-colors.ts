@@ -137,6 +137,8 @@ interface PianoRollThemeColors {
 
 interface NoteThemeColors {
   readonly default: string;
+  /** Neutral note fill used when a pitch is outside the selected mode. */
+  readonly outOfScale: string;
   readonly label: string;
   readonly voicePalette: readonly string[];
   /** One stable color per chromatic pitch class, starting at C. */
@@ -299,6 +301,7 @@ const DARK_APPLICATION_THEME = Object.freeze({
   }),
   notes: Object.freeze({
     default: "#6ea8fe",
+    outOfScale: "#596271",
     label: "rgba(18, 22, 29, 0.78)",
     voicePalette: Object.freeze([
       "#79a7ff",
@@ -467,6 +470,7 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
   }),
   notes: Object.freeze({
     default: "#587f91",
+    outOfScale: "#998a72",
     label: "rgba(255, 250, 240, 0.9)",
     voicePalette: Object.freeze([
       "#557d78",

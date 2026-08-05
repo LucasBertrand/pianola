@@ -116,7 +116,10 @@ export interface PianoRollLayersProps extends CanvasLayerProps {
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
   >;
-  readonly onSelectionChange: (hasSelection: boolean) => void;
+  readonly onSelectionChange: (
+    hasSelection: boolean,
+    soleVoiceId: VoiceId | null,
+  ) => void;
   readonly onGridSeek: (tick: number) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
@@ -420,6 +423,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
               note,
               stylesByVoiceId,
               colorMode,
+              labelSettings,
             );
           currentVoiceId = note.voiceId;
           currentPitch = note.pitch;
@@ -709,7 +713,7 @@ function paintGrid(
     }
   }
 
-  if (pitchSnapSettings.enabled) {
+  if (pitchSnapSettings.visualGuideEnabled) {
     for (
       let pitch = firstPitch;
       pitch <= lastPitch;

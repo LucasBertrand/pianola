@@ -76,7 +76,10 @@ export interface InteractionOverlayProps {
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
   >;
-  readonly onSelectionChange: (hasSelection: boolean) => void;
+  readonly onSelectionChange: (
+    hasSelection: boolean,
+    soleVoiceId: VoiceId | null,
+  ) => void;
   readonly onGridSeek: (tick: number) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
@@ -329,7 +332,10 @@ export function InteractionOverlay(
           `${Math.max(1, nextY - y - 1)}px`;
         element.style.background =
           noteColorMode.get() === "pitch"
-            ? getPitchNoteColor(pitch)
+            ? getPitchNoteColor(
+                pitch,
+                pitchSnapSettings.get(),
+              )
             : style?.fillStyle
               ?? APPLICATION_COLORS.accent.primary;
         element.textContent = getMidiNoteLabel(
@@ -548,7 +554,12 @@ function populateGhostLayer(
     element.style.height =
       `${Math.max(1, nextY - y - 1)}px`;
     element.style.background =
-      getNoteFillStyle(note, stylesByVoiceId, colorMode);
+      getNoteFillStyle(
+        note,
+        stylesByVoiceId,
+        colorMode,
+        pitchSnapSettings,
+      );
     element.textContent = getMidiNoteLabel(
       note.pitch,
       pitchSnapSettings,
@@ -597,7 +608,10 @@ function updateGhostPitchPresentation(
     );
 
     if (updatePitchColor) {
-      element.style.background = getPitchNoteColor(pitch);
+      element.style.background = getPitchNoteColor(
+        pitch,
+        pitchSnapSettings,
+      );
     }
   }
 }
@@ -652,7 +666,7 @@ function updatePitchSnappedDrag(
 
     if (updatePitchColor) {
       element.style.background =
-        getPitchNoteColor(snappedPitch);
+        getPitchNoteColor(snappedPitch, pitchSnapSettings);
     }
   }
 }

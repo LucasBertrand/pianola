@@ -298,6 +298,8 @@ function didPlaybackStateChange(
     || state.tracksByVoiceId !== previousState.tracksByVoiceId
     || state.transportSettings !== previousState.transportSettings
     || state.masterBus.muted !== previousState.masterBus.muted
+    || state.masterBus.tuningFrequencyHz
+      !== previousState.masterBus.tuningFrequencyHz
   ) {
     return true;
   }

@@ -3,8 +3,12 @@ import type {
   VoiceId,
 } from "../../domain/model";
 import {
-  RENDERING_CONSTANTS,
-} from "../../config/program-constants";
+  APPLICATION_COLORS,
+} from "../../config/application-colors";
+import {
+  getPitchScaleDegreeColorIndex,
+  type PitchSnapSettings,
+} from "../interactions/pitch-snap";
 
 export interface VoiceRenderStyle {
   readonly fillStyle: string;
@@ -15,9 +19,7 @@ export interface VoiceRenderStyle {
 export type NoteColorMode = "voice" | "pitch";
 
 const DEFAULT_NOTE_COLOR =
-  RENDERING_CONSTANTS.defaultNoteColor;
-const PITCH_CLASS_NOTE_COLORS =
-  RENDERING_CONSTANTS.pitchClassNoteColors;
+  APPLICATION_COLORS.notes.default;
 
 export function compareNotesByVoiceRenderOrder(
   left: Note,
@@ -63,16 +65,26 @@ export function getNoteFillStyle(
   note: Note,
   stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
   colorMode: NoteColorMode,
+  pitchSnapSettings: PitchSnapSettings,
 ): string {
   return colorMode === "pitch"
-    ? getPitchNoteColor(note.pitch)
+    ? getPitchNoteColor(note.pitch, pitchSnapSettings)
     : stylesByVoiceId[note.voiceId]?.fillStyle
       ?? DEFAULT_NOTE_COLOR;
 }
 
-export function getPitchNoteColor(pitch: number): string {
-  const pitchClass = ((pitch % 12) + 12) % 12;
+export function getPitchNoteColor(
+  pitch: number,
+  pitchSnapSettings: PitchSnapSettings,
+): string {
+  const degreeColorIndex = getPitchScaleDegreeColorIndex(
+    pitch,
+    pitchSnapSettings,
+  );
 
-  return PITCH_CLASS_NOTE_COLORS[pitchClass]
-    ?? DEFAULT_NOTE_COLOR;
+  return degreeColorIndex === null
+    ? APPLICATION_COLORS.notes.outOfScale
+    : APPLICATION_COLORS.pianoRoll.degreeAccents[
+        degreeColorIndex
+      ] ?? DEFAULT_NOTE_COLOR;
 }
