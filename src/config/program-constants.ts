@@ -491,7 +491,7 @@ export const RENDERING_CONSTANTS = Object.freeze({
 /** Native document limits and browser download behavior. */
 export const FILE_CONSTANTS = Object.freeze({
   nativeProjectFormat: "app.pianola.native-project",
-  nativeProjectVersion: 2,
+  nativeProjectVersion: 1,
   nativeProjectExtension: ".pianola",
   nativeProjectMaximumBytes: 32 * 1024 * 1024,
   objectUrlRevokeDelayMs: 1_000,

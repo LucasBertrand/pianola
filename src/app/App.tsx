@@ -239,8 +239,6 @@ export function App(): React.JSX.Element {
   const projectFileMenuRef =
     useRef<HTMLDivElement | null>(null);
   const barLabelRef = useRef<HTMLOutputElement | null>(null);
-  const playheadPositionLabelRef =
-    useRef<HTMLOutputElement | null>(null);
   const pianoRollEventControllerRef =
     useRef<PianoRollEventController | null>(null);
   const clipboardRef = useRef<PianoRollClipboard | null>(null);
@@ -561,12 +559,6 @@ export function App(): React.JSX.Element {
           );
         }
 
-        updateBarOutput(barLabelRef.current, {
-          ...nextViewport,
-        }, getTicksPerBar(
-          currentScene.projectStore.getState().transportSettings,
-        ));
-
         if (
           scrollX !== viewport.scrollX
           || scrollY !== viewport.scrollY
@@ -634,15 +626,6 @@ export function App(): React.JSX.Element {
           String(state.revision);
       }
 
-      updateBarOutput(
-        barLabelRef.current,
-        {
-          ...viewport,
-          scrollX,
-        },
-        getTicksPerBar(state.transportSettings),
-      );
-
       if (scrollInputRef.current !== null) {
         scrollInputRef.current.max = String(
           maximumHorizontalScroll,
@@ -694,11 +677,11 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     const updatePlayheadPosition = (): void => {
-      if (playheadPositionLabelRef.current === null) {
+      if (barLabelRef.current === null) {
         return;
       }
 
-      playheadPositionLabelRef.current.value =
+      barLabelRef.current.value =
         formatMusicalPosition(
           scene.playheadTick.get(),
           scene.projectStore.getState().transportSettings,
@@ -790,18 +773,6 @@ export function App(): React.JSX.Element {
           `${Math.round(viewport.zoomY * 100)}%`;
       }
 
-      updateBarOutput(
-        barLabelRef.current,
-        {
-          ...viewport,
-          scrollX,
-          scrollY,
-        },
-        getTicksPerBar(
-          scene.projectStore.getState().transportSettings,
-        ),
-      );
-
       if (
         scrollX !== viewport.scrollX
         || scrollY !== viewport.scrollY
@@ -891,12 +862,6 @@ export function App(): React.JSX.Element {
         zoomLabelRef.current.value = `${Math.round(zoomX * 100)}%`;
       }
 
-      updateBarOutput(barLabelRef.current, {
-        ...nextViewport,
-        scrollX,
-      }, getTicksPerBar(
-        currentScene.projectStore.getState().transportSettings,
-      ));
     },
     [publishViewport],
   );
@@ -927,12 +892,6 @@ export function App(): React.JSX.Element {
         scrollX,
       });
 
-      updateBarOutput(barLabelRef.current, {
-        ...viewport,
-        scrollX,
-      }, getTicksPerBar(
-        currentScene.projectStore.getState().transportSettings,
-      ));
     },
     [publishViewport],
   );
@@ -3013,10 +2972,7 @@ export function App(): React.JSX.Element {
 
           <div className="view-controls">
             <div className="timeline-position">
-              <output ref={barLabelRef}>Bar 1</output>
-              <output ref={playheadPositionLabelRef}>
-                Play 2.1.1
-              </output>
+              <output ref={barLabelRef}>1.1.1</output>
             </div>
             <input
               ref={scrollInputRef}
@@ -3322,6 +3278,7 @@ export function App(): React.JSX.Element {
             ref={setGeneralInspectorToolbarHost}
             className="general-inspector-toolbar-host"
           />
+          <div className="general-inspector-scroll-content">
           <div className="general-inspector-heading">
             <div>
               <small>Arrangement</small>
@@ -3763,7 +3720,7 @@ export function App(): React.JSX.Element {
               </div>
             </section>
           )}
-
+          </div>
         </aside>
       </section>
       <ApplicationDialogOverlay
@@ -6267,6 +6224,30 @@ function MasterGainControl(
         </output>
       </div>
       <div className="master-bus-controls">
+        <label
+          className="master-tuning-control"
+          title="Master tuning frequency"
+        >
+          <input
+            ref={tuningInputRef}
+            type="number"
+            min={MINIMUM_MASTER_TUNING_FREQUENCY_HZ}
+            max={MAXIMUM_MASTER_TUNING_FREQUENCY_HZ}
+            step={PROJECT_CONSTANTS.masterTuningStepHz}
+            defaultValue={formatMasterTuning(
+              tuningFrequencyHz,
+            )}
+            inputMode="decimal"
+            aria-label="Master tuning frequency"
+            onBlur={commitTuning}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
+          />
+          <span>Hz</span>
+        </label>
         <input
           ref={inputRef}
           className="master-gain-input"
@@ -6307,30 +6288,6 @@ function MasterGainControl(
             )}
           </svg>
         </button>
-        <label
-          className="master-tuning-control"
-          title="Master tuning frequency"
-        >
-          <input
-            ref={tuningInputRef}
-            type="number"
-            min={MINIMUM_MASTER_TUNING_FREQUENCY_HZ}
-            max={MAXIMUM_MASTER_TUNING_FREQUENCY_HZ}
-            step={PROJECT_CONSTANTS.masterTuningStepHz}
-            defaultValue={formatMasterTuning(
-              tuningFrequencyHz,
-            )}
-            inputMode="decimal"
-            aria-label="Master tuning frequency"
-            onBlur={commitTuning}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              }
-            }}
-          />
-          <span>Hz</span>
-        </label>
       </div>
     </section>
   );
@@ -6448,34 +6405,6 @@ function getHorizontalScrollStep(
   );
 }
 
-function updateBarOutput(
-  output: HTMLOutputElement | null,
-  viewport: ViewportState,
-  ticksPerBar: number,
-): void {
-  if (output === null) {
-    return;
-  }
-
-  const tick =
-    viewport.scrollX
-    * viewport.ticksPerPixel
-    / viewport.zoomX;
-
-  output.value = `Bar ${Math.floor(tick / ticksPerBar) + 1}`;
-}
-
-function getTicksPerBar(
-  transport: TransportState,
-): number {
-  return (
-    transport.ppqn
-    * 4
-    * transport.timeSignature.numerator
-    / transport.timeSignature.denominator
-  );
-}
-
 function formatMusicalPosition(
   tick: number,
   transport: TransportState,
@@ -6496,10 +6425,7 @@ function formatMusicalPosition(
     tickInBeat / Math.max(1, gridResolutionTicks),
   );
 
-  return (
-    `Play ${barIndex + 1}.${beatIndex + 1}.`
-    + `${subdivisionIndex + 1}`
-  );
+  return `${barIndex + 1}.${beatIndex + 1}.${subdivisionIndex + 1}`;
 }
 
 function formatTempo(tempoBpm: number): string {

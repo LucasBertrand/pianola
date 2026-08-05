@@ -1119,16 +1119,21 @@ input:focus-visible {
 
 .view-controls {
   display: grid;
+  --view-slider-track-size: clamp(64px, 8vw, 112px);
   min-height: 44px;
   padding: 0 0px 0 16px;
   border-top: 1px solid var(--color-border-subtle);
   background: var(--color-surface-app);
   grid-template-columns:
-    88px
-    minmax(100px, 1fr)
-    180px
-    260px
-    280px;
+    58px
+    var(--view-slider-track-size)
+    calc(var(--view-slider-track-size) + 84px)
+    calc(
+      var(--view-slider-track-size)
+      + var(--view-slider-track-size)
+      + 92px
+    )
+    minmax(210px, 1fr);
   align-items: center;
   gap: 8px;
   -webkit-user-select: none;
@@ -1139,15 +1144,12 @@ input:focus-visible {
 .timeline-position {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  place-items: center start;
 }
 
-.timeline-position output:first-child {
+.timeline-position output {
   color: var(--color-accent-primary-bright);
-}
-
-.timeline-position output:last-child {
-  color: var(--color-accent-danger);
+  white-space: nowrap;
 }
 
 .view-controls output {
@@ -1185,21 +1187,25 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .timeline-range {
-  width: 100%;
+  width: var(--view-slider-track-size);
 }
 
 .zoom-control {
   display: grid;
-  width: 180px;
+  width: 100%;
   color: var(--color-text-quiet);
   font-size: 11px;
-  grid-template-columns: 12px 90px 12px 42px;
+  grid-template-columns:
+    12px
+    var(--view-slider-track-size)
+    12px
+    42px;
   align-items: center;
   gap: 6px;
 }
 
 .zoom-control input {
-  width: 90px;
+  width: var(--view-slider-track-size);
 }
 
 .zoom-control output {
@@ -1208,15 +1214,21 @@ input[type="range"]::-webkit-slider-thumb {
 
 .pitch-control {
   display: grid;
+  width: 100%;
   color: var(--color-text-quiet);
   font-size: 10px;
-  grid-template-columns: 28px 72px 10px 72px 42px;
+  grid-template-columns:
+    24px
+    var(--view-slider-track-size)
+    8px
+    var(--view-slider-track-size)
+    36px;
   align-items: center;
   gap: 6px;
 }
 
 .pitch-control input {
-  width: 72px;
+  width: var(--view-slider-track-size);
 }
 
 .pitch-control output {
@@ -1225,7 +1237,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 .pitch-snap-control {
   display: grid;
-  width: 280px;
+  width: min(100%, 300px);
+  max-width: 300px;
   min-width: 0;
   padding: 3px;
   border: 1px solid var(--color-tonal-soft);
@@ -1235,10 +1248,11 @@ input[type="range"]::-webkit-slider-thumb {
     27px
     27px
     38px
-    minmax(62px, 0.8fr)
-    minmax(100px, 1.2fr);
+    minmax(48px, 0.8fr)
+    minmax(70px, 1.2fr);
   align-items: center;
   gap: 3px;
+  justify-self: end;
 }
 
 .pitch-snap-toggle,
@@ -1303,7 +1317,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .pitch-snap-tonic-select {
-  width: 38px;
+  width: 100%;
 }
 
 .pitch-snap-pattern-select {
@@ -1413,10 +1427,17 @@ input[type="range"]::-webkit-slider-thumb {
 /* General inspector */
 
 .general-inspector {
+  display: grid;
   min-height: 0;
   padding: 22px 16px 18px;
-  overflow: auto;
+  overflow: hidden;
   background: var(--color-surface-app);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.general-inspector-scroll-content {
+  min-height: 0;
+  overflow: auto;
 }
 
 .general-inspector-heading,
@@ -2014,7 +2035,7 @@ input[type="range"]::-webkit-slider-thumb {
     top: 0;
     right: 0;
     bottom: 0;
-    display: block;
+    display: grid;
     width: min(86vw, 320px);
     padding: 22px 16px 18px;
     box-shadow: none;
@@ -2065,7 +2086,7 @@ input[type="range"]::-webkit-slider-thumb {
     top: auto;
     right: auto;
     bottom: auto;
-    display: block;
+    display: grid;
     width: 100%;
     max-height: none;
     padding: 0px 12px 12px 12px;
@@ -2074,6 +2095,7 @@ input[type="range"]::-webkit-slider-thumb {
     grid-row: 1;
     transform: none;
     transition: none;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .general-inspector:not(.is-open) {
@@ -2081,7 +2103,7 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .general-inspector:not(.is-open)
-    > :not(.general-inspector-toolbar-host) {
+    .general-inspector-scroll-content {
     display: none;
   }
 
@@ -2097,7 +2119,8 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .general-inspector-toggle-button {
-    height: 50px;
+    height: 40px;
+    min-height: 40px;
   }
 
   .general-inspector
@@ -2113,13 +2136,115 @@ input[type="range"]::-webkit-slider-thumb {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
+    gap: 7px;
   }
 
   .edit-tool-group {
     grid-column: 1;
     grid-row: 1;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    width: 100%;
+    padding: 2px;
+    overflow-x: auto;
+    grid-template-columns: none;
+    grid-auto-columns: 34px;
+    grid-auto-flow: column;
+    gap: 1px;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .edit-tool-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .edit-tool-group button {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .edit-tool-group button > svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .view-controls {
+    --view-slider-track-size: clamp(46px, 9vw, 72px);
+    padding-left: 6px;
+    grid-template-columns:
+      58px
+      var(--view-slider-track-size)
+      calc(var(--view-slider-track-size) + 63px)
+      calc(
+        var(--view-slider-track-size)
+        + var(--view-slider-track-size)
+        + 76px
+      )
+      minmax(228px, 1.4fr);
+    gap: 3px;
+  }
+
+  .view-controls output {
+    font-size: 9px;
+  }
+
+  .zoom-control {
+    width: 100%;
+    grid-template-columns:
+      10px
+      var(--view-slider-track-size)
+      10px
+      34px;
+    gap: 3px;
+  }
+
+  .zoom-control input {
+    width: var(--view-slider-track-size);
+  }
+
+  .pitch-control {
+    width: 100%;
+    grid-template-columns:
+      22px
+      var(--view-slider-track-size)
+      8px
+      var(--view-slider-track-size)
+      34px;
+    gap: 3px;
+  }
+
+  .pitch-control input {
+    width: var(--view-slider-track-size);
+  }
+
+  .pitch-snap-control {
+    width: min(100%, 300px);
+    max-width: 300px;
+    padding: 3px;
+    grid-template-columns:
+      27px
+      27px
+      38px
+      minmax(48px, 0.8fr)
+      minmax(70px, 1.2fr);
+    gap: 3px;
+  }
+
+  .pitch-snap-toggle,
+  .pitch-guide-toggle {
+    width: 27px;
+    height: 27px;
+  }
+
+  .pitch-snap-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .pitch-snap-control select {
+    height: 28px;
+    padding: 0 4px;
+    font-size: 9px;
   }
 
   .general-inspector

@@ -477,8 +477,9 @@ Son identité et sa version sont définies dans
 Le passage officiel à Pianola a créé le format
 `app.pianola.native-project` et l’extension `.pianola`. Les anciens fichiers
 portant l’identité `.pianoroll` ne sont pas pris en charge par cette release.
-La version native 2 ajoute le contexte de l’éditeur et n’accepte pas les
-fichiers des versions précédentes.
+Le format reste en version native 1 pendant cette phase de développement. Il
+n’existe pas encore de stratégie de migration entre les sauvegardes produites
+par des révisions différentes de l’application.
 
 Avant de changer le schéma :
 

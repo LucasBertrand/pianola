@@ -538,7 +538,7 @@ try {
     );
   });
 
-  test("round-trips current Pianola audio settings and rejects stale documents", () => {
+  test("round-trips the current Pianola native document", () => {
     const state = createProject({
       masterGain: 0.41,
       masterTuningFrequencyHz: 442,
@@ -555,7 +555,9 @@ try {
       editorState,
     );
     const loaded = parseNativeProjectFile(serialized);
+    const nativeDocument = JSON.parse(serialized);
 
+    assert.equal(nativeDocument.formatVersion, 1);
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
     assert.deepEqual(loaded.editorState, editorState);
@@ -567,16 +569,6 @@ try {
       loaded.projectState.voicesById["voice-a"]
         .instrument.polyphony,
       DEFAULT_INSTRUMENT_POLYPHONY,
-    );
-
-    const staleDocument = JSON.parse(serialized);
-    staleDocument.formatVersion = 1;
-    assert.throws(
-      () => parseNativeProjectFile(JSON.stringify(staleDocument)),
-      (error) => (
-        error.code === "UNSUPPORTED_VERSION"
-        && error.path === "$.formatVersion"
-      ),
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);
