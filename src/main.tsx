@@ -10,9 +10,23 @@ import {
 import {
   APPLICATION_CONSTANTS,
 } from "./config/program-constants";
+import {
+  APPLICATION_CSS_COLOR_VARIABLES,
+} from "./config/application-colors";
 import "./styles.css";
 
 document.title = APPLICATION_CONSTANTS.productName;
+
+/*
+ * Install the centralized theme before React renders. Defining the custom
+ * properties on the document root makes them available to every portal,
+ * overlay, and responsive layout without prop drilling.
+ */
+for (const [property, value] of Object.entries(
+  APPLICATION_CSS_COLOR_VARIABLES,
+)) {
+  document.documentElement.style.setProperty(property, value);
+}
 
 const rootElement = document.getElementById("root");
 

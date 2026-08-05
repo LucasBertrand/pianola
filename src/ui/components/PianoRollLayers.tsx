@@ -6,6 +6,9 @@ import React, {
   type MutableRefObject,
 } from "react";
 import {
+  APPLICATION_COLORS,
+} from "../../config/application-colors";
+import {
   RENDERING_CONSTANTS,
 } from "../../config/program-constants";
 import type {
@@ -39,6 +42,8 @@ import type {
   SelectionMode,
 } from "../interactions/types";
 import {
+  getPitchScaleDegreeColorIndex,
+  getPitchSnapRootPitchClass,
   isPitchAllowedByTonalPattern,
   type PitchSnapSettings,
 } from "../interactions/pitch-snap";
@@ -57,6 +62,7 @@ import {
 } from "../rendering/theme";
 import {
   getMidiNoteLabel,
+  getPitchLabelContextKey,
 } from "../rendering/pitch-label";
 import {
   InteractionOverlay,
@@ -87,6 +93,7 @@ export interface NotesCanvasProps extends CanvasLayerProps {
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
+  readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly editingNoteIds: ReadonlySet<NoteId>;
 }
 
@@ -218,6 +225,7 @@ export function PianoRollLayers(
         spatialIndex={spatialIndex}
         voiceStyles={voiceStyles}
         noteColorMode={noteColorMode}
+        pitchSnapSettings={pitchSnapSettings}
         editingNoteIds={editingNoteIds}
       />
       <InteractionOverlay
@@ -330,6 +338,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     spatialIndex,
     voiceStyles,
     noteColorMode,
+    pitchSnapSettings,
     editingNoteIds,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
@@ -358,6 +367,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       const visibleNotes = visibleNotesRef.current;
       const stylesByVoiceId = voiceStyles.get();
       const colorMode = noteColorMode.get();
+      const labelSettings = pitchSnapSettings.get();
 
       spatialIndex.queryRect(
         region.startTick,
@@ -492,7 +502,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       context.textAlign = "left";
       context.textBaseline = "middle";
       const noteLabelWidths =
-        getNoteLabelWidths(context);
+        getNoteLabelWidths(context, labelSettings);
 
       for (
         let noteIndex = 0;
@@ -517,7 +527,10 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
           converter.pitchToCssPixelY(note.pitch - 1);
         const width = Math.max(1, endX - x - 1);
         const height = Math.max(1, nextRowY - y - 1);
-        const label = getMidiNoteLabel(note.pitch);
+        const label = getMidiNoteLabel(
+          note.pitch,
+          labelSettings,
+        );
         const labelWidth =
           noteLabelWidths[note.pitch] ?? 0;
 
@@ -550,6 +563,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       visibleRegion,
       voiceStyles,
       noteColorMode,
+      pitchSnapSettings,
     ],
   );
   const renderer = useCanvasRenderer({
@@ -571,15 +585,22 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
 const lockedNotePatterns =
   new WeakMap<CanvasRenderingContext2D, CanvasPattern>();
 const noteLabelWidthCaches =
-  new WeakMap<CanvasRenderingContext2D, Float32Array>();
+  new WeakMap<CanvasRenderingContext2D, NoteLabelWidthCache>();
+
+interface NoteLabelWidthCache {
+  readonly contextKey: string;
+  readonly widths: Float32Array;
+}
 
 function getNoteLabelWidths(
   context: CanvasRenderingContext2D,
+  settings: PitchSnapSettings,
 ): Float32Array {
-  const cachedWidths = noteLabelWidthCaches.get(context);
+  const contextKey = getPitchLabelContextKey(settings);
+  const cached = noteLabelWidthCaches.get(context);
 
-  if (cachedWidths !== undefined) {
-    return cachedWidths;
+  if (cached?.contextKey === contextKey) {
+    return cached.widths;
   }
 
   const widths = new Float32Array(MAX_MIDI_PITCH + 1);
@@ -590,10 +611,15 @@ function getNoteLabelWidths(
     pitch += 1
   ) {
     widths[pitch] =
-      context.measureText(getMidiNoteLabel(pitch)).width;
+      context.measureText(
+        getMidiNoteLabel(pitch, settings),
+      ).width;
   }
 
-  noteLabelWidthCaches.set(context, widths);
+  noteLabelWidthCaches.set(context, {
+    contextKey,
+    widths,
+  });
   return widths;
 }
 
@@ -616,7 +642,8 @@ function getLockedNotePattern(
   }
 
   patternContext.clearRect(0, 0, 8, 8);
-  patternContext.strokeStyle = "rgba(8, 10, 14, 0.72)";
+  patternContext.strokeStyle =
+    APPLICATION_COLORS.pianoRoll.lockedNoteHatch;
   patternContext.lineWidth = 2;
   patternContext.beginPath();
   patternContext.moveTo(-2, 8);
@@ -699,17 +726,29 @@ function paintGrid(
 
       const y = converter.pitchToCssPixelY(pitch);
       const nextY = converter.pitchToCssPixelY(pitch - 1);
-      const pitchClass =
-        (
-          pitch
-          - pitchSnapSettings.tonicPitchClass
-          + 12
-        ) % 12;
+      const pitchClass = ((pitch % 12) + 12) % 12;
+      const degreeColorIndex = getPitchScaleDegreeColorIndex(
+        pitch,
+        pitchSnapSettings,
+      );
+      const degreePitchRowColor =
+        degreeColorIndex === null
+          ? undefined
+          : APPLICATION_COLORS.pianoRoll.degreePitchRows[
+              degreeColorIndex
+            ];
+      const degreeRootRowColor =
+        degreeColorIndex === null
+          ? undefined
+          : APPLICATION_COLORS.pianoRoll.degreeRootRows[
+              degreeColorIndex
+            ];
 
       context.fillStyle =
-        pitchClass === 0
-          ? TONAL_SNAP_TONIC_ROW_COLOR
-          : TONAL_SNAP_PITCH_ROW_COLOR;
+        pitchClass
+          === getPitchSnapRootPitchClass(pitchSnapSettings)
+          ? degreeRootRowColor ?? TONAL_SNAP_TONIC_ROW_COLOR
+          : degreePitchRowColor ?? TONAL_SNAP_PITCH_ROW_COLOR;
       context.fillRect(0, y, width, nextY - y);
     }
   }

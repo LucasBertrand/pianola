@@ -511,9 +511,8 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 | Nom, description et titres par défaut | `src/config/program-constants.ts` |
 | Métadonnées navigateur | `index.html` et `public/manifest.webmanifest` |
 | Version npm | `package.json` et `package-lock.json` |
-| Couleurs Canvas et palettes de voix | `RENDERING_CONSTANTS` dans `program-constants.ts` |
-| Fond général | `applicationSurfaceColor` et `--app-surface-color` |
-| Couleurs et layout DOM | `src/styles.css` |
+| Toutes les couleurs de l'application | `src/config/application-colors.ts` |
+| Layout et règles visuelles DOM | `src/styles.css` |
 | Valeurs par défaut et limites | `src/config/program-constants.ts` |
 | Structure principale de l’UI | `src/app/App.tsx` |
 | État initial et projet vierge | `src/app/demo-scene.ts` |
@@ -546,9 +545,9 @@ Les réglages produit sont centralisés dans
 - `AUDIO_CONSTANTS` : scheduler et enveloppes ;
 - `VIEWPORT_CONSTANTS` : zoom, dimensions et HiDPI ;
 - `INTERACTION_CONSTANTS` : délais et zones tactiles ;
-- `TONAL_SNAP_CONSTANTS` : gammes et accords ;
+- `TONAL_SNAP_CONSTANTS` : toniques, modes et degrés ;
 - `EDITOR_CONSTANTS` : transport, grille et sliders ;
-- `RENDERING_CONSTANTS` : couleurs Canvas ;
+- `RENDERING_CONSTANTS` : budgets et dimensions de rendu ;
 - `FILE_CONSTANTS` : format natif ;
 - `MIDI_CONSTANTS` : limites MIDI.
 
@@ -568,10 +567,49 @@ tablette si elle touche au rendu ou aux interactions.
 
 Ne pas modifier directement `ProjectState` dans un composant React.
 
-### Modifier le rendu
+### Modifier les couleurs
 
-Pour une couleur Canvas, préférer `RENDERING_CONSTANTS`. Pour une couleur DOM,
-chercher d’abord une variable CSS dans `src/styles.css`.
+Toutes les couleurs sont définies dans `src/config/application-colors.ts`.
+Ce fichier constitue l'unique source de vérité pour le DOM, les overlays et
+les Canvas. Il est organisé par rôles visuels : surfaces neutres, accents,
+grille du piano roll, notes, interactions et clavier.
+
+Deux thèmes complets sont disponibles :
+
+- `dark` : thème sombre historique de Pianola ;
+- `score-paper` : thème clair beige inspiré du papier à musique.
+
+Le thème actif est défini par `ACTIVE_APPLICATION_THEME_ID`. Changer cette
+unique constante applique la palette choisie au CSS, aux Canvas, au ruler, au
+clavier et aux contrôles natifs du navigateur.
+
+Quelques points de repère utiles :
+
+- `APPLICATION_COLORS.pianoRoll.degreeRootRows[0]` modifie la couleur de la
+  tonique, qui appartient à la famille du degré I ;
+- `degreeAccents`, `degreePitchRows` et `degreeRootRows` définissent les sept
+  familles I à VII. Les variantes mineures et majeures d'un même intervalle
+  partagent volontairement la même famille, par exemple `bIII` et `III` ;
+- `APPLICATION_COLORS.pianoRoll.tonalSnapPitchRow` modifie les autres hauteurs
+  autorisées par le mode ou le degré ;
+- `APPLICATION_COLORS.notes.voicePalette` définit les couleurs proposées aux
+  nouvelles voix ;
+- `APPLICATION_COLORS.notes.pitchClassPalette` définit les douze couleurs du
+  mode d'affichage par pitch ;
+- `APPLICATION_CSS_COLOR_VARIABLES` relie la palette TypeScript aux variables
+  CSS utilisées dans `src/styles.css`.
+
+Ne pas ajouter directement de couleur hexadécimale, `rgb()` ou `rgba()` dans
+un composant ou dans `src/styles.css`. Ajouter un rôle documenté à la palette,
+puis consommer ce rôle depuis le Canvas ou via une variable CSS.
+
+Exception statique : `index.html`, `public/manifest.webmanifest` et
+`public/pianola-icon.svg` sont lus par le navigateur avant le code TypeScript.
+Ils reprennent manuellement le fond principal et les deux accents de la
+palette. Si ces trois couleurs changent, rechercher leurs anciennes valeurs
+dans ces fichiers et les synchroniser.
+
+### Modifier le rendu
 
 Une modification de taille doit être testée dans ces configurations :
 

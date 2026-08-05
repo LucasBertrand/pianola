@@ -1,6 +1,6 @@
 import {
-  RENDERING_CONSTANTS,
-} from "../../config/program-constants";
+  APPLICATION_COLORS,
+} from "../../config/application-colors";
 
 export const APPLICATION_SURFACE_COLOR =
-  RENDERING_CONSTANTS.applicationSurfaceColor;
+  APPLICATION_COLORS.neutral.application;

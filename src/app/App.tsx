@@ -23,6 +23,9 @@ import {
   VOICE_CONSTANTS,
 } from "../config/program-constants";
 import {
+  APPLICATION_COLORS,
+} from "../config/application-colors";
+import {
   CommandRejectedError,
   type PianoRollCommand,
   type Transaction,
@@ -114,9 +117,15 @@ import type {
   PianoRollEventController,
 } from "../ui/hooks/usePianoRollEvents";
 import {
+  getScaleDegreeColorIndex,
+  getTonalPatternDefinition,
   isTonalPatternId,
+  snapPitchToTonalPattern,
   type PitchSnapSettings,
 } from "../ui/interactions/pitch-snap";
+import {
+  getScaleDegreeLabel,
+} from "../ui/rendering/pitch-label";
 import type {
   SelectionMode,
 } from "../ui/interactions/types";
@@ -2432,9 +2441,6 @@ export function App(): React.JSX.Element {
       className="app-shell"
       aria-label={APPLICATION_CONSTANTS.productName}
       data-project-revision="0"
-      style={{
-        "--app-surface-color": APPLICATION_SURFACE_COLOR,
-      } as React.CSSProperties}
     >
       <header className="topbar">
         <div className="brand">
@@ -2925,7 +2931,9 @@ export function App(): React.JSX.Element {
                     || selectedVoice.locked
                   }
                   style={{
-                    color: selectedVoice?.color ?? "#596271",
+                    color:
+                      selectedVoice?.color
+                      ?? APPLICATION_COLORS.neutral.textDisabled,
                   }}
                   onClick={handleTransferSelectionToVoice}
                 >
@@ -2944,6 +2952,7 @@ export function App(): React.JSX.Element {
             <PianoKeyboard
               viewport={scene.viewport}
               previewEnabled={pitchPreviewEnabled}
+              pitchSnapSettings={pitchSnapSettings}
               onPreviewToggle={() => {
                 setPitchPreviewEnabled((enabled) => !enabled);
               }}
@@ -3157,49 +3166,92 @@ export function App(): React.JSX.Element {
               <select
                 className="pitch-snap-pattern-select"
                 value={pitchSnapSettings.patternId}
-                aria-label="Pitch snap scale or chord"
+                aria-label="Pitch snap mode"
                 onChange={(event) => {
                   const patternId = event.currentTarget.value;
 
                   if (isTonalPatternId(patternId)) {
                     updatePitchSnapSettings({
                       patternId,
+                      scaleDegreeIndex: null,
                     });
                   }
                 }}
               >
-                <optgroup label="Modes">
-                  {TONAL_SNAP_CONSTANTS.patterns.map(
-                    (pattern) => (
-                      pattern.category === "scale"
-                        ? (
-                            <option
-                              key={pattern.id}
-                              value={pattern.id}
-                            >
-                              {pattern.label}
-                            </option>
-                          )
-                        : null
-                    ),
-                  )}
-                </optgroup>
-                <optgroup label="Chords">
-                  {TONAL_SNAP_CONSTANTS.patterns.map(
-                    (pattern) => (
-                      pattern.category === "chord"
-                        ? (
-                            <option
-                              key={pattern.id}
-                              value={pattern.id}
-                            >
-                              {pattern.label}
-                            </option>
-                          )
-                        : null
-                    ),
-                  )}
-                </optgroup>
+                {TONAL_SNAP_CONSTANTS.patternFamilies.map(
+                  (family) => (
+                    <optgroup
+                      key={family.id}
+                      label={family.label}
+                    >
+                      {TONAL_SNAP_CONSTANTS.patterns.map(
+                        (pattern) => (
+                          pattern.family === family.id
+                            ? (
+                                <option
+                                  key={pattern.id}
+                                  value={pattern.id}
+                                >
+                                  {pattern.label}
+                                </option>
+                              )
+                            : null
+                        ),
+                      )}
+                    </optgroup>
+                  ),
+                )}
+              </select>
+              <select
+                className="pitch-snap-degree-select"
+                value={pitchSnapSettings.scaleDegreeIndex ?? -1}
+                aria-label="Pitch snap mode degree"
+                style={{
+                  "--degree-color":
+                    pitchSnapSettings.scaleDegreeIndex === null
+                      ? APPLICATION_COLORS.accent.tonal
+                      : getScaleDegreeAccentColor(
+                          pitchSnapSettings,
+                          pitchSnapSettings.scaleDegreeIndex,
+                        ),
+                } as React.CSSProperties}
+                onChange={(event) => {
+                  const scaleDegreeIndex = Number(
+                    event.currentTarget.value,
+                  );
+                  const pattern = getTonalPatternDefinition(
+                    pitchSnapSettings.patternId,
+                  );
+
+                  updatePitchSnapSettings({
+                    scaleDegreeIndex:
+                      scaleDegreeIndex >= 0
+                      && scaleDegreeIndex < pattern.intervals.length
+                        ? scaleDegreeIndex
+                        : null,
+                  });
+                }}
+              >
+                <option value={-1}>Full mode</option>
+                {getTonalPatternDefinition(
+                  pitchSnapSettings.patternId,
+                ).intervals.map((_, degreeIndex) => (
+                  <option
+                    key={degreeIndex}
+                    value={degreeIndex}
+                    style={{
+                      color: getScaleDegreeAccentColor(
+                        pitchSnapSettings,
+                        degreeIndex,
+                      ),
+                    }}
+                  >
+                    {getScaleDegreeLabel(
+                      pitchSnapSettings,
+                      degreeIndex,
+                    )}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -4142,7 +4194,7 @@ function createUserVoice(
     RENDERING_CONSTANTS.userVoiceColors[
       voiceIndex % RENDERING_CONSTANTS.userVoiceColors.length
     ]
-    ?? "#79a7ff";
+    ?? APPLICATION_COLORS.accent.primary;
 
   return createDefaultVoice({
     id: `voice-${Date.now()}-${sequence + 1}`,
@@ -4151,6 +4203,21 @@ function createUserVoice(
     oscillatorWaveform:
       getDefaultOscillatorWaveform(voiceIndex),
   });
+}
+
+function getScaleDegreeAccentColor(
+  settings: PitchSnapSettings,
+  degreeIndex: number,
+): string {
+  const colorIndex = getScaleDegreeColorIndex(
+    settings,
+    degreeIndex,
+  );
+
+  return colorIndex === null
+    ? APPLICATION_COLORS.accent.tonal
+    : APPLICATION_COLORS.pianoRoll.degreeAccents[colorIndex]
+      ?? APPLICATION_COLORS.accent.tonal;
 }
 
 function getVoiceInstrumentLabel(): string {
@@ -4189,6 +4256,7 @@ function formatPercentage(value: number): string {
 interface PianoKeyboardProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly previewEnabled: boolean;
+  readonly pitchSnapSettings: PitchSnapSettings;
   readonly onPreviewToggle: () => void;
   readonly onPitchAudition?: (pitch: number) => void;
   readonly onPitchLongPress?: (pitch: number) => void;
@@ -5103,7 +5171,7 @@ function BarRuler(
         frame.heightCssPixels,
         5,
         frame.devicePixelRatio,
-        "#343b47",
+        APPLICATION_COLORS.pianoRoll.rulerSubdivision,
       );
       drawRulerTicks(
         context,
@@ -5115,7 +5183,7 @@ function BarRuler(
         frame.heightCssPixels,
         10,
         frame.devicePixelRatio,
-        "#4a5464",
+        APPLICATION_COLORS.pianoRoll.rulerBeat,
       );
       drawRulerTicks(
         context,
@@ -5127,10 +5195,10 @@ function BarRuler(
         frame.heightCssPixels,
         frame.heightCssPixels,
         frame.devicePixelRatio,
-        "#667388",
+        APPLICATION_COLORS.pianoRoll.rulerBar,
       );
 
-      context.fillStyle = "#8b96a7";
+      context.fillStyle = APPLICATION_COLORS.pianoRoll.rulerText;
       context.font =
         '9px "SFMono-Regular", Consolas, monospace';
       context.textBaseline = "top";
@@ -5427,6 +5495,7 @@ function PianoKeyboard(
   const {
     viewport,
     previewEnabled,
+    pitchSnapSettings,
     onPreviewToggle,
     onPitchAudition,
     onPitchLongPress,
@@ -5474,8 +5543,14 @@ function PianoKeyboard(
 
     let activePointerId = -1;
     let activePitch = -1;
+    let lastAuditionedPitch = -1;
     let originClientX = 0;
     let originClientY = 0;
+    let keyboardLeft = 0;
+    let keyboardRight = 0;
+    let keyboardTop = 0;
+    let keyboardBottom = 0;
+    let highlightedKeyElement: HTMLElement | null = null;
     let longPressTimerId: number | null = null;
 
     const clearLongPress = (): void => {
@@ -5483,6 +5558,115 @@ function PianoKeyboard(
         window.clearTimeout(longPressTimerId);
         longPressTimerId = null;
       }
+    };
+    const updateInteractionPitch = (
+      pitch: number | null,
+    ): void => {
+      highlightedKeyElement?.classList.remove("is-playing");
+      highlightedKeyElement = null;
+
+      if (pitch !== null) {
+        highlightedKeyElement = element.querySelector<HTMLElement>(
+          `[data-pitch="${pitch}"]`,
+        );
+        highlightedKeyElement?.classList.add("is-playing");
+      }
+
+      onPitchInteractionChange?.(pitch);
+    };
+    const updateHitTestGeometry = (): void => {
+      const viewportElement = element.parentElement;
+
+      if (viewportElement === null) {
+        return;
+      }
+
+      const bounds = viewportElement.getBoundingClientRect();
+
+      keyboardLeft = bounds.left;
+      keyboardRight = bounds.right;
+      keyboardTop = bounds.top;
+      keyboardBottom = bounds.bottom;
+    };
+    const getPitchAtPoint = (
+      clientX: number,
+      clientY: number,
+    ): number | null => {
+      if (
+        clientX < keyboardLeft
+        || clientX > keyboardRight
+        || clientY < keyboardTop
+        || clientY > keyboardBottom
+      ) {
+        return null;
+      }
+
+      const currentViewport = viewport.get();
+      const pitchRowHeight =
+        currentViewport.pitchHeight * currentViewport.zoomY;
+      const pitchIndex = Math.floor(
+        (
+          clientY
+          - keyboardTop
+          + currentViewport.scrollY
+        ) / pitchRowHeight,
+      );
+      const pitch =
+        VIEWPORT_CONSTANTS.maximumMidiPitch - pitchIndex;
+
+      return pitch >= VIEWPORT_CONSTANTS.minimumMidiPitch
+        && pitch <= VIEWPORT_CONSTANTS.maximumMidiPitch
+        ? pitch
+        : null;
+    };
+    const auditionRawPitch = (
+      rawPitch: number,
+      movementDirection: number,
+    ): number => {
+      const auditionedPitch = snapPitchToTonalPattern(
+        rawPitch,
+        pitchSnapSettings,
+        movementDirection,
+      );
+
+      if (
+        previewEnabled
+        && auditionedPitch !== lastAuditionedPitch
+      ) {
+        lastAuditionedPitch = auditionedPitch;
+        onPitchAudition?.(auditionedPitch);
+      }
+
+      return auditionedPitch;
+    };
+    const auditionPitchRange = (
+      previousPitch: number,
+      nextPitch: number,
+    ): number => {
+      const movementDirection = Math.sign(
+        nextPitch - previousPitch,
+      );
+
+      if (movementDirection === 0) {
+        return auditionRawPitch(nextPitch, 0);
+      }
+
+      let auditionedPitch = nextPitch;
+
+      for (
+        let pitch = previousPitch + movementDirection;
+        movementDirection > 0
+          ? pitch <= nextPitch
+          : pitch >= nextPitch;
+        pitch += movementDirection
+      ) {
+        auditionedPitch = auditionRawPitch(
+          pitch,
+          movementDirection,
+        );
+      }
+
+      return auditionedPitch;
     };
     const handlePointerDown = (event: PointerEvent): void => {
       if (event.button !== 0 || activePointerId !== -1) {
@@ -5498,13 +5682,15 @@ function PianoKeyboard(
       if (Number.isInteger(pitch)) {
         activePointerId = event.pointerId;
         activePitch = pitch;
-        onPitchInteractionChange?.(pitch);
         originClientX = event.clientX;
         originClientY = event.clientY;
+        updateHitTestGeometry();
         element.setPointerCapture(event.pointerId);
-        if (previewEnabled) {
-          onPitchAudition?.(pitch);
-        }
+        const auditionedPitch = auditionPitchRange(pitch, pitch);
+
+        updateInteractionPitch(
+          previewEnabled ? auditionedPitch : pitch,
+        );
 
         if (onPitchLongPress !== undefined) {
           const delay =
@@ -5519,6 +5705,7 @@ function PianoKeyboard(
               activePointerId === event.pointerId
               && activePitch === pitch
             ) {
+              updateInteractionPitch(pitch);
               onPitchLongPress(pitch);
             }
           }, delay);
@@ -5541,6 +5728,24 @@ function PianoKeyboard(
         clearLongPress();
       }
 
+      const pitch = getPitchAtPoint(
+        event.clientX,
+        event.clientY,
+      );
+
+      if (pitch !== null && pitch !== activePitch) {
+        clearLongPress();
+        const auditionedPitch = auditionPitchRange(
+          activePitch,
+          pitch,
+        );
+
+        activePitch = pitch;
+        updateInteractionPitch(
+          previewEnabled ? auditionedPitch : pitch,
+        );
+      }
+
       event.preventDefault();
     };
     const finishPointer = (event: PointerEvent): void => {
@@ -5551,7 +5756,8 @@ function PianoKeyboard(
       clearLongPress();
       activePointerId = -1;
       activePitch = -1;
-      onPitchInteractionChange?.(null);
+      lastAuditionedPitch = -1;
+      updateInteractionPitch(null);
 
       if (element.hasPointerCapture(event.pointerId)) {
         element.releasePointerCapture(event.pointerId);
@@ -5572,7 +5778,7 @@ function PianoKeyboard(
 
     return (): void => {
       clearLongPress();
-      onPitchInteractionChange?.(null);
+      updateInteractionPitch(null);
       element.removeEventListener(
         "pointerdown",
         handlePointerDown,
@@ -5599,6 +5805,7 @@ function PianoKeyboard(
     onPitchAudition,
     onPitchLongPress,
     onPitchInteractionChange,
+    pitchSnapSettings,
     previewEnabled,
   ]);
 

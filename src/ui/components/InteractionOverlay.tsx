@@ -4,6 +4,9 @@ import React, {
   type CSSProperties,
   type MutableRefObject,
 } from "react";
+import {
+  APPLICATION_COLORS,
+} from "../../config/application-colors";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -106,9 +109,10 @@ const SELECTION_LAYER_STYLE: CSSProperties = {
 const LASSO_STYLE: CSSProperties = {
   position: "absolute",
   display: "none",
-  border: "1px solid rgba(120, 180, 255, 0.95)",
-  background: "rgba(80, 150, 255, 0.18)",
-  boxShadow: "0 0 0 1px rgba(30, 70, 120, 0.3)",
+  border: `1px solid ${APPLICATION_COLORS.interaction.lassoBorder}`,
+  background: APPLICATION_COLORS.interaction.lassoFill,
+  boxShadow:
+    `0 0 0 1px ${APPLICATION_COLORS.interaction.lassoInnerShadow}`,
   pointerEvents: "none",
   boxSizing: "border-box",
   willChange: "transform, width, height",
@@ -168,6 +172,7 @@ export function InteractionOverlay(
           converter,
           stylesByVoiceId,
           noteColorMode.get(),
+          pitchSnapSettings.get(),
           null,
           ghostElementsRef.current,
           ghostBaseLeftRef,
@@ -227,6 +232,7 @@ export function InteractionOverlay(
           ghostElementsRef.current,
           ghostBasePitchRef.current,
           deltaPitch,
+          pitchSnapSettings.get(),
           noteColorMode.get() === "pitch",
         );
       },
@@ -252,6 +258,7 @@ export function InteractionOverlay(
           converter,
           stylesByVoiceId,
           noteColorMode.get(),
+          pitchSnapSettings.get(),
           edge,
           ghostElementsRef.current,
           ghostBaseLeftRef,
@@ -323,8 +330,12 @@ export function InteractionOverlay(
         element.style.background =
           noteColorMode.get() === "pitch"
             ? getPitchNoteColor(pitch)
-            : style?.fillStyle ?? "#79a7ff";
-        element.textContent = getMidiNoteLabel(pitch);
+            : style?.fillStyle
+              ?? APPLICATION_COLORS.accent.primary;
+        element.textContent = getMidiNoteLabel(
+          pitch,
+          pitchSnapSettings.get(),
+        );
         drawGhostElementRef.current = element;
         ghostLayer.appendChild(element);
       },
@@ -478,6 +489,7 @@ function populateGhostLayer(
   converter: CoordinateConverter,
   stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
   colorMode: NoteColorMode,
+  pitchSnapSettings: PitchSnapSettings,
   resizeEdge: ResizeEdge | null,
   elements: HTMLElement[],
   baseLeftRef: React.MutableRefObject<Float64Array | null>,
@@ -537,7 +549,10 @@ function populateGhostLayer(
       `${Math.max(1, nextY - y - 1)}px`;
     element.style.background =
       getNoteFillStyle(note, stylesByVoiceId, colorMode);
-    element.textContent = getMidiNoteLabel(note.pitch);
+    element.textContent = getMidiNoteLabel(
+      note.pitch,
+      pitchSnapSettings,
+    );
     baseLeft[elements.length] = x;
     baseWidth[elements.length] = width;
     basePitch[elements.length] = note.pitch;
@@ -555,6 +570,7 @@ function updateGhostPitchPresentation(
   elements: readonly HTMLElement[],
   basePitches: Int16Array | null,
   deltaPitch: number,
+  pitchSnapSettings: PitchSnapSettings,
   updatePitchColor: boolean,
 ): void {
   if (basePitches === null) {
@@ -575,7 +591,10 @@ function updateGhostPitchPresentation(
 
     const pitch = basePitch + deltaPitch;
 
-    element.textContent = getMidiNoteLabel(pitch);
+    element.textContent = getMidiNoteLabel(
+      pitch,
+      pitchSnapSettings,
+    );
 
     if (updatePitchColor) {
       element.style.background = getPitchNoteColor(pitch);
@@ -625,7 +644,10 @@ function updatePitchSnappedDrag(
       `translate3d(${deltaXCssPixels}px, ${deltaYCssPixels}px, 0)`;
 
     if (updatePitchLabel) {
-      element.textContent = getMidiNoteLabel(snappedPitch);
+      element.textContent = getMidiNoteLabel(
+        snappedPitch,
+        pitchSnapSettings,
+      );
     }
 
     if (updatePitchColor) {
