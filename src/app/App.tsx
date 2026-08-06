@@ -67,6 +67,11 @@ import {
   type NoteCollisionResolutionMode,
 } from "../domain/note-collision";
 import {
+  SelectionTransformationError,
+  transformNoteSelection,
+  type SelectionTransformationKind,
+} from "../domain/selection-transformations";
+import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
   MINIMUM_HORIZONTAL_ZOOM,
@@ -1732,6 +1737,90 @@ export function App(): React.JSX.Element {
       controller?.clearSelection();
     }
   }, [dispatchEditCommands]);
+  const handleTransformSelection = useCallback(
+    (
+      kind: SelectionTransformationKind,
+      label: string,
+    ): void => {
+      const controller = pianoRollEventControllerRef.current;
+      const originalNotes = controller?.getSelectedNotes() ?? [];
+
+      if (controller === null || originalNotes.length === 0) {
+        return;
+      }
+
+      const state = scene.projectStore.getState();
+
+      for (const note of originalNotes) {
+        const voice = state.voicesById[note.voiceId];
+
+        if (voice === undefined || voice.locked) {
+          showApplicationAlert(
+            "Transformation unavailable",
+            voice === undefined
+              ? "The selection contains a note whose voice is unavailable."
+              : `Unlock voice "${voice.name}" before transforming its notes.`,
+          );
+          return;
+        }
+      }
+
+      try {
+        const proposedNotes = transformNoteSelection(
+          originalNotes,
+          kind,
+          getProjectDurationTicks(state),
+        );
+        const intent = {
+          originalNotes,
+          proposedNotes,
+        } as const;
+
+        if (hasNoteEditCollisions(state, intent)) {
+          handleNoteCollision({
+            label,
+            collisionCount: countNoteEditCollisions(state, intent),
+            ...intent,
+            onResolved(nextState, selectedNoteIds): void {
+              controller.replaceSelection(
+                findNotesByIds(nextState, selectedNoteIds),
+              );
+            },
+          });
+          return;
+        }
+
+        const nextState = dispatchEditCommands(
+          buildTransformCommandsForNotes(proposedNotes),
+          label,
+        );
+
+        if (nextState !== null) {
+          controller.replaceSelection(
+            findNotesByIds(
+              nextState,
+              proposedNotes.map((note) => note.id),
+            ),
+          );
+        }
+      } catch (error: unknown) {
+        showApplicationAlert(
+          "Transformation unavailable",
+          error instanceof SelectionTransformationError
+            || error instanceof CommandRejectedError
+            ? error.message
+            : "The selected notes could not be transformed.",
+          "danger",
+        );
+      }
+    },
+    [
+      dispatchEditCommands,
+      handleNoteCollision,
+      scene,
+      showApplicationAlert,
+    ],
+  );
   const handlePaste = useCallback((): void => {
     const clipboard = clipboardRef.current;
 
@@ -2901,6 +2990,85 @@ export function App(): React.JSX.Element {
                     <path d="M13 12h7M17 8l4 4-4 4" />
                   </svg>
                 </button>
+                <button
+                  type="button"
+                  title="Invert selected intervals"
+                  aria-label="Invert selected intervals"
+                  disabled={!selectionAvailable}
+                  onClick={() => {
+                    handleTransformSelection(
+                      "invert",
+                      "Invert selected intervals",
+                    );
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2.5 18 8 6.5" />
+                    <circle cx="2.5" cy="18" r="1.5" />
+                    <circle cx="8" cy="6.5" r="1.5" />
+                    <path d="M10.5 12h3M12 10.5l1.5 1.5-1.5 1.5" />
+                    <path d="m16 6.5 5.5 11.5" />
+                    <circle cx="16" cy="6.5" r="1.5" />
+                    <circle cx="21.5" cy="18" r="1.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Retrograde selected motif"
+                  aria-label="Retrograde selected motif"
+                  disabled={!selectionAvailable}
+                  onClick={() => {
+                    handleTransformSelection(
+                      "retrograde",
+                      "Retrograde selected motif",
+                    );
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="5" width="4" height="6" rx="1" />
+                    <rect x="10" y="7" width="4" height="4" rx="1" />
+                    <rect x="16" y="3" width="4" height="8" rx="1" />
+                    <path d="M20 18H4M8 14l-4 4 4 4" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Augment selected motif"
+                  aria-label="Augment selected motif"
+                  disabled={!selectionAvailable}
+                  onClick={() => {
+                    handleTransformSelection(
+                      "augment",
+                      "Augment selected motif",
+                    );
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="4" width="7" height="5" rx="1" />
+                    <path d="M12 6.5h5M15 4l2.5 2.5L15 9" />
+                    <rect x="3" y="15" width="18" height="5" rx="1" />
+                    <path d="M7 12h10" strokeDasharray="1.5 2" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  title="Diminish selected motif"
+                  aria-label="Diminish selected motif"
+                  disabled={!selectionAvailable}
+                  onClick={() => {
+                    handleTransformSelection(
+                      "diminish",
+                      "Diminish selected motif",
+                    );
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="5" rx="1" />
+                    <path d="M17.5 12h-5M15 9.5 12.5 12l2.5 2.5" />
+                    <rect x="3" y="15" width="7" height="5" rx="1" />
+                    <path d="M7 12h3" strokeDasharray="1.5 2" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>,
@@ -3968,6 +4136,40 @@ function buildAddCommandsForNotes(
       type: "AddNotes",
       trackVoiceId: voiceId,
       notes: voiceNotes,
+    });
+  }
+
+  return commands;
+}
+
+function buildTransformCommandsForNotes(
+  notes: readonly Note[],
+): readonly PianoRollCommand[] {
+  const notesByVoice = new Map<VoiceId, Note[]>();
+
+  for (const note of notes) {
+    let voiceNotes = notesByVoice.get(note.voiceId);
+
+    if (voiceNotes === undefined) {
+      voiceNotes = [];
+      notesByVoice.set(note.voiceId, voiceNotes);
+    }
+
+    voiceNotes.push(note);
+  }
+
+  const commands: PianoRollCommand[] = [];
+
+  for (const [voiceId, voiceNotes] of notesByVoice) {
+    commands.push({
+      type: "TransformNotes",
+      trackVoiceId: voiceId,
+      changes: voiceNotes.map((note) => ({
+        noteId: note.id,
+        startTick: note.startTick,
+        durationTicks: note.durationTicks,
+        pitch: note.pitch,
+      })),
     });
   }
 

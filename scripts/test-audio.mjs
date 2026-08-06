@@ -25,6 +25,12 @@ try {
     "/src/domain/note-collision.ts",
   );
   const {
+    SelectionTransformationError,
+    transformNoteSelection,
+  } = await vite.ssrLoadModule(
+    "/src/domain/selection-transformations.ts",
+  );
+  const {
     ProjectStore,
   } = await vite.ssrLoadModule(
     "/src/domain/project-store.ts",
@@ -1211,6 +1217,137 @@ try {
       store.getState().tracksByVoiceId,
       originalTracks,
     );
+    assert.equal(store.canUndo(), false);
+  });
+
+  test("applies the four selection transformations deterministically", () => {
+    const notes = [
+      createNote("a", "voice-a", 60, 0, 120),
+      createNote("b", "voice-a", 64, 240, 240),
+      createNote("c", "voice-a", 67, 480, 120),
+    ];
+
+    assert.deepEqual(
+      transformNoteSelection(notes, "invert", 10_000).map(
+        (note) => [note.pitch, note.startTick, note.durationTicks],
+      ),
+      [
+        [60, 0, 120],
+        [56, 240, 240],
+        [53, 480, 120],
+      ],
+    );
+    assert.deepEqual(
+      transformNoteSelection(notes, "retrograde", 10_000).map(
+        (note) => [note.pitch, note.startTick, note.durationTicks],
+      ),
+      [
+        [60, 480, 120],
+        [64, 120, 240],
+        [67, 0, 120],
+      ],
+    );
+    assert.deepEqual(
+      transformNoteSelection(notes, "augment", 10_000).map(
+        (note) => [note.startTick, note.durationTicks],
+      ),
+      [
+        [0, 240],
+        [480, 480],
+        [960, 240],
+      ],
+    );
+    assert.deepEqual(
+      transformNoteSelection(notes, "diminish", 10_000).map(
+        (note) => [note.startTick, note.durationTicks],
+      ),
+      [
+        [0, 60],
+        [120, 120],
+        [240, 60],
+      ],
+    );
+    assert.deepEqual(
+      notes.map((note) => [note.pitch, note.startTick, note.durationTicks]),
+      [
+        [60, 0, 120],
+        [64, 240, 240],
+        [67, 480, 120],
+      ],
+    );
+  });
+
+  test("rejects transformed notes outside project bounds", () => {
+    assert.throws(
+      () => transformNoteSelection(
+        [createNote("high", "voice-a", 100, 0, 120)],
+        "augment",
+        100,
+      ),
+      SelectionTransformationError,
+    );
+
+    assert.throws(
+      () => transformNoteSelection(
+        [
+          createNote("axis", "voice-a", 20, 0, 120),
+          createNote("target", "voice-a", 80, 240, 120),
+        ],
+        "invert",
+        10_000,
+      ),
+      SelectionTransformationError,
+    );
+  });
+
+  test("stores a note transformation as one undoable transaction", () => {
+    const noteA = createNote("a", "voice-a", 60, 0, 300);
+    const noteB = createNote("b", "voice-a", 60, 400, 120);
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [noteA, noteB],
+      },
+    });
+    const originalTracks = structuredClone(state.tracksByVoiceId);
+    const store = new ProjectStore(state);
+
+    store.dispatch({
+      transactionId: "transform-selection",
+      label: "Invert selected intervals",
+      createdAt: 1,
+      commands: [
+        {
+          type: "TransformNotes",
+          trackVoiceId: "voice-a",
+          changes: [
+            {
+              noteId: "a",
+              pitch: 60,
+              startTick: 200,
+              durationTicks: 100,
+            },
+            {
+              noteId: "b",
+              pitch: 60,
+              startTick: 400,
+              durationTicks: 120,
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"].notesById.a.startTick,
+      200,
+    );
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"].notesById.a.durationTicks,
+      100,
+    );
+    assert.equal(store.canUndo(), true);
+    store.undo();
+    assert.deepEqual(store.getState().tracksByVoiceId, originalTracks);
     assert.equal(store.canUndo(), false);
   });
 
