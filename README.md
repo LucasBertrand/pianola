@@ -166,6 +166,11 @@ qui coordonnent le runtime avec les dialogues ou les fichiers du navigateur
 sont dans `src/app/workflows`. `App.tsx` sert de point de câblage entre ces
 modules et ne doit pas redevenir le lieu d'implémentation des cas d'usage.
 
+La synchronisation haute fréquence des quatre sliders de déplacement/zoom est
+centralisée dans `useViewportControls.ts`. Ce hook écrit directement dans les
+signaux de rendu et regroupe les entrées avec `requestAnimationFrame` ; ne pas
+la remplacer par du state React piloté à chaque événement `input`.
+
 Éviter `setState`, `map`, `filter` et la création d'objets dans les boucles de
 rendu ou de `pointermove`.
 

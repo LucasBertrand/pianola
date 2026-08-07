@@ -111,6 +111,9 @@ Adapte les couches précédentes au navigateur :
 - `PianoRollLayers.tsx` compose la grille, les notes et l'overlay ;
 - `Timeline.tsx`, `PianoKeyboard.tsx` et `TransportMetrics.tsx` isolent les
   grandes surfaces de navigation musicale ;
+- `EditorHeader.tsx`, `TransportControls.tsx`, `ViewControls.tsx` et
+  `PitchSnapControls.tsx` composent le header, le transport et les contrôles
+  de navigation sans embarquer leur orchestration ;
 - `EditorToolbar.tsx`, `GeneralInspector.tsx` et
   `InstrumentInspector.tsx` portent les contrôles visuels de l'éditeur sans
   connaître les détails des workflows ;
@@ -136,6 +139,11 @@ de dialogue et de contrôles de fichiers du navigateur :
   et l'unique procédure de remplacement du projet actif ;
 - `useMidiFileWorkflow.ts` possède l'analyse, la confirmation d'import et
   l'export MIDI.
+- `useTransportWorkflow.ts` regroupe les commandes de transport, de master bus
+  et de structure temporelle ;
+- `useViewportControls.ts` possède les références DOM, ResizeObserver, la
+  synchronisation des sliders et le batching `requestAnimationFrame` du
+  viewport.
 
 `App.tsx` doit rester une racine de composition : il branche les services et
 les composants, mais ne doit plus recevoir de nouveau workflow métier complet
@@ -200,10 +208,10 @@ le brouillon sont transitoires ; le store n'est modifié qu'après validation.
 La modularisation est volontairement progressive. Les prochains chantiers les
 plus rentables sont :
 
-1. extraire le reste des contrôles de vue et du header de `App.tsx` lorsque
-   leur contrat est stabilisé ;
-2. déplacer les commandes de transport et de structure temporelle vers un
-   workflow dédié ;
+1. extraire la résolution de collision et la gestion des dialogues encore
+   assemblées dans `App.tsx` ;
+2. isoler la composition centrale du piano roll si ses props cessent
+   d'évoluer ;
 3. séparer les constantes produit, musicales, audio et visuelles aujourd'hui
    regroupées dans `program-constants.ts` ;
 4. ajouter des tests navigateur ciblés pour pointer capture, long press et
