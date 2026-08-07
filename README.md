@@ -93,7 +93,7 @@ de panne et simplifie les mises à jour.
 ├── public/                    Manifeste et icône copiés tels quels dans dist
 ├── scripts/                   Suites de tests audio/domaine et MIDI
 ├── src/
-│   ├── app/                   Racine de composition et runtime d'un éditeur
+│   ├── app/                   Composition, runtime et workflows navigateur
 │   ├── application/           Cas d'usage, sélection et plans de commandes
 │   ├── audio/                 Snapshot, scheduler et moteur Web Audio
 │   ├── config/                Constantes produit et réglages centralisés
@@ -159,6 +159,12 @@ pas des composants React individuels :
 - `DomInteractionVisualController` affiche les ghosts et poignées temporaires ;
 - `InteractionOverlay.tsx` monte les couches DOM et branche les adaptateurs ;
 - `render-signal.ts` permet de redessiner sans re-render React.
+
+Les grandes surfaces React sont séparées dans `src/ui/components` (timeline,
+clavier, transport, toolbar, inspecteur général et instrument). Les workflows
+qui coordonnent le runtime avec les dialogues ou les fichiers du navigateur
+sont dans `src/app/workflows`. `App.tsx` sert de point de câblage entre ces
+modules et ne doit pas redevenir le lieu d'implémentation des cas d'usage.
 
 Éviter `setState`, `map`, `filter` et la création d'objets dans les boucles de
 rendu ou de `pointermove`.

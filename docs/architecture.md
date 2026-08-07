@@ -109,6 +109,11 @@ Adapte les couches précédentes au navigateur :
 - `DomInteractionVisualController` peint les ghosts, poignées et lasso dans le
   DOM sans passer par un state React ;
 - `PianoRollLayers.tsx` compose la grille, les notes et l'overlay ;
+- `Timeline.tsx`, `PianoKeyboard.tsx` et `TransportMetrics.tsx` isolent les
+  grandes surfaces de navigation musicale ;
+- `EditorToolbar.tsx`, `GeneralInspector.tsx` et
+  `InstrumentInspector.tsx` portent les contrôles visuels de l'éditeur sans
+  connaître les détails des workflows ;
 - `PianoRollRuntimePort` limite le contrat partagé entre cette composition et
   le runtime concret.
 
@@ -119,7 +124,22 @@ fréquence. Les notes ne deviennent jamais une liste de composants React.
 
 Est la racine de composition. `editor-runtime.ts` construit les services et
 signaux d'une instance d'éditeur. `demo-scene.ts` ne contient plus que les
-fixtures de projet initial et vierge.
+fixtures de projet initial et vierge. Le dossier `app/workflows` contient les
+adaptateurs React de cas d'usage qui ont besoin à la fois du runtime, de boîtes
+de dialogue et de contrôles de fichiers du navigateur :
+
+- `useVoiceWorkflow.ts` orchestre ajout, suppression, ordre et édition des
+  voix ;
+- `useSelectionWorkflow.ts` orchestre Undo/Redo, presse-papiers, transfert,
+  slice et transformations de sélection ;
+- `useProjectFileWorkflow.ts` possède le cycle nouveau/sauvegarde/chargement
+  et l'unique procédure de remplacement du projet actif ;
+- `useMidiFileWorkflow.ts` possède l'analyse, la confirmation d'import et
+  l'export MIDI.
+
+`App.tsx` doit rester une racine de composition : il branche les services et
+les composants, mais ne doit plus recevoir de nouveau workflow métier complet
+ni de grand bloc visuel spécialisé.
 
 Cette séparation prépare un futur système d'onglets : chaque onglet pourra
 posséder son propre `EditorRuntime` sans dupliquer les services globaux de
@@ -180,10 +200,10 @@ le brouillon sont transitoires ; le store n'est modifié qu'après validation.
 La modularisation est volontairement progressive. Les prochains chantiers les
 plus rentables sont :
 
-1. extraire les workflows de validation encore locaux à
-   `App.tsx`, notamment les opérations de projet et de voix ;
-2. extraire les grands panneaux JSX de `App.tsx` vers des composants focalisés
-   avec des props explicites ;
+1. extraire le reste des contrôles de vue et du header de `App.tsx` lorsque
+   leur contrat est stabilisé ;
+2. déplacer les commandes de transport et de structure temporelle vers un
+   workflow dédié ;
 3. séparer les constantes produit, musicales, audio et visuelles aujourd'hui
    regroupées dans `program-constants.ts` ;
 4. ajouter des tests navigateur ciblés pour pointer capture, long press et
