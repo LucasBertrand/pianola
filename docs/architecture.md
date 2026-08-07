@@ -57,6 +57,8 @@ visuelle :
   sans détourner un signal de rendu ;
 - `note-edit-commands.ts` et `selection-edit-plans.ts` construisent les
   transactions complexes avant leur envoi au store ;
+- `NoteGestureWorkflow` valide et finalise les déplacements, resize et dessins
+  de notes, puis réconcilie la sélection après la transaction ;
 - `note-collision-resolution.ts` définit le contrat entre une collision métier
   et la modale qui recueille le choix de l'utilisateur.
 
@@ -80,7 +82,7 @@ doit pas dépendre d'un composant Canvas.
 Contient les entrées et calculs de gestes indépendants du navigateur :
 
 - échantillon pointeur normalisé (`PointerSample`) ;
-- brouillon mutable et modes de geste ;
+- brouillon mutable et machine à états des gestes ;
 - quantification, bornes de sélection et de resize ;
 - calcul du pinch/pan et verrouillage d'axe ;
 - masque observable des notes temporairement cachées.
@@ -102,8 +104,8 @@ Adapte les couches précédentes au navigateur :
 - `pointer-sample.ts` traduit les événements natifs en `PointerSample` ;
 - `useInteractionManager.ts` gère les listeners, le pointer capture, les
   timers et `requestAnimationFrame` ;
-- `usePianoRollEvents.ts` traduit les transitions de gestes en intentions
-  applicatives ;
+- `usePianoRollEvents.ts` adapte les résultats de la machine aux workflows
+  applicatifs et au feedback visuel, sans porter la validation métier ;
 - `DomInteractionVisualController` peint les ghosts, poignées et lasso dans le
   DOM sans passer par un state React ;
 - `PianoRollLayers.tsx` compose la grille, les notes et l'overlay ;
@@ -132,8 +134,8 @@ PointerEvent natif
   → stratégie du piano roll
   → PianoRollInteractionSession + draft mutable
   → DomInteractionVisualController (feedback immédiat)
-  → validation au pointerup
-  → plan de commandes applicatif
+  → NoteGestureWorkflow au pointerup
+  → validation métier et plan de commandes applicatif
   → EditorCommandService
   → ProjectStore / reducer / Undo-Redo
 ```
@@ -178,8 +180,8 @@ le brouillon sont transitoires ; le store n'est modifié qu'après validation.
 La modularisation est volontairement progressive. Les prochains chantiers les
 plus rentables sont :
 
-1. transformer les transitions encore locales à `usePianoRollEvents.ts` en
-   machine à états testable, mode par mode ;
+1. extraire les workflows de validation encore locaux à
+   `App.tsx`, notamment les opérations de projet et de voix ;
 2. extraire les grands panneaux JSX de `App.tsx` vers des composants focalisés
    avec des props explicites ;
 3. séparer les constantes produit, musicales, audio et visuelles aujourd'hui

@@ -14,8 +14,6 @@ import {
 export const APPLICATION_CONSTANTS = Object.freeze({
   productName: "Pianola",
   productSlug: "pianola",
-  productDescription:
-    "A touch-first polyphonic piano-roll sequencer for the browser.",
   defaultProjectTitle: "Pianola Project",
   demoProjectTitle: "Pianola Demo",
 } as const);
@@ -178,7 +176,6 @@ export const INTERACTION_CONSTANTS = Object.freeze({
   minimumPinchScale: 0.82,
   maximumPinchScale: 1.22,
   pinchScaleDeadZone: 0.003,
-  contextActionEventName: "piano-roll-context-action",
 } as const);
 
 /**
@@ -399,7 +396,6 @@ export const EDITOR_CONSTANTS = Object.freeze({
   verticalScrollStep: 4,
   zoomStep: 0.05,
   defaultDrawVelocity: 100,
-  defaultInteractionTool: "select",
   defaultNoteColorMode: "voice",
   defaultGridBaseResolutionTicks: PROJECT_CONSTANTS.ppqn / 4,
   defaultGridSubdivision: "straight",
@@ -463,7 +459,6 @@ export const EDITOR_CONSTANTS = Object.freeze({
 
 /** Rendering budgets and colors sourced from the central application theme. */
 export const RENDERING_CONSTANTS = Object.freeze({
-  applicationSurfaceColor: APPLICATION_COLORS.neutral.application,
   defaultNoteColor: APPLICATION_COLORS.notes.default,
   noteLabelMinimumHeightCssPixels: 11,
   noteLabelHorizontalPaddingCssPixels: 2,
@@ -484,7 +479,6 @@ export const RENDERING_CONSTANTS = Object.freeze({
   gridBarLineColor: APPLICATION_COLORS.pianoRoll.barLine,
   minimumGridLineSpacingCssPixels: 4,
   maximumGridLinesPerPass: 4_096,
-  pitchClassNoteColors: APPLICATION_COLORS.notes.pitchClassPalette,
   userVoiceColors: APPLICATION_COLORS.notes.voicePalette,
 } as const);
 

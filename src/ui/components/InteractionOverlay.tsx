@@ -24,12 +24,16 @@ import {
 } from "../hooks/useInteractionManager";
 import {
   usePianoRollEvents,
-  type PianoRollEventController,
 } from "../hooks/usePianoRollEvents";
 import type {
+  PianoRollEventController,
+} from "../../interaction/piano-roll-event-controller";
+import type {
   SelectionMode,
-  TouchAwareInteractionStrategy,
-} from "../interactions/types";
+} from "../../interaction/core/state";
+import type {
+  PointerInteractionStrategy,
+} from "../../interaction/pointer-interaction-strategy";
 import type {
   PianoRollRuntimePort,
 } from "../contracts/piano-roll-runtime";
@@ -113,14 +117,13 @@ export function InteractionOverlay(
     voiceStyles,
     noteColorMode,
     editorCommands,
-    interactionToolState: toolState,
     gridResolutionTicks,
     pitchSnapSettings,
     selectionRequests,
   } = runtime;
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const visualsRef = useRef<DomInteractionVisualController | null>(null);
-  const strategyRef = useRef<TouchAwareInteractionStrategy | null>(
+  const strategyRef = useRef<PointerInteractionStrategy | null>(
     null,
   );
 
@@ -134,11 +137,10 @@ export function InteractionOverlay(
 
   const visuals = visualsRef.current;
 
-  const interactionManager = useInteractionManager({
+  useInteractionManager({
     overlayRef,
     strategyRef,
     viewport,
-    toolState,
     totalTicks,
     setViewport,
   });
@@ -153,7 +155,6 @@ export function InteractionOverlay(
     editorCommands,
     activeVoiceId,
     totalTicks,
-    getActiveTool: interactionManager.getActiveTool,
     selectionMode,
     gridResolutionTicks,
     pitchSnapSettings,

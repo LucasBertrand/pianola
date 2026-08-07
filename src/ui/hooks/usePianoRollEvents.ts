@@ -7,18 +7,9 @@ import {
   EDITOR_CONSTANTS,
   INTERACTION_CONSTANTS,
 } from "../../config/program-constants";
-import type {
-  PianoRollCommand,
-} from "../../domain/commands";
 import {
-  buildDeleteNoteCommands,
-  buildRepositionNoteCommands,
-  buildResizeNoteCommands,
-  resizeNotes,
-} from "../../application/note-edit-commands";
-import type {
-  EditorSelection,
-} from "../../application/editor-selection";
+  NoteGestureWorkflow,
+} from "../../application/note-gesture-workflow";
 import type {
   EditorSelectionRequest,
   EditorSelectionRequests,
@@ -26,13 +17,8 @@ import type {
 import type {
   Note,
   NoteId,
-  ProjectState,
   VoiceId,
 } from "../../domain/model";
-import {
-  countNoteEditCollisions,
-  type NoteEditIntent,
-} from "../../domain/note-collision";
 import type {
   NoteCollisionResolutionRequest,
 } from "../../application/note-collision-resolution";
@@ -47,30 +33,25 @@ import {
 } from "../../geometry/spatial-index";
 import {
   createTouchEnvelope,
-  hasResizeCollision,
-  hasVoiceCollision,
-} from "../../interaction/note-hit-testing";
+} from "../../interaction/touch-envelope";
 import {
   compareNotesByVoiceRenderOrder,
   type VoiceRenderStyle,
 } from "../rendering/note-style";
 import {
-  type InteractionDraft,
   type InteractionVisualController,
-  type ResizeEdge,
 } from "../interactions/contracts";
 import type {
-  InteractionTool,
   SelectionMode,
-  TouchAwareInteractionStrategy,
-} from "../interactions/types";
+} from "../../interaction/core/state";
 import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,
 } from "../../music/pitch-snap";
 import {
   isSupportedPointerActivation,
-} from "../interactions/types";
+  type PointerInteractionStrategy,
+} from "../../interaction/pointer-interaction-strategy";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
@@ -87,12 +68,15 @@ import {
 import {
   PianoRollInteractionSession,
 } from "../../interaction/piano-roll-interaction-session";
+import type {
+  PianoRollEventController,
+} from "../../interaction/piano-roll-event-controller";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
   readonly visualsRef: RefObject<InteractionVisualController | null>;
   readonly strategyRef: RefObject<
-    TouchAwareInteractionStrategy | null
+    PointerInteractionStrategy | null
   >;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly spatialIndex: SpatialIndex;
@@ -102,7 +86,6 @@ export interface UsePianoRollEventsOptions {
   readonly editorCommands: EditorCommandPort;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
-  readonly getActiveTool: () => InteractionTool;
   readonly selectionMode: SelectionMode;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
@@ -118,17 +101,6 @@ export interface UsePianoRollEventsOptions {
   readonly onTransactionRejected?:
     | ((error: unknown) => void)
     | undefined;
-}
-
-export interface PianoRollEventController {
-  readonly draft: InteractionDraft;
-  readonly selection: EditorSelection;
-  getSelectedNotes(): readonly Note[];
-  replaceSelection(notes: readonly Note[]): void;
-  removeVoiceFromSelection(voiceId: VoiceId): void;
-  togglePitchSelection(pitch: number): void;
-  cancel(): void;
-  clearSelection(): void;
 }
 
 const TOUCH_DOUBLE_TAP_DELAY_MS =
@@ -159,7 +131,6 @@ export function usePianoRollEvents(
     voiceStyles,
     editorCommands,
     activeVoiceId,
-    getActiveTool,
     selectionMode,
     gridResolutionTicks,
     pitchSnapSettings,
@@ -183,12 +154,12 @@ export function usePianoRollEvents(
 
   const session = sessionRef.current;
   const draft = session.draft;
+  const gesture = session.gesture;
   const selection = session.selection;
 
   useEffect(() => {
     const overlay = overlayRef.current;
     const converter = session.converter;
-    const collisionBuffer = session.collisionBuffer;
     const lassoBuffer = session.lassoBuffer;
     const tapState = session.tapState;
 
@@ -232,71 +203,15 @@ export function usePianoRollEvents(
     const isSelectedNoteEditable = (note: Note): boolean =>
       selection.has(note.id) && isNoteEditable(note);
 
-    const refreshSelection = (
-      projectState: ProjectState,
-    ): void => {
-      selection.reconcile(projectState, isNoteEditable);
-    };
-
-    const replaceSelectionByNoteIds = (
-      projectState: ProjectState,
-      noteIds: readonly NoteId[],
-    ): void => {
-      selection.clear();
-
-      for (const noteId of noteIds) {
-        for (const voiceId of projectState.voiceOrder) {
-          const note =
-            projectState
-              .tracksByVoiceId[voiceId]
-              ?.notesById[noteId];
-
-          if (
-            note !== undefined
-            && !isVoiceLocked(note.voiceId)
-          ) {
-            selection.add(note);
-            break;
-          }
-        }
-      }
-
-      showSelection();
-    };
-
-    const requestNoteCollisionResolution = (
-      originalNotes: readonly Note[],
-      proposedNotes: readonly Note[],
-      label: string,
-    ): void => {
-      const requestState = editorCommands.getState();
-      const originalSnapshot = originalNotes.slice();
-      const proposedSnapshot = proposedNotes.slice();
-      const collisionCount = countNoteEditCollisions(
-        requestState,
-        {
-          originalNotes: originalSnapshot,
-          proposedNotes: proposedSnapshot,
-        },
-      );
-
-      if (collisionCount === 0) {
-        return;
-      }
-
-      onNoteCollision?.({
-        label,
-        collisionCount,
-        originalNotes: originalSnapshot,
-        proposedNotes: proposedSnapshot,
-        onResolved(projectState, selectedNoteIds): void {
-          replaceSelectionByNoteIds(
-            projectState,
-            selectedNoteIds,
-          );
-        },
-      });
-    };
+    const noteGestureWorkflow = new NoteGestureWorkflow(
+      editorCommands,
+      selection,
+      {
+        onCollision: onNoteCollision,
+        onTransactionRejected,
+        onSelectionChanged: showSelection,
+      },
+    );
 
     const endGestureVisual = (): void => {
       if (draft.mode === "DRAGGING") {
@@ -328,22 +243,6 @@ export function usePianoRollEvents(
         )
       ) {
         showSelection();
-      }
-    };
-
-    const dispatchTransaction = (
-      commands: readonly PianoRollCommand[],
-      label: string,
-    ): ProjectState | null => {
-      if (commands.length === 0) {
-        return null;
-      }
-
-      try {
-        return editorCommands.dispatch(commands, label);
-      } catch (error: unknown) {
-        onTransactionRejected?.(error);
-        return null;
       }
     };
 
@@ -385,15 +284,12 @@ export function usePianoRollEvents(
 
       const deleteSelection =
         includeSelection && selection.has(note.id);
-      const commands = deleteSelection
-        ? buildDeleteNoteCommands(selection.notes)
-        : buildDeleteNoteCommands([note]);
-      const nextState = dispatchTransaction(
-        commands,
+      const result = noteGestureWorkflow.commitDelete(
+        deleteSelection ? selection.notes : [note],
         deleteSelection ? "Delete selected notes" : "Delete note",
       );
 
-      if (nextState !== null) {
+      if (result === "committed") {
         clearSelection();
         return true;
       }
@@ -455,7 +351,6 @@ export function usePianoRollEvents(
       const localY = event.clientY - bounds.top;
       const pointerTick = converter.cssPixelXToTick(localX);
       const pointerPitch = converter.cssPixelYToPitch(localY);
-      const activeTool = getActiveTool();
       const resolutionTicks = gridResolutionTicks.get();
       const bodyEnvelope = createTouchEnvelope(
         converter,
@@ -477,28 +372,21 @@ export function usePianoRollEvents(
         MOUSE_RESIZE_HANDLE_CSS_PIXELS,
         TOUCH_RESIZE_HANDLE_CSS_PIXELS,
       );
-      const selectedEdgeCandidate =
-        activeTool === "select"
-          ? spatialIndex.queryNoteEdge(
-              pointerTick,
-              pointerPitch,
-              edgeEnvelope,
-              isSelectedNoteEditable,
-              compareNotesByVoiceRenderOrder,
-            )
-          : undefined;
+      const selectedEdgeCandidate = spatialIndex.queryNoteEdge(
+        pointerTick,
+        pointerPitch,
+        edgeEnvelope,
+        isSelectedNoteEditable,
+        compareNotesByVoiceRenderOrder,
+      );
       const edgeCandidate =
         selectedEdgeCandidate
-        ?? (
-          activeTool === "select"
-            ? spatialIndex.queryNoteEdge(
-                pointerTick,
-                pointerPitch,
-                edgeEnvelope,
-                isNoteEditable,
-                compareNotesByVoiceRenderOrder,
-              )
-            : undefined
+        ?? spatialIndex.queryNoteEdge(
+          pointerTick,
+          pointerPitch,
+          edgeEnvelope,
+          isNoteEditable,
+          compareNotesByVoiceRenderOrder,
         );
       const edgeHit =
         edgeCandidate !== undefined
@@ -508,29 +396,27 @@ export function usePianoRollEvents(
       const targetNote =
         edgeCandidate?.note ?? hitNote;
 
-      draft.activeTool = activeTool;
-      draft.snapResolutionTicks = resolutionTicks;
-      draft.pitchSnapSettings = pitchSnapSettings.get();
-      draft.pointerId = event.pointerId;
-      draft.overlayLeft = bounds.left;
-      draft.overlayTop = bounds.top;
-      draft.originLocalX = localX;
-      draft.originLocalY = localY;
-      draft.currentLocalX = localX;
-      draft.currentLocalY = localY;
-      draft.originPointerTick = pointerTick;
-      draft.originPointerPitch = pointerPitch;
-      draft.deltaTicks = 0;
-      draft.deltaPitch = 0;
-      draft.targetNoteId = targetNote?.id ?? null;
-      draft.additiveSelection = event.shiftKey;
-      draft.selectionMode = event.shiftKey
-        ? "add"
-        : selectionMode;
+      const pointerStarted = gesture.beginPointer({
+        pointerId: event.pointerId,
+        overlayLeft: bounds.left,
+        overlayTop: bounds.top,
+        localX,
+        localY,
+        pointerTick,
+        pointerPitch,
+        targetNoteId: targetNote?.id ?? null,
+        snapResolutionTicks: resolutionTicks,
+        pitchSnapSettings: pitchSnapSettings.get(),
+        selectionMode: event.shiftKey ? "add" : selectionMode,
+      });
+
+      if (!pointerStarted) {
+        return;
+      }
 
       if (targetNote !== undefined) {
         if (draft.selectionMode === "subtract") {
-          draft.mode = "PENDING_NOTE_SELECTION";
+          gesture.beginPendingNoteSelection();
           return;
         }
 
@@ -542,30 +428,17 @@ export function usePianoRollEvents(
           selection.notes,
         );
 
-        draft.minimumSelectedStartTick =
-          selectionBounds.minimumStartTick;
-        draft.maximumSelectedEndTick =
-          selectionBounds.maximumEndTick;
-        draft.minimumSelectedPitch =
-          selectionBounds.minimumPitch;
-        draft.maximumSelectedPitch =
-          selectionBounds.maximumPitch;
-
         const resizeEdge = edgeHit?.edge ?? null;
 
         if (resizeEdge === null) {
-          draft.mode = "DRAGGING";
+          gesture.beginDrag(selectionBounds);
           visualsRef.current?.beginDrag(
             selection.notes,
             converter,
             voiceStyles.get(),
           );
         } else {
-          draft.mode =
-            resizeEdge === "start"
-              ? "RESIZING_START"
-              : "RESIZING_END";
-          draft.originResizeTick =
+          const originResizeTick =
             resizeEdge === "start"
               ? targetNote.startTick
               : targetNote.startTick + targetNote.durationTicks;
@@ -575,10 +448,12 @@ export function usePianoRollEvents(
             resolutionTicks,
             totalTicks,
           );
-          draft.minimumResizeDeltaTicks =
-            resizeBounds.minimumDeltaTicks;
-          draft.maximumResizeDeltaTicks =
-            resizeBounds.maximumDeltaTicks;
+          gesture.beginResize(
+            resizeEdge,
+            originResizeTick,
+            selectionBounds,
+            resizeBounds,
+          );
           visualsRef.current?.beginResize(
             selection.notes,
             converter,
@@ -587,158 +462,77 @@ export function usePianoRollEvents(
           );
         }
       } else {
-        draft.mode = "PENDING_LASSO";
+        gesture.beginPendingLasso();
       }
 
     };
 
     const handlePointerMove = (event: PointerSample): void => {
-      if (
-        event.pointerId !== draft.pointerId
-        || draft.mode === "IDLE"
-      ) {
+      if (!gesture.isPointerActive(event.pointerId)) {
         return;
       }
 
       const localX = event.clientX - draft.overlayLeft;
       const localY = event.clientY - draft.overlayTop;
-      draft.currentLocalX = localX;
-      draft.currentLocalY = localY;
+      const updateKind = gesture.updatePointer(
+        event.pointerId,
+        localX,
+        localY,
+        converter.cssPixelXToTick(localX),
+        converter.cssPixelYToPitch(localY),
+        totalTicks,
+        TAP_MOVEMENT_TOLERANCE_CSS_PIXELS,
+      );
 
-      if (draft.mode === "PENDING_LASSO") {
-        const movedBeyondTapTolerance =
-          Math.abs(localX - draft.originLocalX)
-            > TAP_MOVEMENT_TOLERANCE_CSS_PIXELS
-          || Math.abs(localY - draft.originLocalY)
-            > TAP_MOVEMENT_TOLERANCE_CSS_PIXELS;
-
-        if (!movedBeyondTapTolerance) {
-          return;
-        }
-
+      if (updateKind === "beginLasso") {
         if (draft.selectionMode === "replace") {
           clearSelection();
         }
 
-        draft.mode = "LASSO_SELECTING";
         visualsRef.current?.beginLasso(
           draft.originLocalX,
           draft.originLocalY,
         );
+        visualsRef.current?.updateLasso(
+          draft.originLocalX,
+          draft.originLocalY,
+          localX,
+          localY,
+        );
+        return;
       }
 
-      if (draft.mode === "DRAGGING") {
-        const pointerTick = converter.cssPixelXToTick(localX);
-        const pointerPitch = converter.cssPixelYToPitch(localY);
-        let deltaTicks = quantizeTick(
-          pointerTick - draft.originPointerTick,
-          draft.snapResolutionTicks,
+      if (updateKind === "updateDrag") {
+        const deltaX =
+          converter.tickToCssPixelX(draft.deltaTicks)
+          - converter.tickToCssPixelX(0);
+        const pitchStepCssPixels =
+          converter.pitchToCssPixelY(0)
+          - converter.pitchToCssPixelY(1);
+
+        visualsRef.current?.updateDrag(
+          deltaX,
+          pitchStepCssPixels,
+          draft.deltaPitch,
+          draft.pitchSnapSettings,
         );
-        let deltaPitch =
-          pointerPitch - draft.originPointerPitch;
+      } else if (updateKind === "updateResize") {
+        const deltaX =
+          converter.tickToCssPixelX(draft.deltaTicks)
+          - converter.tickToCssPixelX(0);
+        const resizeEdge =
+          draft.mode === "RESIZING_START" ? "start" : "end";
 
-        if (
-          draft.minimumSelectedStartTick + deltaTicks < 0
-        ) {
-          deltaTicks = -draft.minimumSelectedStartTick;
-        }
+        visualsRef.current?.updateResize(resizeEdge, deltaX);
+      } else if (updateKind === "updateDraw") {
+        const width =
+          converter.tickToCssPixelX(
+            draft.drawStartTick + draft.drawDurationTicks,
+          )
+          - converter.tickToCssPixelX(draft.drawStartTick);
 
-        if (
-          draft.maximumSelectedEndTick + deltaTicks > totalTicks
-        ) {
-          deltaTicks = totalTicks - draft.maximumSelectedEndTick;
-        }
-
-        if (draft.minimumSelectedPitch + deltaPitch < 0) {
-          deltaPitch = -draft.minimumSelectedPitch;
-        } else if (
-          draft.maximumSelectedPitch + deltaPitch > 127
-        ) {
-          deltaPitch = 127 - draft.maximumSelectedPitch;
-        }
-
-        if (
-          deltaTicks !== draft.deltaTicks
-          || deltaPitch !== draft.deltaPitch
-        ) {
-          draft.deltaTicks = deltaTicks;
-          draft.deltaPitch = deltaPitch;
-
-          const deltaX =
-            converter.tickToCssPixelX(deltaTicks)
-            - converter.tickToCssPixelX(0);
-          const pitchStepCssPixels =
-            converter.pitchToCssPixelY(0)
-            - converter.pitchToCssPixelY(1);
-
-          visualsRef.current?.updateDrag(
-            deltaX,
-            pitchStepCssPixels,
-            deltaPitch,
-            draft.pitchSnapSettings,
-          );
-        }
-      } else if (
-        draft.mode === "RESIZING_START"
-        || draft.mode === "RESIZING_END"
-      ) {
-        const pointerTick = converter.cssPixelXToTick(localX);
-        const targetTick = quantizeTick(
-          draft.originResizeTick
-            + pointerTick
-            - draft.originPointerTick,
-          draft.snapResolutionTicks,
-        );
-        let deltaTicks = targetTick - draft.originResizeTick;
-
-        if (deltaTicks < draft.minimumResizeDeltaTicks) {
-          deltaTicks = draft.minimumResizeDeltaTicks;
-        } else if (
-          deltaTicks > draft.maximumResizeDeltaTicks
-        ) {
-          deltaTicks = draft.maximumResizeDeltaTicks;
-        }
-
-        if (deltaTicks !== draft.deltaTicks) {
-          draft.deltaTicks = deltaTicks;
-          const deltaX =
-            converter.tickToCssPixelX(deltaTicks)
-            - converter.tickToCssPixelX(0);
-          const resizeEdge =
-            draft.mode === "RESIZING_START"
-              ? "start"
-              : "end";
-
-          visualsRef.current?.updateResize(
-            resizeEdge,
-            deltaX,
-          );
-        }
-      } else if (draft.mode === "DRAWING") {
-        const pointerTick = converter.cssPixelXToTick(localX);
-        const snappedEndTick = quantizeTick(
-          pointerTick,
-          draft.snapResolutionTicks,
-        );
-        const durationTicks = Math.min(
-          totalTicks - draft.drawStartTick,
-          Math.max(
-            draft.snapResolutionTicks,
-            snappedEndTick - draft.drawStartTick,
-          ),
-        );
-
-        if (durationTicks !== draft.drawDurationTicks) {
-          draft.drawDurationTicks = durationTicks;
-          const width =
-            converter.tickToCssPixelX(
-              draft.drawStartTick + durationTicks,
-            )
-            - converter.tickToCssPixelX(draft.drawStartTick);
-
-          visualsRef.current?.updateDraw(width);
-        }
-      } else if (draft.mode === "LASSO_SELECTING") {
+        visualsRef.current?.updateDraw(width);
+      } else if (updateKind === "updateLasso") {
         visualsRef.current?.updateLasso(
           draft.originLocalX,
           draft.originLocalY,
@@ -746,64 +540,35 @@ export function usePianoRollEvents(
           localY,
         );
       }
-
     };
 
     const handlePointerUp = (event: PointerSample): void => {
-      if (
-        event.pointerId !== draft.pointerId
-        || draft.mode === "IDLE"
-      ) {
+      const completion = gesture.completePointer(
+        event.pointerId,
+        TAP_MOVEMENT_TOLERANCE_CSS_PIXELS,
+      );
+
+      if (completion === null) {
         return;
       }
 
-      const completedMode = draft.mode;
-      const targetNoteId = draft.targetNoteId;
-      const pointerWasTap =
-        Math.abs(
-          draft.currentLocalX - draft.originLocalX,
-        ) <= TAP_MOVEMENT_TOLERANCE_CSS_PIXELS
-        && Math.abs(
-          draft.currentLocalY - draft.originLocalY,
-        ) <= TAP_MOVEMENT_TOLERANCE_CSS_PIXELS;
+      const completedMode = completion.mode;
+      const targetNoteId = completion.targetNoteId;
+      const pointerWasTap = completion.pointerWasTap;
 
       if (completedMode === "DRAGGING") {
         if (
-          draft.deltaTicks !== 0
-          || draft.deltaPitch !== 0
+          completion.deltaTicks !== 0
+          || completion.deltaPitch !== 0
         ) {
           const proposedNotes = buildRepositionedNotes(
             selection.notes,
-            draft.deltaTicks,
-            draft.deltaPitch,
-            draft.pitchSnapSettings,
+            completion.deltaTicks,
+            completion.deltaPitch,
+            completion.pitchSnapSettings,
           );
-          const moveIntent = {
-            originalNotes: selection.notes,
-            proposedNotes,
-          } as const;
 
-          if (
-            countNoteEditCollisions(
-              editorCommands.getState(),
-              moveIntent,
-            ) > 0
-          ) {
-            requestNoteCollisionResolution(
-              selection.notes,
-              proposedNotes,
-              "Move notes",
-            );
-          } else {
-            const nextState = dispatchTransaction(
-              buildRepositionNoteCommands(proposedNotes),
-              "Move notes",
-            );
-
-            if (nextState !== null) {
-              refreshSelection(nextState);
-            }
-          }
+          noteGestureWorkflow.commitMove(proposedNotes);
         }
 
         visualsRef.current?.endDrag();
@@ -812,99 +577,33 @@ export function usePianoRollEvents(
         completedMode === "RESIZING_START"
         || completedMode === "RESIZING_END"
       ) {
-        const resizeEdge: ResizeEdge =
+        const resizeEdge =
           completedMode === "RESIZING_START"
             ? "start"
-            : "end";
+            : "end" as const;
 
-        if (draft.deltaTicks !== 0) {
-          if (
-            hasResizeCollision(
-              selection.notes,
-              draft.deltaTicks,
-              resizeEdge,
-              spatialIndex,
-              collisionBuffer,
-            )
-          ) {
-            requestNoteCollisionResolution(
-              selection.notes,
-              resizeNotes(
-                selection.notes,
-                draft.deltaTicks,
-                resizeEdge,
-              ),
-              "Resize notes",
-            );
-          } else {
-            const nextState = dispatchTransaction(
-              buildResizeNoteCommands(
-                selection.notes,
-                draft.deltaTicks,
-                resizeEdge,
-              ),
-              "Resize notes",
-            );
-
-            if (nextState !== null) {
-              refreshSelection(nextState);
-            }
-          }
+        if (completion.deltaTicks !== 0) {
+          noteGestureWorkflow.commitResize(
+            completion.deltaTicks,
+            resizeEdge,
+          );
         }
 
         visualsRef.current?.endResize();
         showSelection();
       } else if (completedMode === "DRAWING") {
-        const voiceId = draft.drawVoiceId;
+        const voiceId = completion.drawVoiceId;
         if (voiceId !== null) {
           const note: Note = {
             id: session.createNoteId(Date.now()),
-            pitch: draft.drawPitch,
-            startTick: draft.drawStartTick,
-            durationTicks: draft.drawDurationTicks,
+            pitch: completion.drawPitch,
+            startTick: completion.drawStartTick,
+            durationTicks: completion.drawDurationTicks,
             velocity: EDITOR_CONSTANTS.defaultDrawVelocity,
             voiceId,
           };
 
-          if (
-            hasVoiceCollision(
-              voiceId,
-              draft.drawStartTick,
-              draft.drawStartTick + draft.drawDurationTicks,
-              draft.drawPitch,
-              spatialIndex,
-              collisionBuffer,
-            )
-          ) {
-            requestNoteCollisionResolution(
-              [],
-              [note],
-              "Draw note",
-            );
-          } else {
-            const command: PianoRollCommand = {
-              type: "AddNotes",
-              trackVoiceId: voiceId,
-              notes: [note],
-            };
-            const nextState = dispatchTransaction(
-              [command],
-              "Draw note",
-            );
-
-            if (nextState !== null) {
-              const addedNote =
-                nextState
-                  .tracksByVoiceId[voiceId]
-                  ?.notesById[note.id];
-
-              clearSelection();
-
-              if (addedNote !== undefined) {
-                selection.add(addedNote);
-              }
-            }
-          }
+          noteGestureWorkflow.commitDraw(note);
         }
 
         visualsRef.current?.endDraw();
@@ -912,16 +611,16 @@ export function usePianoRollEvents(
 
       } else if (completedMode === "LASSO_SELECTING") {
         const startTick = converter.cssPixelXToTick(
-          draft.originLocalX,
+          completion.originLocalX,
         );
         const endTick = converter.cssPixelXToTick(
-          draft.currentLocalX,
+          completion.currentLocalX,
         );
         const startPitch = converter.cssPixelYToPitch(
-          draft.originLocalY,
+          completion.originLocalY,
         );
         const endPitch = converter.cssPixelYToPitch(
-          draft.currentLocalY,
+          completion.currentLocalY,
         );
         const minimumTick = Math.max(
           0,
@@ -937,7 +636,7 @@ export function usePianoRollEvents(
           Math.max(startPitch, endPitch),
         );
 
-        if (draft.selectionMode === "replace") {
+        if (completion.selectionMode === "replace") {
           clearSelection();
         }
 
@@ -949,7 +648,7 @@ export function usePianoRollEvents(
           lassoBuffer,
         );
 
-        if (draft.selectionMode === "subtract") {
+        if (completion.selectionMode === "subtract") {
           for (
             let noteIndex = 0;
             noteIndex < lassoBuffer.length;
@@ -985,11 +684,11 @@ export function usePianoRollEvents(
         clearSelection();
 
         const pointerTick = converter.cssPixelXToTick(
-          draft.currentLocalX,
+          completion.currentLocalX,
         );
         const snappedTick = quantizeTick(
           pointerTick,
-          draft.snapResolutionTicks,
+          completion.snapResolutionTicks,
         );
 
         onGridSeek?.(
@@ -1003,8 +702,6 @@ export function usePianoRollEvents(
         removeHitNoteFromSelection(targetNoteId);
       }
 
-      resetDraft();
-
       if (
         pointerWasTap
         && targetNoteId !== null
@@ -1016,16 +713,12 @@ export function usePianoRollEvents(
     };
 
     const handlePointerCancel = (event: PointerSample): void => {
-      if (event.pointerId === draft.pointerId) {
+      if (gesture.isPointerActive(event.pointerId)) {
         cancelGesture();
       }
     };
 
     const handleDoubleClick = (event: PointerSample): void => {
-      if (getActiveTool() !== "select") {
-        return;
-      }
-
       updateConverter();
 
       const bounds = overlay.getBoundingClientRect();
@@ -1103,26 +796,30 @@ export function usePianoRollEvents(
         return;
       }
 
-      draft.activeTool = "select";
-      draft.snapResolutionTicks = resolutionTicks;
-      draft.pitchSnapSettings = activePitchSnapSettings;
-      draft.pointerId = event.pointerId;
-      draft.overlayLeft = bounds.left;
-      draft.overlayTop = bounds.top;
-      draft.originLocalX = localX;
-      draft.originLocalY = localY;
-      draft.currentLocalX = localX;
-      draft.currentLocalY = localY;
-      draft.originPointerTick = tick;
-      draft.originPointerPitch = pitch;
-      draft.deltaTicks = 0;
-      draft.deltaPitch = 0;
-      draft.targetNoteId = null;
-      draft.mode = "DRAWING";
-      draft.drawStartTick = startTick;
-      draft.drawPitch = drawPitch;
-      draft.drawDurationTicks = resolutionTicks;
-      draft.drawVoiceId = currentActiveVoiceId;
+      const pointerStarted = gesture.beginPointer({
+        pointerId: event.pointerId,
+        overlayLeft: bounds.left,
+        overlayTop: bounds.top,
+        localX,
+        localY,
+        pointerTick: tick,
+        pointerPitch: pitch,
+        targetNoteId: null,
+        snapResolutionTicks: resolutionTicks,
+        pitchSnapSettings: activePitchSnapSettings,
+        selectionMode: "replace",
+      });
+
+      if (!pointerStarted) {
+        return;
+      }
+
+      gesture.beginDrawing(
+        startTick,
+        drawPitch,
+        resolutionTicks,
+        currentActiveVoiceId,
+      );
       clearSelection();
       visualsRef.current?.beginDraw(
         startTick,
@@ -1189,8 +886,7 @@ export function usePianoRollEvents(
     );
     const unsubscribeSelectionRequests =
       selectionRequests.subscribe(handleSelectionRequest);
-    const strategy: TouchAwareInteractionStrategy = {
-      supportsHover: false,
+    const strategy: PointerInteractionStrategy = {
       onPointerDown: handlePointerDown,
       shouldScheduleLongPress(): boolean {
         return draft.mode === "PENDING_LASSO";
@@ -1219,7 +915,7 @@ export function usePianoRollEvents(
     };
   }, [
     draft,
-    getActiveTool,
+    gesture,
     gridResolutionTicks,
     pitchSnapSettings,
     onNoteCollision,
@@ -1240,8 +936,6 @@ export function usePianoRollEvents(
   ]);
 
   return {
-    draft,
-    selection,
     getSelectedNotes(): readonly Note[] {
       return selection.copyNotes();
     },
@@ -1316,10 +1010,7 @@ export function usePianoRollEvents(
       visualsRef.current?.endResize();
       visualsRef.current?.endDraw();
       visualsRef.current?.endLasso();
-      draft.mode = "IDLE";
-      draft.pointerId = -1;
-      draft.deltaTicks = 0;
-      draft.deltaPitch = 0;
+      gesture.reset();
 
       visualsRef.current?.showSelection(
         selection.notes,

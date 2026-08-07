@@ -44,10 +44,10 @@ import {
 } from "../hooks/useCanvasRenderer";
 import type {
   PianoRollEventController,
-} from "../hooks/usePianoRollEvents";
+} from "../../interaction/piano-roll-event-controller";
 import type {
   SelectionMode,
-} from "../interactions/types";
+} from "../../interaction/core/state";
 import type {
   PianoRollRuntimePort,
 } from "../contracts/piano-roll-runtime";

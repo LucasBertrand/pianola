@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useRef,
   type RefObject,
 } from "react";
 import {
@@ -13,14 +12,10 @@ import {
   MINIMUM_VERTICAL_ZOOM,
   type ViewportState,
 } from "../../geometry/converter";
-import type {
-  InteractionManagerController,
-  InteractionToolSignal,
-  TouchAwareInteractionStrategy,
-} from "../interactions/types";
 import {
+  type PointerInteractionStrategy,
   isSupportedPointerActivation,
-} from "../interactions/types";
+} from "../../interaction/pointer-interaction-strategy";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
@@ -38,10 +33,9 @@ import {
 export interface UseInteractionManagerOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
   readonly strategyRef: RefObject<
-    TouchAwareInteractionStrategy | null
+    PointerInteractionStrategy | null
   >;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
-  readonly toolState: InteractionToolSignal;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
 }
@@ -65,26 +59,14 @@ const PINCH_SCALE_DEAD_ZONE =
 
 export function useInteractionManager(
   options: UseInteractionManagerOptions,
-): InteractionManagerController {
+): void {
   const {
     overlayRef,
     strategyRef,
     viewport,
-    toolState,
     totalTicks,
     setViewport,
   } = options;
-  const controllerRef = useRef<InteractionManagerController | null>(
-    null,
-  );
-
-  if (controllerRef.current === null) {
-    controllerRef.current = {
-      getActiveTool(): "select" {
-        return "select";
-      },
-    };
-  }
 
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -393,14 +375,6 @@ export function useInteractionManager(
       event.preventDefault();
     };
 
-    const updateToolDataset = (): void => {
-      const state = toolState.get();
-
-      overlay.dataset["activeTool"] = state.activeTool;
-    };
-    const unsubscribeToolState =
-      toolState.subscribe(updateToolDataset);
-
     overlay.addEventListener("pointerdown", handlePointerDown);
     overlay.addEventListener("pointermove", handlePointerMove);
     overlay.addEventListener("pointerup", handlePointerUp);
@@ -411,8 +385,6 @@ export function useInteractionManager(
     );
     overlay.addEventListener("dblclick", handleDoubleClick);
     overlay.addEventListener("contextmenu", handleContextMenu);
-    updateToolDataset();
-
     return (): void => {
       cancelLongPress();
       if (gestureAnimationFrameId !== null) {
@@ -420,7 +392,6 @@ export function useInteractionManager(
         gestureAnimationFrameId = null;
       }
       strategyRef.current?.cancel();
-      unsubscribeToolState();
       activePointers.clear();
       overlay.removeEventListener(
         "pointerdown",
@@ -449,10 +420,8 @@ export function useInteractionManager(
     overlayRef,
     setViewport,
     strategyRef,
-    toolState,
     totalTicks,
     viewport,
   ]);
 
-  return controllerRef.current;
 }

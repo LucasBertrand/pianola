@@ -29,9 +29,6 @@ import {
 import {
   calculateVisibleRegion,
 } from "../geometry/visible-region";
-import type {
-  InteractionModeState,
-} from "../ui/interactions/types";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   type PitchSnapSettings,
@@ -69,7 +66,6 @@ export interface EditorRuntime {
   readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
   readonly playheadTick: MutableRenderSignal<number>;
   readonly highlightedPitch: MutableRenderSignal<number | null>;
-  readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
   readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
   readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
@@ -134,9 +130,6 @@ export function createEditorRuntime(
       / initialProjectState.transportSettings.timeSignature.denominator,
     ),
     highlightedPitch: new MutableRenderSignal<number | null>(null),
-    interactionToolState: new MutableRenderSignal({
-      activeTool: EDITOR_CONSTANTS.defaultInteractionTool,
-    }),
     pitchSnapSettings: new MutableRenderSignal(
       DEFAULT_PITCH_SNAP_SETTINGS,
     ),

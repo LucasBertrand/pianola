@@ -90,11 +90,6 @@ export interface UpdateMasterTuningCommand {
   readonly tuningFrequencyHz: number;
 }
 
-export interface UpdateMeasureCountCommand {
-  readonly type: "UpdateMeasureCount";
-  readonly measureCount: number;
-}
-
 export interface InsertMeasureCommand {
   readonly type: "InsertMeasure";
   readonly measureIndex: number;
@@ -195,12 +190,6 @@ export interface SetLoopEnabledCommand {
   readonly enabled: boolean;
 }
 
-export interface SetTransportAnchorCommand {
-  readonly type: "SetTransportAnchor";
-  readonly anchorTick: Tick;
-  readonly anchorAudioTimeSeconds: number | null;
-}
-
 export type PianoRollCommand =
   | AddVoiceCommand
   | UpdateVoiceCommand
@@ -210,7 +199,6 @@ export type PianoRollCommand =
   | UpdateMasterGainCommand
   | SetMasterMutedCommand
   | UpdateMasterTuningCommand
-  | UpdateMeasureCountCommand
   | InsertMeasureCommand
   | RemoveMeasureCommand
   | AddNotesCommand
@@ -223,8 +211,7 @@ export type PianoRollCommand =
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
   | UpdateLoopCommand
-  | SetLoopEnabledCommand
-  | SetTransportAnchorCommand;
+  | SetLoopEnabledCommand;
 
 export interface Transaction {
   readonly transactionId: string;
@@ -263,10 +250,6 @@ export class CommandRejectedError extends Error {
   }
 }
 
-export interface ProjectCommandBus {
-  execute(state: ProjectState, transaction: Transaction): ProjectState;
-}
-
 export function projectReducer(
   state: ProjectState,
   transaction: Transaction,
@@ -301,10 +284,6 @@ export function projectReducer(
   };
 }
 
-export const projectCommandBus: ProjectCommandBus = Object.freeze({
-  execute: projectReducer,
-});
-
 function applyCommand(
   state: ProjectState,
   command: PianoRollCommand,
@@ -326,8 +305,6 @@ function applyCommand(
       return applySetMasterMuted(state, command);
     case "UpdateMasterTuning":
       return applyUpdateMasterTuning(state, command);
-    case "UpdateMeasureCount":
-      return applyUpdateMeasureCount(state, command);
     case "InsertMeasure":
       return applyInsertMeasure(state, command);
     case "RemoveMeasure":
@@ -354,8 +331,6 @@ function applyCommand(
       return applyUpdateLoop(state, command);
     case "SetLoopEnabled":
       return applySetLoopEnabled(state, command);
-    case "SetTransportAnchor":
-      return applySetTransportAnchor(state, command);
     default:
       return assertNever(command);
   }
@@ -600,37 +575,6 @@ function applyUpdateMasterTuning(
       tuningFrequencyHz: command.tuningFrequencyHz,
     },
   };
-}
-
-function applyUpdateMeasureCount(
-  state: ProjectState,
-  command: UpdateMeasureCountCommand,
-): ProjectState {
-  if (
-    !Number.isSafeInteger(command.measureCount)
-    || command.measureCount < MINIMUM_MEASURE_COUNT
-    || command.measureCount > MAXIMUM_MEASURE_COUNT
-  ) {
-    reject(
-      "INVALID_COMMAND",
-      `Measure count must be between ${MINIMUM_MEASURE_COUNT} and ${MAXIMUM_MEASURE_COUNT}.`,
-      command.type,
-    );
-  }
-
-  if (command.measureCount === state.measureCount) {
-    return state;
-  }
-
-  assertValidProjectDuration(
-    command.measureCount,
-    state.transportSettings,
-  );
-
-  return trimProjectToDuration({
-    ...state,
-    measureCount: command.measureCount,
-  });
 }
 
 function applyInsertMeasure(
@@ -1580,37 +1524,6 @@ function applySetLoopEnabled(
       ...state.transportSettings,
       loopEnabled: command.enabled,
     },
-  };
-}
-
-function applySetTransportAnchor(
-  state: ProjectState,
-  command: SetTransportAnchorCommand,
-): ProjectState {
-  const transportSettings = {
-    ...state.transportSettings,
-    anchorTick: command.anchorTick,
-    anchorAudioTimeSeconds: command.anchorAudioTimeSeconds,
-  };
-
-  assertValidTransportState(transportSettings);
-  assertTransportWithinProjectDuration(
-    state,
-    transportSettings,
-    command.type,
-  );
-
-  if (
-    command.anchorTick === state.transportSettings.anchorTick
-    && command.anchorAudioTimeSeconds
-      === state.transportSettings.anchorAudioTimeSeconds
-  ) {
-    return state;
-  }
-
-  return {
-    ...state,
-    transportSettings,
   };
 }
 

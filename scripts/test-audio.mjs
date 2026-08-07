@@ -51,6 +51,11 @@ try {
     "/src/application/editor-selection-requests.ts",
   );
   const {
+    NoteGestureWorkflow,
+  } = await vite.ssrLoadModule(
+    "/src/application/note-gesture-workflow.ts",
+  );
+  const {
     buildDeleteNoteCommands,
     buildRepositionNoteCommands,
   } = await vite.ssrLoadModule(
@@ -74,6 +79,11 @@ try {
     createInteractionDraft,
   } = await vite.ssrLoadModule(
     "/src/interaction/core/state.ts",
+  );
+  const {
+    PianoRollGestureStateMachine,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/core/gesture-state-machine.ts",
   );
   const {
     buildRepositionedNotes: buildGestureRepositionedNotes,
@@ -526,6 +536,146 @@ try {
     ]);
   });
 
+  test("commits completed note gestures through one application workflow", () => {
+    const selected = createNote(
+      "selected",
+      "voice-a",
+      60,
+      240,
+      120,
+    );
+    const store = new ProjectStore(createProject({
+      notesByVoiceId: {
+        "voice-a": [selected],
+      },
+    }));
+    const commands = new EditorCommandService(store);
+    const selection = new EditorSelection();
+    selection.add(selected);
+    const workflow = new NoteGestureWorkflow(
+      commands,
+      selection,
+      {
+        onCollision: undefined,
+        onTransactionRejected: undefined,
+        onSelectionChanged: undefined,
+      },
+    );
+    const moved = {
+      ...selected,
+      startTick: 480,
+      pitch: 62,
+    };
+
+    assert.equal(workflow.commitMove([moved]), "committed");
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["selected"].startTick,
+      480,
+    );
+    assert.deepEqual(selection.copyNotes(), [
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["selected"],
+    ]);
+
+    assert.equal(workflow.commitResize(120, "end"), "committed");
+    assert.equal(
+      selection.copyNotes()[0].durationTicks,
+      240,
+    );
+
+    const drawn = createNote(
+      "drawn",
+      "voice-a",
+      67,
+      720,
+      120,
+    );
+    assert.equal(workflow.commitDraw(drawn), "committed");
+    assert.deepEqual(
+      selection.copyNotes().map((note) => note.id),
+      ["drawn"],
+    );
+    assert.equal(
+      workflow.commitDelete(
+        selection.copyNotes(),
+        "Delete selected notes",
+      ),
+      "committed",
+    );
+    assert.equal(selection.size, 0);
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["drawn"],
+      undefined,
+    );
+  });
+
+  test("defers colliding gestures and reconciles their resolution", () => {
+    const existing = createNote(
+      "existing",
+      "voice-a",
+      60,
+      0,
+      480,
+    );
+    const selected = createNote(
+      "selected",
+      "voice-a",
+      60,
+      600,
+      240,
+    );
+    const store = new ProjectStore(createProject({
+      notesByVoiceId: {
+        "voice-a": [existing, selected],
+      },
+    }));
+    const selection = new EditorSelection();
+    selection.add(selected);
+    let collisionRequest = null;
+    let selectionChangeCount = 0;
+    const workflow = new NoteGestureWorkflow(
+      new EditorCommandService(store),
+      selection,
+      {
+        onCollision(request) {
+          collisionRequest = request;
+        },
+        onTransactionRejected: undefined,
+        onSelectionChanged() {
+          selectionChangeCount += 1;
+        },
+      },
+    );
+
+    assert.equal(
+      workflow.commitMove([{
+        ...selected,
+        startTick: 360,
+      }]),
+      "collision",
+    );
+    assert.equal(collisionRequest.collisionCount, 1);
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["selected"].startTick,
+      600,
+    );
+
+    const resolvedState = createProject({
+      notesByVoiceId: {
+        "voice-a": [{
+          ...selected,
+          startTick: 360,
+        }],
+      },
+    });
+    collisionRequest.onResolved(resolvedState, ["selected"]);
+    assert.equal(selection.copyNotes()[0].startTick, 360);
+    assert.equal(selectionChangeCount, 1);
+  });
+
   test("publishes editing-mask changes and builds voice-grouped commands", () => {
     const first = createNote("first", "voice-a", 60, 0, 120);
     const second = createNote("second", "voice-b", 64, 240, 120);
@@ -586,6 +736,98 @@ try {
 
     assert.equal(moved[0].startTick, 240);
     assert.equal(moved[0].pitch, 62);
+  });
+
+  test("runs piano-roll gesture transitions without React or the DOM", () => {
+    const draft = createInteractionDraft();
+    const gesture = new PianoRollGestureStateMachine(draft);
+    const beginPointer = (overrides = {}) => gesture.beginPointer({
+      pointerId: 7,
+      overlayLeft: 10,
+      overlayTop: 20,
+      localX: 100,
+      localY: 80,
+      pointerTick: 120,
+      pointerPitch: 60,
+      targetNoteId: null,
+      snapResolutionTicks: 120,
+      pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      selectionMode: "replace",
+      ...overrides,
+    });
+
+    assert.equal(beginPointer(), true);
+    gesture.beginPendingLasso();
+    assert.equal(
+      gesture.updatePointer(7, 106, 84, 180, 60, 960, 8),
+      "none",
+    );
+    assert.equal(gesture.isTap(8), true);
+    assert.equal(
+      gesture.updatePointer(7, 112, 84, 240, 60, 960, 8),
+      "beginLasso",
+    );
+    assert.equal(draft.mode, "LASSO_SELECTING");
+    assert.equal(
+      gesture.updatePointer(7, 130, 90, 360, 59, 960, 8),
+      "updateLasso",
+    );
+
+    gesture.reset();
+    assert.equal(beginPointer(), true);
+    gesture.beginDrag({
+      minimumStartTick: 120,
+      maximumEndTick: 600,
+      minimumPitch: 60,
+      maximumPitch: 67,
+    });
+    assert.equal(
+      gesture.updatePointer(7, 400, 20, 900, 200, 960, 8),
+      "updateDrag",
+    );
+    assert.equal(draft.deltaTicks, 360);
+    assert.equal(draft.deltaPitch, 60);
+
+    gesture.reset();
+    assert.equal(beginPointer({ pointerTick: 300 }), true);
+    gesture.beginResize(
+      "end",
+      360,
+      {
+        minimumStartTick: 120,
+        maximumEndTick: 600,
+        minimumPitch: 60,
+        maximumPitch: 67,
+      },
+      {
+        minimumDeltaTicks: 0,
+        maximumDeltaTicks: 240,
+      },
+    );
+    assert.equal(
+      gesture.updatePointer(7, 500, 80, 1_000, 60, 960, 8),
+      "updateResize",
+    );
+    assert.equal(draft.deltaTicks, 240);
+
+    gesture.reset();
+    assert.equal(beginPointer(), true);
+    gesture.beginDrawing(120, 60, 120, "voice-a");
+    assert.equal(
+      gesture.updatePointer(7, 400, 80, 480, 60, 960, 8),
+      "updateDraw",
+    );
+    assert.equal(draft.drawDurationTicks, 360);
+    assert.equal(gesture.isPointerActive(8), false);
+    assert.equal(beginPointer(), false);
+    const completion = gesture.completePointer(7, 8);
+
+    assert.equal(completion.mode, "DRAWING");
+    assert.equal(completion.drawDurationTicks, 360);
+    assert.equal(completion.pointerWasTap, false);
+    assert.equal(draft.mode, "IDLE");
+    assert.equal(gesture.completePointer(7, 8), null);
+    assert.equal(beginPointer(), true);
   });
 
   test("keeps pinch viewport math independent from browser events", () => {

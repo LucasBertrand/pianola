@@ -49,7 +49,7 @@ export function createGridSettings(
   });
 }
 
-export function calculateGridResolutionTicks(
+function calculateGridResolutionTicks(
   baseResolutionTicks: number,
   subdivision: GridSubdivision,
 ): number {

@@ -14,14 +14,6 @@ import type {
 import type {
   ResizeEdge,
 } from "../../interaction/core/state";
-export {
-  createInteractionDraft,
-} from "../../interaction/core/state";
-export type {
-  InteractionDraft,
-  InteractionMode,
-  ResizeEdge,
-} from "../../interaction/core/state";
 
 export interface InteractionVisualController {
   beginDrag(

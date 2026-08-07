@@ -82,6 +82,32 @@ export class EditorSelection {
     this.cacheDirty = true;
   }
 
+  /** Rebuilds the selection from persistent identifiers after a transaction. */
+  public replaceFromNoteIds(
+    state: ProjectState,
+    noteIds: readonly NoteId[],
+    predicate?: NoteSelectionPredicate,
+  ): void {
+    this.notesById.clear();
+
+    for (const noteId of noteIds) {
+      for (const voiceId of state.voiceOrder) {
+        const note =
+          state.tracksByVoiceId[voiceId]?.notesById[noteId];
+
+        if (
+          note !== undefined
+          && (predicate === undefined || predicate(note))
+        ) {
+          this.notesById.set(note.id, note);
+          break;
+        }
+      }
+    }
+
+    this.cacheDirty = true;
+  }
+
   public retain(predicate: NoteSelectionPredicate): void {
     let changed = false;
 

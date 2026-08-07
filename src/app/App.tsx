@@ -140,7 +140,7 @@ import {
 } from "../ui/hooks/useAudioPlayback";
 import type {
   PianoRollEventController,
-} from "../ui/hooks/usePianoRollEvents";
+} from "../interaction/piano-roll-event-controller";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   getScaleDegreeColorIndex,
@@ -155,7 +155,7 @@ import {
 } from "../ui/rendering/pitch-label";
 import type {
   SelectionMode,
-} from "../ui/interactions/types";
+} from "../interaction/core/state";
 import type {
   ReadonlyRenderSignal,
 } from "../ui/rendering/render-signal";
@@ -4148,10 +4148,6 @@ function getScaleDegreeAccentColor(
     ? APPLICATION_COLORS.accent.tonal
     : APPLICATION_COLORS.pianoRoll.degreeAccents[colorIndex]
       ?? APPLICATION_COLORS.accent.tonal;
-}
-
-function getVoiceInstrumentLabel(): string {
-  return "Oscillator";
 }
 
 function getVoiceWaveform(voice: Voice): OscillatorWaveform {

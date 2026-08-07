@@ -78,7 +78,7 @@ export function getMidiNoteLabel(
   return `${spelling.label}${octave}`;
 }
 
-export function getPitchClassLabel(
+function getPitchClassLabel(
   pitchClass: number,
   settings: PitchSnapSettings,
 ): string {

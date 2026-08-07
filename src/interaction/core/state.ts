@@ -7,12 +7,7 @@ import {
   type PitchSnapSettings,
 } from "../../music/pitch-snap";
 
-export type InteractionTool = "select";
 export type SelectionMode = "replace" | "add" | "subtract";
-
-export interface InteractionModeState {
-  readonly activeTool: InteractionTool;
-}
 
 export type InteractionMode =
   | "IDLE"
@@ -26,14 +21,9 @@ export type InteractionMode =
 
 export type ResizeEdge = "start" | "end";
 
-/**
- * Mutable high-frequency gesture data. This is now independent from React and
- * the DOM; converting it to a discriminated state union can therefore happen
- * behind focused unit tests in a later refactoring step.
- */
+/** Mutable high-frequency data owned exclusively by the gesture state machine. */
 export interface InteractionDraft {
   mode: InteractionMode;
-  activeTool: InteractionTool;
   pointerId: number;
   overlayLeft: number;
   overlayTop: number;
@@ -59,14 +49,12 @@ export interface InteractionDraft {
   drawVoiceId: VoiceId | null;
   snapResolutionTicks: number;
   pitchSnapSettings: PitchSnapSettings;
-  additiveSelection: boolean;
   selectionMode: SelectionMode;
 }
 
 export function createInteractionDraft(): InteractionDraft {
   return {
     mode: "IDLE",
-    activeTool: "select",
     pointerId: -1,
     overlayLeft: 0,
     overlayTop: 0,
@@ -92,7 +80,6 @@ export function createInteractionDraft(): InteractionDraft {
     drawVoiceId: null,
     snapResolutionTicks: 240,
     pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
-    additiveSelection: false,
     selectionMode: "replace",
   };
 }

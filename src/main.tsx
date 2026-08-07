@@ -1,6 +1,4 @@
-import React, {
-  StrictMode,
-} from "react";
+import React from "react";
 import {
   createRoot,
 } from "react-dom/client";
@@ -35,7 +33,7 @@ if (rootElement === null) {
 }
 
 createRoot(rootElement).render(
-  <StrictMode>
+  <React.StrictMode>
     <App />
-  </StrictMode>,
+  </React.StrictMode>,
 );

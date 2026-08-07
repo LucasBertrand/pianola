@@ -29,8 +29,10 @@ import type {
 } from "../rendering/render-signal";
 import type {
   InteractionVisualController,
-  ResizeEdge,
 } from "./contracts";
+import type {
+  ResizeEdge,
+} from "../../interaction/core/state";
 
 interface LayerGeometry {
   readonly left: Float64Array;

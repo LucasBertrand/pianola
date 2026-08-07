@@ -23,9 +23,6 @@ import type {
   PitchSnapSettings,
 } from "../../music/pitch-snap";
 import type {
-  InteractionToolSignal,
-} from "../interactions/types";
-import type {
   NoteColorMode,
   VoiceRenderStyle,
 } from "../rendering/note-style";
@@ -50,7 +47,6 @@ export interface PianoRollRuntimePort {
   >;
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly highlightedPitch: ReadonlyRenderSignal<number | null>;
-  readonly interactionToolState: InteractionToolSignal;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
 }

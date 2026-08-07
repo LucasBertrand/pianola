@@ -14,6 +14,9 @@ import {
   createInteractionDraft,
   type InteractionDraft,
 } from "./core/state";
+import {
+  PianoRollGestureStateMachine,
+} from "./core/gesture-state-machine";
 
 export interface InteractionTapState {
   noteId: NoteId | null;
@@ -28,8 +31,10 @@ export interface InteractionTapState {
  */
 export class PianoRollInteractionSession {
   public readonly draft: InteractionDraft = createInteractionDraft();
+  public readonly gesture = new PianoRollGestureStateMachine(
+    this.draft,
+  );
   public readonly selection = new EditorSelection();
-  public readonly collisionBuffer: Note[] = [];
   public readonly lassoBuffer: Note[] = [];
   public readonly tapState: InteractionTapState = {
     noteId: null,
@@ -65,21 +70,7 @@ export class PianoRollInteractionSession {
   }
 
   public resetDraft(): void {
-    this.draft.mode = "IDLE";
-    this.draft.pointerId = -1;
-    this.draft.deltaTicks = 0;
-    this.draft.deltaPitch = 0;
-    this.draft.minimumResizeDeltaTicks = Number.NEGATIVE_INFINITY;
-    this.draft.maximumResizeDeltaTicks = Number.POSITIVE_INFINITY;
-    this.draft.maximumSelectedEndTick = 0;
-    this.draft.originResizeTick = 0;
-    this.draft.targetNoteId = null;
-    this.draft.drawStartTick = 0;
-    this.draft.drawPitch = 0;
-    this.draft.drawDurationTicks = 0;
-    this.draft.drawVoiceId = null;
-    this.draft.additiveSelection = false;
-    this.draft.selectionMode = "replace";
+    this.gesture.reset();
   }
 
   public captureGestureSelection(): void {

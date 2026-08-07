@@ -102,28 +102,6 @@ export function secondsToTick(
     + secondsToTickDelta(seconds - segmentStartSeconds, bpm, ppqn);
 }
 
-export function tickRangeToSeconds(
-  startTick: number,
-  endTick: number,
-  tempoMap: TempoMapSnapshot,
-  ppqn: number,
-): number {
-  assertFiniteNumber(startTick, "startTick");
-  assertFiniteNumber(endTick, "endTick");
-
-  if (endTick < startTick) {
-    throw new RangeError("endTick must be greater than or equal to startTick.");
-  }
-
-  return tickToSeconds(endTick, tempoMap, ppqn)
-    - tickToSeconds(startTick, tempoMap, ppqn);
-}
-
-export function getLoopDurationTicks(loop: LoopRegion): number {
-  assertValidLoop(loop);
-  return loop.endTick - loop.startTick;
-}
-
 export function projectTickIntoLoop(
   unwrappedTick: number,
   loop: LoopRegion,
