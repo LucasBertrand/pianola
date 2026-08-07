@@ -1821,6 +1821,56 @@ export function App(): React.JSX.Element {
       showApplicationAlert,
     ],
   );
+  const handleSliceSelectionAtPlayhead = useCallback((): void => {
+    const controller = pianoRollEventControllerRef.current;
+    const selectedNotes = controller?.getSelectedNotes() ?? [];
+
+    if (controller === null || selectedNotes.length === 0) {
+      return;
+    }
+
+    const sliceTick = Math.round(scene.playheadTick.get());
+    const timestamp = Date.now();
+    const plan = buildSliceCommandsForNotes(
+      selectedNotes,
+      sliceTick,
+      timestamp,
+      editTransactionSequenceRef.current + 1,
+    );
+
+    if (plan.commands.length === 0) {
+      showApplicationAlert(
+        "Slice unavailable",
+        "The playhead must cross the interior of at least one selected note.",
+      );
+      return;
+    }
+
+    try {
+      const nextState = dispatchEditCommands(
+        plan.commands,
+        "Slice selected notes at playhead",
+      );
+
+      if (nextState !== null) {
+        controller.replaceSelection(
+          findNotesByIds(nextState, plan.resultingNoteIds),
+        );
+      }
+    } catch (error: unknown) {
+      showApplicationAlert(
+        "Slice unavailable",
+        error instanceof CommandRejectedError
+          ? error.message
+          : "The selected notes could not be sliced.",
+        "danger",
+      );
+    }
+  }, [
+    dispatchEditCommands,
+    scene,
+    showApplicationAlert,
+  ]);
   const handlePaste = useCallback((): void => {
     const clipboard = clipboardRef.current;
 
@@ -2992,6 +3042,21 @@ export function App(): React.JSX.Element {
                 </button>
                 <button
                   type="button"
+                  title="Slice selected notes at the playhead"
+                  aria-label="Slice selected notes at the playhead"
+                  disabled={!selectionAvailable}
+                  onClick={handleSliceSelectionAtPlayhead}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2.5v5" />
+                    <path d="m9.5 5.5 2.5 3 2.5-3" />
+                    <rect x="2.5" y="10.5" width="8" height="6" rx="1.5" />
+                    <rect x="13.5" y="10.5" width="8" height="6" rx="1.5" />
+                    <path d="M12 10.5v11" strokeDasharray="2 2" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
                   title="Invert selected intervals"
                   aria-label="Invert selected intervals"
                   disabled={!selectionAvailable}
@@ -3142,17 +3207,19 @@ export function App(): React.JSX.Element {
             <div className="timeline-position">
               <output ref={barLabelRef}>1.1.1</output>
             </div>
-            <input
-              ref={scrollInputRef}
-              className="timeline-range"
-              type="range"
-              min="0"
-              step={EDITOR_CONSTANTS.horizontalScrollStep}
-              defaultValue="0"
-              aria-label="Horizontal timeline position"
-            />
-            <div className="zoom-control">
-              <span aria-hidden="true">−</span>
+            <label className="view-position-control">
+              <span aria-hidden="true">X</span>
+              <input
+                ref={scrollInputRef}
+                type="range"
+                min="0"
+                step={EDITOR_CONSTANTS.horizontalScrollStep}
+                defaultValue="0"
+                aria-label="Horizontal timeline position"
+              />
+            </label>
+            <label className="view-zoom-control">
+              <span aria-hidden="true">ZX</span>
               <input
                 ref={zoomInputRef}
                 type="range"
@@ -3164,59 +3231,60 @@ export function App(): React.JSX.Element {
                 }
                 aria-label="Horizontal zoom"
               />
-              <span aria-hidden="true">+</span>
               <output ref={zoomLabelRef}>
                 {Math.round(
                   VIEWPORT_CONSTANTS.initialHorizontalZoom * 100,
                 )}%
               </output>
-            </div>
-            <div className="pitch-control">
-              <span>Pitch</span>
-              <input
-                ref={pitchScrollInputRef}
-                className="pitch-scroll-range"
-                type="range"
-                min="0"
-                max={Math.max(
-                  0,
-                  (
-                    VIEWPORT_CONSTANTS.maximumMidiPitch
-                    - VIEWPORT_CONSTANTS.minimumMidiPitch
-                    + 1
-                  )
-                    * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels
-                    * VIEWPORT_CONSTANTS.initialVerticalZoom
-                    - VIEWPORT_CONSTANTS.initialHeightCssPixels,
-                )}
-                step={EDITOR_CONSTANTS.verticalScrollStep}
-                defaultValue={String(
-                  (
-                    VIEWPORT_CONSTANTS.maximumMidiPitch
-                    - INITIAL_MAX_VISIBLE_PITCH
-                  )
-                  * INITIAL_PITCH_HEIGHT,
-                )}
-                aria-label="Vertical pitch position"
-              />
-              <span>Y</span>
-              <input
-                ref={pitchZoomInputRef}
-                className="pitch-zoom-range"
-                type="range"
-                min={MINIMUM_VERTICAL_ZOOM}
-                max={MAXIMUM_VERTICAL_ZOOM}
-                step={EDITOR_CONSTANTS.zoomStep}
-                defaultValue={
-                  VIEWPORT_CONSTANTS.initialVerticalZoom
-                }
-                aria-label="Vertical pitch zoom"
-              />
-              <output ref={pitchZoomLabelRef}>
-                {Math.round(
-                  VIEWPORT_CONSTANTS.initialVerticalZoom * 100,
-                )}%
-              </output>
+            </label>
+            <div className="pitch-view-controls">
+              <label className="view-position-control">
+                <span aria-hidden="true">Y</span>
+                <input
+                  ref={pitchScrollInputRef}
+                  type="range"
+                  min="0"
+                  max={Math.max(
+                    0,
+                    (
+                      VIEWPORT_CONSTANTS.maximumMidiPitch
+                      - VIEWPORT_CONSTANTS.minimumMidiPitch
+                      + 1
+                    )
+                      * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels
+                      * VIEWPORT_CONSTANTS.initialVerticalZoom
+                      - VIEWPORT_CONSTANTS.initialHeightCssPixels,
+                  )}
+                  step={EDITOR_CONSTANTS.verticalScrollStep}
+                  defaultValue={String(
+                    (
+                      VIEWPORT_CONSTANTS.maximumMidiPitch
+                      - INITIAL_MAX_VISIBLE_PITCH
+                    )
+                    * INITIAL_PITCH_HEIGHT,
+                  )}
+                  aria-label="Vertical pitch position"
+                />
+              </label>
+              <label className="view-zoom-control">
+                <span aria-hidden="true">ZY</span>
+                <input
+                  ref={pitchZoomInputRef}
+                  type="range"
+                  min={MINIMUM_VERTICAL_ZOOM}
+                  max={MAXIMUM_VERTICAL_ZOOM}
+                  step={EDITOR_CONSTANTS.zoomStep}
+                  defaultValue={
+                    VIEWPORT_CONSTANTS.initialVerticalZoom
+                  }
+                  aria-label="Vertical pitch zoom"
+                />
+                <output ref={pitchZoomLabelRef}>
+                  {Math.round(
+                    VIEWPORT_CONSTANTS.initialVerticalZoom * 100,
+                  )}%
+                </output>
+              </label>
             </div>
             <div
               className={
@@ -4174,6 +4242,68 @@ function buildTransformCommandsForNotes(
   }
 
   return commands;
+}
+
+interface SliceCommandPlan {
+  readonly commands: readonly PianoRollCommand[];
+  readonly resultingNoteIds: readonly NoteId[];
+}
+
+function buildSliceCommandsForNotes(
+  notes: readonly Note[],
+  sliceTick: number,
+  timestamp: number,
+  transactionSequence: number,
+): SliceCommandPlan {
+  const slicesByVoice = new Map<
+    VoiceId,
+    Array<{ readonly noteId: NoteId; readonly rightNoteId: NoteId }>
+  >();
+  const resultingNoteIds: NoteId[] = [];
+  let sliceSequence = 0;
+
+  for (const note of notes) {
+    if (
+      sliceTick <= note.startTick
+      || sliceTick >= note.startTick + note.durationTicks
+    ) {
+      resultingNoteIds.push(note.id);
+      continue;
+    }
+
+    let slices = slicesByVoice.get(note.voiceId);
+
+    if (slices === undefined) {
+      slices = [];
+      slicesByVoice.set(note.voiceId, slices);
+    }
+
+    const rightNoteId =
+      `slice-${timestamp}-${transactionSequence}-${sliceSequence}`;
+
+    sliceSequence += 1;
+    slices.push({
+      noteId: note.id,
+      rightNoteId,
+    });
+    resultingNoteIds.push(note.id, rightNoteId);
+  }
+
+  const commands: PianoRollCommand[] = [];
+
+  for (const [voiceId, slices] of slicesByVoice) {
+    commands.push({
+      type: "SliceNotes",
+      trackVoiceId: voiceId,
+      sliceTick,
+      slices,
+    });
+  }
+
+  return {
+    commands,
+    resultingNoteIds,
+  };
 }
 
 function createPastedNotes(

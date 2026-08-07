@@ -157,6 +157,18 @@ export interface TransformNotesCommand {
   readonly changes: readonly NoteTransformChange[];
 }
 
+export interface NoteSliceDescriptor {
+  readonly noteId: NoteId;
+  readonly rightNoteId: NoteId;
+}
+
+export interface SliceNotesCommand {
+  readonly type: "SliceNotes";
+  readonly trackVoiceId: VoiceId;
+  readonly sliceTick: Tick;
+  readonly slices: readonly NoteSliceDescriptor[];
+}
+
 export interface DeleteNotesCommand {
   readonly type: "DeleteNotes";
   readonly trackVoiceId: VoiceId;
@@ -206,6 +218,7 @@ export type PianoRollCommand =
   | RepositionNotesCommand
   | ResizeNotesCommand
   | TransformNotesCommand
+  | SliceNotesCommand
   | DeleteNotesCommand
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
@@ -329,6 +342,8 @@ function applyCommand(
       return applyResizeNotes(state, command);
     case "TransformNotes":
       return applyTransformNotes(state, command);
+    case "SliceNotes":
+      return applySliceNotes(state, command);
     case "DeleteNotes":
       return applyDeleteNotes(state, command);
     case "UpdateTempo":
@@ -1314,6 +1329,119 @@ function applyTransformNotes(
 
   for (const note of updatedNotes) {
     notesById[note.id] = note;
+  }
+
+  return replaceTrack(state, {
+    ...track,
+    notesById,
+  });
+}
+
+function applySliceNotes(
+  state: ProjectState,
+  command: SliceNotesCommand,
+): ProjectState {
+  const track = requireTrack(state, command.trackVoiceId, command.type);
+  assertVoiceEditable(state, command.trackVoiceId, command.type);
+
+  if (!Number.isSafeInteger(command.sliceTick)) {
+    reject(
+      "INVALID_COMMAND",
+      "The note slice tick must be an integer.",
+      command.type,
+    );
+  }
+
+  if (
+    command.slices.length
+    > MAXIMUM_PROJECT_NOTE_COUNT - countProjectNotes(state)
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_PROJECT_NOTE_COUNT} notes.`,
+      command.type,
+    );
+  }
+
+  const sourceNoteIds = new Set<NoteId>();
+  const rightNoteIds = new Set<NoteId>();
+  const leftNotes: Note[] = [];
+  const rightNotes: Note[] = [];
+
+  for (const slice of command.slices) {
+    if (sourceNoteIds.has(slice.noteId)) {
+      reject(
+        "DUPLICATE_NOTE_ID",
+        `Note "${slice.noteId}" appears more than once in the command.`,
+        command.type,
+      );
+    }
+
+    if (
+      slice.rightNoteId === slice.noteId
+      || rightNoteIds.has(slice.rightNoteId)
+      || findNoteVoiceId(state, slice.rightNoteId) !== undefined
+    ) {
+      reject(
+        "NOTE_ALREADY_EXISTS",
+        `Right-hand note ID "${slice.rightNoteId}" is already in use.`,
+        command.type,
+      );
+    }
+
+    const note = requireNote(track, slice.noteId, command.type);
+    const noteEndTick = note.startTick + note.durationTicks;
+
+    if (
+      command.sliceTick <= note.startTick
+      || command.sliceTick >= noteEndTick
+    ) {
+      reject(
+        "INVALID_COMMAND",
+        `Note "${note.id}" does not cross the slice tick.`,
+        command.type,
+      );
+    }
+
+    const leftNote: Note = {
+      ...note,
+      durationTicks: command.sliceTick - note.startTick,
+    };
+    const rightNote: Note = {
+      ...note,
+      id: slice.rightNoteId,
+      startTick: command.sliceTick,
+      durationTicks: noteEndTick - command.sliceTick,
+    };
+
+    assertValidNoteForTrack(leftNote, track.voiceId);
+    assertValidNoteForTrack(rightNote, track.voiceId);
+    sourceNoteIds.add(slice.noteId);
+    rightNoteIds.add(slice.rightNoteId);
+    leftNotes.push(leftNote);
+    rightNotes.push(rightNote);
+  }
+
+  if (leftNotes.length === 0) {
+    return state;
+  }
+
+  const notesById: Record<NoteId, Note> = {
+    ...track.notesById,
+  };
+
+  for (
+    let noteIndex = 0;
+    noteIndex < leftNotes.length;
+    noteIndex += 1
+  ) {
+    const leftNote = leftNotes[noteIndex];
+    const rightNote = rightNotes[noteIndex];
+
+    if (leftNote !== undefined && rightNote !== undefined) {
+      notesById[leftNote.id] = leftNote;
+      notesById[rightNote.id] = rightNote;
+    }
   }
 
   return replaceTrack(state, {

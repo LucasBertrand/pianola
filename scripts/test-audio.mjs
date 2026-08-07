@@ -1351,6 +1351,57 @@ try {
     assert.equal(store.canUndo(), false);
   });
 
+  test("slices selected notes atomically and restores them on undo", () => {
+    const note = createNote("whole", "voice-a", 60, 120, 480);
+    const state = createProject({
+      notesByVoiceId: {
+        "voice-a": [note],
+      },
+    });
+    const store = new ProjectStore(state);
+
+    store.dispatch({
+      transactionId: "slice-selection",
+      label: "Slice selected notes at playhead",
+      createdAt: 1,
+      commands: [
+        {
+          type: "SliceNotes",
+          trackVoiceId: "voice-a",
+          sliceTick: 360,
+          slices: [
+            {
+              noteId: "whole",
+              rightNoteId: "right-half",
+            },
+          ],
+        },
+      ],
+    });
+
+    const slicedTrack = store.getState().tracksByVoiceId["voice-a"];
+
+    assert.deepEqual(
+      [
+        slicedTrack.notesById.whole.startTick,
+        slicedTrack.notesById.whole.durationTicks,
+      ],
+      [120, 240],
+    );
+    assert.deepEqual(
+      [
+        slicedTrack.notesById["right-half"].startTick,
+        slicedTrack.notesById["right-half"].durationTicks,
+      ],
+      [360, 240],
+    );
+    store.undo();
+    assert.deepEqual(
+      store.getState().tracksByVoiceId,
+      state.tracksByVoiceId,
+    );
+  });
+
   test("steals the oldest overlapping voice when polyphony is exhausted", () => {
     const voices = [
       {
