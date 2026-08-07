@@ -36,6 +36,66 @@ try {
     "/src/domain/project-store.ts",
   );
   const {
+    EditorCommandService,
+  } = await vite.ssrLoadModule(
+    "/src/application/editor-command-service.ts",
+  );
+  const {
+    EditorSelection,
+  } = await vite.ssrLoadModule(
+    "/src/application/editor-selection.ts",
+  );
+  const {
+    EditorSelectionRequests,
+  } = await vite.ssrLoadModule(
+    "/src/application/editor-selection-requests.ts",
+  );
+  const {
+    buildDeleteNoteCommands,
+    buildRepositionNoteCommands,
+  } = await vite.ssrLoadModule(
+    "/src/application/note-edit-commands.ts",
+  );
+  const {
+    buildSliceCommandsForNotes,
+    canPlacePastedNotes,
+    createPastedNotes,
+    createVoiceTransferPlan,
+    findNotesByIds,
+  } = await vite.ssrLoadModule(
+    "/src/application/selection-edit-plans.ts",
+  );
+  const {
+    EditingNoteMask,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/core/editing-note-mask.ts",
+  );
+  const {
+    createInteractionDraft,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/core/state.ts",
+  );
+  const {
+    buildRepositionedNotes: buildGestureRepositionedNotes,
+    calculateResizeDeltaBounds,
+    measureNoteSelection,
+    quantizeTick,
+    snapTickToCellStart,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/core/note-gesture-math.ts",
+  );
+  const {
+    classifyPinchZoomAxis,
+    PinchViewportGesture,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/core/pinch-viewport-gesture.ts",
+  );
+  const {
+    PianoRollInteractionSession,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/piano-roll-interaction-session.ts",
+  );
+  const {
     DEFAULT_INSTRUMENT_POLYPHONY,
     PROJECT_SCHEMA_VERSION,
     createDefaultMasterBusState,
@@ -72,7 +132,7 @@ try {
     isPitchAllowedByTonalPattern,
     snapPitchToTonalPattern,
   } = await vite.ssrLoadModule(
-    "/src/ui/interactions/pitch-snap.ts",
+    "/src/music/pitch-snap.ts",
   );
   const {
     getMidiNoteLabel,
@@ -383,6 +443,302 @@ try {
       callback,
     });
   }
+
+  test("centralizes editor transactions behind the application port", () => {
+    const store = new ProjectStore(createProject());
+    const commands = new EditorCommandService(store);
+    const transactionIds = [];
+
+    store.subscribe((_state, _previousState, transaction) => {
+      transactionIds.push(transaction.transactionId);
+    });
+
+    const nextState = commands.dispatch(
+      [{ type: "UpdateProjectTitle", title: "Refactored" }],
+      "Rename project",
+    );
+
+    assert.equal(nextState.title, "Refactored");
+    assert.equal(commands.getState(), nextState);
+    assert.match(transactionIds[0], /^editor-\d+-1$/);
+    assert.equal(commands.dispatch([], "No operation"), null);
+    assert.equal(transactionIds.length, 1);
+  });
+
+  test("keeps one canonical editor selection across project revisions", () => {
+    const first = createNote("first", "voice-a", 60, 0, 120);
+    const second = createNote("second", "voice-a", 64, 240, 120);
+    const selection = new EditorSelection();
+
+    assert.equal(selection.add(first), true);
+    assert.equal(selection.add(first), false);
+    selection.add(second);
+    assert.equal(selection.size, 2);
+    assert.equal(selection.getSoleVoiceId(), "voice-a");
+
+    const movedFirst = { ...first, startTick: 480 };
+    const nextState = createProject({
+      notesByVoiceId: {
+        "voice-a": [movedFirst],
+      },
+    });
+
+    selection.reconcile(nextState);
+    assert.deepEqual(selection.copyNotes(), [movedFirst]);
+
+    const toggleState = createProject({
+      voiceOrder: ["voice-a", "voice-b"],
+      notesByVoiceId: {
+        "voice-a": [movedFirst, second],
+        "voice-b": [
+          createNote("third", "voice-b", 60, 720, 120),
+        ],
+      },
+    });
+
+    selection.toggleVoice(toggleState, "voice-a");
+    assert.equal(selection.size, 2);
+    selection.toggleVoice(toggleState, "voice-a");
+    assert.equal(selection.size, 0);
+    selection.togglePitch(toggleState, 60);
+    assert.equal(selection.size, 2);
+    selection.togglePitch(toggleState, 60);
+    assert.equal(selection.size, 0);
+  });
+
+  test("delivers repeated selection intentions without signal invalidation", () => {
+    const requests = new EditorSelectionRequests();
+    const received = [];
+    const unsubscribe = requests.subscribe((request) => {
+      received.push(request);
+    });
+
+    requests.toggleVoice("voice-a");
+    requests.toggleVoice("voice-a");
+    requests.clear();
+    unsubscribe();
+    requests.clear();
+
+    assert.deepEqual(received, [
+      { type: "toggleVoice", voiceId: "voice-a" },
+      { type: "toggleVoice", voiceId: "voice-a" },
+      { type: "clear" },
+    ]);
+  });
+
+  test("publishes editing-mask changes and builds voice-grouped commands", () => {
+    const first = createNote("first", "voice-a", 60, 0, 120);
+    const second = createNote("second", "voice-b", 64, 240, 120);
+    const mask = new EditingNoteMask();
+    let invalidationCount = 0;
+
+    mask.subscribe(() => {
+      invalidationCount += 1;
+    });
+    mask.replace([first, second]);
+    assert.equal(mask.get().has("first"), true);
+    mask.clear();
+    mask.clear();
+    assert.equal(invalidationCount, 2);
+    assert.equal(buildDeleteNoteCommands([first, second]).length, 2);
+    assert.equal(
+      buildRepositionNoteCommands([first, second])[0].type,
+      "RepositionNotes",
+    );
+    assert.equal(createInteractionDraft().mode, "IDLE");
+  });
+
+  test("calculates note gesture constraints without a UI runtime", () => {
+    const first = createNote("first", "voice-a", 60, 120, 240);
+    const second = createNote("second", "voice-a", 67, 480, 120);
+
+    assert.deepEqual(measureNoteSelection([first, second]), {
+      minimumStartTick: 120,
+      maximumEndTick: 600,
+      minimumPitch: 60,
+      maximumPitch: 67,
+    });
+    assert.deepEqual(
+      calculateResizeDeltaBounds(
+        [first, second],
+        "end",
+        120,
+        960,
+      ),
+      {
+        minimumDeltaTicks: 0,
+        maximumDeltaTicks: 360,
+      },
+    );
+    assert.equal(quantizeTick(179, 120), 120);
+    assert.equal(quantizeTick(181, 120), 240);
+    assert.equal(snapTickToCellStart(239, 120), 120);
+
+    const moved = buildGestureRepositionedNotes(
+      [first],
+      120,
+      1,
+      {
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        enabled: true,
+      },
+    );
+
+    assert.equal(moved[0].startTick, 240);
+    assert.equal(moved[0].pitch, 62);
+  });
+
+  test("keeps pinch viewport math independent from browser events", () => {
+    const settings = {
+      minimumDistanceCssPixels: 8,
+      axisLockRatio: 1.35,
+      minimumScale: 0.8,
+      maximumScale: 1.25,
+      scaleDeadZone: 0.004,
+      minimumZoomX: 0.1,
+      maximumZoomX: 8,
+      minimumZoomY: 0.5,
+      maximumZoomY: 4,
+      pitchCount: 128,
+    };
+    const gesture = new PinchViewportGesture(settings);
+    const pointer = (pointerId, clientX, clientY) => ({
+      pointerId,
+      pointerType: "touch",
+      clientX,
+      clientY,
+      button: 0,
+      buttons: 1,
+      shiftKey: false,
+      timeStamp: 0,
+    });
+
+    assert.equal(classifyPinchZoomAxis(100, 10, 1.35), "horizontal");
+    assert.equal(classifyPinchZoomAxis(10, 100, 1.35), "vertical");
+    assert.equal(classifyPinchZoomAxis(100, 100, 1.35), "both");
+
+    gesture.begin(pointer(1, 0, 0), pointer(2, 100, 10), 0, 0);
+    const nextViewport = gesture.update(
+      pointer(1, 0, 0),
+      pointer(2, 120, 10),
+      0,
+      0,
+      800,
+      600,
+      15_360,
+      {
+        zoomX: 1,
+        zoomY: 1,
+        scrollX: 0,
+        scrollY: 0,
+        pitchHeight: 18,
+        ticksPerPixel: 10,
+        devicePixelRatio: 2,
+      },
+    );
+
+    assert.equal(nextViewport.zoomX > 1, true);
+    assert.equal(nextViewport.zoomY, 1);
+    gesture.reset();
+    assert.equal(gesture.active, false);
+  });
+
+  test("owns a piano-roll gesture lifecycle outside React", () => {
+    const initialViewport = {
+      zoomX: 1,
+      zoomY: 1,
+      scrollX: 0,
+      scrollY: 0,
+      pitchHeight: 18,
+      ticksPerPixel: 10,
+      devicePixelRatio: 1,
+    };
+    const session = new PianoRollInteractionSession(
+      initialViewport,
+      0,
+    );
+    const note = createNote("selected", "voice-a", 60, 0, 120);
+
+    session.selection.add(note);
+    session.captureGestureSelection();
+    session.selection.clear();
+    assert.equal(
+      session.restoreGestureSelectionOnce(() => true),
+      true,
+    );
+    assert.equal(
+      session.restoreGestureSelectionOnce(() => true),
+      false,
+    );
+    assert.deepEqual(session.selection.notes, [note]);
+
+    session.draft.mode = "DRAGGING";
+    session.draft.deltaTicks = 120;
+    session.resetDraft();
+    assert.equal(session.draft.mode, "IDLE");
+    assert.equal(session.draft.deltaTicks, 0);
+    assert.equal(session.createNoteId(100), "note-100-1");
+    assert.equal(session.createNoteId(100), "note-100-2");
+
+    const movedConverter = session.synchronizeConverter(
+      {
+        ...initialViewport,
+        scrollX: 20,
+      },
+      1,
+    );
+
+    assert.equal(movedConverter.tickToCssPixelX(200), 0);
+  });
+
+  test("plans selection edits without application component state", () => {
+    const source = createNote("source", "voice-a", 60, 120, 240);
+    const target = createNote("target", "voice-b", 64, 480, 120);
+    const state = createProject({
+      voiceOrder: ["voice-a", "voice-b"],
+      notesByVoiceId: {
+        "voice-a": [source],
+        "voice-b": [target],
+      },
+    });
+    const clipboard = {
+      notes: [source],
+      originTick: source.startTick,
+    };
+    const pasted = createPastedNotes(clipboard, 600, 100, 2);
+
+    assert.equal(pasted[0].startTick, 600);
+    assert.equal(pasted[0].id, "source-copy-100-2-0");
+    assert.equal(canPlacePastedNotes(state, pasted), true);
+    assert.deepEqual(findNotesByIds(state, ["target", "source"]), [
+      target,
+      source,
+    ]);
+
+    const slicePlan = buildSliceCommandsForNotes(
+      [source, target],
+      240,
+      100,
+      2,
+    );
+
+    assert.equal(slicePlan.commands.length, 1);
+    assert.deepEqual(slicePlan.resultingNoteIds, [
+      "source",
+      "slice-100-2-0",
+      "target",
+    ]);
+
+    const transferPlan = createVoiceTransferPlan(
+      state,
+      [source],
+      "voice-b",
+    );
+
+    assert.equal(transferPlan.valid, true);
+    assert.equal(transferPlan.commands[0].type, "MoveNotes");
+    assert.equal(transferPlan.proposedNotes[0].voiceId, "voice-b");
+  });
 
   test("compiles deterministic, voice-ordered playback snapshots", () => {
     const state = createProject({

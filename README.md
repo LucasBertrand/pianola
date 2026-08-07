@@ -93,12 +93,15 @@ de panne et simplifie les mises à jour.
 ├── public/                    Manifeste et icône copiés tels quels dans dist
 ├── scripts/                   Suites de tests audio/domaine et MIDI
 ├── src/
-│   ├── app/                   Composition React et scène initiale
+│   ├── app/                   Racine de composition et runtime d'un éditeur
+│   ├── application/           Cas d'usage, sélection et plans de commandes
 │   ├── audio/                 Snapshot, scheduler et moteur Web Audio
 │   ├── config/                Constantes produit et réglages centralisés
 │   ├── domain/                Modèle, validation, commandes, reducer et store
 │   ├── geometry/              Conversion de coordonnées et index spatial
+│   ├── interaction/           Session et calculs de gestes sans React
 │   ├── midi/                  Lecture, écriture, import et export SMF
+│   ├── music/                 Théorie musicale et magnétisme tonal
 │   ├── persistence/           Sérialisation du format natif Pianola
 │   ├── ui/                    Canvas, hooks, interactions et signaux de rendu
 │   ├── main.tsx               Point d’entrée React
@@ -150,12 +153,19 @@ pas des composants React individuels :
   `requestAnimationFrame` ;
 - `spatial-index.ts` classe les notes dans 128 buckets MIDI et limite le rendu
   aux notes visibles ;
-- `usePianoRollEvents.ts` pilote les gestes à haute fréquence ;
-- `InteractionOverlay.tsx` affiche les ghosts et poignées temporaires ;
+- `interaction/core` calcule quantification, bornes et pinch/pan sans DOM ;
+- `PianoRollInteractionSession` possède le draft, la sélection et les buffers ;
+- `usePianoRollEvents.ts` adapte les transitions vers les commandes ;
+- `DomInteractionVisualController` affiche les ghosts et poignées temporaires ;
+- `InteractionOverlay.tsx` monte les couches DOM et branche les adaptateurs ;
 - `render-signal.ts` permet de redessiner sans re-render React.
 
-Éviter `setState`, `map`, `filter` et la création d’objets dans les boucles de
+Éviter `setState`, `map`, `filter` et la création d'objets dans les boucles de
 rendu ou de `pointermove`.
+
+Les règles de dépendances, le cycle détaillé d'un geste et l'ordre conseillé
+pour poursuivre la modularisation sont décrits dans
+[`docs/architecture.md`](docs/architecture.md).
 
 ### Audio
 
@@ -240,12 +250,12 @@ utiliser le déploiement Vercel en HTTPS.
 | `npm run typecheck` | Vérifie tout le TypeScript strict |
 | `npm run typecheck:core` | Vérifie domaine, géométrie, MIDI et persistance |
 | `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
-| `npm run test:audio` | Lance 27 tests domaine/audio/persistance |
+| `npm run test:audio` | Lance la suite domaine/application/audio/persistance |
 | `npm run test:midi` | Lance 9 tests d’intégration MIDI |
 | `npm test` | Lance les deux suites de tests |
 | `npm run build` | Typecheck puis produit le bundle `dist/` |
 | `npm run preview` | Sert localement le dernier build de production |
-| `npm run verify` | Build complet puis les 36 tests |
+| `npm run verify` | Build complet puis toutes les suites de tests |
 
 La commande de référence avant un commit ou une release est :
 
@@ -525,9 +535,12 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 | État initial et projet vierge | `src/app/demo-scene.ts` |
 | Notes, voix, transport | `src/domain/model.ts` |
 | Actions mutantes | `src/domain/commands.ts` |
+| Cas d'usage et plans de commandes | `src/application/` |
 | Collisions | `src/domain/note-collision.ts` |
-| Gestes | `src/ui/hooks/usePianoRollEvents.ts` |
-| Multi-touch | `src/ui/hooks/useInteractionManager.ts` |
+| État et calculs des gestes | `src/interaction/` |
+| Adaptateur des gestes au navigateur | `src/ui/hooks/usePianoRollEvents.ts` |
+| Capture et multi-touch | `src/ui/hooks/useInteractionManager.ts` |
+| Ghosts, poignées et lasso | `src/ui/interactions/dom-interaction-visual-controller.ts` |
 | Rendu des notes et grille | `src/ui/components/PianoRollLayers.tsx` |
 | Audio | `src/audio/` et `src/ui/hooks/useAudioPlayback.ts` |
 | Format natif | `src/persistence/native-project-file.ts` |

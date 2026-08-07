@@ -10,60 +10,22 @@ import {
   APPLICATION_CONSTANTS,
   EDITOR_CONSTANTS,
   PROJECT_CONSTANTS,
-  VIEWPORT_CONSTANTS,
   VOICE_CONSTANTS,
 } from "../config/program-constants";
 import {
   createDefaultMasterBusState,
   createDefaultTransportState,
   DEFAULT_MEASURE_COUNT,
-  getProjectDurationTicks,
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
   createDefaultVoice,
   getDefaultOscillatorWaveform,
 } from "../domain/voice-factory";
-import {
-  ProjectStore,
-} from "../domain/project-store";
-import type {
-  ViewportState,
-} from "../geometry/converter";
-import {
-  SpatialIndex,
-} from "../geometry/spatial-index";
-import type {
-  Rect,
-} from "../ui/components/PianoRollLayers";
-import type {
-  NoteColorMode,
-  VoiceRenderStyle,
-} from "../ui/rendering/note-style";
-import type {
-  InteractionModeState,
-} from "../ui/interactions/types";
-import {
-  DEFAULT_PITCH_SNAP_SETTINGS,
-  type PitchSnapSettings,
-} from "../ui/interactions/pitch-snap";
-import {
-  DEFAULT_GRID_SETTINGS,
-  type GridSettings,
-} from "../ui/rendering/grid-settings";
-import {
-  MappedRenderSignal,
-  MutableRenderSignal,
-  type ReadonlyRenderSignal,
-} from "../ui/rendering/render-signal";
 
 export const DEMO_NOTE_COUNT = EDITOR_CONSTANTS.demoNoteCount;
 const DEMO_INITIAL_NOTE_SPAN_TICKS =
   EDITOR_CONSTANTS.demoInitialNoteSpanTicks;
-export const INITIAL_PITCH_HEIGHT =
-  VIEWPORT_CONSTANTS.initialPitchHeightCssPixels;
-export const INITIAL_MAX_VISIBLE_PITCH =
-  VIEWPORT_CONSTANTS.initialMaximumVisiblePitch;
 
 export interface DemoVoice {
   readonly id: VoiceId;
@@ -71,118 +33,14 @@ export interface DemoVoice {
   readonly color: string;
 }
 
-export interface DemoScene {
-  readonly projectStore: ProjectStore;
-  readonly spatialIndex: SpatialIndex;
-  readonly viewport: MutableRenderSignal<ViewportState>;
-  readonly visibleRegion: MutableRenderSignal<Rect>;
-  readonly voiceStyles: MutableRenderSignal<
-    Readonly<Record<VoiceId, VoiceRenderStyle>>
-  >;
-  readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
-  readonly voiceSelectionRequest: MutableRenderSignal<VoiceId | null>;
-  readonly playheadTick: MutableRenderSignal<number>;
-  readonly highlightedPitch: MutableRenderSignal<number | null>;
-  readonly interactionToolState: MutableRenderSignal<InteractionModeState>;
-  readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
-  readonly gridSettings: MutableRenderSignal<GridSettings>;
-  readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
-}
-
 export const DEMO_VOICES: readonly DemoVoice[] =
   VOICE_CONSTANTS.demoVoices;
 
-export function createDemoScene(): DemoScene {
-  const viewportState: ViewportState = {
-    zoomX: VIEWPORT_CONSTANTS.initialHorizontalZoom,
-    zoomY: VIEWPORT_CONSTANTS.initialVerticalZoom,
-    scrollX: 0,
-    scrollY:
-      (
-        VIEWPORT_CONSTANTS.maximumMidiPitch
-        - INITIAL_MAX_VISIBLE_PITCH
-      ) * INITIAL_PITCH_HEIGHT,
-    pitchHeight: INITIAL_PITCH_HEIGHT,
-    ticksPerPixel: VIEWPORT_CONSTANTS.initialTicksPerPixel,
-    devicePixelRatio:
-      VIEWPORT_CONSTANTS.initialDevicePixelRatio,
-  };
-  const spatialIndex = new SpatialIndex();
-  const notes = createDemoNotes(DEMO_NOTE_COUNT);
-  const projectStore = new ProjectStore(
-    createProjectState(
-      notes,
-      PROJECT_CONSTANTS.demoProjectTitle,
-    ),
+export function createDemoProjectState(): ProjectState {
+  return createProjectState(
+    createDemoNotes(DEMO_NOTE_COUNT),
+    PROJECT_CONSTANTS.demoProjectTitle,
   );
-  const indexedNotesBuffer: Note[] = [];
-  const voiceStyles = new MutableRenderSignal(
-    createVoiceRenderStyles(projectStore.getState()),
-  );
-  const gridSettings = new MutableRenderSignal<GridSettings>(
-    DEFAULT_GRID_SETTINGS,
-  );
-
-  spatialIndex.update(notes);
-  projectStore.subscribe((state, previousState) => {
-    if (
-      state.tracksByVoiceId
-      !== previousState.tracksByVoiceId
-    ) {
-      rebuildSpatialIndex(
-        state,
-        spatialIndex,
-        indexedNotesBuffer,
-      );
-    }
-
-    if (state.voicesById !== previousState.voicesById) {
-      voiceStyles.set(createVoiceRenderStyles(state));
-    }
-  });
-
-  return {
-    projectStore,
-    spatialIndex,
-    viewport: new MutableRenderSignal(viewportState),
-    visibleRegion: new MutableRenderSignal(
-      calculateVisibleRegion(
-        viewportState,
-        VIEWPORT_CONSTANTS.initialWidthCssPixels,
-        VIEWPORT_CONSTANTS.initialHeightCssPixels,
-        getProjectDurationTicks(projectStore.getState()),
-      ),
-    ),
-    voiceStyles,
-    noteColorMode: new MutableRenderSignal<NoteColorMode>(
-      EDITOR_CONSTANTS.defaultNoteColorMode,
-    ),
-    voiceSelectionRequest: new MutableRenderSignal<VoiceId | null>(
-      null,
-    ),
-    playheadTick: new MutableRenderSignal(
-      PROJECT_CONSTANTS.ppqn
-      * 4
-      * PROJECT_CONSTANTS.defaultTimeSignatureNumerator
-      / PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
-    ),
-    highlightedPitch: new MutableRenderSignal<number | null>(null),
-    interactionToolState: new MutableRenderSignal({
-      activeTool: EDITOR_CONSTANTS.defaultInteractionTool,
-    }),
-    pitchSnapSettings: new MutableRenderSignal(
-      DEFAULT_PITCH_SNAP_SETTINGS,
-    ),
-    gridSettings,
-    gridResolutionTicks: new MappedRenderSignal(
-      gridSettings,
-      getGridResolutionTicks,
-    ),
-  };
-}
-
-function getGridResolutionTicks(settings: GridSettings): number {
-  return settings.resolutionTicks;
 }
 
 export function createBlankProjectState(): ProjectState {
@@ -190,73 +48,6 @@ export function createBlankProjectState(): ProjectState {
     [],
     APPLICATION_CONSTANTS.defaultProjectTitle,
   );
-}
-
-function createVoiceRenderStyles(
-  state: ProjectState,
-): Readonly<Record<VoiceId, VoiceRenderStyle>> {
-  const styles: Record<VoiceId, VoiceRenderStyle> = {};
-
-  for (
-    let voiceIndex = 0;
-    voiceIndex < state.voiceOrder.length;
-    voiceIndex += 1
-  ) {
-    const voiceId = state.voiceOrder[voiceIndex];
-
-    if (voiceId === undefined) {
-      continue;
-    }
-
-    const voice = state.voicesById[voiceId];
-
-    if (voice !== undefined) {
-      styles[voiceId] = {
-        fillStyle: voice.color,
-        opacity: voice.muted ? 0.16 : 1,
-        locked: voice.locked,
-      };
-    }
-  }
-
-  return styles;
-}
-
-export function calculateVisibleRegion(
-  viewport: ViewportState,
-  widthCssPixels: number,
-  heightCssPixels: number,
-  totalTicks: number,
-): Rect {
-  const startTick =
-    viewport.scrollX * viewport.ticksPerPixel / viewport.zoomX;
-  const endTick =
-    (viewport.scrollX + widthCssPixels)
-    * viewport.ticksPerPixel
-    / viewport.zoomX;
-  const pitchHeight =
-    viewport.pitchHeight * viewport.zoomY;
-  const maxPitch =
-    VIEWPORT_CONSTANTS.maximumMidiPitch
-    - Math.floor(viewport.scrollY / pitchHeight);
-  const minPitch =
-    VIEWPORT_CONSTANTS.maximumMidiPitch
-    - Math.floor(
-      (viewport.scrollY + heightCssPixels) / pitchHeight,
-    );
-
-  return {
-    startTick: Math.max(0, startTick),
-    endTick: Math.min(totalTicks, endTick),
-    minPitch: Math.max(
-      VIEWPORT_CONSTANTS.minimumMidiPitch,
-      minPitch,
-    ),
-    maxPitch: Math.min(
-      VIEWPORT_CONSTANTS.maximumMidiPitch,
-      maxPitch,
-    ),
-  };
 }
 
 function createDemoNotes(noteCount: number): readonly Note[] {
@@ -449,40 +240,4 @@ function createDomainVoice(
     oscillatorWaveform:
       getDefaultOscillatorWaveform(voiceIndex),
   });
-}
-
-function rebuildSpatialIndex(
-  state: ProjectState,
-  spatialIndex: SpatialIndex,
-  target: Note[],
-): void {
-  target.length = 0;
-
-  for (
-    let voiceIndex = 0;
-    voiceIndex < state.voiceOrder.length;
-    voiceIndex += 1
-  ) {
-    const voiceId = state.voiceOrder[voiceIndex];
-
-    if (voiceId === undefined) {
-      continue;
-    }
-
-    const track = state.tracksByVoiceId[voiceId];
-
-    if (track === undefined) {
-      continue;
-    }
-
-    for (const noteId in track.notesById) {
-      const note = track.notesById[noteId];
-
-      if (note !== undefined) {
-        target.push(note);
-      }
-    }
-  }
-
-  spatialIndex.update(target);
 }

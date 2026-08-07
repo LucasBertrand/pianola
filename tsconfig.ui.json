@@ -15,6 +15,7 @@
     "src/audio/**/*.ts",
     "src/domain/**/*.ts",
     "src/geometry/**/*.ts",
+    "src/interaction/**/*.ts",
     "src/persistence/**/*.ts",
     "src/app/**/*.ts",
     "src/app/**/*.tsx",

@@ -24,6 +24,16 @@ import {
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
+import type {
+  PointerSample,
+} from "../../interaction/core/input";
+import {
+  PinchViewportGesture,
+} from "../../interaction/core/pinch-viewport-gesture";
+import {
+  createMousePointerSample,
+  createPointerSample,
+} from "../interactions/pointer-sample";
 
 export interface UseInteractionManagerOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
@@ -34,16 +44,6 @@ export interface UseInteractionManagerOptions {
   readonly toolState: InteractionToolSignal;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
-}
-
-interface MutableGestureState {
-  active: boolean;
-  zoomAxis: "horizontal" | "vertical" | "both";
-  previousDistance: number;
-  previousSpanX: number;
-  previousSpanY: number;
-  previousMidpointX: number;
-  previousMidpointY: number;
 }
 
 const LONG_PRESS_DELAY_MS =
@@ -93,24 +93,28 @@ export function useInteractionManager(
       return undefined;
     }
 
-    const activePointers = new Map<number, PointerEvent>();
-    const gestureEvents: PointerEvent[] = [];
-    const gestureState: MutableGestureState = {
-      active: false,
-      zoomAxis: "both",
-      previousDistance: 1,
-      previousSpanX: 1,
-      previousSpanY: 1,
-      previousMidpointX: 0,
-      previousMidpointY: 0,
-    };
+    const activePointers = new Map<number, PointerSample>();
+    const gestureEvents: PointerSample[] = [];
+    const pinchGesture = new PinchViewportGesture({
+      minimumDistanceCssPixels:
+        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
+      axisLockRatio: PINCH_AXIS_LOCK_RATIO,
+      minimumScale: MINIMUM_PINCH_SCALE,
+      maximumScale: MAXIMUM_PINCH_SCALE,
+      scaleDeadZone: PINCH_SCALE_DEAD_ZONE,
+      minimumZoomX: MINIMUM_HORIZONTAL_ZOOM,
+      maximumZoomX: MAXIMUM_HORIZONTAL_ZOOM,
+      minimumZoomY: MINIMUM_VERTICAL_ZOOM,
+      maximumZoomY: MAXIMUM_VERTICAL_ZOOM,
+      pitchCount: 128,
+    });
     let suppressSinglePointer = false;
     let gestureAnimationFrameId: number | null = null;
     let longPressTimerId: number | null = null;
     let longPressPointerId = -1;
     let longPressOriginX = 0;
     let longPressOriginY = 0;
-    let longPressEvent: PointerEvent | null = null;
+    let longPressEvent: PointerSample | null = null;
 
     const cancelLongPress = (): void => {
       if (longPressTimerId !== null) {
@@ -153,39 +157,18 @@ export function useInteractionManager(
       suppressSinglePointer = true;
 
       const bounds = overlay.getBoundingClientRect();
-      const midpointX =
-        (first.clientX + second.clientX) / 2 - bounds.left;
-      const midpointY =
-        (first.clientY + second.clientY) / 2 - bounds.top;
-      const deltaX = second.clientX - first.clientX;
-      const deltaY = second.clientY - first.clientY;
-      const spanX = Math.max(
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-        Math.abs(deltaX),
+      pinchGesture.begin(
+        first,
+        second,
+        bounds.left,
+        bounds.top,
       );
-      const spanY = Math.max(
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-        Math.abs(deltaY),
-      );
-      gestureState.active = true;
-      gestureState.zoomAxis = classifyPinchZoomAxis(
-        Math.abs(deltaX),
-        Math.abs(deltaY),
-      );
-      gestureState.previousDistance = Math.max(
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-        Math.hypot(deltaX, deltaY),
-      );
-      gestureState.previousSpanX = spanX;
-      gestureState.previousSpanY = spanY;
-      gestureState.previousMidpointX = midpointX;
-      gestureState.previousMidpointY = midpointY;
       strategyRef.current?.onGesture(gestureEvents);
     };
 
     const updateGesture = (): void => {
       if (
-        !gestureState.active
+        !pinchGesture.active
         || !populateGestureEvents()
       ) {
         return;
@@ -199,106 +182,21 @@ export function useInteractionManager(
       }
 
       const bounds = overlay.getBoundingClientRect();
-      const midpointX =
-        (first.clientX + second.clientX) / 2 - bounds.left;
-      const midpointY =
-        (first.clientY + second.clientY) / 2 - bounds.top;
-      const deltaX = second.clientX - first.clientX;
-      const deltaY = second.clientY - first.clientY;
-      const distance = Math.max(
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-        Math.hypot(deltaX, deltaY),
-      );
-      const spanX = Math.max(
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-        Math.abs(deltaX),
-      );
-      const spanY = Math.max(
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-        Math.abs(deltaY),
-      );
       const currentViewport = viewport.get();
-      const uniformScale = normalizePinchScale(
-        distance / gestureState.previousDistance,
-      );
-      const scaleX =
-        gestureState.zoomAxis === "vertical"
-          ? 1
-          : gestureState.zoomAxis === "horizontal"
-            ? normalizePinchScale(
-                spanX / gestureState.previousSpanX,
-              )
-            : uniformScale;
-      const scaleY =
-        gestureState.zoomAxis === "horizontal"
-          ? 1
-          : gestureState.zoomAxis === "vertical"
-            ? normalizePinchScale(
-                spanY / gestureState.previousSpanY,
-              )
-            : uniformScale;
-      const currentPitchHeight =
-        currentViewport.pitchHeight * currentViewport.zoomY;
-      const anchorTick =
-        (
-          currentViewport.scrollX
-          + gestureState.previousMidpointX
-        )
-        * currentViewport.ticksPerPixel
-        / currentViewport.zoomX;
-      const anchorPitchRow =
-        (
-          currentViewport.scrollY
-          + gestureState.previousMidpointY
-        )
-        / currentPitchHeight;
-      const zoomX = clamp(
-        currentViewport.zoomX * scaleX,
-        MINIMUM_HORIZONTAL_ZOOM,
-        MAXIMUM_HORIZONTAL_ZOOM,
-      );
-      const zoomY = clamp(
-        currentViewport.zoomY * scaleY,
-        MINIMUM_VERTICAL_ZOOM,
-        MAXIMUM_VERTICAL_ZOOM,
-      );
-      const pitchHeight =
-        currentViewport.pitchHeight * zoomY;
-      const maximumScrollX = Math.max(
-        0,
-        totalTicks * zoomX / currentViewport.ticksPerPixel
-          - overlay.clientWidth,
-      );
-      const maximumScrollY = Math.max(
-        0,
-        128 * pitchHeight - overlay.clientHeight,
-      );
-      const scrollX = clamp(
-        anchorTick
-          * zoomX
-          / currentViewport.ticksPerPixel
-          - midpointX,
-        0,
-        maximumScrollX,
-      );
-      const scrollY = clamp(
-        anchorPitchRow * pitchHeight - midpointY,
-        0,
-        maximumScrollY,
+      const nextViewport = pinchGesture.update(
+        first,
+        second,
+        bounds.left,
+        bounds.top,
+        overlay.clientWidth,
+        overlay.clientHeight,
+        totalTicks,
+        currentViewport,
       );
 
-      gestureState.previousDistance = distance;
-      gestureState.previousSpanX = spanX;
-      gestureState.previousSpanY = spanY;
-      gestureState.previousMidpointX = midpointX;
-      gestureState.previousMidpointY = midpointY;
-      setViewport({
-        ...currentViewport,
-        zoomX,
-        zoomY,
-        scrollX,
-        scrollY,
-      });
+      if (nextViewport !== null) {
+        setViewport(nextViewport);
+      }
       strategyRef.current?.onGesture(gestureEvents);
     };
 
@@ -322,7 +220,7 @@ export function useInteractionManager(
       updateGesture();
     };
 
-    const scheduleLongPress = (event: PointerEvent): void => {
+    const scheduleLongPress = (event: PointerSample): void => {
       cancelLongPress();
 
       longPressPointerId = event.pointerId;
@@ -341,7 +239,7 @@ export function useInteractionManager(
 
         if (
           retainedEvent === null
-          || gestureState.active
+          || pinchGesture.active
           || !activePointers.has(longPressPointerId)
         ) {
           return;
@@ -358,7 +256,9 @@ export function useInteractionManager(
         return;
       }
 
-      activePointers.set(event.pointerId, event);
+      const sample = createPointerSample(event);
+
+      activePointers.set(event.pointerId, sample);
 
       if (!overlay.hasPointerCapture(event.pointerId)) {
         overlay.setPointerCapture(event.pointerId);
@@ -370,10 +270,10 @@ export function useInteractionManager(
       ) {
         const strategy = strategyRef.current;
 
-        strategy?.onPointerDown(event);
+        strategy?.onPointerDown(sample);
 
         if (strategy?.shouldScheduleLongPress() === true) {
-          scheduleLongPress(event);
+          scheduleLongPress(sample);
         } else {
           cancelLongPress();
         }
@@ -389,7 +289,9 @@ export function useInteractionManager(
         return;
       }
 
-      activePointers.set(event.pointerId, event);
+      const sample = createPointerSample(event);
+
+      activePointers.set(event.pointerId, sample);
 
       if (
         longPressPointerId === event.pointerId
@@ -403,10 +305,10 @@ export function useInteractionManager(
         cancelLongPress();
       }
 
-      if (gestureState.active) {
+      if (pinchGesture.active) {
         scheduleGestureUpdate();
       } else if (!suppressSinglePointer) {
-        strategyRef.current?.onPointerMove(event);
+        strategyRef.current?.onPointerMove(sample);
       }
 
       event.preventDefault();
@@ -421,19 +323,20 @@ export function useInteractionManager(
       }
 
       cancelLongPress();
+      const sample = createPointerSample(event);
 
       if (
-        !gestureState.active
+        !pinchGesture.active
         && !suppressSinglePointer
       ) {
         if (cancelled) {
-          strategyRef.current?.onPointerCancel(event);
+          strategyRef.current?.onPointerCancel(sample);
         } else {
-          strategyRef.current?.onPointerUp(event);
+          strategyRef.current?.onPointerUp(sample);
         }
       }
 
-      if (gestureState.active) {
+      if (pinchGesture.active) {
         flushGestureUpdate();
       }
 
@@ -446,11 +349,11 @@ export function useInteractionManager(
       }
 
       if (activePointers.size === 0) {
-        gestureState.active = false;
+        pinchGesture.reset();
         suppressSinglePointer = false;
         gestureEvents.length = 0;
-      } else if (gestureState.active) {
-        gestureState.active = false;
+      } else if (pinchGesture.active) {
+        pinchGesture.reset();
         suppressSinglePointer = true;
       }
 
@@ -474,13 +377,16 @@ export function useInteractionManager(
         activePointers.delete(event.pointerId);
         cancelLongPress();
         strategyRef.current?.cancel();
-        gestureState.active = false;
+        pinchGesture.reset();
         suppressSinglePointer = activePointers.size > 0;
       }
     };
 
     const handleDoubleClick = (event: MouseEvent): void => {
-      strategyRef.current?.onDoubleClick(event);
+      strategyRef.current?.onDoubleClick(
+        createMousePointerSample(event),
+      );
+      event.preventDefault();
     };
 
     const handleContextMenu = (event: MouseEvent): void => {
@@ -549,42 +455,4 @@ export function useInteractionManager(
   ]);
 
   return controllerRef.current;
-}
-
-function clamp(
-  value: number,
-  minimum: number,
-  maximum: number,
-): number {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
-function classifyPinchZoomAxis(
-  spanX: number,
-  spanY: number,
-): MutableGestureState["zoomAxis"] {
-  if (spanX >= spanY * PINCH_AXIS_LOCK_RATIO) {
-    return "horizontal";
-  }
-
-  if (spanY >= spanX * PINCH_AXIS_LOCK_RATIO) {
-    return "vertical";
-  }
-
-  return "both";
-}
-
-function normalizePinchScale(scale: number): number {
-  if (
-    !Number.isFinite(scale)
-    || Math.abs(scale - 1) <= PINCH_SCALE_DEAD_ZONE
-  ) {
-    return 1;
-  }
-
-  return clamp(
-    scale,
-    MINIMUM_PINCH_SCALE,
-    MAXIMUM_PINCH_SCALE,
-  );
 }

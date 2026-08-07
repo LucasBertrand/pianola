@@ -20,12 +20,15 @@
     "noEmit": true
   },
   "include": [
+    "src/application/**/*.ts",
     "src/audio/contracts.ts",
     "src/audio/playback-snapshot.ts",
     "src/audio/time-math.ts",
     "src/domain/**/*.ts",
     "src/geometry/**/*.ts",
+    "src/interaction/**/*.ts",
     "src/midi/**/*.ts",
+    "src/music/**/*.ts",
     "src/persistence/**/*.ts"
   ]
 }

@@ -26,9 +26,27 @@ import {
   APPLICATION_COLORS,
 } from "../config/application-colors";
 import {
+  buildAddNoteCommands,
+  buildDeleteNoteCommands,
+} from "../application/note-edit-commands";
+import {
+  buildSliceCommandsForNotes,
+  buildTransformCommandsForNotes,
+  canPlacePastedNotes,
+  createPastedNotes,
+  createVoiceTransferPlan,
+  findNotesByIds,
+  type PianoRollClipboard,
+} from "../application/selection-edit-plans";
+import type {
+  NoteCollisionResolutionRequest,
+} from "../application/note-collision-resolution";
+import type {
+  EditorCommandPort,
+} from "../application/editor-command-service";
+import {
   CommandRejectedError,
   type PianoRollCommand,
-  type Transaction,
   type UpdateVoiceChanges,
 } from "../domain/commands";
 import type {
@@ -121,7 +139,6 @@ import {
   useAudioPlayback,
 } from "../ui/hooks/useAudioPlayback";
 import type {
-  NoteCollisionResolutionRequest,
   PianoRollEventController,
 } from "../ui/hooks/usePianoRollEvents";
 import {
@@ -131,7 +148,7 @@ import {
   isTonalPatternId,
   snapPitchToTonalPattern,
   type PitchSnapSettings,
-} from "../ui/interactions/pitch-snap";
+} from "../music/pitch-snap";
 import {
   getPreferredTonicLabel,
   getScaleDegreeLabel,
@@ -154,22 +171,22 @@ import {
   APPLICATION_SURFACE_COLOR,
 } from "../ui/rendering/theme";
 import {
-  calculateVisibleRegion,
   createBlankProjectState,
-  createDemoScene,
+  createDemoProjectState,
+} from "./demo-scene";
+import {
+  createEditorRuntime,
   INITIAL_MAX_VISIBLE_PITCH,
   INITIAL_PITCH_HEIGHT,
-  type DemoScene,
-} from "./demo-scene";
+  type EditorRuntime,
+} from "./editor-runtime";
+import {
+  calculateVisibleRegion,
+} from "../geometry/visible-region";
 
 interface ViewportDimensions {
   width: number;
   height: number;
-}
-
-interface PianoRollClipboard {
-  readonly notes: readonly Note[];
-  readonly originTick: number;
 }
 
 interface ApplicationConfirmationOptions {
@@ -228,7 +245,7 @@ const TIMELINE_HEADER_HEIGHT_CSS_PIXELS =
   RULER_HEIGHT_CSS_PIXELS + LOOP_REGION_HEIGHT_CSS_PIXELS;
 
 export function App(): React.JSX.Element {
-  const sceneRef = useRef<DemoScene | null>(null);
+  const sceneRef = useRef<EditorRuntime | null>(null);
   const appShellRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const zoomInputRef = useRef<HTMLInputElement | null>(null);
@@ -259,7 +276,9 @@ export function App(): React.JSX.Element {
   });
 
   if (sceneRef.current === null) {
-    sceneRef.current = createDemoScene();
+    sceneRef.current = createEditorRuntime(
+      createDemoProjectState(),
+    );
   }
 
   const scene = sceneRef.current;
@@ -1151,16 +1170,7 @@ export function App(): React.JSX.Element {
       label: string,
     ): void => {
       voiceTransactionSequenceRef.current += 1;
-      const timestamp = Date.now();
-      const transaction: Transaction = {
-        transactionId:
-          `voice-${timestamp}-${voiceTransactionSequenceRef.current}`,
-        label,
-        createdAt: timestamp,
-        commands: [command],
-      };
-
-      scene.projectStore.dispatch(transaction);
+      scene.editorCommands.dispatch([command], label);
     },
     [scene],
   );
@@ -1174,16 +1184,7 @@ export function App(): React.JSX.Element {
       }
 
       editTransactionSequenceRef.current += 1;
-      const timestamp = Date.now();
-      const transaction: Transaction = {
-        transactionId:
-          `edit-${timestamp}-${editTransactionSequenceRef.current}`,
-        label,
-        createdAt: timestamp,
-        commands,
-      };
-
-      return scene.projectStore.dispatch(transaction);
+      return scene.editorCommands.dispatch(commands, label);
     },
     [scene],
   );
@@ -1614,13 +1615,7 @@ export function App(): React.JSX.Element {
       }
 
       setSelectedVoiceId(voiceId);
-      const request = scene.voiceSelectionRequest;
-
-      if (request.get() === voiceId) {
-        request.invalidate();
-      } else {
-        request.set(voiceId);
-      }
+      scene.selectionRequests.toggleVoice(voiceId);
     },
     [scene],
   );
@@ -1709,7 +1704,7 @@ export function App(): React.JSX.Element {
     }
 
     const nextState = dispatchEditCommands(
-      buildDeleteCommandsForNotes(clipboard.notes),
+      buildDeleteNoteCommands(clipboard.notes),
       "Cut notes",
     );
 
@@ -1729,7 +1724,7 @@ export function App(): React.JSX.Element {
     }
 
     const nextState = dispatchEditCommands(
-      buildDeleteCommandsForNotes(notes),
+      buildDeleteNoteCommands(notes),
       "Delete notes",
     );
 
@@ -1921,7 +1916,7 @@ export function App(): React.JSX.Element {
     }
 
     const nextState = dispatchEditCommands(
-      buildAddCommandsForNotes(pastedNotes),
+      buildAddNoteCommands(pastedNotes),
       "Paste notes",
     );
 
@@ -2234,7 +2229,7 @@ export function App(): React.JSX.Element {
       pendingMidiImportRef.current = null;
       setClipboardAvailable(false);
       setSelectionAvailable(false);
-      scene.voiceSelectionRequest.set(null);
+      scene.selectionRequests.clear();
       scene.gridSettings.set(editorState.gridSettings);
       scene.noteColorMode.set(editorState.noteColorMode);
       scene.pitchSnapSettings.set(
@@ -2795,6 +2790,7 @@ export function App(): React.JSX.Element {
 
         <TransportMetrics
           projectStore={scene.projectStore}
+          editorCommands={scene.editorCommands}
           gridSettings={scene.gridSettings}
         />
 
@@ -3171,23 +3167,11 @@ export function App(): React.JSX.Element {
               />
               <div className="canvas-host">
                 <PianoRollLayers
-                  viewport={scene.viewport}
-                  visibleRegion={scene.visibleRegion}
-                  spatialIndex={scene.spatialIndex}
-                  voiceStyles={scene.voiceStyles}
-                  noteColorMode={scene.noteColorMode}
-                  projectStore={scene.projectStore}
-                  toolState={scene.interactionToolState}
+                  runtime={scene}
                   selectionMode={selectionMode}
                   activeVoiceId={selectedVoiceId ?? ""}
                   totalTicks={totalTicks}
                   setViewport={publishViewport}
-                  gridResolutionTicks={scene.gridResolutionTicks}
-                  pitchSnapSettings={scene.pitchSnapSettings}
-                  highlightedPitch={scene.highlightedPitch}
-                  voiceSelectionRequest={
-                    scene.voiceSelectionRequest
-                  }
                   eventControllerRef={
                     pianoRollEventControllerRef
                   }
@@ -4132,398 +4116,6 @@ function VoiceNameEditor(
   );
 }
 
-function buildDeleteCommandsForNotes(
-  notes: readonly Note[],
-): readonly PianoRollCommand[] {
-  const noteIdsByVoice = new Map<VoiceId, NoteId[]>();
-
-  for (
-    let noteIndex = 0;
-    noteIndex < notes.length;
-    noteIndex += 1
-  ) {
-    const note = notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    let noteIds = noteIdsByVoice.get(note.voiceId);
-
-    if (noteIds === undefined) {
-      noteIds = [];
-      noteIdsByVoice.set(note.voiceId, noteIds);
-    }
-
-    noteIds.push(note.id);
-  }
-
-  const commands: PianoRollCommand[] = [];
-
-  for (const [voiceId, noteIds] of noteIdsByVoice) {
-    commands.push({
-      type: "DeleteNotes",
-      trackVoiceId: voiceId,
-      noteIds,
-    });
-  }
-
-  return commands;
-}
-
-function buildAddCommandsForNotes(
-  notes: readonly Note[],
-): readonly PianoRollCommand[] {
-  const notesByVoice = new Map<VoiceId, Note[]>();
-
-  for (
-    let noteIndex = 0;
-    noteIndex < notes.length;
-    noteIndex += 1
-  ) {
-    const note = notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    let voiceNotes = notesByVoice.get(note.voiceId);
-
-    if (voiceNotes === undefined) {
-      voiceNotes = [];
-      notesByVoice.set(note.voiceId, voiceNotes);
-    }
-
-    voiceNotes.push(note);
-  }
-
-  const commands: PianoRollCommand[] = [];
-
-  for (const [voiceId, voiceNotes] of notesByVoice) {
-    commands.push({
-      type: "AddNotes",
-      trackVoiceId: voiceId,
-      notes: voiceNotes,
-    });
-  }
-
-  return commands;
-}
-
-function buildTransformCommandsForNotes(
-  notes: readonly Note[],
-): readonly PianoRollCommand[] {
-  const notesByVoice = new Map<VoiceId, Note[]>();
-
-  for (const note of notes) {
-    let voiceNotes = notesByVoice.get(note.voiceId);
-
-    if (voiceNotes === undefined) {
-      voiceNotes = [];
-      notesByVoice.set(note.voiceId, voiceNotes);
-    }
-
-    voiceNotes.push(note);
-  }
-
-  const commands: PianoRollCommand[] = [];
-
-  for (const [voiceId, voiceNotes] of notesByVoice) {
-    commands.push({
-      type: "TransformNotes",
-      trackVoiceId: voiceId,
-      changes: voiceNotes.map((note) => ({
-        noteId: note.id,
-        startTick: note.startTick,
-        durationTicks: note.durationTicks,
-        pitch: note.pitch,
-      })),
-    });
-  }
-
-  return commands;
-}
-
-interface SliceCommandPlan {
-  readonly commands: readonly PianoRollCommand[];
-  readonly resultingNoteIds: readonly NoteId[];
-}
-
-function buildSliceCommandsForNotes(
-  notes: readonly Note[],
-  sliceTick: number,
-  timestamp: number,
-  transactionSequence: number,
-): SliceCommandPlan {
-  const slicesByVoice = new Map<
-    VoiceId,
-    Array<{ readonly noteId: NoteId; readonly rightNoteId: NoteId }>
-  >();
-  const resultingNoteIds: NoteId[] = [];
-  let sliceSequence = 0;
-
-  for (const note of notes) {
-    if (
-      sliceTick <= note.startTick
-      || sliceTick >= note.startTick + note.durationTicks
-    ) {
-      resultingNoteIds.push(note.id);
-      continue;
-    }
-
-    let slices = slicesByVoice.get(note.voiceId);
-
-    if (slices === undefined) {
-      slices = [];
-      slicesByVoice.set(note.voiceId, slices);
-    }
-
-    const rightNoteId =
-      `slice-${timestamp}-${transactionSequence}-${sliceSequence}`;
-
-    sliceSequence += 1;
-    slices.push({
-      noteId: note.id,
-      rightNoteId,
-    });
-    resultingNoteIds.push(note.id, rightNoteId);
-  }
-
-  const commands: PianoRollCommand[] = [];
-
-  for (const [voiceId, slices] of slicesByVoice) {
-    commands.push({
-      type: "SliceNotes",
-      trackVoiceId: voiceId,
-      sliceTick,
-      slices,
-    });
-  }
-
-  return {
-    commands,
-    resultingNoteIds,
-  };
-}
-
-function createPastedNotes(
-  clipboard: PianoRollClipboard,
-  pasteTick: number,
-  timestamp: number,
-  sequence: number,
-): readonly Note[] {
-  const notes: Note[] = [];
-
-  for (
-    let noteIndex = 0;
-    noteIndex < clipboard.notes.length;
-    noteIndex += 1
-  ) {
-    const sourceNote = clipboard.notes[noteIndex];
-
-    if (sourceNote === undefined) {
-      continue;
-    }
-
-    notes.push({
-      ...sourceNote,
-      id:
-        `${sourceNote.id}-copy-${timestamp}-${sequence}-${noteIndex}`,
-      startTick:
-        pasteTick
-        + sourceNote.startTick
-        - clipboard.originTick,
-    });
-  }
-
-  return notes;
-}
-
-function canPlacePastedNotes(
-  state: ProjectState,
-  notes: readonly Note[],
-): boolean {
-  const totalTicks = getProjectDurationTicks(state);
-
-  for (
-    let noteIndex = 0;
-    noteIndex < notes.length;
-    noteIndex += 1
-  ) {
-    const note = notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    const voice = state.voicesById[note.voiceId];
-    const track = state.tracksByVoiceId[note.voiceId];
-
-    if (
-      voice === undefined
-      || voice.locked
-      || track === undefined
-      || note.startTick < 0
-      || note.startTick + note.durationTicks > totalTicks
-    ) {
-      return false;
-    }
-
-  }
-
-  return notes.length > 0;
-}
-
-type VoiceTransferPlan =
-  | {
-      readonly valid: true;
-      readonly commands: readonly PianoRollCommand[];
-      readonly originalNotes: readonly Note[];
-      readonly proposedNotes: readonly Note[];
-    }
-  | {
-      readonly valid: false;
-      readonly message: string;
-    };
-
-function createVoiceTransferPlan(
-  state: ProjectState,
-  selectedNotes: readonly Note[],
-  targetVoiceId: VoiceId,
-): VoiceTransferPlan {
-  const targetVoice = state.voicesById[targetVoiceId];
-  const targetTrack = state.tracksByVoiceId[targetVoiceId];
-
-  if (targetVoice === undefined || targetTrack === undefined) {
-    return {
-      valid: false,
-      message: "The selected target voice is unavailable.",
-    };
-  }
-
-  if (targetVoice.locked) {
-    return {
-      valid: false,
-      message: "Unlock the selected target voice before transferring notes.",
-    };
-  }
-
-  const transferredNotes: Note[] = [];
-  const originalNotes: Note[] = [];
-  const noteIdsBySourceVoice = new Map<VoiceId, NoteId[]>();
-
-  for (
-    let noteIndex = 0;
-    noteIndex < selectedNotes.length;
-    noteIndex += 1
-  ) {
-    const selectedNote = selectedNotes[noteIndex];
-
-    if (selectedNote === undefined) {
-      continue;
-    }
-
-    const sourceVoice = state.voicesById[selectedNote.voiceId];
-    const sourceTrack =
-      state.tracksByVoiceId[selectedNote.voiceId];
-
-    if (
-      sourceVoice === undefined
-      || sourceTrack?.notesById[selectedNote.id] === undefined
-    ) {
-      return {
-        valid: false,
-        message: "The selection contains a note that is no longer available.",
-      };
-    }
-
-    if (sourceVoice.locked) {
-      return {
-        valid: false,
-        message: `Unlock voice "${sourceVoice.name}" before transferring its notes.`,
-      };
-    }
-
-    if (selectedNote.voiceId === targetVoiceId) {
-      continue;
-    }
-
-    if (targetTrack.notesById[selectedNote.id] !== undefined) {
-      return {
-        valid: false,
-        message: `Transfer cancelled because note ID "${selectedNote.id}" already exists in the target voice.`,
-      };
-    }
-
-    const transferredNote: Note = {
-      ...selectedNote,
-      voiceId: targetVoiceId,
-    };
-
-    originalNotes.push(selectedNote);
-    transferredNotes.push(transferredNote);
-    let sourceNoteIds =
-      noteIdsBySourceVoice.get(selectedNote.voiceId);
-
-    if (sourceNoteIds === undefined) {
-      sourceNoteIds = [];
-      noteIdsBySourceVoice.set(
-        selectedNote.voiceId,
-        sourceNoteIds,
-      );
-    }
-
-    sourceNoteIds.push(selectedNote.id);
-  }
-
-  const commands: PianoRollCommand[] = [];
-
-  for (const [sourceVoiceId, noteIds] of noteIdsBySourceVoice) {
-    commands.push({
-      type: "MoveNotes",
-      sourceVoiceId,
-      targetVoiceId,
-      noteIds,
-      deltaTicks: 0,
-      deltaPitch: 0,
-    });
-  }
-
-  return {
-    valid: true,
-    commands,
-    originalNotes,
-    proposedNotes: transferredNotes,
-  };
-}
-
-function findNotesByIds(
-  state: ProjectState,
-  noteIds: readonly NoteId[],
-): readonly Note[] {
-  const notes: Note[] = [];
-  const acceptedNoteIds = new Set<NoteId>();
-
-  for (const noteId of noteIds) {
-    if (acceptedNoteIds.has(noteId)) {
-      continue;
-    }
-
-    for (const voiceId of state.voiceOrder) {
-      const note =
-        state.tracksByVoiceId[voiceId]?.notesById[noteId];
-
-      if (note !== undefined) {
-        acceptedNoteIds.add(note.id);
-        notes.push(note);
-        break;
-      }
-    }
-  }
-
-  return notes;
-}
-
 function createUserVoice(
   voiceIndex: number,
   sequence: number,
@@ -4604,8 +4196,9 @@ interface PianoKeyboardProps {
 }
 
 interface TransportMetricsProps {
-  readonly projectStore: DemoScene["projectStore"];
-  readonly gridSettings: DemoScene["gridSettings"];
+  readonly projectStore: EditorRuntime["projectStore"];
+  readonly editorCommands: EditorCommandPort;
+  readonly gridSettings: EditorRuntime["gridSettings"];
 }
 
 function TransportMetrics(
@@ -4613,13 +4206,13 @@ function TransportMetrics(
 ): React.JSX.Element {
   const {
     projectStore,
+    editorCommands,
     gridSettings,
   } = props;
   const tempoInputRef = useRef<HTMLInputElement | null>(null);
   const gridSelectRef = useRef<HTMLSelectElement | null>(null);
   const subdivisionSelectRef =
     useRef<HTMLSelectElement | null>(null);
-  const transactionSequenceRef = useRef(0);
   const [meterValue, setMeterValue] = useState(() =>
     formatTimeSignatureValue(
       projectStore.getState().transportSettings.timeSignature,
@@ -4679,18 +4272,9 @@ function TransportMetrics(
       command: PianoRollCommand,
       label: string,
     ): void => {
-      transactionSequenceRef.current += 1;
-      const transaction: Transaction = {
-        transactionId:
-          `transport-${Date.now()}-${transactionSequenceRef.current}`,
-        label,
-        createdAt: Date.now(),
-        commands: [command],
-      };
-
-      projectStore.dispatch(transaction);
+      editorCommands.dispatch([command], label);
     },
-    [projectStore],
+    [editorCommands],
   );
 
   const handleTempoCommit = useCallback(
@@ -4938,8 +4522,8 @@ function isConfiguredTimeSignatureValue(
 
 interface BarRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
-  readonly projectStore: DemoScene["projectStore"];
-  readonly gridResolutionTicks: DemoScene["gridResolutionTicks"];
+  readonly projectStore: EditorRuntime["projectStore"];
+  readonly gridResolutionTicks: EditorRuntime["gridResolutionTicks"];
   readonly onSeekStart: () => void;
   readonly onSeekPreview: (tick: number) => void;
   readonly onSeekCommit: (tick: number) => void;
@@ -4955,9 +4539,9 @@ type LoopGestureMode =
   | "resize-end";
 
 interface TimelineLoopRegionProps {
-  readonly viewport: DemoScene["viewport"];
-  readonly projectStore: DemoScene["projectStore"];
-  readonly gridResolutionTicks: DemoScene["gridResolutionTicks"];
+  readonly viewport: EditorRuntime["viewport"];
+  readonly projectStore: EditorRuntime["projectStore"];
+  readonly gridResolutionTicks: EditorRuntime["gridResolutionTicks"];
   readonly onCommit: (loop: LoopRegion) => void;
 }
 
@@ -5718,8 +5302,8 @@ function BarRuler(
 }
 
 interface RollPlayheadProps {
-  readonly viewport: DemoScene["viewport"];
-  readonly playheadTick: DemoScene["playheadTick"];
+  readonly viewport: EditorRuntime["viewport"];
+  readonly playheadTick: EditorRuntime["playheadTick"];
 }
 
 function RollPlayhead(

@@ -8,7 +8,7 @@ import {
   getScaleDegreeTriadQuality,
   getTonalPatternDefinition,
   type PitchSnapSettings,
-} from "../interactions/pitch-snap";
+} from "../../music/pitch-snap";
 
 const NATURAL_PITCH_CLASSES = Object.freeze([
   0,

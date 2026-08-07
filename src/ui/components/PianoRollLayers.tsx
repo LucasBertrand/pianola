@@ -13,13 +13,15 @@ import {
 } from "../../config/program-constants";
 import type {
   Note,
-  NoteId,
   ProjectState,
   VoiceId,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
+import type {
+  NoteCollisionResolutionRequest,
+} from "../../application/note-collision-resolution";
 import {
   CoordinateConverter,
   MAX_MIDI_PITCH,
@@ -29,24 +31,32 @@ import {
 import {
   SpatialIndex,
 } from "../../geometry/spatial-index";
+import type {
+  Rect,
+} from "../../geometry/rect";
+import {
+  EditingNoteMask,
+  type ReadonlyEditingNoteMask,
+} from "../../interaction/core/editing-note-mask";
 import {
   useCanvasRenderer,
   type CanvasFrame,
 } from "../hooks/useCanvasRenderer";
 import type {
-  NoteCollisionResolutionRequest,
   PianoRollEventController,
 } from "../hooks/usePianoRollEvents";
 import type {
-  InteractionToolSignal,
   SelectionMode,
 } from "../interactions/types";
+import type {
+  PianoRollRuntimePort,
+} from "../contracts/piano-roll-runtime";
 import {
   getPitchScaleDegreeColorIndex,
   getPitchSnapRootPitchClass,
   isPitchAllowedByTonalPattern,
   type PitchSnapSettings,
-} from "../interactions/pitch-snap";
+} from "../../music/pitch-snap";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
@@ -68,13 +78,6 @@ import {
   InteractionOverlay,
 } from "./InteractionOverlay";
 
-export interface Rect {
-  readonly startTick: number;
-  readonly endTick: number;
-  readonly minPitch: number;
-  readonly maxPitch: number;
-}
-
 export interface CanvasLayerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly visibleRegion: ReadonlyRenderSignal<Rect>;
@@ -89,30 +92,21 @@ export interface GridCanvasProps extends CanvasLayerProps {
 
 export interface NotesCanvasProps extends CanvasLayerProps {
   readonly spatialIndex: SpatialIndex;
+  readonly projectStore: ProjectStorePort;
   readonly voiceStyles: ReadonlyRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
-  readonly editingNoteIds: ReadonlySet<NoteId>;
+  readonly editingNoteMask: ReadonlyEditingNoteMask;
 }
 
-export interface PianoRollLayersProps extends CanvasLayerProps {
-  readonly spatialIndex: SpatialIndex;
-  readonly voiceStyles: ReadonlyRenderSignal<
-    Readonly<Record<VoiceId, VoiceRenderStyle>>
-  >;
-  readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
-  readonly projectStore: ProjectStorePort;
-  readonly toolState: InteractionToolSignal;
+export interface PianoRollLayersProps {
+  readonly runtime: PianoRollRuntimePort;
   readonly selectionMode: SelectionMode;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
-  readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
-  readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
-  readonly highlightedPitch: ReadonlyRenderSignal<number | null>;
-  readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
   >;
@@ -184,33 +178,34 @@ export function PianoRollLayers(
   props: PianoRollLayersProps,
 ): React.JSX.Element {
   const {
+    runtime,
+    selectionMode,
+    activeVoiceId,
+    totalTicks,
+    setViewport,
+    eventControllerRef,
+    onSelectionChange,
+    onGridSeek,
+    onNoteCollision,
+  } = props;
+  const {
     viewport,
     visibleRegion,
     spatialIndex,
     voiceStyles,
     noteColorMode,
     projectStore,
-    toolState,
-    selectionMode,
-    activeVoiceId,
-    totalTicks,
-    setViewport,
     gridResolutionTicks,
     pitchSnapSettings,
     highlightedPitch,
-    voiceSelectionRequest,
-    eventControllerRef,
-    onSelectionChange,
-    onGridSeek,
-    onNoteCollision,
-  } = props;
-  const editingNoteIdsRef = useRef<Set<NoteId> | null>(null);
+  } = runtime;
+  const editingNoteMaskRef = useRef<EditingNoteMask | null>(null);
 
-  if (editingNoteIdsRef.current === null) {
-    editingNoteIdsRef.current = new Set<NoteId>();
+  if (editingNoteMaskRef.current === null) {
+    editingNoteMaskRef.current = new EditingNoteMask();
   }
 
-  const editingNoteIds = editingNoteIdsRef.current;
+  const editingNoteMask = editingNoteMaskRef.current;
 
   return (
     <div style={LAYER_STACK_STYLE}>
@@ -226,26 +221,19 @@ export function PianoRollLayers(
         viewport={viewport}
         visibleRegion={visibleRegion}
         spatialIndex={spatialIndex}
+        projectStore={projectStore}
         voiceStyles={voiceStyles}
         noteColorMode={noteColorMode}
         pitchSnapSettings={pitchSnapSettings}
-        editingNoteIds={editingNoteIds}
+        editingNoteMask={editingNoteMask}
       />
       <InteractionOverlay
-        viewport={viewport}
-        spatialIndex={spatialIndex}
-        voiceStyles={voiceStyles}
-        noteColorMode={noteColorMode}
-        projectStore={projectStore}
-        toolState={toolState}
+        runtime={runtime}
         selectionMode={selectionMode}
         activeVoiceId={activeVoiceId}
         totalTicks={totalTicks}
         setViewport={setViewport}
-        gridResolutionTicks={gridResolutionTicks}
-        pitchSnapSettings={pitchSnapSettings}
-        voiceSelectionRequest={voiceSelectionRequest}
-        editingNoteIds={editingNoteIds}
+        editingNoteMask={editingNoteMask}
         eventControllerRef={eventControllerRef}
         onSelectionChange={onSelectionChange}
         onGridSeek={onGridSeek}
@@ -339,10 +327,11 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     viewport,
     visibleRegion,
     spatialIndex,
+    projectStore,
     voiceStyles,
     noteColorMode,
     pitchSnapSettings,
-    editingNoteIds,
+    editingNoteMask,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
   const converterVersionRef = useRef(-1);
@@ -371,6 +360,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       const stylesByVoiceId = voiceStyles.get();
       const colorMode = noteColorMode.get();
       const labelSettings = pitchSnapSettings.get();
+      const editingNoteIds = editingNoteMask.get();
 
       spatialIndex.queryRect(
         region.startTick,
@@ -562,7 +552,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     },
     [
       spatialIndex,
-      editingNoteIds,
+      editingNoteMask,
       viewport,
       visibleRegion,
       voiceStyles,
@@ -572,10 +562,23 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
   );
   const renderer = useCanvasRenderer({
     render: renderNotes,
-    mode: "continuous",
+    mode: "on-demand",
     clearBeforeRender: true,
     contextAttributes: TRANSPARENT_CONTEXT_ATTRIBUTES,
   });
+  useSignalInvalidation(viewport, renderer.invalidate);
+  useSignalInvalidation(visibleRegion, renderer.invalidate);
+  useSignalInvalidation(voiceStyles, renderer.invalidate);
+  useSignalInvalidation(noteColorMode, renderer.invalidate);
+  useSignalInvalidation(pitchSnapSettings, renderer.invalidate);
+  useSignalInvalidation(editingNoteMask, renderer.invalidate);
+  useEffect(
+    () => projectStore.subscribe(renderer.invalidate),
+    [
+      projectStore,
+      renderer.invalidate,
+    ],
+  );
 
   return (
     <canvas

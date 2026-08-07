@@ -31,7 +31,7 @@ import {
   getTonalPatternDefinition,
   isTonalPatternId,
   type PitchSnapSettings,
-} from "../ui/interactions/pitch-snap";
+} from "../music/pitch-snap";
 import {
   createGridSettings,
   parseGridSubdivision,

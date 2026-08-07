@@ -8,7 +8,7 @@ import {
 import {
   getPitchScaleDegreeColorIndex,
   type PitchSnapSettings,
-} from "../interactions/pitch-snap";
+} from "../../music/pitch-snap";
 
 export interface VoiceRenderStyle {
   readonly fillStyle: string;

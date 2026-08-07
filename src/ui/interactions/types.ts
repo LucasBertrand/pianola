@@ -1,13 +1,18 @@
 import {
   INTERACTION_CONSTANTS,
 } from "../../config/program-constants";
-
-export type InteractionTool = "select";
-export type SelectionMode = "replace" | "add" | "subtract";
-
-export interface InteractionModeState {
-  readonly activeTool: InteractionTool;
-}
+import type {
+  PointerSample,
+} from "../../interaction/core/input";
+import type {
+  InteractionModeState,
+  InteractionTool,
+} from "../../interaction/core/state";
+export type {
+  InteractionModeState,
+  InteractionTool,
+  SelectionMode,
+} from "../../interaction/core/state";
 
 export interface InteractionToolSignal {
   readonly version: number;
@@ -18,14 +23,14 @@ export interface InteractionToolSignal {
 
 export interface TouchAwareInteractionStrategy {
   readonly supportsHover: false;
-  onPointerDown(event: PointerEvent): void;
+  onPointerDown(event: PointerSample): void;
   shouldScheduleLongPress(): boolean;
-  onPointerMove(event: PointerEvent): void;
-  onPointerUp(event: PointerEvent): void;
-  onPointerCancel(event: PointerEvent): void;
-  onGesture(events: PointerEvent[]): void;
-  onLongPress(event: PointerEvent): void;
-  onDoubleClick(event: MouseEvent): void;
+  onPointerMove(event: PointerSample): void;
+  onPointerUp(event: PointerSample): void;
+  onPointerCancel(event: PointerSample): void;
+  onGesture(events: readonly PointerSample[]): void;
+  onLongPress(event: PointerSample): void;
+  onDoubleClick(event: PointerSample): void;
   cancel(): void;
 }
 
@@ -45,7 +50,7 @@ export const PIANO_ROLL_CONTEXT_ACTION_EVENT =
   INTERACTION_CONSTANTS.contextActionEventName;
 
 export function isSupportedPointerActivation(
-  event: PointerEvent,
+  event: Pick<PointerSample, "button">,
 ): boolean {
   return event.button === 0;
 }

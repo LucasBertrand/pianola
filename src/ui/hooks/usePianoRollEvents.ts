@@ -8,11 +8,21 @@ import {
   INTERACTION_CONSTANTS,
 } from "../../config/program-constants";
 import type {
-  NoteDurationChange,
-  NotePositionChange,
   PianoRollCommand,
-  Transaction,
 } from "../../domain/commands";
+import {
+  buildDeleteNoteCommands,
+  buildRepositionNoteCommands,
+  buildResizeNoteCommands,
+  resizeNotes,
+} from "../../application/note-edit-commands";
+import type {
+  EditorSelection,
+} from "../../application/editor-selection";
+import type {
+  EditorSelectionRequest,
+  EditorSelectionRequests,
+} from "../../application/editor-selection-requests";
 import type {
   Note,
   NoteId,
@@ -24,26 +34,28 @@ import {
   type NoteEditIntent,
 } from "../../domain/note-collision";
 import type {
-  ProjectStorePort,
-} from "../../domain/project-store";
+  NoteCollisionResolutionRequest,
+} from "../../application/note-collision-resolution";
+import type {
+  EditorCommandPort,
+} from "../../application/editor-command-service";
 import {
-  CoordinateConverter,
   type ViewportState,
 } from "../../geometry/converter";
 import {
   SpatialIndex,
 } from "../../geometry/spatial-index";
-import type {
-  SpatialTouchEnvelope,
-} from "../../geometry/spatial-index";
+import {
+  createTouchEnvelope,
+  hasResizeCollision,
+  hasVoiceCollision,
+} from "../../interaction/note-hit-testing";
 import {
   compareNotesByVoiceRenderOrder,
   type VoiceRenderStyle,
 } from "../rendering/note-style";
 import {
-  createInteractionDraft,
   type InteractionDraft,
-  type InteractionSelection,
   type InteractionVisualController,
   type ResizeEdge,
 } from "../interactions/contracts";
@@ -55,13 +67,26 @@ import type {
 import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,
-} from "../interactions/pitch-snap";
+} from "../../music/pitch-snap";
 import {
   isSupportedPointerActivation,
 } from "../interactions/types";
 import type {
   ReadonlyRenderSignal,
 } from "../rendering/render-signal";
+import type {
+  PointerSample,
+} from "../../interaction/core/input";
+import {
+  buildRepositionedNotes,
+  calculateResizeDeltaBounds,
+  measureNoteSelection,
+  quantizeTick,
+  snapTickToCellStart,
+} from "../../interaction/core/note-gesture-math";
+import {
+  PianoRollInteractionSession,
+} from "../../interaction/piano-roll-interaction-session";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
@@ -74,14 +99,14 @@ export interface UsePianoRollEventsOptions {
   readonly voiceStyles: ReadonlyRenderSignal<
     Readonly<Record<VoiceId, VoiceRenderStyle>>
   >;
-  readonly projectStore: ProjectStorePort;
+  readonly editorCommands: EditorCommandPort;
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly getActiveTool: () => InteractionTool;
   readonly selectionMode: SelectionMode;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
-  readonly voiceSelectionRequest: ReadonlyRenderSignal<VoiceId | null>;
+  readonly selectionRequests: EditorSelectionRequests;
   readonly onGridSeek?: (tick: number) => void;
   readonly onSelectionChange?: (
     hasSelection: boolean,
@@ -95,32 +120,15 @@ export interface UsePianoRollEventsOptions {
     | undefined;
 }
 
-export interface NoteCollisionResolutionRequest
-  extends NoteEditIntent {
-  readonly label: string;
-  readonly collisionCount: number;
-  readonly onResolved: (
-    state: ProjectState,
-    selectedNoteIds: readonly NoteId[],
-  ) => void;
-}
-
 export interface PianoRollEventController {
   readonly draft: InteractionDraft;
-  readonly selection: InteractionSelection;
+  readonly selection: EditorSelection;
   getSelectedNotes(): readonly Note[];
   replaceSelection(notes: readonly Note[]): void;
   removeVoiceFromSelection(voiceId: VoiceId): void;
   togglePitchSelection(pitch: number): void;
   cancel(): void;
   clearSelection(): void;
-}
-
-interface TapState {
-  noteId: NoteId | null;
-  timeStamp: number;
-  clientX: number;
-  clientY: number;
 }
 
 const TOUCH_DOUBLE_TAP_DELAY_MS =
@@ -149,99 +157,50 @@ export function usePianoRollEvents(
     viewport,
     spatialIndex,
     voiceStyles,
-    projectStore,
+    editorCommands,
     activeVoiceId,
     getActiveTool,
     selectionMode,
     gridResolutionTicks,
     pitchSnapSettings,
-    voiceSelectionRequest,
+    selectionRequests,
     onGridSeek,
     onSelectionChange,
     onNoteCollision,
     onTransactionRejected,
   } = options;
-  const draftRef = useRef<InteractionDraft | null>(null);
-  const selectionRef = useRef<InteractionSelection | null>(null);
-  const collisionBufferRef = useRef<Note[] | null>(null);
-  const lassoBufferRef = useRef<Note[] | null>(null);
-  const gestureSelectionSnapshotRef =
-    useRef<Note[] | null>(null);
-  const converterRef = useRef<CoordinateConverter | null>(null);
-  const converterVersionRef = useRef(-1);
-  const transactionSequenceRef = useRef(0);
-  const tapStateRef = useRef<TapState | null>(null);
+  const sessionRef = useRef<PianoRollInteractionSession | null>(null);
   const activeVoiceIdRef = useRef(activeVoiceId);
 
   activeVoiceIdRef.current = activeVoiceId;
 
-  if (draftRef.current === null) {
-    draftRef.current = createInteractionDraft();
+  if (sessionRef.current === null) {
+    sessionRef.current = new PianoRollInteractionSession(
+      viewport.get(),
+      viewport.version,
+    );
   }
 
-  if (selectionRef.current === null) {
-    selectionRef.current = {
-      noteIds: new Set<NoteId>(),
-      notes: [],
-    };
-  }
-
-  if (collisionBufferRef.current === null) {
-    collisionBufferRef.current = [];
-  }
-
-  if (lassoBufferRef.current === null) {
-    lassoBufferRef.current = [];
-  }
-
-  if (gestureSelectionSnapshotRef.current === null) {
-    gestureSelectionSnapshotRef.current = [];
-  }
-
-  if (converterRef.current === null) {
-    converterRef.current = new CoordinateConverter(viewport.get());
-    converterVersionRef.current = viewport.version;
-  }
-
-  if (tapStateRef.current === null) {
-    tapStateRef.current = {
-      noteId: null,
-      timeStamp: 0,
-      clientX: 0,
-      clientY: 0,
-    };
-  }
-
-  const draft = draftRef.current;
-  const selection = selectionRef.current;
+  const session = sessionRef.current;
+  const draft = session.draft;
+  const selection = session.selection;
 
   useEffect(() => {
     const overlay = overlayRef.current;
-    const converter = converterRef.current;
-    const collisionBuffer = collisionBufferRef.current;
-    const lassoBuffer = lassoBufferRef.current;
-    const gestureSelectionSnapshot =
-      gestureSelectionSnapshotRef.current;
-    const tapState = tapStateRef.current;
+    const converter = session.converter;
+    const collisionBuffer = session.collisionBuffer;
+    const lassoBuffer = session.lassoBuffer;
+    const tapState = session.tapState;
 
-    if (
-      overlay === null
-      || converter === null
-      || collisionBuffer === null
-      || lassoBuffer === null
-      || gestureSelectionSnapshot === null
-      || tapState === null
-    ) {
+    if (overlay === null) {
       return undefined;
     }
 
-    let gestureSelectionRestored = false;
-
     const updateConverter = (): void => {
-      if (converterVersionRef.current !== viewport.version) {
-        converter.setViewportState(viewport.get());
-        converterVersionRef.current = viewport.version;
-      }
+      session.synchronizeConverter(
+        viewport.get(),
+        viewport.version,
+      );
     };
 
     const showSelection = (): void => {
@@ -251,86 +210,39 @@ export function usePianoRollEvents(
         converter,
       );
       onSelectionChange?.(
-        selection.notes.length > 0,
-        getSoleSelectionVoiceId(selection.notes),
+        selection.size > 0,
+        selection.getSoleVoiceId(),
       );
     };
 
     const resetDraft = (): void => {
-      draft.mode = "IDLE";
-      draft.pointerId = -1;
-      draft.deltaTicks = 0;
-      draft.deltaPitch = 0;
-      draft.minimumResizeDeltaTicks =
-        Number.NEGATIVE_INFINITY;
-      draft.maximumResizeDeltaTicks =
-        Number.POSITIVE_INFINITY;
-      draft.maximumSelectedEndTick = 0;
-      draft.originResizeTick = 0;
-      draft.targetNoteId = null;
-      draft.drawStartTick = 0;
-      draft.drawPitch = 0;
-      draft.drawDurationTicks = 0;
-      draft.drawVoiceId = null;
-      draft.additiveSelection = false;
-      draft.selectionMode = "replace";
+      session.resetDraft();
     };
 
     const clearSelection = (): void => {
-      selection.noteIds.clear();
-      selection.notes.length = 0;
+      selection.clear();
       visualsRef.current?.clearSelection();
       onSelectionChange?.(false, null);
     };
 
     const isVoiceLocked = (voiceId: VoiceId): boolean =>
-      projectStore.getState().voicesById[voiceId]?.locked ?? true;
+      editorCommands.getState().voicesById[voiceId]?.locked ?? true;
     const isNoteEditable = (note: Note): boolean =>
       !isVoiceLocked(note.voiceId);
     const isSelectedNoteEditable = (note: Note): boolean =>
-      selection.noteIds.has(note.id) && isNoteEditable(note);
+      selection.has(note.id) && isNoteEditable(note);
 
     const refreshSelection = (
       projectState: ProjectState,
     ): void => {
-      let targetIndex = 0;
-
-      for (
-        let noteIndex = 0;
-        noteIndex < selection.notes.length;
-        noteIndex += 1
-      ) {
-        const previousNote = selection.notes[noteIndex];
-
-        if (previousNote === undefined) {
-          continue;
-        }
-
-        const updatedNote =
-          projectState
-            .tracksByVoiceId[previousNote.voiceId]
-            ?.notesById[previousNote.id];
-
-        if (
-          updatedNote !== undefined
-          && !isVoiceLocked(updatedNote.voiceId)
-        ) {
-          selection.notes[targetIndex] = updatedNote;
-          targetIndex += 1;
-        } else {
-          selection.noteIds.delete(previousNote.id);
-        }
-      }
-
-      selection.notes.length = targetIndex;
+      selection.reconcile(projectState, isNoteEditable);
     };
 
     const replaceSelectionByNoteIds = (
       projectState: ProjectState,
       noteIds: readonly NoteId[],
     ): void => {
-      selection.noteIds.clear();
-      selection.notes.length = 0;
+      selection.clear();
 
       for (const noteId of noteIds) {
         for (const voiceId of projectState.voiceOrder) {
@@ -343,8 +255,7 @@ export function usePianoRollEvents(
             note !== undefined
             && !isVoiceLocked(note.voiceId)
           ) {
-            selection.noteIds.add(note.id);
-            selection.notes.push(note);
+            selection.add(note);
             break;
           }
         }
@@ -358,7 +269,7 @@ export function usePianoRollEvents(
       proposedNotes: readonly Note[],
       label: string,
     ): void => {
-      const requestState = projectStore.getState();
+      const requestState = editorCommands.getState();
       const originalSnapshot = originalNotes.slice();
       const proposedSnapshot = proposedNotes.slice();
       const collisionCount = countNoteEditCollisions(
@@ -408,44 +319,16 @@ export function usePianoRollEvents(
       showSelection();
     };
     const captureGestureSelection = (): void => {
-      gestureSelectionSnapshot.length = 0;
-
-      for (
-        let noteIndex = 0;
-        noteIndex < selection.notes.length;
-        noteIndex += 1
-      ) {
-        const note = selection.notes[noteIndex];
-
-        if (note !== undefined) {
-          gestureSelectionSnapshot.push(note);
-        }
-      }
-
-      gestureSelectionRestored = false;
+      session.captureGestureSelection();
     };
     const restoreGestureSelection = (): void => {
-      selection.noteIds.clear();
-      selection.notes.length = 0;
-
-      for (
-        let noteIndex = 0;
-        noteIndex < gestureSelectionSnapshot.length;
-        noteIndex += 1
+      if (
+        session.restoreGestureSelectionOnce(
+          (note) => !isVoiceLocked(note.voiceId),
+        )
       ) {
-        const note = gestureSelectionSnapshot[noteIndex];
-
-        if (
-          note !== undefined
-          && !isVoiceLocked(note.voiceId)
-          && !selection.noteIds.has(note.id)
-        ) {
-          selection.noteIds.add(note.id);
-          selection.notes.push(note);
-        }
+        showSelection();
       }
-
-      showSelection();
     };
 
     const dispatchTransaction = (
@@ -456,17 +339,8 @@ export function usePianoRollEvents(
         return null;
       }
 
-      transactionSequenceRef.current += 1;
-      const transaction: Transaction = {
-        transactionId:
-          `interaction-${Date.now()}-${transactionSequenceRef.current}`,
-        label,
-        createdAt: Date.now(),
-        commands,
-      };
-
       try {
-        return projectStore.dispatch(transaction);
+        return editorCommands.dispatch(commands, label);
       } catch (error: unknown) {
         onTransactionRejected?.(error);
         return null;
@@ -481,13 +355,12 @@ export function usePianoRollEvents(
         return;
       }
 
-      if (!selection.noteIds.has(note.id)) {
+      if (!selection.has(note.id)) {
         if (!additive) {
           clearSelection();
         }
 
-        selection.noteIds.add(note.id);
-        selection.notes.push(note);
+        selection.add(note);
       }
 
       showSelection();
@@ -496,29 +369,9 @@ export function usePianoRollEvents(
     const removeHitNoteFromSelection = (
       noteId: NoteId,
     ): void => {
-      if (!selection.noteIds.delete(noteId)) {
+      if (!selection.delete(noteId)) {
         return;
       }
-
-      let retainedNoteCount = 0;
-
-      for (
-        let noteIndex = 0;
-        noteIndex < selection.notes.length;
-        noteIndex += 1
-      ) {
-        const note = selection.notes[noteIndex];
-
-        if (
-          note !== undefined
-          && selection.noteIds.has(note.id)
-        ) {
-          selection.notes[retainedNoteCount] = note;
-          retainedNoteCount += 1;
-        }
-      }
-
-      selection.notes.length = retainedNoteCount;
       showSelection();
     };
 
@@ -531,10 +384,10 @@ export function usePianoRollEvents(
       }
 
       const deleteSelection =
-        includeSelection && selection.noteIds.has(note.id);
+        includeSelection && selection.has(note.id);
       const commands = deleteSelection
-        ? buildDeleteCommands(selection.notes)
-        : buildDeleteCommands([note]);
+        ? buildDeleteNoteCommands(selection.notes)
+        : buildDeleteNoteCommands([note]);
       const nextState = dispatchTransaction(
         commands,
         deleteSelection ? "Delete selected notes" : "Delete note",
@@ -549,7 +402,7 @@ export function usePianoRollEvents(
     };
 
     const registerTouchTap = (
-      event: PointerEvent,
+      event: PointerSample,
       noteId: NoteId,
     ): void => {
       if (event.pointerType !== "touch") {
@@ -571,7 +424,7 @@ export function usePianoRollEvents(
 
       if (isDoubleTap) {
         tapState.noteId = null;
-        const note = findSelectedNote(selection.notes, noteId);
+        const note = selection.find(noteId);
 
         if (note !== undefined) {
           deleteHitNote(note);
@@ -586,7 +439,7 @@ export function usePianoRollEvents(
       tapState.clientY = event.clientY;
     };
 
-    const handlePointerDown = (event: PointerEvent): void => {
+    const handlePointerDown = (event: PointerSample): void => {
       if (
         !isSupportedPointerActivation(event)
         || draft.mode !== "IDLE"
@@ -649,7 +502,7 @@ export function usePianoRollEvents(
         );
       const edgeHit =
         edgeCandidate !== undefined
-        && selection.noteIds.has(edgeCandidate.note.id)
+        && selection.has(edgeCandidate.note.id)
           ? edgeCandidate
           : undefined;
       const targetNote =
@@ -678,7 +531,6 @@ export function usePianoRollEvents(
       if (targetNote !== undefined) {
         if (draft.selectionMode === "subtract") {
           draft.mode = "PENDING_NOTE_SELECTION";
-          event.preventDefault();
           return;
         }
 
@@ -686,7 +538,18 @@ export function usePianoRollEvents(
           targetNote,
           draft.selectionMode === "add",
         );
-        updateSelectedBounds(draft, selection.notes);
+        const selectionBounds = measureNoteSelection(
+          selection.notes,
+        );
+
+        draft.minimumSelectedStartTick =
+          selectionBounds.minimumStartTick;
+        draft.maximumSelectedEndTick =
+          selectionBounds.maximumEndTick;
+        draft.minimumSelectedPitch =
+          selectionBounds.minimumPitch;
+        draft.maximumSelectedPitch =
+          selectionBounds.maximumPitch;
 
         const resizeEdge = edgeHit?.edge ?? null;
 
@@ -706,13 +569,16 @@ export function usePianoRollEvents(
             resizeEdge === "start"
               ? targetNote.startTick
               : targetNote.startTick + targetNote.durationTicks;
-          updateResizeBounds(
-            draft,
+          const resizeBounds = calculateResizeDeltaBounds(
             selection.notes,
             resizeEdge,
             resolutionTicks,
             totalTicks,
           );
+          draft.minimumResizeDeltaTicks =
+            resizeBounds.minimumDeltaTicks;
+          draft.maximumResizeDeltaTicks =
+            resizeBounds.maximumDeltaTicks;
           visualsRef.current?.beginResize(
             selection.notes,
             converter,
@@ -724,10 +590,9 @@ export function usePianoRollEvents(
         draft.mode = "PENDING_LASSO";
       }
 
-      event.preventDefault();
     };
 
-    const handlePointerMove = (event: PointerEvent): void => {
+    const handlePointerMove = (event: PointerSample): void => {
       if (
         event.pointerId !== draft.pointerId
         || draft.mode === "IDLE"
@@ -748,7 +613,6 @@ export function usePianoRollEvents(
             > TAP_MOVEMENT_TOLERANCE_CSS_PIXELS;
 
         if (!movedBeyondTapTolerance) {
-          event.preventDefault();
           return;
         }
 
@@ -883,10 +747,9 @@ export function usePianoRollEvents(
         );
       }
 
-      event.preventDefault();
     };
 
-    const handlePointerUp = (event: PointerEvent): void => {
+    const handlePointerUp = (event: PointerSample): void => {
       if (
         event.pointerId !== draft.pointerId
         || draft.mode === "IDLE"
@@ -922,7 +785,7 @@ export function usePianoRollEvents(
 
           if (
             countNoteEditCollisions(
-              projectStore.getState(),
+              editorCommands.getState(),
               moveIntent,
             ) > 0
           ) {
@@ -933,7 +796,7 @@ export function usePianoRollEvents(
             );
           } else {
             const nextState = dispatchTransaction(
-              buildRepositionCommands(proposedNotes),
+              buildRepositionNoteCommands(proposedNotes),
               "Move notes",
             );
 
@@ -957,7 +820,7 @@ export function usePianoRollEvents(
         if (draft.deltaTicks !== 0) {
           if (
             hasResizeCollision(
-              selection,
+              selection.notes,
               draft.deltaTicks,
               resizeEdge,
               spatialIndex,
@@ -966,7 +829,7 @@ export function usePianoRollEvents(
           ) {
             requestNoteCollisionResolution(
               selection.notes,
-              buildResizedNotes(
+              resizeNotes(
                 selection.notes,
                 draft.deltaTicks,
                 resizeEdge,
@@ -975,7 +838,7 @@ export function usePianoRollEvents(
             );
           } else {
             const nextState = dispatchTransaction(
-              buildResizeCommands(
+              buildResizeNoteCommands(
                 selection.notes,
                 draft.deltaTicks,
                 resizeEdge,
@@ -995,8 +858,7 @@ export function usePianoRollEvents(
         const voiceId = draft.drawVoiceId;
         if (voiceId !== null) {
           const note: Note = {
-            id:
-              `note-${Date.now()}-${transactionSequenceRef.current + 1}`,
+            id: session.createNoteId(Date.now()),
             pitch: draft.drawPitch,
             startTick: draft.drawStartTick,
             durationTicks: draft.drawDurationTicks,
@@ -1039,8 +901,7 @@ export function usePianoRollEvents(
               clearSelection();
 
               if (addedNote !== undefined) {
-                selection.noteIds.add(addedNote.id);
-                selection.notes.push(addedNote);
+                selection.add(addedNote);
               }
             }
           }
@@ -1097,29 +958,9 @@ export function usePianoRollEvents(
             const note = lassoBuffer[noteIndex];
 
             if (note !== undefined) {
-              selection.noteIds.delete(note.id);
+              selection.delete(note.id);
             }
           }
-
-          let retainedNoteCount = 0;
-
-          for (
-            let noteIndex = 0;
-            noteIndex < selection.notes.length;
-            noteIndex += 1
-          ) {
-            const note = selection.notes[noteIndex];
-
-            if (
-              note !== undefined
-              && selection.noteIds.has(note.id)
-            ) {
-              selection.notes[retainedNoteCount] = note;
-              retainedNoteCount += 1;
-            }
-          }
-
-          selection.notes.length = retainedNoteCount;
         } else {
           for (
             let noteIndex = 0;
@@ -1131,10 +972,9 @@ export function usePianoRollEvents(
             if (
               note !== undefined
               && !isVoiceLocked(note.voiceId)
-              && !selection.noteIds.has(note.id)
+              && !selection.has(note.id)
             ) {
-              selection.noteIds.add(note.id);
-              selection.notes.push(note);
+              selection.add(note);
             }
           }
         }
@@ -1173,16 +1013,15 @@ export function usePianoRollEvents(
         registerTouchTap(event, targetNoteId);
       }
 
-      event.preventDefault();
     };
 
-    const handlePointerCancel = (event: PointerEvent): void => {
+    const handlePointerCancel = (event: PointerSample): void => {
       if (event.pointerId === draft.pointerId) {
         cancelGesture();
       }
     };
 
-    const handleDoubleClick = (event: MouseEvent): void => {
+    const handleDoubleClick = (event: PointerSample): void => {
       if (getActiveTool() !== "select") {
         return;
       }
@@ -1201,11 +1040,10 @@ export function usePianoRollEvents(
 
       if (note !== undefined) {
         deleteHitNote(note);
-        event.preventDefault();
       }
     };
 
-    const handleLongPress = (event: PointerEvent): void => {
+    const handleLongPress = (event: PointerSample): void => {
       updateConverter();
 
       const bounds = overlay.getBoundingClientRect();
@@ -1235,14 +1073,14 @@ export function usePianoRollEvents(
 
       const currentActiveVoiceId = activeVoiceIdRef.current;
       const activeVoice =
-        projectStore.getState().voicesById[currentActiveVoiceId];
+        editorCommands.getState().voicesById[currentActiveVoiceId];
 
       if (
         pitch < 0
         || pitch > 127
         || activeVoice === undefined
         || activeVoice.locked
-        || projectStore
+        || editorCommands
           .getState()
           .tracksByVoiceId[currentActiveVoiceId] === undefined
       ) {
@@ -1297,7 +1135,7 @@ export function usePianoRollEvents(
     };
 
     const handleGesture = (
-      events: PointerEvent[],
+      events: readonly PointerSample[],
     ): void => {
       if (events.length < 2) {
         return;
@@ -1307,127 +1145,50 @@ export function usePianoRollEvents(
         cancelGesture();
       }
 
-      if (!gestureSelectionRestored) {
-        restoreGestureSelection();
-        gestureSelectionRestored = true;
-      }
+      restoreGestureSelection();
     };
 
     const handleViewportChange = (): void => {
       updateConverter();
       showSelection();
     };
-    const handleVoiceSelectionRequest = (): void => {
-      const voiceId = voiceSelectionRequest.get();
-
-      if (voiceId === null) {
+    const handleSelectionRequest = (
+      request: EditorSelectionRequest,
+    ): void => {
+      if (request.type === "clear") {
         clearSelection();
         return;
       }
 
-      let uniqueNoteCount = 0;
-      const projectState = projectStore.getState();
+      const voiceId = request.voiceId;
 
-      selection.noteIds.clear();
-
-      for (
-        let noteIndex = 0;
-        noteIndex < selection.notes.length;
-        noteIndex += 1
-      ) {
-        const selectedNote = selection.notes[noteIndex];
-
-        if (
-          selectedNote !== undefined
-          && !(
-            projectState.voicesById[selectedNote.voiceId]
-              ?.locked ?? true
-          )
-          && !selection.noteIds.has(selectedNote.id)
-        ) {
-          selection.noteIds.add(selectedNote.id);
-          selection.notes[uniqueNoteCount] = selectedNote;
-          uniqueNoteCount += 1;
-        }
-      }
-
-      selection.notes.length = uniqueNoteCount;
-
-      const track = projectState.tracksByVoiceId[voiceId];
+      const projectState = editorCommands.getState();
+      selection.reconcile(
+        projectState,
+        (note) =>
+          projectState.voicesById[note.voiceId]?.locked === false,
+      );
       const requestedVoice = projectState.voicesById[voiceId];
 
-      if (track === undefined || requestedVoice?.locked !== false) {
+      if (requestedVoice?.locked !== false) {
         showSelection();
         return;
       }
 
-      let voiceNoteCount = 0;
-      let selectedVoiceNoteCount = 0;
-
-      for (const noteId in track.notesById) {
-        const note = track.notesById[noteId];
-
-        if (note === undefined) {
-          continue;
-        }
-
-        voiceNoteCount += 1;
-
-        if (selection.noteIds.has(note.id)) {
-          selectedVoiceNoteCount += 1;
-        }
-      }
-
-      if (
-        voiceNoteCount > 0
-        && selectedVoiceNoteCount === voiceNoteCount
-      ) {
-        let retainedNoteCount = 0;
-
-        for (
-          let noteIndex = 0;
-          noteIndex < selection.notes.length;
-          noteIndex += 1
-        ) {
-          const note = selection.notes[noteIndex];
-
-          if (note === undefined || note.voiceId === voiceId) {
-            if (note !== undefined) {
-              selection.noteIds.delete(note.id);
-            }
-            continue;
-          }
-
-          selection.notes[retainedNoteCount] = note;
-          retainedNoteCount += 1;
-        }
-
-        selection.notes.length = retainedNoteCount;
-        showSelection();
-        return;
-      }
-
-      for (const noteId in track.notesById) {
-        const note = track.notesById[noteId];
-
-        if (
-          note !== undefined
-          && !selection.noteIds.has(note.id)
-        ) {
-          selection.noteIds.add(note.id);
-          selection.notes.push(note);
-        }
-      }
+      selection.toggleVoice(
+        projectState,
+        voiceId,
+        (note) =>
+          projectState.voicesById[note.voiceId]?.locked === false,
+      );
 
       showSelection();
     };
     const unsubscribeViewport = viewport.subscribe(
       handleViewportChange,
     );
-    const unsubscribeVoiceSelection =
-      voiceSelectionRequest.subscribe(
-        handleVoiceSelectionRequest,
-      );
+    const unsubscribeSelectionRequests =
+      selectionRequests.subscribe(handleSelectionRequest);
     const strategy: TouchAwareInteractionStrategy = {
       supportsHover: false,
       onPointerDown: handlePointerDown,
@@ -1450,7 +1211,7 @@ export function usePianoRollEvents(
     return (): void => {
       cancelGesture();
       unsubscribeViewport();
-      unsubscribeVoiceSelection();
+      unsubscribeSelectionRequests();
 
       if (strategyRef.current === strategy) {
         strategyRef.current = null;
@@ -1466,7 +1227,7 @@ export function usePianoRollEvents(
     onTransactionRejected,
     onSelectionChange,
     overlayRef,
-    projectStore,
+    editorCommands,
     selectionMode,
     selection,
     spatialIndex,
@@ -1474,7 +1235,7 @@ export function usePianoRollEvents(
     totalTicks,
     viewport,
     visualsRef,
-    voiceSelectionRequest,
+    selectionRequests,
     voiceStyles,
   ]);
 
@@ -1482,83 +1243,40 @@ export function usePianoRollEvents(
     draft,
     selection,
     getSelectedNotes(): readonly Note[] {
-      return selection.notes.slice();
+      return selection.copyNotes();
     },
     replaceSelection(notes: readonly Note[]): void {
-      selection.noteIds.clear();
-      selection.notes.length = 0;
+      selection.replace(notes);
+      const converter = session.synchronizeConverter(
+        viewport.get(),
+        viewport.version,
+      );
 
-      for (
-        let noteIndex = 0;
-        noteIndex < notes.length;
-        noteIndex += 1
-      ) {
-        const note = notes[noteIndex];
-
-        if (
-          note !== undefined
-          && !selection.noteIds.has(note.id)
-        ) {
-          selection.noteIds.add(note.id);
-          selection.notes.push(note);
-        }
-      }
-
-      const converter = converterRef.current;
-
-      if (converter !== null) {
-        if (converterVersionRef.current !== viewport.version) {
-          converter.setViewportState(viewport.get());
-          converterVersionRef.current = viewport.version;
-        }
-
-        visualsRef.current?.showSelection(
-          selection.notes,
-          converter,
-        );
-      }
+      visualsRef.current?.showSelection(
+        selection.notes,
+        converter,
+      );
 
       onSelectionChange?.(
-        selection.notes.length > 0,
-        getSoleSelectionVoiceId(selection.notes),
+        selection.size > 0,
+        selection.getSoleVoiceId(),
       );
     },
     removeVoiceFromSelection(voiceId: VoiceId): void {
-      let targetIndex = 0;
+      selection.retain((note) => note.voiceId !== voiceId);
+      const converter = session.synchronizeConverter(
+        viewport.get(),
+        viewport.version,
+      );
 
-      for (
-        let noteIndex = 0;
-        noteIndex < selection.notes.length;
-        noteIndex += 1
-      ) {
-        const note = selection.notes[noteIndex];
-
-        if (note === undefined) {
-          continue;
-        }
-
-        if (note.voiceId === voiceId) {
-          selection.noteIds.delete(note.id);
-        } else {
-          selection.notes[targetIndex] = note;
-          targetIndex += 1;
-        }
-      }
-
-      selection.notes.length = targetIndex;
-
-      const converter = converterRef.current;
-
-      if (converter !== null) {
-        visualsRef.current?.showSelection(
-          selection.notes,
-          converter,
-        );
-      }
+      visualsRef.current?.showSelection(
+        selection.notes,
+        converter,
+      );
 
       onSelectionChange?.(
-        selection.notes.length > 0,
-        getSoleSelectionVoiceId(selection.notes),
+        selection.size > 0,
+        selection.getSoleVoiceId(),
       );
     },
     togglePitchSelection(pitch: number): void {
@@ -1566,122 +1284,31 @@ export function usePianoRollEvents(
         return;
       }
 
-      const state = projectStore.getState();
-      let selectableNoteCount = 0;
-      let selectedNoteCount = 0;
+      const state = editorCommands.getState();
+      const changed = selection.togglePitch(
+        state,
+        pitch,
+        (note) =>
+          state.voicesById[note.voiceId]?.locked === false,
+      );
 
-      for (
-        let voiceIndex = 0;
-        voiceIndex < state.voiceOrder.length;
-        voiceIndex += 1
-      ) {
-        const voiceId = state.voiceOrder[voiceIndex];
-
-        if (
-          voiceId === undefined
-          || state.voicesById[voiceId]?.locked !== false
-        ) {
-          continue;
-        }
-
-        const track = state.tracksByVoiceId[voiceId];
-
-        if (track === undefined) {
-          continue;
-        }
-
-        for (const noteId in track.notesById) {
-          const note = track.notesById[noteId];
-
-          if (
-            note !== undefined
-            && note.pitch === pitch
-          ) {
-            selectableNoteCount += 1;
-
-            if (selection.noteIds.has(note.id)) {
-              selectedNoteCount += 1;
-            }
-          }
-        }
-      }
-
-      if (selectableNoteCount === 0) {
+      if (!changed) {
         return;
       }
 
-      if (selectedNoteCount === selectableNoteCount) {
-        let targetIndex = 0;
+      const converter = session.synchronizeConverter(
+        viewport.get(),
+        viewport.version,
+      );
 
-        for (
-          let noteIndex = 0;
-          noteIndex < selection.notes.length;
-          noteIndex += 1
-        ) {
-          const note = selection.notes[noteIndex];
-
-          if (note === undefined) {
-            continue;
-          }
-
-          if (note.pitch === pitch) {
-            selection.noteIds.delete(note.id);
-            continue;
-          }
-
-          selection.notes[targetIndex] = note;
-          targetIndex += 1;
-        }
-
-        selection.notes.length = targetIndex;
-      } else {
-        for (
-          let voiceIndex = 0;
-          voiceIndex < state.voiceOrder.length;
-          voiceIndex += 1
-        ) {
-          const voiceId = state.voiceOrder[voiceIndex];
-
-          if (
-            voiceId === undefined
-            || state.voicesById[voiceId]?.locked !== false
-          ) {
-            continue;
-          }
-
-          const track = state.tracksByVoiceId[voiceId];
-
-          if (track === undefined) {
-            continue;
-          }
-
-          for (const noteId in track.notesById) {
-            const note = track.notesById[noteId];
-
-            if (
-              note !== undefined
-              && note.pitch === pitch
-              && !selection.noteIds.has(note.id)
-            ) {
-              selection.noteIds.add(note.id);
-              selection.notes.push(note);
-            }
-          }
-        }
-      }
-
-      const converter = converterRef.current;
-
-      if (converter !== null) {
-        visualsRef.current?.showSelection(
-          selection.notes,
-          converter,
-        );
-      }
+      visualsRef.current?.showSelection(
+        selection.notes,
+        converter,
+      );
 
       onSelectionChange?.(
-        selection.notes.length > 0,
-        getSoleSelectionVoiceId(selection.notes),
+        selection.size > 0,
+        selection.getSoleVoiceId(),
       );
     },
     cancel(): void {
@@ -1694,469 +1321,18 @@ export function usePianoRollEvents(
       draft.deltaTicks = 0;
       draft.deltaPitch = 0;
 
-      if (converterRef.current !== null) {
-        visualsRef.current?.showSelection(
-          selection.notes,
-          converterRef.current,
-        );
-      }
+      visualsRef.current?.showSelection(
+        selection.notes,
+        session.synchronizeConverter(
+          viewport.get(),
+          viewport.version,
+        ),
+      );
     },
     clearSelection(): void {
-      selection.noteIds.clear();
-      selection.notes.length = 0;
+      selection.clear();
       visualsRef.current?.clearSelection();
       onSelectionChange?.(false, null);
     },
   };
-}
-
-function getSoleSelectionVoiceId(
-  notes: readonly Note[],
-): VoiceId | null {
-  const firstNote = notes[0];
-
-  if (firstNote === undefined) {
-    return null;
-  }
-
-  const voiceId = firstNote.voiceId;
-
-  for (let noteIndex = 1; noteIndex < notes.length; noteIndex += 1) {
-    if (notes[noteIndex]?.voiceId !== voiceId) {
-      return null;
-    }
-  }
-
-  return voiceId;
-}
-
-export function quantizeTick(
-  tick: number,
-  resolutionTicks: number,
-): number {
-  if (
-    !Number.isFinite(tick)
-    || !Number.isSafeInteger(resolutionTicks)
-    || resolutionTicks <= 0
-  ) {
-    return tick;
-  }
-
-  return Math.round(tick / resolutionTicks) * resolutionTicks;
-}
-
-export function snapTickToCellStart(
-  tick: number,
-  resolutionTicks: number,
-): number {
-  if (
-    !Number.isFinite(tick)
-    || !Number.isSafeInteger(resolutionTicks)
-    || resolutionTicks <= 0
-  ) {
-    return tick;
-  }
-
-  return Math.floor(tick / resolutionTicks) * resolutionTicks;
-}
-
-function createTouchEnvelope(
-  converter: CoordinateConverter,
-  pointerType: string,
-  mouseRadiusCssPixels: number,
-  touchRadiusCssPixels: number,
-): SpatialTouchEnvelope {
-  const radiusCssPixels =
-    pointerType === "touch"
-      ? touchRadiusCssPixels
-      : mouseRadiusCssPixels;
-  const tickRadius = Math.abs(
-    converter.cssPixelXToTick(radiusCssPixels)
-      - converter.cssPixelXToTick(0),
-  );
-
-  return {
-    tickRadius,
-    pitchRadius: 0,
-  };
-}
-
-function updateSelectedBounds(
-  draft: InteractionDraft,
-  notes: readonly Note[],
-): void {
-  let minimumStartTick = Number.POSITIVE_INFINITY;
-  let maximumEndTick = 0;
-  let minimumPitch = 127;
-  let maximumPitch = 0;
-
-  for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
-    const note = notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    if (note.startTick < minimumStartTick) {
-      minimumStartTick = note.startTick;
-    }
-
-    const endTick = note.startTick + note.durationTicks;
-
-    if (endTick > maximumEndTick) {
-      maximumEndTick = endTick;
-    }
-
-    if (note.pitch < minimumPitch) {
-      minimumPitch = note.pitch;
-    }
-
-    if (note.pitch > maximumPitch) {
-      maximumPitch = note.pitch;
-    }
-  }
-
-  draft.minimumSelectedStartTick = Number.isFinite(
-    minimumStartTick,
-  )
-    ? minimumStartTick
-    : 0;
-  draft.maximumSelectedEndTick = maximumEndTick;
-  draft.minimumSelectedPitch = minimumPitch;
-  draft.maximumSelectedPitch = maximumPitch;
-}
-
-function updateResizeBounds(
-  draft: InteractionDraft,
-  notes: readonly Note[],
-  edge: ResizeEdge,
-  gridResolutionTicks: number,
-  totalTicks: number,
-): void {
-  let minimumDelta = Number.NEGATIVE_INFINITY;
-  let maximumDelta = Number.POSITIVE_INFINITY;
-
-  for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
-    const note = notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    const minimumDuration = Math.min(
-      gridResolutionTicks,
-      note.durationTicks,
-    );
-
-    if (edge === "start") {
-      minimumDelta = Math.max(
-        minimumDelta,
-        -note.startTick,
-      );
-      maximumDelta = Math.min(
-        maximumDelta,
-        note.durationTicks - minimumDuration,
-      );
-    } else {
-      minimumDelta = Math.max(
-        minimumDelta,
-        minimumDuration - note.durationTicks,
-      );
-      maximumDelta = Math.min(
-        maximumDelta,
-        totalTicks - note.startTick - note.durationTicks,
-      );
-    }
-  }
-
-  draft.minimumResizeDeltaTicks = minimumDelta;
-  draft.maximumResizeDeltaTicks = maximumDelta;
-}
-
-function hasVoiceCollision(
-  voiceId: VoiceId,
-  startTick: number,
-  endTick: number,
-  pitch: number,
-  spatialIndex: SpatialIndex,
-  collisionBuffer: Note[],
-): boolean {
-  spatialIndex.queryRect(
-    startTick,
-    endTick,
-    pitch,
-    pitch,
-    collisionBuffer,
-  );
-
-  for (
-    let noteIndex = 0;
-    noteIndex < collisionBuffer.length;
-    noteIndex += 1
-  ) {
-    if (collisionBuffer[noteIndex]?.voiceId === voiceId) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function hasResizeCollision(
-  selection: InteractionSelection,
-  deltaTicks: number,
-  edge: ResizeEdge,
-  spatialIndex: SpatialIndex,
-  collisionBuffer: Note[],
-): boolean {
-  for (
-    let noteIndex = 0;
-    noteIndex < selection.notes.length;
-    noteIndex += 1
-  ) {
-    const note = selection.notes[noteIndex];
-
-    if (note === undefined) {
-      continue;
-    }
-
-    const startTick =
-      edge === "start"
-        ? note.startTick + deltaTicks
-        : note.startTick;
-    const durationTicks =
-      edge === "start"
-        ? note.durationTicks - deltaTicks
-        : note.durationTicks + deltaTicks;
-
-    spatialIndex.queryRect(
-      startTick,
-      startTick + durationTicks,
-      note.pitch,
-      note.pitch,
-      collisionBuffer,
-    );
-
-    for (
-      let candidateIndex = 0;
-      candidateIndex < collisionBuffer.length;
-      candidateIndex += 1
-    ) {
-      const candidate = collisionBuffer[candidateIndex];
-
-      if (
-        candidate !== undefined
-        && candidate.voiceId === note.voiceId
-        && candidate.id !== note.id
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-function findSelectedNote(
-  notes: readonly Note[],
-  noteId: NoteId,
-): Note | undefined {
-  for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
-    const note = notes[noteIndex];
-
-    if (note?.id === noteId) {
-      return note;
-    }
-  }
-
-  return undefined;
-}
-
-function buildRepositionedNotes(
-  notes: readonly Note[],
-  deltaTicks: number,
-  deltaPitch: number,
-  pitchSnapSettings: PitchSnapSettings,
-): readonly Note[] {
-  const repositionedNotes: Note[] = [];
-
-  for (const note of notes) {
-    repositionedNotes.push({
-      ...note,
-      startTick: note.startTick + deltaTicks,
-      pitch:
-        deltaPitch === 0
-          ? note.pitch
-          : snapPitchToTonalPattern(
-              note.pitch + deltaPitch,
-              pitchSnapSettings,
-              deltaPitch,
-            ),
-    });
-  }
-
-  return repositionedNotes;
-}
-
-function buildResizedNotes(
-  notes: readonly Note[],
-  deltaTicks: number,
-  edge: ResizeEdge,
-): readonly Note[] {
-  const resizedNotes: Note[] = [];
-
-  for (const note of notes) {
-    resizedNotes.push({
-      ...note,
-      startTick:
-        edge === "start"
-          ? note.startTick + deltaTicks
-          : note.startTick,
-      durationTicks:
-        edge === "start"
-          ? note.durationTicks - deltaTicks
-          : note.durationTicks + deltaTicks,
-    });
-  }
-
-  return resizedNotes;
-}
-
-function buildRepositionCommands(
-  notes: readonly Note[],
-): readonly PianoRollCommand[] {
-  const commands: PianoRollCommand[] = [];
-  const processedVoiceIds = new Set<VoiceId>();
-
-  for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
-    const note = notes[noteIndex];
-
-    if (
-      note === undefined
-      || processedVoiceIds.has(note.voiceId)
-    ) {
-      continue;
-    }
-
-    processedVoiceIds.add(note.voiceId);
-    const changes: NotePositionChange[] = [];
-
-    for (
-      let selectedIndex = noteIndex;
-      selectedIndex < notes.length;
-      selectedIndex += 1
-    ) {
-      const selectedNote = notes[selectedIndex];
-
-      if (selectedNote?.voiceId === note.voiceId) {
-        changes.push({
-          noteId: selectedNote.id,
-          startTick: selectedNote.startTick,
-          pitch: selectedNote.pitch,
-        });
-      }
-    }
-
-    commands.push({
-      type: "RepositionNotes",
-      trackVoiceId: note.voiceId,
-      changes,
-    });
-  }
-
-  return commands;
-}
-
-function buildResizeCommands(
-  notes: readonly Note[],
-  deltaTicks: number,
-  edge: ResizeEdge,
-): readonly PianoRollCommand[] {
-  const commands: PianoRollCommand[] = [];
-  const processedVoiceIds = new Set<VoiceId>();
-
-  for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
-    const note = notes[noteIndex];
-
-    if (
-      note === undefined
-      || processedVoiceIds.has(note.voiceId)
-    ) {
-      continue;
-    }
-
-    processedVoiceIds.add(note.voiceId);
-    const changes: NoteDurationChange[] = [];
-
-    for (
-      let selectedIndex = noteIndex;
-      selectedIndex < notes.length;
-      selectedIndex += 1
-    ) {
-      const selectedNote = notes[selectedIndex];
-
-      if (selectedNote?.voiceId === note.voiceId) {
-        changes.push({
-          noteId: selectedNote.id,
-          startTick:
-            edge === "start"
-              ? selectedNote.startTick + deltaTicks
-              : selectedNote.startTick,
-          durationTicks:
-            edge === "start"
-              ? selectedNote.durationTicks - deltaTicks
-              : selectedNote.durationTicks + deltaTicks,
-        });
-      }
-    }
-
-    commands.push({
-      type: "ResizeNotes",
-      trackVoiceId: note.voiceId,
-      changes,
-    });
-  }
-
-  return commands;
-}
-
-function buildDeleteCommands(
-  notes: readonly Note[],
-): readonly PianoRollCommand[] {
-  const commands: PianoRollCommand[] = [];
-  const processedVoiceIds = new Set<VoiceId>();
-
-  for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
-    const note = notes[noteIndex];
-
-    if (
-      note === undefined
-      || processedVoiceIds.has(note.voiceId)
-    ) {
-      continue;
-    }
-
-    processedVoiceIds.add(note.voiceId);
-    const noteIds: NoteId[] = [];
-
-    for (
-      let selectedIndex = noteIndex;
-      selectedIndex < notes.length;
-      selectedIndex += 1
-    ) {
-      const selectedNote = notes[selectedIndex];
-
-      if (selectedNote?.voiceId === note.voiceId) {
-        noteIds.push(selectedNote.id);
-      }
-    }
-
-    commands.push({
-      type: "DeleteNotes",
-      trackVoiceId: note.voiceId,
-      noteIds,
-    });
-  }
-
-  return commands;
 }

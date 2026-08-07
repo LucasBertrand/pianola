@@ -1,7 +1,7 @@
 import {
   PROJECT_CONSTANTS,
   TONAL_SNAP_CONSTANTS,
-} from "../../config/program-constants";
+} from "../config/program-constants";
 
 export type TonalPatternDefinition =
   (typeof TONAL_SNAP_CONSTANTS.patterns)[number];
