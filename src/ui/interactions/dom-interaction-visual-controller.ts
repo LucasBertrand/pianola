@@ -379,6 +379,10 @@ function populateGhostLayer(
       colorMode,
       pitchSnapSettings,
     );
+    element.style.opacity = String(
+      (stylesByVoiceId[note.voiceId]?.opacity ?? 1)
+      * (note.enabled ? 1 : 0.36),
+    );
     element.textContent = getMidiNoteLabel(
       note.pitch,
       pitchSnapSettings,

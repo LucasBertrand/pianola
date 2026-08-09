@@ -20,6 +20,7 @@ import {
   createPastedNotes,
   createVoiceTransferPlan,
   findNotesByIds,
+  getRequiredMeasureCountForNotes,
   type PianoRollClipboard,
 } from "../../application/selection-edit-plans";
 import {
@@ -337,11 +338,20 @@ export function useSelectionWorkflow({
       nextSequence(),
     );
     const state = commands.getState();
+    const requiredMeasureCount =
+      getRequiredMeasureCountForNotes(state, pastedNotes);
+    const timelineCommands =
+      requiredMeasureCount > state.measureCount
+        ? [{
+            type: "AppendMeasures" as const,
+            count: requiredMeasureCount - state.measureCount,
+          }]
+        : [];
 
     if (!canPlacePastedNotes(state, pastedNotes)) {
       alert(
         "Paste unavailable",
-        "Paste is unavailable because it would exceed the timeline or target an unavailable or locked voice.",
+        "Paste is unavailable because it exceeds the project limit or targets an unavailable or locked voice.",
       );
       return;
     }
@@ -356,6 +366,7 @@ export function useSelectionWorkflow({
         label: "Paste notes",
         collisionCount: countNoteEditCollisions(state, intent),
         ...intent,
+        prefixCommands: timelineCommands,
         onResolved(nextState, selectedNoteIds): void {
           getController()?.replaceSelection(
             findNotesByIds(nextState, selectedNoteIds),
@@ -366,7 +377,10 @@ export function useSelectionWorkflow({
     }
 
     const nextState = commands.dispatch(
-      buildAddNoteCommands(pastedNotes),
+      [
+        ...timelineCommands,
+        ...buildAddNoteCommands(pastedNotes),
+      ],
       "Paste notes",
     );
 

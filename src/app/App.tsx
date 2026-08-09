@@ -347,7 +347,10 @@ export function App(): React.JSX.Element {
 
         try {
           const nextState = dispatchEditCommands(
-            plan.commands,
+            [
+              ...(request.prefixCommands ?? []),
+              ...plan.commands,
+            ],
             mode === "merge"
               ? `${request.label}: merge collisions`
               : `${request.label}: slice collisions`,

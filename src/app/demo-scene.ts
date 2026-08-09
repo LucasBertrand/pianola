@@ -127,6 +127,7 @@ function createDemoNotes(noteCount: number): readonly Note[] {
       durationTicks,
       velocity: 52 + (randomState >>> 12) % 76,
       voiceId: voice.id,
+      enabled: true,
     };
   }
 

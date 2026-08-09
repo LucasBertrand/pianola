@@ -181,6 +181,11 @@ function compileVoiceSnapshot(
       voice.id,
       projectDurationTicks,
     );
+
+    if (!note.enabled) {
+      continue;
+    }
+
     notes.push(note);
   }
 
@@ -317,6 +322,12 @@ function assertCompilableNote(
   ) {
     throw new PlaybackSnapshotCompilationError(
       `Note "${note.id}" velocity must be an integer between 0 and 127.`,
+    );
+  }
+
+  if (typeof note.enabled !== "boolean") {
+    throw new PlaybackSnapshotCompilationError(
+      `Note "${note.id}" enabled state must be a boolean.`,
     );
   }
 

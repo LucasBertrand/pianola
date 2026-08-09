@@ -59,6 +59,7 @@ export interface Note {
   readonly durationTicks: Tick;
   readonly velocity: MidiVelocity;
   readonly voiceId: VoiceId;
+  readonly enabled: boolean;
 }
 
 export interface AdsrEnvelope {

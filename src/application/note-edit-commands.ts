@@ -59,6 +59,32 @@ export function buildDeleteNoteCommands(
   return commands;
 }
 
+/** Creates explicit enabled-state updates grouped by voice. */
+export function buildSetNotesEnabledCommands(
+  notes: readonly Note[],
+  enabled: boolean,
+): readonly PianoRollCommand[] {
+  const notesByVoice = groupNotesByVoice(notes);
+  const commands: PianoRollCommand[] = [];
+
+  for (const [voiceId, voiceNotes] of notesByVoice) {
+    const noteIds: NoteId[] = [];
+
+    for (const note of voiceNotes) {
+      noteIds.push(note.id);
+    }
+
+    commands.push({
+      type: "SetNotesEnabled",
+      trackVoiceId: voiceId,
+      noteIds,
+      enabled,
+    });
+  }
+
+  return commands;
+}
+
 /** Creates atomic absolute-position updates grouped by voice. */
 export function buildRepositionNoteCommands(
   notes: readonly Note[],

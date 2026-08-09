@@ -530,6 +530,7 @@ try {
         durationTicks: 960,
         velocity: 70,
         voiceId: voice.id,
+        enabled: true,
       },
       {
         id: "newer",
@@ -538,6 +539,7 @@ try {
         durationTicks: 480,
         velocity: 110,
         voiceId: voice.id,
+        enabled: true,
       },
     ];
     const analysis = createImportAnalysis(
@@ -796,6 +798,7 @@ try {
               durationTicks: 1,
               velocity: 100,
               voiceId: voice.id,
+              enabled: true,
             },
           },
         },
@@ -862,6 +865,7 @@ try {
               durationTicks: 480,
               velocity: 100,
               voiceId: lead.id,
+              enabled: true,
             },
             "lead-e": {
               id: "lead-e",
@@ -870,6 +874,7 @@ try {
               durationTicks: 720,
               velocity: 88,
               voiceId: lead.id,
+              enabled: true,
             },
             "lead-c-next": {
               id: "lead-c-next",
@@ -878,6 +883,7 @@ try {
               durationTicks: 240,
               velocity: 105,
               voiceId: lead.id,
+              enabled: true,
             },
           },
         },
@@ -891,6 +897,7 @@ try {
               durationTicks: 960,
               velocity: 92,
               voiceId: bass.id,
+              enabled: true,
             },
           },
         },
@@ -935,6 +942,38 @@ try {
     assert.deepEqual(
       normalizeProjectVoices(imported),
       normalizeProjectVoices(sourceProject),
+    );
+
+    const disabledNoteProject = {
+      ...sourceProject,
+      tracksByVoiceId: {
+        ...sourceProject.tracksByVoiceId,
+        [bass.id]: {
+          ...sourceProject.tracksByVoiceId[bass.id],
+          notesById: {
+            ...sourceProject.tracksByVoiceId[bass.id].notesById,
+            disabled: {
+              id: "disabled",
+              pitch: 71,
+              startTick: 0,
+              durationTicks: 240,
+              velocity: 100,
+              voiceId: bass.id,
+              enabled: false,
+            },
+          },
+        },
+      },
+    };
+    const disabledNoteExport = createMidiExport(
+      disabledNoteProject,
+    );
+
+    assert.equal(
+      disabledNoteExport.file.tracks.some((track) =>
+        track.events.some((event) =>
+          event.kind === "note-on" && event.note === 71)),
+      false,
     );
 
     const alternatePpqnProject = {

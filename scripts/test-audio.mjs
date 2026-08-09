@@ -58,6 +58,7 @@ try {
   const {
     buildDeleteNoteCommands,
     buildRepositionNoteCommands,
+    buildSetNotesEnabledCommands,
   } = await vite.ssrLoadModule(
     "/src/application/note-edit-commands.ts",
   );
@@ -67,6 +68,7 @@ try {
     createPastedNotes,
     createVoiceTransferPlan,
     findNotesByIds,
+    getRequiredMeasureCountForNotes,
   } = await vite.ssrLoadModule(
     "/src/application/selection-edit-plans.ts",
   );
@@ -210,6 +212,7 @@ try {
       durationTicks,
       velocity,
       voiceId,
+      enabled: true,
     };
   }
 
@@ -982,6 +985,99 @@ try {
     assert.equal(transferPlan.proposedNotes[0].voiceId, "voice-b");
   });
 
+  test("extends the timeline and pastes notes as one undoable transaction", () => {
+    const store = new ProjectStore(createProject({ measureCount: 1 }));
+    const commands = new EditorCommandService(store);
+    const pastedNote = createNote(
+      "pasted",
+      "voice-a",
+      60,
+      3_840,
+      240,
+    );
+    const requiredMeasureCount = getRequiredMeasureCountForNotes(
+      store.getState(),
+      [pastedNote],
+    );
+
+    assert.equal(requiredMeasureCount, 2);
+    assert.equal(canPlacePastedNotes(store.getState(), [pastedNote]), true);
+
+    commands.dispatch(
+      [
+        {
+          type: "AppendMeasures",
+          count: requiredMeasureCount - store.getState().measureCount,
+        },
+        {
+          type: "AddNotes",
+          trackVoiceId: "voice-a",
+          notes: [pastedNote],
+        },
+      ],
+      "Paste notes",
+    );
+
+    assert.equal(store.getState().measureCount, 2);
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["pasted"],
+      pastedNote,
+    );
+
+    store.undo();
+
+    assert.equal(store.getState().measureCount, 1);
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["pasted"],
+      undefined,
+    );
+  });
+
+  test("keeps disabled notes editable while excluding them from playback", () => {
+    const note = createNote("toggle", "voice-a", 60, 0, 240);
+    const store = new ProjectStore(createProject({
+      notesByVoiceId: {
+        "voice-a": [note],
+      },
+    }));
+    const commands = new EditorCommandService(store);
+
+    commands.dispatch(
+      buildSetNotesEnabledCommands([note], false),
+      "Disable selected notes",
+    );
+
+    const disabledNote = store.getState()
+      .tracksByVoiceId["voice-a"].notesById["toggle"];
+
+    assert.equal(disabledNote.enabled, false);
+    assert.deepEqual(
+      compilePlaybackSnapshot(store.getState()).voices[0].noteIds,
+      [],
+    );
+
+    commands.dispatch(
+      buildRepositionNoteCommands([{
+        ...disabledNote,
+        startTick: 480,
+      }]),
+      "Move disabled note",
+    );
+
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["toggle"].startTick,
+      480,
+    );
+    assert.equal(
+      store.getState().tracksByVoiceId["voice-a"]
+        .notesById["toggle"].enabled,
+      false,
+    );
+  });
+
   test("compiles deterministic, voice-ordered playback snapshots", () => {
     const state = createProject({
       revision: 7,
@@ -1146,6 +1242,12 @@ try {
     const state = createProject({
       masterGain: 0.41,
       masterTuningFrequencyHz: 442,
+      notesByVoiceId: {
+        "voice-a": [{
+          ...createNote("disabled", "voice-a", 60, 0, 240),
+          enabled: false,
+        }],
+      },
     });
     const metadata = {
       documentId: "audio-test-document",
@@ -1164,6 +1266,11 @@ try {
     assert.equal(nativeDocument.formatVersion, 1);
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
+    assert.equal(
+      loaded.projectState.tracksByVoiceId["voice-a"]
+        .notesById["disabled"].enabled,
+      false,
+    );
     assert.deepEqual(loaded.editorState, editorState);
     assert.equal(
       loaded.projectState.schemaVersion,

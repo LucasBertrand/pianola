@@ -780,6 +780,7 @@ function convertSourceNotes(
       durationTicks: endTick - startTick,
       velocity: sourceNote.velocity,
       voiceId,
+      enabled: true,
     });
   }
 

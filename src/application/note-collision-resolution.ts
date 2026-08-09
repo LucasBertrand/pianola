@@ -1,4 +1,7 @@
 import type {
+  PianoRollCommand,
+} from "../domain/commands";
+import type {
   NoteId,
   ProjectState,
 } from "../domain/model";
@@ -15,6 +18,7 @@ export interface NoteCollisionResolutionRequest
   extends NoteEditIntent {
   readonly label: string;
   readonly collisionCount: number;
+  readonly prefixCommands?: readonly PianoRollCommand[];
   readonly onResolved: (
     state: ProjectState,
     selectedNoteIds: readonly NoteId[],

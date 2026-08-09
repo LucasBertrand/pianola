@@ -171,6 +171,17 @@ PointerEvent natif
 Pendant `pointermove`, le projet global ne doit pas être muté. La sélection et
 le brouillon sont transitoires ; le store n'est modifié qu'après validation.
 
+L'activation d'une note est une donnée métier persistante (`Note.enabled`).
+Une note désactivée reste dans la piste et dans l'index spatial : elle conserve
+les mêmes règles d'édition et de collision, mais le compilateur de playback et
+l'export MIDI l'ignorent. Un appui long produit une seule transaction
+`SetNotesEnabled`, regroupée par voix pour une sélection multiple.
+
+Lorsqu'un collage dépasse la durée courante, le workflow précède les commandes
+`AddNotes` par `AppendMeasures` dans la même transaction. Cette composition est
+importante : une seule annulation restaure à la fois le contenu et la longueur
+antérieure du projet, y compris après résolution d'une collision.
+
 ## État canonique et signaux
 
 - `ProjectState` est la source de vérité persistante.

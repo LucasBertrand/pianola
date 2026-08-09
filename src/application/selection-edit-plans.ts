@@ -2,7 +2,8 @@ import type {
   PianoRollCommand,
 } from "../domain/commands";
 import {
-  getProjectDurationTicks,
+  getTicksPerMeasure,
+  MAXIMUM_MEASURE_COUNT,
   type Note,
   type NoteId,
   type ProjectState,
@@ -169,8 +170,6 @@ export function canPlacePastedNotes(
   state: ProjectState,
   notes: readonly Note[],
 ): boolean {
-  const totalTicks = getProjectDurationTicks(state);
-
   for (
     let noteIndex = 0;
     noteIndex < notes.length;
@@ -190,13 +189,42 @@ export function canPlacePastedNotes(
       || voice.locked
       || track === undefined
       || note.startTick < 0
-      || note.startTick + note.durationTicks > totalTicks
     ) {
       return false;
     }
   }
 
-  return notes.length > 0;
+  return (
+    notes.length > 0
+    && getRequiredMeasureCountForNotes(state, notes)
+      <= MAXIMUM_MEASURE_COUNT
+  );
+}
+
+export function getRequiredMeasureCountForNotes(
+  state: ProjectState,
+  notes: readonly Note[],
+): number {
+  let maximumEndTick = 0;
+
+  for (const note of notes) {
+    const noteEndTick = note.startTick + note.durationTicks;
+
+    if (!Number.isSafeInteger(noteEndTick) || noteEndTick <= 0) {
+      return MAXIMUM_MEASURE_COUNT + 1;
+    }
+
+    maximumEndTick = Math.max(maximumEndTick, noteEndTick);
+  }
+
+  const ticksPerMeasure = getTicksPerMeasure(
+    state.transportSettings,
+  );
+
+  return Math.max(
+    state.measureCount,
+    Math.ceil(maximumEndTick / ticksPerMeasure),
+  );
 }
 
 export function createVoiceTransferPlan(

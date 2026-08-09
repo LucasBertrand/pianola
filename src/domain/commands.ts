@@ -100,6 +100,11 @@ export interface RemoveMeasureCommand {
   readonly measureIndex: number;
 }
 
+export interface AppendMeasuresCommand {
+  readonly type: "AppendMeasures";
+  readonly count: number;
+}
+
 export interface AddNotesCommand {
   readonly type: "AddNotes";
   readonly trackVoiceId: VoiceId;
@@ -170,6 +175,13 @@ export interface DeleteNotesCommand {
   readonly noteIds: readonly NoteId[];
 }
 
+export interface SetNotesEnabledCommand {
+  readonly type: "SetNotesEnabled";
+  readonly trackVoiceId: VoiceId;
+  readonly noteIds: readonly NoteId[];
+  readonly enabled: boolean;
+}
+
 export interface UpdateTempoCommand {
   readonly type: "UpdateTempo";
   readonly bpm: number;
@@ -201,6 +213,7 @@ export type PianoRollCommand =
   | UpdateMasterTuningCommand
   | InsertMeasureCommand
   | RemoveMeasureCommand
+  | AppendMeasuresCommand
   | AddNotesCommand
   | MoveNotesCommand
   | RepositionNotesCommand
@@ -208,6 +221,7 @@ export type PianoRollCommand =
   | TransformNotesCommand
   | SliceNotesCommand
   | DeleteNotesCommand
+  | SetNotesEnabledCommand
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
   | UpdateLoopCommand
@@ -309,6 +323,8 @@ function applyCommand(
       return applyInsertMeasure(state, command);
     case "RemoveMeasure":
       return applyRemoveMeasure(state, command);
+    case "AppendMeasures":
+      return applyAppendMeasures(state, command);
     case "AddNotes":
       return applyAddNotes(state, command);
     case "MoveNotes":
@@ -323,6 +339,8 @@ function applyCommand(
       return applySliceNotes(state, command);
     case "DeleteNotes":
       return applyDeleteNotes(state, command);
+    case "SetNotesEnabled":
+      return applySetNotesEnabled(state, command);
     case "UpdateTempo":
       return applyUpdateTempo(state, command);
     case "UpdateTimeSignature":
@@ -668,6 +686,36 @@ function applyRemoveMeasure(
     measureCount: state.measureCount - 1,
     tracksByVoiceId,
     transportSettings,
+  };
+}
+
+function applyAppendMeasures(
+  state: ProjectState,
+  command: AppendMeasuresCommand,
+): ProjectState {
+  if (!Number.isSafeInteger(command.count) || command.count <= 0) {
+    reject(
+      "INVALID_COMMAND",
+      "The appended measure count must be a positive safe integer.",
+      command.type,
+    );
+  }
+
+  const measureCount = state.measureCount + command.count;
+
+  if (measureCount > MAXIMUM_MEASURE_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_MEASURE_COUNT} measures.`,
+      command.type,
+    );
+  }
+
+  assertValidProjectDuration(measureCount, state.transportSettings);
+
+  return {
+    ...state,
+    measureCount,
   };
 }
 
@@ -1416,6 +1464,54 @@ function applyDeleteNotes(
 
   for (const noteId of command.noteIds) {
     delete notesById[noteId];
+  }
+
+  return replaceTrack(state, {
+    ...track,
+    notesById,
+  });
+}
+
+function applySetNotesEnabled(
+  state: ProjectState,
+  command: SetNotesEnabledCommand,
+): ProjectState {
+  const track = requireTrack(state, command.trackVoiceId, command.type);
+
+  assertVoiceEditable(state, command.trackVoiceId, command.type);
+  assertUniqueNoteIds(command.noteIds, command.type);
+
+  if (typeof command.enabled !== "boolean") {
+    reject(
+      "INVALID_COMMAND",
+      "Note enabled state must be a boolean.",
+      command.type,
+    );
+  }
+
+  let notesById: Record<NoteId, Note> | null = null;
+
+  for (const noteId of command.noteIds) {
+    const note = requireNote(track, noteId, command.type);
+
+    if (note.enabled === command.enabled) {
+      continue;
+    }
+
+    if (notesById === null) {
+      notesById = {
+        ...track.notesById,
+      };
+    }
+
+    notesById[noteId] = {
+      ...note,
+      enabled: command.enabled,
+    };
+  }
+
+  if (notesById === null) {
+    return state;
   }
 
   return replaceTrack(state, {

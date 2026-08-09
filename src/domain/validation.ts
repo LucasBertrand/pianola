@@ -25,6 +25,7 @@ export type ValidationCode =
   | "INVALID_VELOCITY"
   | "INVALID_START_TICK"
   | "INVALID_DURATION"
+  | "INVALID_NOTE_ENABLED"
   | "VOICE_TRACK_MISMATCH"
   | "NOTE_KEY_MISMATCH"
   | "INVALID_VOICE"
@@ -134,6 +135,14 @@ export function validateNote(note: Note): ValidationResult {
       code: "INVALID_DURATION",
       path: "durationTicks",
       message: "Duration must be a positive safe integer.",
+    });
+  }
+
+  if (typeof note.enabled !== "boolean") {
+    issues.push({
+      code: "INVALID_NOTE_ENABLED",
+      path: "enabled",
+      message: "Note enabled state must be a boolean.",
     });
   }
 

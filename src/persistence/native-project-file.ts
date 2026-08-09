@@ -1304,6 +1304,10 @@ function parseNotes(
         noteRecord["velocity"],
         `${notePath}.velocity`,
       ),
+      enabled: readBoolean(
+        noteRecord["enabled"],
+        `${notePath}.enabled`,
+      ),
       voiceId: readNonEmptyString(
         noteRecord["voiceId"],
         `${notePath}.voiceId`,

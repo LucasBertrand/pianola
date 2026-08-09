@@ -437,9 +437,17 @@ stockage dans le navigateur.
 - Drag d’une note sélectionnée : déplacement de la sélection.
 - Drag d’une poignée visible : redimensionnement.
 - Appui long dans une cellule vide puis drag : création et durée.
+- Appui long sur une note : active ou désactive la note. Si la note appartient
+  à la sélection, l'opération s'applique à toute la sélection.
 - Double clic/tap sur une note : suppression.
 - Icône poubelle : suppression de la sélection.
-- Copier/couper/coller : collage à partir de la tête de lecture.
+- Copier/couper/coller : collage à partir de la tête de lecture. Si le motif
+  dépasse la fin du projet, Pianola ajoute automatiquement les mesures
+  nécessaires dans la même opération Undo/Redo.
+
+Une note désactivée reste visible, sélectionnable et transformable tant que sa
+voix n'est pas verrouillée, mais elle n'est ni jouée ni exportée en MIDI. Son
+état est conservé dans le fichier natif `.pianola`.
 
 Une collision entre notes de même pitch et même voix ouvre une modale offrant
 l’annulation, la fusion ou la découpe. Deux notes de pitchs différents peuvent

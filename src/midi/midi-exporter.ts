@@ -118,6 +118,10 @@ export function createMidiExport(
     let trackEndTick = projectEndTick;
 
     for (const note of notes) {
+      if (!note.enabled) {
+        continue;
+      }
+
       let noteStartTick = convertProjectTickForMidi(
         note.startTick,
         sourcePpqn,

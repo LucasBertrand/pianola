@@ -10,6 +10,9 @@ import {
 import {
   NoteGestureWorkflow,
 } from "../../application/note-gesture-workflow";
+import {
+  buildSetNotesEnabledCommands,
+} from "../../application/note-edit-commands";
 import type {
   EditorSelectionRequest,
   EditorSelectionRequests,
@@ -297,11 +300,53 @@ export function usePianoRollEvents(
       return false;
     };
 
-    const registerTouchTap = (
+    const toggleSelectedNotesEnabled = (): void => {
+      const selectedNotes = selection.notes;
+
+      if (selectedNotes.length === 0) {
+        return;
+      }
+
+      let enableNotes = true;
+
+      for (const selectedNote of selectedNotes) {
+        if (selectedNote.enabled) {
+          enableNotes = false;
+          break;
+        }
+      }
+
+      try {
+        const nextState = editorCommands.dispatch(
+          buildSetNotesEnabledCommands(
+            selectedNotes,
+            enableNotes,
+          ),
+          enableNotes
+            ? "Enable selected notes"
+            : "Disable selected notes",
+        );
+
+        if (nextState !== null) {
+          selection.reconcile(
+            nextState,
+            (note) => !isVoiceLocked(note.voiceId),
+          );
+          showSelection();
+        }
+      } catch (error: unknown) {
+        onTransactionRejected?.(error);
+      }
+    };
+
+    const registerDirectPointerTap = (
       event: PointerSample,
       noteId: NoteId,
     ): void => {
-      if (event.pointerType !== "touch") {
+      if (
+        event.pointerType !== "touch"
+        && event.pointerType !== "pen"
+      ) {
         return;
       }
 
@@ -601,6 +646,7 @@ export function usePianoRollEvents(
             durationTicks: completion.drawDurationTicks,
             velocity: EDITOR_CONSTANTS.defaultDrawVelocity,
             voiceId,
+            enabled: true,
           };
 
           noteGestureWorkflow.commitDraw(note);
@@ -707,7 +753,7 @@ export function usePianoRollEvents(
         && targetNoteId !== null
         && completedMode !== "LASSO_SELECTING"
       ) {
-        registerTouchTap(event, targetNoteId);
+        registerDirectPointerTap(event, targetNoteId);
       }
 
     };
@@ -760,7 +806,14 @@ export function usePianoRollEvents(
       );
 
       if (note !== undefined) {
-        selectHitNote(note, false);
+        cancelGesture();
+        restoreGestureSelection();
+
+        if (!selection.has(note.id)) {
+          selectHitNote(note, false);
+        }
+
+        toggleSelectedNotesEnabled();
         return;
       }
 
@@ -889,7 +942,13 @@ export function usePianoRollEvents(
     const strategy: PointerInteractionStrategy = {
       onPointerDown: handlePointerDown,
       shouldScheduleLongPress(): boolean {
-        return draft.mode === "PENDING_LASSO";
+        return (
+          draft.mode === "PENDING_LASSO"
+          || draft.mode === "PENDING_NOTE_SELECTION"
+          || draft.mode === "DRAGGING"
+          || draft.mode === "RESIZING_START"
+          || draft.mode === "RESIZING_END"
+        );
       },
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,

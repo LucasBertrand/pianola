@@ -419,14 +419,16 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
           currentPitch = note.pitch;
         }
 
-        const opacity = voiceStyle?.opacity ?? 1;
+        const opacity =
+          (voiceStyle?.opacity ?? 1)
+          * (note.enabled ? 1 : 0.36);
 
         if (voiceStyle?.locked === true) {
           hasVisibleLockedNote = true;
         }
 
         if (opacity !== currentOpacity) {
-          context.globalAlpha = voiceStyle?.opacity ?? 1;
+          context.globalAlpha = opacity;
           currentOpacity = opacity;
         }
 
@@ -540,7 +542,9 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
 
         const voiceStyle = stylesByVoiceId[note.voiceId];
 
-        context.globalAlpha = voiceStyle?.opacity ?? 1;
+        context.globalAlpha =
+          (voiceStyle?.opacity ?? 1)
+          * (note.enabled ? 1 : 0.36);
         context.fillText(
           label,
           x + NOTE_LABEL_HORIZONTAL_PADDING,
