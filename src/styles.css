@@ -1538,7 +1538,7 @@ input[type="range"]::-webkit-slider-thumb {
 .clip-card {
   --voice-color: var(--color-accent-primary);
   min-height: 58px;
-  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  grid-template-columns: 36px minmax(0, 1fr) 36px 36px;
   grid-template-rows: auto;
 }
 
@@ -1565,6 +1565,10 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .clip-card .voice-delete-button {
+  grid-column: 4;
+}
+
+.clip-card .voice-duplicate-button {
   grid-column: 3;
 }
 
@@ -1797,6 +1801,18 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--color-accent-danger);
   font-size: 19px;
   line-height: 1;
+}
+
+.voice-duplicate-button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
 }
 
 .voice-empty-state {
@@ -2158,6 +2174,10 @@ input[type="range"]::-webkit-slider-thumb {
     grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
   }
 
+  .workspace.is-clips-inspector-open {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
   .editor-panel {
     min-height: 0;
     grid-row: 2;
@@ -2183,6 +2203,10 @@ input[type="range"]::-webkit-slider-thumb {
     transform: none;
     transition: none;
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .general-inspector.is-clips-panel {
+    max-height: 33vh;
   }
 
   .general-inspector:not(.is-open) {

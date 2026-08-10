@@ -77,6 +77,10 @@ export interface EditorRuntime {
   readonly restoreClipEditorStates: (
     states: Readonly<Record<ClipId, ClipEditorRuntimeState>>,
   ) => void;
+  readonly duplicateClipEditorState: (
+    sourceClipId: ClipId,
+    targetClipId: ClipId,
+  ) => void;
 }
 
 export interface ClipEditorRuntimeState {
@@ -218,6 +222,36 @@ export function createEditorRuntime(
       viewport.set(restored.viewport);
       pitchSnapSettings.set(restored.pitchSnapSettings);
       gridSettings.set(restored.gridSettings);
+    },
+    duplicateClipEditorState(
+      sourceClipId: ClipId,
+      targetClipId: ClipId,
+    ): void {
+      const state = projectStore.getState();
+      const sourceClip = state.clipsById[sourceClipId];
+
+      if (sourceClip === undefined) {
+        return;
+      }
+
+      if (sourceClipId === state.activeClipId) {
+        clipEditorStates.set(sourceClipId, {
+          playheadTick: playheadTick.get(),
+          viewport: viewport.get(),
+          pitchSnapSettings: pitchSnapSettings.get(),
+          gridSettings: gridSettings.get(),
+        });
+      }
+
+      const sourceState = clipEditorStates.get(sourceClipId)
+        ?? createDefaultClipEditorRuntimeState(sourceClip);
+
+      clipEditorStates.set(targetClipId, {
+        playheadTick: sourceState.playheadTick,
+        viewport: { ...sourceState.viewport },
+        pitchSnapSettings: { ...sourceState.pitchSnapSettings },
+        gridSettings: { ...sourceState.gridSettings },
+      });
     },
   };
 

@@ -2,13 +2,14 @@ import React from "react";
 import type {
   UpdateVoiceChanges,
 } from "../../domain/commands";
-import type {
-  AdsrEnvelope,
-  ClipId,
-  OscillatorWaveform,
-  ProjectState,
-  Voice,
-  VoiceId,
+import {
+  MAXIMUM_PROJECT_VOICE_COUNT,
+  type AdsrEnvelope,
+  type ClipId,
+  type OscillatorWaveform,
+  type ProjectState,
+  type Voice,
+  type VoiceId,
 } from "../../domain/model";
 import {
   ClipInspector,
@@ -32,11 +33,13 @@ export interface GeneralInspectorProps {
   readonly onClose: () => void;
   readonly onClipSelect: (clipId: ClipId) => void;
   readonly onAddClip: () => void;
+  readonly onDuplicateClip: (clipId: ClipId) => void;
   readonly onMoveActiveClip: (direction: -1 | 1) => void;
   readonly onDeleteClip: (clipId: ClipId) => void;
   readonly onRenameClip: (clipId: ClipId, name: string) => void;
   readonly onMoveSelectedVoice: (direction: -1 | 1) => void;
   readonly onAddVoice: () => void;
+  readonly onDuplicateVoice: (voiceId: VoiceId) => void;
   readonly onVoiceSelect: (voiceId: VoiceId) => void;
   readonly onUpdateVoice: (
     voiceId: VoiceId,
@@ -76,11 +79,13 @@ export function GeneralInspector({
   onClose,
   onClipSelect,
   onAddClip,
+  onDuplicateClip,
   onMoveActiveClip,
   onDeleteClip,
   onRenameClip,
   onMoveSelectedVoice,
   onAddVoice,
+  onDuplicateVoice,
   onVoiceSelect,
   onUpdateVoice,
   onVoiceGainPreview,
@@ -110,6 +115,7 @@ export function GeneralInspector({
       onClose={onClose}
       onSelect={onClipSelect}
       onAdd={onAddClip}
+      onDuplicate={onDuplicateClip}
       onMoveActive={onMoveActiveClip}
       onDelete={onDeleteClip}
       onRename={onRenameClip}
@@ -117,7 +123,6 @@ export function GeneralInspector({
     <section className="voice-inspector-section">
     <div className="general-inspector-heading">
       <div>
-        <small>Project voices</small>
         <h1>Voices</h1>
       </div>
       <div className="general-inspector-heading-actions">
@@ -338,6 +343,25 @@ export function GeneralInspector({
                 }}
               >
                 S
+              </button>
+              <button
+                className="voice-duplicate-button"
+                type="button"
+                aria-label={`Duplicate ${voice.name}`}
+                title="Duplicate voice"
+                disabled={
+                  projectState.voiceOrder.length
+                    >= MAXIMUM_PROJECT_VOICE_COUNT
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDuplicateVoice(voice.id);
+                }}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="6.5" y="6.5" width="9" height="9" rx="1.5" />
+                  <path d="M4 13.5H3.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1V4" />
+                </svg>
               </button>
               <button
                 className="voice-delete-button"

@@ -57,6 +57,7 @@ export interface SelectionWorkflowOptions {
   readonly projectStore: ProjectStorePort;
   readonly getController: () => PianoRollEventController | null;
   readonly getPlayheadTick: () => number;
+  readonly setPlayheadTick: (tick: number) => void;
   readonly getGridResolutionTicks: () => number;
   readonly selectedVoiceId: VoiceId | null;
   readonly resolveCollision: (
@@ -87,6 +88,7 @@ export function useSelectionWorkflow({
   projectStore,
   getController,
   getPlayheadTick,
+  setPlayheadTick,
   getGridResolutionTicks,
   selectedVoiceId,
   resolveCollision,
@@ -370,9 +372,13 @@ export function useSelectionWorkflow({
         ...intent,
         prefixCommands: timelineCommands,
         onResolved(nextState, selectedNoteIds): void {
-          getController()?.replaceSelection(
-            findNotesByIds(nextState, selectedNoteIds),
+          const resolvedNotes = findNotesByIds(
+            nextState,
+            selectedNoteIds,
           );
+
+          getController()?.replaceSelection(resolvedNotes);
+          movePlayheadToSelectionEnd(resolvedNotes, setPlayheadTick);
         },
       });
       return;
@@ -404,6 +410,7 @@ export function useSelectionWorkflow({
     }
 
     getController()?.replaceSelection(selectedPastedNotes);
+    movePlayheadToSelectionEnd(selectedPastedNotes, setPlayheadTick);
   }, [
     alert,
     commands,
@@ -412,6 +419,7 @@ export function useSelectionWorkflow({
     getPlayheadTick,
     nextSequence,
     resolveCollision,
+    setPlayheadTick,
   ]);
 
   const transferToSelectedVoice = useCallback((): void => {
@@ -524,4 +532,19 @@ export function useSelectionWorkflow({
     paste,
     transferToSelectedVoice,
   };
+}
+
+function movePlayheadToSelectionEnd(
+  notes: readonly Note[],
+  setPlayheadTick: (tick: number) => void,
+): void {
+  let endTick = -1;
+
+  for (const note of notes) {
+    endTick = Math.max(endTick, note.startTick + note.durationTicks);
+  }
+
+  if (endTick >= 0) {
+    setPlayheadTick(endTick);
+  }
 }

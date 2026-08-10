@@ -14,11 +14,13 @@ import {
 import type {
   UpdateVoiceChanges,
 } from "../../domain/commands";
-import type {
-  AdsrEnvelope,
-  OscillatorWaveform,
-  Voice,
-  VoiceId,
+import {
+  MAXIMUM_PROJECT_VOICE_COUNT,
+  MAXIMUM_VOICE_NAME_LENGTH,
+  type AdsrEnvelope,
+  type OscillatorWaveform,
+  type Voice,
+  type VoiceId,
 } from "../../domain/model";
 import {
   createDefaultVoice,
@@ -40,6 +42,7 @@ export interface VoiceWorkflowOptions {
 export interface VoiceWorkflow {
   readonly select: (voiceId: VoiceId) => void;
   readonly add: () => void;
+  readonly duplicate: (voiceId: VoiceId) => void;
   readonly moveSelected: (direction: -1 | 1) => void;
   readonly remove: (voiceId: VoiceId) => void;
   readonly update: (
@@ -155,6 +158,53 @@ export function useVoiceWorkflow({
     },
     [commands, selectedVoiceId],
   );
+
+  const duplicate = useCallback((voiceId: VoiceId): void => {
+    const state = commands.getState();
+    const sourceVoice = state.voicesById[voiceId];
+
+    if (
+      sourceVoice === undefined
+      || state.voiceOrder.length >= MAXIMUM_PROJECT_VOICE_COUNT
+    ) {
+      return;
+    }
+
+    voiceSequenceRef.current += 1;
+    const duplicatedVoice: Voice = {
+      ...sourceVoice,
+      id: createVoiceId(voiceSequenceRef.current),
+      name: createCopyName(
+        sourceVoice.name,
+        MAXIMUM_VOICE_NAME_LENGTH,
+      ),
+      instrument: {
+        ...sourceVoice.instrument,
+        envelope: { ...sourceVoice.instrument.envelope },
+      },
+      effects: sourceVoice.effects.map((effect) => ({
+        ...effect,
+        parameters: { ...effect.parameters },
+      })),
+      generativeRules: sourceVoice.generativeRules.map((rule) => ({
+        ...rule,
+        parameters: { ...rule.parameters },
+      })),
+      interpretation: { ...sourceVoice.interpretation },
+    };
+    const sourceIndex = state.voiceOrder.indexOf(voiceId);
+    const voiceOrder = [...state.voiceOrder];
+
+    voiceOrder.splice(sourceIndex + 1, 0, duplicatedVoice.id);
+    commands.dispatch(
+      [
+        { type: "AddVoice", voice: duplicatedVoice },
+        { type: "ReorderVoices", voiceOrder },
+      ],
+      "Duplicate voice",
+    );
+    selectVoice(duplicatedVoice.id);
+  }, [commands, selectVoice]);
 
   const remove = useCallback(
     (voiceId: VoiceId): void => {
@@ -306,6 +356,7 @@ export function useVoiceWorkflow({
   return {
     select,
     add,
+    duplicate,
     moveSelected,
     remove,
     update,
@@ -333,4 +384,18 @@ function createUserVoice(
     color,
     oscillatorWaveform: getDefaultOscillatorWaveform(voiceIndex),
   });
+}
+
+function createVoiceId(sequence: number): VoiceId {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return `voice-${globalThis.crypto.randomUUID()}`;
+  }
+
+  return `voice-${Date.now()}-${sequence}`;
+}
+
+function createCopyName(name: string, maximumLength: number): string {
+  const suffix = " Copy";
+
+  return `${name.slice(0, maximumLength - suffix.length)}${suffix}`;
 }

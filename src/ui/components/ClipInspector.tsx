@@ -14,6 +14,7 @@ export interface ClipInspectorProps {
   readonly onClose: () => void;
   readonly onSelect: (clipId: ClipId) => void;
   readonly onAdd: () => void;
+  readonly onDuplicate: (clipId: ClipId) => void;
   readonly onMoveActive: (direction: -1 | 1) => void;
   readonly onDelete: (clipId: ClipId) => void;
   readonly onRename: (clipId: ClipId, name: string) => void;
@@ -24,6 +25,7 @@ export function ClipInspector({
   onClose,
   onSelect,
   onAdd,
+  onDuplicate,
   onMoveActive,
   onDelete,
   onRename,
@@ -36,7 +38,6 @@ export function ClipInspector({
     <section className="clip-inspector-section">
       <div className="general-inspector-heading">
         <div>
-          <small>Arrangement</small>
           <h1>Clips</h1>
         </div>
         <div className="general-inspector-heading-actions">
@@ -124,6 +125,25 @@ export function ClipInspector({
                 />
                 <span>{clip.measureCount} measures</span>
               </div>
+              <button
+                className="voice-duplicate-button"
+                type="button"
+                aria-label={`Duplicate ${clip.name}`}
+                title="Duplicate clip"
+                disabled={
+                  projectState.clipOrder.length
+                    >= MAXIMUM_PROJECT_CLIP_COUNT
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDuplicate(clip.id);
+                }}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="6.5" y="6.5" width="9" height="9" rx="1.5" />
+                  <path d="M4 13.5H3.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1V4" />
+                </svg>
+              </button>
               <button
                 className="voice-delete-button"
                 type="button"

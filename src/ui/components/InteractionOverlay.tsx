@@ -47,6 +47,8 @@ export interface InteractionOverlayProps {
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
+  readonly onHorizontalViewportInteractionStart: () => void;
+  readonly onHorizontalViewportInteractionEnd: () => void;
   readonly editingNoteMask: EditingNoteMask;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
@@ -105,6 +107,8 @@ export function InteractionOverlay(
     activeVoiceId,
     totalTicks,
     setViewport,
+    onHorizontalViewportInteractionStart,
+    onHorizontalViewportInteractionEnd,
     editingNoteMask,
     eventControllerRef,
     onSelectionChange,
@@ -143,6 +147,8 @@ export function InteractionOverlay(
     viewport,
     totalTicks,
     setViewport,
+    onHorizontalViewportInteractionStart,
+    onHorizontalViewportInteractionEnd,
   });
 
   const eventController = usePianoRollEvents({

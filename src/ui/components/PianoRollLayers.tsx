@@ -108,6 +108,8 @@ export interface PianoRollLayersProps {
   readonly activeVoiceId: VoiceId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
+  readonly onHorizontalViewportInteractionStart: () => void;
+  readonly onHorizontalViewportInteractionEnd: () => void;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
   >;
@@ -184,6 +186,8 @@ export function PianoRollLayers(
     activeVoiceId,
     totalTicks,
     setViewport,
+    onHorizontalViewportInteractionStart,
+    onHorizontalViewportInteractionEnd,
     eventControllerRef,
     onSelectionChange,
     onGridSeek,
@@ -234,6 +238,12 @@ export function PianoRollLayers(
         activeVoiceId={activeVoiceId}
         totalTicks={totalTicks}
         setViewport={setViewport}
+        onHorizontalViewportInteractionStart={
+          onHorizontalViewportInteractionStart
+        }
+        onHorizontalViewportInteractionEnd={
+          onHorizontalViewportInteractionEnd
+        }
         editingNoteMask={editingNoteMask}
         eventControllerRef={eventControllerRef}
         onSelectionChange={onSelectionChange}

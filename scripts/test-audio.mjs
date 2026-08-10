@@ -113,6 +113,9 @@ try {
     getMaximumVerticalScroll,
     getMinimumHorizontalZoom,
     getMinimumVerticalZoom,
+    getPagedScrollXForTick,
+    getPlaybackFollowScrollX,
+    getScrollXToRevealTick,
   } = await vite.ssrLoadModule(
     "/src/geometry/viewport-bounds.ts",
   );
@@ -968,6 +971,108 @@ try {
     );
 
     assert.equal(longerClipMinimum, minimumZoomX / 2);
+  });
+
+  test("pages the viewport only when playback crosses a visible edge", () => {
+    const viewport = {
+      zoomX: 1,
+      zoomY: 1,
+      scrollX: 0,
+      scrollY: 0,
+      pitchHeight: 18,
+      ticksPerPixel: 5,
+      devicePixelRatio: 1,
+    };
+    const viewportWidth = 800;
+    const totalTicks = 12_000;
+
+    assert.equal(
+      getPagedScrollXForTick(viewport, viewportWidth, totalTicks, 3_999),
+      0,
+    );
+    assert.equal(
+      getPagedScrollXForTick(viewport, viewportWidth, totalTicks, 4_000),
+      800,
+    );
+    assert.equal(
+      getPagedScrollXForTick(viewport, viewportWidth, totalTicks, 8_000),
+      1_600,
+    );
+    assert.equal(
+      getPagedScrollXForTick(viewport, viewportWidth, totalTicks, 12_000),
+      1_600,
+    );
+  });
+
+  test("reveals externally moved playheads without disturbing visible ones", () => {
+    const viewport = {
+      zoomX: 1,
+      zoomY: 1,
+      scrollX: 800,
+      scrollY: 0,
+      pitchHeight: 18,
+      ticksPerPixel: 5,
+      devicePixelRatio: 1,
+    };
+
+    assert.equal(
+      getScrollXToRevealTick(viewport, 800, 16_000, 5_000),
+      800,
+    );
+    assert.equal(
+      getScrollXToRevealTick(viewport, 800, 16_000, 8_500),
+      1_700,
+    );
+    assert.equal(
+      getScrollXToRevealTick(viewport, 800, 16_000, 500),
+      100,
+    );
+  });
+
+  test("suspends playback following during horizontal navigation", () => {
+    const viewport = {
+      zoomX: 1,
+      zoomY: 1,
+      scrollX: 800,
+      scrollY: 0,
+      pitchHeight: 18,
+      ticksPerPixel: 5,
+      devicePixelRatio: 1,
+    };
+
+    assert.equal(
+      getPlaybackFollowScrollX(viewport, 800, 16_000, 8_500, true),
+      800,
+    );
+    assert.equal(
+      getPlaybackFollowScrollX(viewport, 800, 16_000, 5_000, false),
+      800,
+    );
+    assert.equal(
+      getPlaybackFollowScrollX(viewport, 800, 16_000, 8_500, false),
+      1_700,
+    );
+  });
+
+  test("aligns a revealed playhead deterministically after horizontal zoom", () => {
+    const viewport = {
+      zoomX: 2,
+      zoomY: 1,
+      scrollX: 800,
+      scrollY: 0,
+      pitchHeight: 18,
+      ticksPerPixel: 5,
+      devicePixelRatio: 1,
+    };
+
+    assert.equal(
+      getScrollXToRevealTick(viewport, 800, 16_000, 4_000),
+      800,
+    );
+    assert.equal(
+      getScrollXToRevealTick(viewport, 800, 16_000, 4_001),
+      1_600.4,
+    );
   });
 
   test("owns a piano-roll gesture lifecycle outside React", () => {

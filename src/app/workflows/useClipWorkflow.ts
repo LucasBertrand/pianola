@@ -9,6 +9,7 @@ import {
   createDefaultTransportState,
   DEFAULT_MEASURE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
+  MAXIMUM_CLIP_NAME_LENGTH,
   type Clip,
   type ClipId,
   type Track,
@@ -21,12 +22,17 @@ import type {
 export interface ClipWorkflowOptions {
   readonly commands: EditorCommandPort;
   readonly beginClipChange: () => void;
+  readonly duplicateEditorState: (
+    sourceClipId: ClipId,
+    targetClipId: ClipId,
+  ) => void;
   readonly confirm: ShowApplicationConfirmation;
 }
 
 export interface ClipWorkflow {
   readonly select: (clipId: ClipId) => void;
   readonly add: () => void;
+  readonly duplicate: (clipId: ClipId) => void;
   readonly moveActive: (direction: -1 | 1) => void;
   readonly remove: (clipId: ClipId) => void;
   readonly rename: (clipId: ClipId, name: string) => void;
@@ -36,6 +42,7 @@ export interface ClipWorkflow {
 export function useClipWorkflow({
   commands,
   beginClipChange,
+  duplicateEditorState,
   confirm,
 }: ClipWorkflowOptions): ClipWorkflow {
   const clipSequenceRef = useRef(0);
@@ -104,6 +111,47 @@ export function useClipWorkflow({
     );
   }, [commands]);
 
+  const duplicate = useCallback((clipId: ClipId): void => {
+    const state = commands.getState();
+    const sourceClip = state.clipsById[clipId];
+
+    if (
+      sourceClip === undefined
+      || state.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT
+    ) {
+      return;
+    }
+
+    clipSequenceRef.current += 1;
+    const duplicatedClipId = createClipId(clipSequenceRef.current);
+    const duplicatedClip: Clip = {
+      ...sourceClip,
+      id: duplicatedClipId,
+      name: createCopyName(sourceClip.name, MAXIMUM_CLIP_NAME_LENGTH),
+      tracksByVoiceId: cloneClipTracks(sourceClip.tracksByVoiceId),
+      transportSettings: {
+        ...sourceClip.transportSettings,
+        loop: { ...sourceClip.transportSettings.loop },
+        timeSignature: {
+          ...sourceClip.transportSettings.timeSignature,
+        },
+      },
+    };
+    const sourceIndex = state.clipOrder.indexOf(clipId);
+    const clipOrder = [...state.clipOrder];
+
+    clipOrder.splice(sourceIndex + 1, 0, duplicatedClipId);
+    duplicateEditorState(clipId, duplicatedClipId);
+    beginClipChange();
+    commands.dispatch(
+      [
+        { type: "AddClip", clip: duplicatedClip },
+        { type: "ReorderClips", clipOrder },
+      ],
+      "Duplicate clip",
+    );
+  }, [beginClipChange, commands, duplicateEditorState]);
+
   const remove = useCallback((clipId: ClipId): void => {
     const state = commands.getState();
     const clip = state.clipsById[clipId];
@@ -140,10 +188,32 @@ export function useClipWorkflow({
   return {
     select,
     add,
+    duplicate,
     moveActive,
     remove,
     rename,
   };
+}
+
+function cloneClipTracks(
+  sourceTracks: Readonly<Record<VoiceId, Track>>,
+): Record<VoiceId, Track> {
+  const tracks: Record<VoiceId, Track> = {};
+
+  for (const [voiceId, track] of Object.entries(sourceTracks)) {
+    tracks[voiceId] = {
+      voiceId,
+      notesById: { ...track.notesById },
+    };
+  }
+
+  return tracks;
+}
+
+function createCopyName(name: string, maximumLength: number): string {
+  const suffix = " Copy";
+
+  return `${name.slice(0, maximumLength - suffix.length)}${suffix}`;
 }
 
 function createEmptyClip(

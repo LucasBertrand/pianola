@@ -330,12 +330,26 @@ export function App(): React.JSX.Element {
     verticalZoomInputRef: pitchZoomInputRef,
     timelinePositionRef: barLabelRef,
     timelineTimeRef: timelineTimeRef,
+    beginHorizontalViewportInteraction,
+    endHorizontalViewportInteraction,
     publishViewport,
   } = useViewportControls(
     scene,
     generalInspectorOpen,
+    playbackStatus === "playing",
     seekPlayback,
   );
+  const handleReturnToStart = useCallback((): void => {
+    returnToStart();
+    const viewport = scene.viewport.get();
+
+    if (viewport.scrollX !== 0) {
+      publishViewport({
+        ...viewport,
+        scrollX: 0,
+      });
+    }
+  }, [publishViewport, returnToStart, scene]);
   const dispatchEditCommands = useCallback(
     (
       commands: readonly PianoRollCommand[],
@@ -424,6 +438,7 @@ export function App(): React.JSX.Element {
   const {
     select: handleVoiceSelect,
     add: handleAddVoice,
+    duplicate: handleDuplicateVoice,
     moveSelected: handleMoveSelectedVoice,
     remove: handleDeleteVoice,
     update: handleUpdateVoice,
@@ -465,12 +480,14 @@ export function App(): React.JSX.Element {
   const {
     select: handleClipSelect,
     add: handleAddClip,
+    duplicate: handleDuplicateClip,
     moveActive: handleMoveActiveClip,
     remove: handleDeleteClip,
     rename: handleRenameClip,
   } = useClipWorkflow({
     commands: scene.editorCommands,
     beginClipChange,
+    duplicateEditorState: scene.duplicateClipEditorState,
     confirm: showApplicationConfirmation,
   });
   const {
@@ -506,6 +523,7 @@ export function App(): React.JSX.Element {
     getPlayheadTick() {
       return scene.playheadTick.get();
     },
+    setPlayheadTick: seekPlayback,
     getGridResolutionTicks() {
       return scene.gridResolutionTicks.get();
     },
@@ -627,7 +645,7 @@ export function App(): React.JSX.Element {
         onProjectFileChange={handleProjectFileChange}
         onMidiFileChange={handleMidiFileChange}
         onProjectTitleCommit={handleProjectTitleCommit}
-        onReturnToStart={returnToStart}
+        onReturnToStart={handleReturnToStart}
         onTogglePlayback={togglePlayback}
         onStopPlayback={stopPlayback}
         onToggleLoop={handleToggleLoop}
@@ -642,6 +660,11 @@ export function App(): React.JSX.Element {
           `workspace${
             generalInspectorOpen
               ? " is-general-inspector-open"
+              : ""
+          }${
+            generalInspectorOpen
+            && generalInspectorSection === "clips"
+              ? " is-clips-inspector-open"
               : ""
           }`
         }
@@ -726,6 +749,12 @@ export function App(): React.JSX.Element {
                   activeVoiceId={selectedVoiceId ?? ""}
                   totalTicks={totalTicks}
                   setViewport={publishViewport}
+                  onHorizontalViewportInteractionStart={
+                    beginHorizontalViewportInteraction
+                  }
+                  onHorizontalViewportInteractionEnd={
+                    endHorizontalViewportInteraction
+                  }
                   eventControllerRef={
                     pianoRollEventControllerRef
                   }
@@ -765,11 +794,13 @@ export function App(): React.JSX.Element {
           }}
           onClipSelect={handleClipSelect}
           onAddClip={handleAddClip}
+          onDuplicateClip={handleDuplicateClip}
           onMoveActiveClip={handleMoveActiveClip}
           onDeleteClip={handleDeleteClip}
           onRenameClip={handleRenameClip}
           onMoveSelectedVoice={handleMoveSelectedVoice}
           onAddVoice={handleAddVoice}
+          onDuplicateVoice={handleDuplicateVoice}
           onVoiceSelect={handleVoiceSelect}
           onUpdateVoice={handleUpdateVoice}
           onVoiceGainPreview={previewVoiceGain}

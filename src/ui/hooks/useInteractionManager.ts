@@ -36,6 +36,8 @@ export interface UseInteractionManagerOptions {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
+  readonly onHorizontalViewportInteractionStart: () => void;
+  readonly onHorizontalViewportInteractionEnd: () => void;
 }
 
 const LONG_PRESS_DELAY_MS =
@@ -64,6 +66,8 @@ export function useInteractionManager(
     viewport,
     totalTicks,
     setViewport,
+    onHorizontalViewportInteractionStart,
+    onHorizontalViewportInteractionEnd,
   } = options;
 
   useEffect(() => {
@@ -92,6 +96,16 @@ export function useInteractionManager(
     let longPressOriginX = 0;
     let longPressOriginY = 0;
     let longPressEvent: PointerSample | null = null;
+    let viewportGestureActive = false;
+
+    const endViewportGesture = (): void => {
+      if (!viewportGestureActive) {
+        return;
+      }
+
+      viewportGestureActive = false;
+      onHorizontalViewportInteractionEnd();
+    };
 
     const cancelLongPress = (): void => {
       if (longPressTimerId !== null) {
@@ -140,6 +154,8 @@ export function useInteractionManager(
         bounds.left,
         bounds.top,
       );
+      viewportGestureActive = true;
+      onHorizontalViewportInteractionStart();
       strategyRef.current?.onGesture(gestureEvents);
     };
 
@@ -315,6 +331,7 @@ export function useInteractionManager(
 
       if (pinchGesture.active) {
         flushGestureUpdate();
+        endViewportGesture();
       }
 
       activePointers.delete(event.pointerId);
@@ -354,6 +371,7 @@ export function useInteractionManager(
         activePointers.delete(event.pointerId);
         cancelLongPress();
         strategyRef.current?.cancel();
+        endViewportGesture();
         pinchGesture.reset();
         suppressSinglePointer = activePointers.size > 0;
       }
@@ -387,6 +405,7 @@ export function useInteractionManager(
         gestureAnimationFrameId = null;
       }
       strategyRef.current?.cancel();
+      endViewportGesture();
       activePointers.clear();
       overlay.removeEventListener(
         "pointerdown",
@@ -413,6 +432,8 @@ export function useInteractionManager(
     };
   }, [
     overlayRef,
+    onHorizontalViewportInteractionEnd,
+    onHorizontalViewportInteractionStart,
     setViewport,
     strategyRef,
     totalTicks,

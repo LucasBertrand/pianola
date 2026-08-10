@@ -25,6 +25,8 @@ import {
   getMaximumVerticalScroll,
   getMinimumHorizontalZoom,
   getMinimumVerticalZoom,
+  getPlaybackFollowScrollX,
+  getScrollXToRevealTick,
 } from "../../geometry/viewport-bounds";
 import type {
   EditorRuntime,
@@ -50,6 +52,8 @@ export interface ViewportControls {
     RefObject<HTMLOutputElement | null>;
   readonly timelineTimeRef:
     RefObject<HTMLOutputElement | null>;
+  readonly beginHorizontalViewportInteraction: () => void;
+  readonly endHorizontalViewportInteraction: () => void;
   readonly publishViewport: (viewport: ViewportState) => void;
   readonly restoreViewport: (
     viewport: ViewportState,
@@ -71,6 +75,7 @@ const TIMELINE_HEADER_HEIGHT_CSS_PIXELS =
 export function useViewportControls(
   runtime: EditorRuntime,
   inspectorOpen: boolean,
+  followPlayback: boolean,
   seekPlayback: (tick: number) => void,
 ): ViewportControls {
   const sceneRef = useRef(runtime);
@@ -86,9 +91,12 @@ export function useViewportControls(
     width: VIEWPORT_CONSTANTS.initialWidthCssPixels,
     height: VIEWPORT_CONSTANTS.initialHeightCssPixels,
   });
+  const horizontalInteractionActiveRef = useRef(false);
+  const followPlaybackRef = useRef(followPlayback);
   const scene = runtime;
 
   sceneRef.current = runtime;
+  followPlaybackRef.current = followPlayback;
 
   const publishViewport = useCallback(
     (viewport: ViewportState): void => {
@@ -111,6 +119,53 @@ export function useViewportControls(
       );
     },
     [],
+  );
+
+  const reconcileHorizontalPlaybackFollow = useCallback(
+    (): void => {
+      if (!followPlaybackRef.current) {
+        return;
+      }
+
+      const currentScene = sceneRef.current;
+      const viewport = currentScene.viewport.get();
+      const scrollX = getPlaybackFollowScrollX(
+        viewport,
+        dimensionsRef.current.width,
+        getActiveClipDurationTicks(
+          currentScene.projectStore.getState(),
+        ),
+        currentScene.playheadTick.get(),
+        false,
+      );
+
+      if (scrollX !== viewport.scrollX) {
+        publishViewport({
+          ...viewport,
+          scrollX,
+        });
+      }
+    },
+    [publishViewport],
+  );
+
+  const beginHorizontalViewportInteraction = useCallback(
+    (): void => {
+      horizontalInteractionActiveRef.current = true;
+    },
+    [],
+  );
+
+  const endHorizontalViewportInteraction = useCallback(
+    (): void => {
+      if (!horizontalInteractionActiveRef.current) {
+        return;
+      }
+
+      horizontalInteractionActiveRef.current = false;
+      reconcileHorizontalPlaybackFollow();
+    },
+    [reconcileHorizontalPlaybackFollow],
   );
 
   useEffect(() => {
@@ -335,6 +390,49 @@ export function useViewportControls(
       unsubscribeProject();
     };
   }, [scene]);
+
+  useEffect(() => {
+    const followPlayheadPage = (): void => {
+      const currentScene = sceneRef.current;
+
+      if (currentScene === null) {
+        return;
+      }
+
+      const viewport = currentScene.viewport.get();
+      const totalTicks = getActiveClipDurationTicks(
+        currentScene.projectStore.getState(),
+      );
+      const playheadTick = currentScene.playheadTick.get();
+      const scrollX = followPlayback
+        ? getPlaybackFollowScrollX(
+          viewport,
+          dimensionsRef.current.width,
+          totalTicks,
+          playheadTick,
+          horizontalInteractionActiveRef.current,
+        )
+        : getScrollXToRevealTick(
+          viewport,
+          dimensionsRef.current.width,
+          totalTicks,
+          playheadTick,
+        );
+
+      if (scrollX !== viewport.scrollX) {
+        publishViewport({
+          ...viewport,
+          scrollX,
+        });
+      }
+    };
+    const unsubscribe = scene.playheadTick.subscribe(
+      followPlayheadPage,
+    );
+
+    followPlayheadPage();
+    return unsubscribe;
+  }, [followPlayback, publishViewport, scene]);
 
   useEffect(() => {
     const syncViewportControls = (): void => {
@@ -669,6 +767,19 @@ export function useViewportControls(
       pendingInputs |= VIEW_INPUT_HORIZONTAL_SCROLL;
       scheduleFlush();
     };
+    const flushPendingInputs = (): void => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+        flushInputs();
+      }
+    };
+    const handleHorizontalInteractionStart = (): void => {
+      beginHorizontalViewportInteraction();
+    };
+    const handleHorizontalInteractionEnd = (): void => {
+      flushPendingInputs();
+      endHorizontalViewportInteraction();
+    };
     const handleHorizontalZoomInput = (): void => {
       horizontalZoom = horizontalZoomInput.valueAsNumber;
       pendingInputs |= VIEW_INPUT_HORIZONTAL_ZOOM;
@@ -701,12 +812,44 @@ export function useViewportControls(
         passive: true,
       },
     );
+    horizontalScrollInput.addEventListener(
+      "pointerdown",
+      handleHorizontalInteractionStart,
+    );
+    horizontalScrollInput.addEventListener(
+      "pointerup",
+      handleHorizontalInteractionEnd,
+    );
+    horizontalScrollInput.addEventListener(
+      "pointercancel",
+      handleHorizontalInteractionEnd,
+    );
+    horizontalScrollInput.addEventListener(
+      "lostpointercapture",
+      handleHorizontalInteractionEnd,
+    );
     horizontalZoomInput.addEventListener(
       "input",
       handleHorizontalZoomInput,
       {
         passive: true,
       },
+    );
+    horizontalZoomInput.addEventListener(
+      "pointerdown",
+      handleHorizontalInteractionStart,
+    );
+    horizontalZoomInput.addEventListener(
+      "pointerup",
+      handleHorizontalInteractionEnd,
+    );
+    horizontalZoomInput.addEventListener(
+      "pointercancel",
+      handleHorizontalInteractionEnd,
+    );
+    horizontalZoomInput.addEventListener(
+      "lostpointercapture",
+      handleHorizontalInteractionEnd,
     );
     verticalScrollInput.addEventListener(
       "input",
@@ -747,6 +890,38 @@ export function useViewportControls(
         "input",
         handleHorizontalScrollInput,
       );
+      horizontalScrollInput.removeEventListener(
+        "pointerdown",
+        handleHorizontalInteractionStart,
+      );
+      horizontalScrollInput.removeEventListener(
+        "pointerup",
+        handleHorizontalInteractionEnd,
+      );
+      horizontalScrollInput.removeEventListener(
+        "pointercancel",
+        handleHorizontalInteractionEnd,
+      );
+      horizontalScrollInput.removeEventListener(
+        "lostpointercapture",
+        handleHorizontalInteractionEnd,
+      );
+      horizontalZoomInput.removeEventListener(
+        "pointerdown",
+        handleHorizontalInteractionStart,
+      );
+      horizontalZoomInput.removeEventListener(
+        "pointerup",
+        handleHorizontalInteractionEnd,
+      );
+      horizontalZoomInput.removeEventListener(
+        "pointercancel",
+        handleHorizontalInteractionEnd,
+      );
+      horizontalZoomInput.removeEventListener(
+        "lostpointercapture",
+        handleHorizontalInteractionEnd,
+      );
       horizontalZoomInput.removeEventListener(
         "input",
         handleHorizontalZoomInput,
@@ -780,6 +955,8 @@ export function useViewportControls(
     applyHorizontalZoom,
     applyVerticalScroll,
     applyVerticalZoom,
+    beginHorizontalViewportInteraction,
+    endHorizontalViewportInteraction,
   ]);
 
 
@@ -807,6 +984,8 @@ export function useViewportControls(
     verticalZoomInputRef: pitchZoomInputRef,
     timelinePositionRef: barLabelRef,
     timelineTimeRef: timeLabelRef,
+    beginHorizontalViewportInteraction,
+    endHorizontalViewportInteraction,
     publishViewport,
     restoreViewport,
   };
