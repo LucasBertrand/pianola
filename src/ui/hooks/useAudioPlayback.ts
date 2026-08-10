@@ -4,10 +4,11 @@ import {
   useRef,
   useState,
 } from "react";
-import type {
-  ProjectState,
-  Tick,
-  VoiceId,
+import {
+  getActiveClip,
+  type ProjectState,
+  type Tick,
+  type VoiceId,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
@@ -85,7 +86,7 @@ export function useAudioPlayback(
       scheduler = new LookaheadScheduler(
         engine,
         snapshot,
-        state.transportSettings,
+        getActiveClip(state).transportSettings,
         {
           onStatusChange(nextStatus, positionTick) {
             setStatus(nextStatus);
@@ -119,9 +120,13 @@ export function useAudioPlayback(
         }
 
         try {
+          const clipChanged =
+            state.activeClipId !== previousState.activeClipId;
+
           scheduler.replacePlaybackState(
             compilePlaybackSnapshot(state),
-            state.transportSettings,
+            getActiveClip(state).transportSettings,
+            clipChanged ? playheadTick.get() : undefined,
           );
         } catch (error: unknown) {
           scheduler.stop();
@@ -293,10 +298,14 @@ function didPlaybackStateChange(
   state: ProjectState,
   previousState: ProjectState,
 ): boolean {
+  const activeClip = getActiveClip(state);
+  const previousActiveClip = getActiveClip(previousState);
+
   if (
-    state.measureCount !== previousState.measureCount
-    || state.tracksByVoiceId !== previousState.tracksByVoiceId
-    || state.transportSettings !== previousState.transportSettings
+    state.activeClipId !== previousState.activeClipId
+    || activeClip.measureCount !== previousActiveClip.measureCount
+    || activeClip.tracksByVoiceId !== previousActiveClip.tracksByVoiceId
+    || activeClip.transportSettings !== previousActiveClip.transportSettings
     || state.masterBus.muted !== previousState.masterBus.muted
     || state.masterBus.tuningFrequencyHz
       !== previousState.masterBus.tuningFrequencyHz

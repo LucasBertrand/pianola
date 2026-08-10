@@ -18,11 +18,14 @@ import {
   type PianoRollCommand,
 } from "../domain/commands";
 import type {
+  ClipId,
   ProjectState,
   VoiceId,
 } from "../domain/model";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getClipDurationTicks,
+  getActiveClipDurationTicks,
 } from "../domain/model";
 import {
   createNoteCollisionResolutionPlan,
@@ -35,7 +38,7 @@ import {
   type MidiImportAnalysis,
 } from "../midi/midi-importer";
 import {
-  type NativeEditorState,
+  type NativeClipEditorState,
 } from "../persistence/native-project-file";
 import {
   ApplicationDialogOverlay,
@@ -88,6 +91,9 @@ import {
   type EditorRuntime,
 } from "./editor-runtime";
 import {
+  useClipWorkflow,
+} from "./workflows/useClipWorkflow";
+import {
   useVoiceWorkflow,
 } from "./workflows/useVoiceWorkflow";
 import {
@@ -134,6 +140,8 @@ export function App(): React.JSX.Element {
     );
   const [generalInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
+  const [generalInspectorSection, setGeneralInspectorSection] =
+    useState<"voices" | "clips">("voices");
   const [
     generalInspectorToolbarHost,
     setGeneralInspectorToolbarHost,
@@ -164,8 +172,9 @@ export function App(): React.JSX.Element {
     selectedVoiceId === null
       ? -1
       : projectState.voiceOrder.indexOf(selectedVoiceId);
+  const activeClip = getActiveClip(projectState);
 
-  const totalTicks = getProjectDurationTicks(projectState);
+  const totalTicks = getActiveClipDurationTicks(projectState);
   const updatePitchSnapSettings = useCallback(
     (changes: Partial<PitchSnapSettings>): void => {
       const nextSettings: PitchSnapSettings = {
@@ -281,7 +290,16 @@ export function App(): React.JSX.Element {
   ]);
 
   useEffect(
-    () => scene.projectStore.subscribe((state) => {
+    () => scene.projectStore.subscribe((state, previousState) => {
+      if (state.activeClipId !== previousState.activeClipId) {
+        const controller = pianoRollEventControllerRef.current;
+
+        controller?.cancel();
+        controller?.clearSelection();
+        scene.selectionRequests.clear();
+        setSelectionAvailable(false);
+      }
+
       setProjectState(state);
       setSelectedVoiceId((currentVoiceId) => {
         if (
@@ -296,6 +314,12 @@ export function App(): React.JSX.Element {
     }),
     [scene],
   );
+  useEffect(
+    () => scene.pitchSnapSettings.subscribe(() => {
+      setPitchSnapSettings(scene.pitchSnapSettings.get());
+    }),
+    [scene],
+  );
 
   const {
     appShellRef,
@@ -304,12 +328,9 @@ export function App(): React.JSX.Element {
     horizontalScrollInputRef: scrollInputRef,
     verticalScrollInputRef: pitchScrollInputRef,
     verticalZoomInputRef: pitchZoomInputRef,
-    horizontalZoomLabelRef: zoomLabelRef,
-    verticalZoomLabelRef: pitchZoomLabelRef,
     timelinePositionRef: barLabelRef,
     timelineTimeRef: timelineTimeRef,
     publishViewport,
-    restoreViewport,
   } = useViewportControls(
     scene,
     generalInspectorOpen,
@@ -429,6 +450,29 @@ export function App(): React.JSX.Element {
       pianoRollEventControllerRef.current,
     [],
   );
+  const clearInteractionSelection = useCallback((): void => {
+    const controller = pianoRollEventControllerRef.current;
+
+    controller?.cancel();
+    controller?.clearSelection();
+    scene.selectionRequests.clear();
+    setSelectionAvailable(false);
+  }, [scene]);
+  const beginClipChange = useCallback((): void => {
+    stopPlayback();
+    clearInteractionSelection();
+  }, [clearInteractionSelection, stopPlayback]);
+  const {
+    select: handleClipSelect,
+    add: handleAddClip,
+    moveActive: handleMoveActiveClip,
+    remove: handleDeleteClip,
+    rename: handleRenameClip,
+  } = useClipWorkflow({
+    commands: scene.editorCommands,
+    beginClipChange,
+    confirm: showApplicationConfirmation,
+  });
   const {
     insertMeasureAtPlayhead: handleInsertMeasureAtPlayhead,
     removeMeasureAtPlayhead: handleRemoveMeasureAtPlayhead,
@@ -488,14 +532,34 @@ export function App(): React.JSX.Element {
   } = useProjectFileWorkflow({
     runtime: scene,
     getEditorState() {
+      const runtimeStates = scene.captureClipEditorStates();
+      const clipStatesById: Record<ClipId, NativeClipEditorState> = {};
+      const state = scene.projectStore.getState();
+
+      for (const [clipId, clipState] of Object.entries(runtimeStates)) {
+        const clip = state.clipsById[clipId];
+
+        if (clip === undefined) {
+          continue;
+        }
+
+        clipStatesById[clipId] = {
+          playheadTick: Math.min(
+            getClipDurationTicks(clip),
+            Math.max(0, Math.round(clipState.playheadTick)),
+          ),
+          pitchSnapSettings: clipState.pitchSnapSettings,
+          gridSettings: clipState.gridSettings,
+          viewport: getNativeViewportState(clipState.viewport),
+        };
+      }
+
       return {
         selectedVoiceId,
         selectionMode,
         noteColorMode,
         pitchPreviewEnabled,
-        pitchSnapSettings: scene.pitchSnapSettings.get(),
-        gridSettings: scene.gridSettings.get(),
-        viewport: getNativeViewportState(scene.viewport.get()),
+        clipStatesById,
       };
     },
     stopPlayback,
@@ -517,19 +581,13 @@ export function App(): React.JSX.Element {
       setSelectionMode(editorState.selectionMode);
       setNoteColorMode(editorState.noteColorMode);
       setPitchPreviewEnabled(editorState.pitchPreviewEnabled);
-      setPitchSnapSettings(editorState.pitchSnapSettings);
       setSelectedVoiceId(editorState.selectedVoiceId);
+      const activeEditorState =
+        editorState.clipStatesById[nextProject.activeClipId];
 
-      const currentViewport = scene.viewport.get();
-      const restoredViewport: ViewportState = {
-        ...currentViewport,
-        ...editorState.viewport,
-      };
-
-      restoreViewport(
-        restoredViewport,
-        getProjectDurationTicks(nextProject),
-      );
+      if (activeEditorState !== undefined) {
+        setPitchSnapSettings(activeEditorState.pitchSnapSettings);
+      }
     },
     alert: showApplicationAlert,
     confirm: showApplicationConfirmation,
@@ -594,15 +652,26 @@ export function App(): React.JSX.Element {
             : createPortal(
           <EditorToolbar
             inspectorOpen={generalInspectorOpen}
+            inspectorSection={generalInspectorSection}
             canUndo={scene.projectStore.canUndo()}
             canRedo={scene.projectStore.canRedo()}
-            measureCount={projectState.measureCount}
+            measureCount={activeClip.measureCount}
             selectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
+            noteColorMode={noteColorMode}
             selectedVoice={selectedVoice}
-            onToggleInspector={() => {
-              setGeneralInspectorOpen((current) => !current);
+            onToggleInspector={(section) => {
+              if (
+                generalInspectorOpen
+                && generalInspectorSection === section
+              ) {
+                setGeneralInspectorOpen(false);
+                return;
+              }
+
+              setGeneralInspectorSection(section);
+              setGeneralInspectorOpen(true);
             }}
             onUndo={handleUndo}
             onRedo={handleRedo}
@@ -613,6 +682,7 @@ export function App(): React.JSX.Element {
             onCut={handleCut}
             onPaste={handlePaste}
             onSelectionModeChange={setSelectionMode}
+            onNoteColorModeToggle={handleNoteColorModeToggle}
             onTransferSelectionToVoice={handleTransferSelectionToVoice}
             onSliceSelectionAtPlayhead={handleSliceSelectionAtPlayhead}
             onTransformSelection={handleTransformSelection}
@@ -676,26 +746,28 @@ export function App(): React.JSX.Element {
             timelineTimeRef={timelineTimeRef}
             horizontalScrollRef={scrollInputRef}
             horizontalZoomRef={zoomInputRef}
-            horizontalZoomLabelRef={zoomLabelRef}
             verticalScrollRef={pitchScrollInputRef}
             verticalZoomRef={pitchZoomInputRef}
-            verticalZoomLabelRef={pitchZoomLabelRef}
             pitchSnapSettings={pitchSnapSettings}
             onPitchSnapSettingsChange={updatePitchSnapSettings}
           />
         </div>
         <GeneralInspector
           open={generalInspectorOpen}
+          portraitSection={generalInspectorSection}
           projectState={projectState}
           selectedVoiceId={selectedVoiceId}
           selectedVoiceIndex={selectedVoiceIndex}
           selectedVoice={selectedVoice}
-          noteColorMode={noteColorMode}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClose={() => {
             setGeneralInspectorOpen(false);
           }}
-          onNoteColorModeToggle={handleNoteColorModeToggle}
+          onClipSelect={handleClipSelect}
+          onAddClip={handleAddClip}
+          onMoveActiveClip={handleMoveActiveClip}
+          onDeleteClip={handleDeleteClip}
+          onRenameClip={handleRenameClip}
           onMoveSelectedVoice={handleMoveSelectedVoice}
           onAddVoice={handleAddVoice}
           onVoiceSelect={handleVoiceSelect}
@@ -721,7 +793,7 @@ export function App(): React.JSX.Element {
 
 function getNativeViewportState(
   viewport: ViewportState,
-): NativeEditorState["viewport"] {
+): NativeClipEditorState["viewport"] {
   return {
     zoomX: viewport.zoomX,
     zoomY: viewport.zoomY,

@@ -36,6 +36,11 @@ try {
     "/src/domain/project-store.ts",
   );
   const {
+    createEditorRuntime,
+  } = await vite.ssrLoadModule(
+    "/src/app/editor-runtime.ts",
+  );
+  const {
     EditorCommandService,
   } = await vite.ssrLoadModule(
     "/src/application/editor-command-service.ts",
@@ -101,6 +106,15 @@ try {
     PinchViewportGesture,
   } = await vite.ssrLoadModule(
     "/src/interaction/core/pinch-viewport-gesture.ts",
+  );
+  const {
+    constrainViewportToContent,
+    getMaximumHorizontalScroll,
+    getMaximumVerticalScroll,
+    getMinimumHorizontalZoom,
+    getMinimumVerticalZoom,
+  } = await vite.ssrLoadModule(
+    "/src/geometry/viewport-bounds.ts",
   );
   const {
     PianoRollInteractionSession,
@@ -269,21 +283,35 @@ try {
       };
     }
 
+    const clipId = "clip-test";
+
     return {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision,
       title: "Audio test project",
-      measureCount,
       voicesById,
       voiceOrder: [...voiceOrder],
-      tracksByVoiceId,
-      transportSettings,
+      clipsById: {
+        [clipId]: {
+          id: clipId,
+          name: "Test Clip",
+          measureCount,
+          tracksByVoiceId,
+          transportSettings,
+        },
+      },
+      clipOrder: [clipId],
+      activeClipId: clipId,
       masterBus: {
         gain: masterGain,
         muted: masterMuted,
         tuningFrequencyHz: masterTuningFrequencyHz,
       },
     };
+  }
+
+  function getActiveTestClip(state) {
+    return state.clipsById[state.activeClipId];
   }
 
   function dispatch(state, command) {
@@ -303,22 +331,27 @@ try {
       selectionMode: "add",
       noteColorMode: "pitch",
       pitchPreviewEnabled: false,
-      pitchSnapSettings: {
-        ...DEFAULT_PITCH_SNAP_SETTINGS,
-        enabled: true,
-        visualGuideEnabled: true,
-        tonicPitchClass: 2,
-      },
-      gridSettings: {
-        baseResolutionTicks: 480,
-        subdivision: "triplet",
-        resolutionTicks: 320,
-      },
-      viewport: {
-        zoomX: 1.4,
-        zoomY: 1.2,
-        scrollX: 240,
-        scrollY: 360,
+      clipStatesById: {
+        "clip-test": {
+          playheadTick: 960,
+          pitchSnapSettings: {
+            ...DEFAULT_PITCH_SNAP_SETTINGS,
+            enabled: true,
+            visualGuideEnabled: true,
+            tonicPitchClass: 2,
+          },
+          gridSettings: {
+            baseResolutionTicks: 480,
+            subdivision: "triplet",
+            resolutionTicks: 320,
+          },
+          viewport: {
+            zoomX: 1.4,
+            zoomY: 1.2,
+            scrollX: 240,
+            scrollY: 360,
+          },
+        },
       },
       ...overrides,
     };
@@ -572,12 +605,12 @@ try {
 
     assert.equal(workflow.commitMove([moved]), "committed");
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["selected"].startTick,
       480,
     );
     assert.deepEqual(selection.copyNotes(), [
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["selected"],
     ]);
 
@@ -608,7 +641,7 @@ try {
     );
     assert.equal(selection.size, 0);
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["drawn"],
       undefined,
     );
@@ -661,7 +694,7 @@ try {
     );
     assert.equal(collisionRequest.collisionCount, 1);
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["selected"].startTick,
       600,
     );
@@ -840,11 +873,8 @@ try {
       minimumScale: 0.8,
       maximumScale: 1.25,
       scaleDeadZone: 0.004,
-      minimumZoomX: 0.1,
       maximumZoomX: 8,
-      minimumZoomY: 0.5,
       maximumZoomY: 4,
-      pitchCount: 128,
     };
     const gesture = new PinchViewportGesture(settings);
     const pointer = (pointerId, clientX, clientY) => ({
@@ -886,6 +916,58 @@ try {
     assert.equal(nextViewport.zoomY, 1);
     gesture.reset();
     assert.equal(gesture.active, false);
+  });
+
+  test("derives zoom limits from the current content and viewport", () => {
+    const viewport = {
+      zoomX: 0.01,
+      zoomY: 0.01,
+      scrollX: 500,
+      scrollY: 500,
+      pitchHeight: 18,
+      ticksPerPixel: 5,
+      devicePixelRatio: 2,
+    };
+    const viewportWidth = 1_200;
+    const viewportHeight = 720;
+    const totalTicks = 61_440;
+    const minimumZoomX = getMinimumHorizontalZoom(
+      viewportWidth,
+      totalTicks,
+      viewport.ticksPerPixel,
+    );
+    const minimumZoomY = getMinimumVerticalZoom(
+      viewportHeight,
+      viewport.pitchHeight,
+    );
+    const constrained = constrainViewportToContent(
+      viewport,
+      viewportWidth,
+      viewportHeight,
+      totalTicks,
+    );
+
+    assert.equal(minimumZoomX, viewportWidth * 5 / totalTicks);
+    assert.equal(minimumZoomY, viewportHeight / (128 * 18));
+    assert.equal(constrained.zoomX, minimumZoomX);
+    assert.equal(constrained.zoomY, minimumZoomY);
+    assert.equal(getMaximumHorizontalScroll(
+      constrained,
+      viewportWidth,
+      totalTicks,
+    ), 0);
+    assert.equal(getMaximumVerticalScroll(
+      constrained,
+      viewportHeight,
+    ), 0);
+
+    const longerClipMinimum = getMinimumHorizontalZoom(
+      viewportWidth,
+      totalTicks * 2,
+      viewport.ticksPerPixel,
+    );
+
+    assert.equal(longerClipMinimum, minimumZoomX / 2);
   });
 
   test("owns a piano-roll gesture lifecycle outside React", () => {
@@ -1007,7 +1089,7 @@ try {
       [
         {
           type: "AppendMeasures",
-          count: requiredMeasureCount - store.getState().measureCount,
+          count: requiredMeasureCount - getActiveTestClip(store.getState()).measureCount,
         },
         {
           type: "AddNotes",
@@ -1018,18 +1100,18 @@ try {
       "Paste notes",
     );
 
-    assert.equal(store.getState().measureCount, 2);
+    assert.equal(getActiveTestClip(store.getState()).measureCount, 2);
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["pasted"],
       pastedNote,
     );
 
     store.undo();
 
-    assert.equal(store.getState().measureCount, 1);
+    assert.equal(getActiveTestClip(store.getState()).measureCount, 1);
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["pasted"],
       undefined,
     );
@@ -1049,7 +1131,7 @@ try {
       "Disable selected notes",
     );
 
-    const disabledNote = store.getState()
+    const disabledNote = getActiveTestClip(store.getState())
       .tracksByVoiceId["voice-a"].notesById["toggle"];
 
     assert.equal(disabledNote.enabled, false);
@@ -1067,12 +1149,12 @@ try {
     );
 
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["toggle"].startTick,
       480,
     );
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
         .notesById["toggle"].enabled,
       false,
     );
@@ -1267,7 +1349,7 @@ try {
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
     assert.equal(
-      loaded.projectState.tracksByVoiceId["voice-a"]
+      getActiveTestClip(loaded.projectState).tracksByVoiceId["voice-a"]
         .notesById["disabled"].enabled,
       false,
     );
@@ -1294,6 +1376,71 @@ try {
         && error.path.endsWith(".instrument.polyphony")
       ),
     );
+  });
+
+  test("round-trips clip order and per-clip editor state", () => {
+    const state = dispatch(createProject(), {
+      type: "AddClip",
+      clip: {
+        id: "clip-native-second",
+        name: "Native Second",
+        measureCount: 2,
+        tracksByVoiceId: {
+          "voice-a": {
+            voiceId: "voice-a",
+            notesById: {
+              second: createNote("second", "voice-a", 65, 240),
+            },
+          },
+        },
+        transportSettings: {
+          ...createDefaultTransportState(),
+          bpm: 84,
+        },
+      },
+    });
+    const firstEditorState = createEditorState();
+    const editorState = {
+      ...firstEditorState,
+      clipStatesById: {
+        ...firstEditorState.clipStatesById,
+        "clip-native-second": {
+          playheadTick: 720,
+          pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+          gridSettings: {
+            baseResolutionTicks: 240,
+            subdivision: "straight",
+            resolutionTicks: 240,
+          },
+          viewport: {
+            zoomX: 0.75,
+            zoomY: 1.5,
+            scrollX: 120,
+            scrollY: 480,
+          },
+        },
+      },
+    };
+    const metadata = {
+      documentId: "multi-clip-document",
+      createdAt: "2026-08-10T10:00:00.000Z",
+      savedAt: "2026-08-10T10:01:00.000Z",
+    };
+    const loaded = parseNativeProjectFile(
+      serializeNativeProjectFile(state, metadata, editorState),
+    );
+
+    assert.deepEqual(
+      loaded.projectState.clipOrder,
+      ["clip-test", "clip-native-second"],
+    );
+    assert.equal(loaded.projectState.activeClipId, "clip-native-second");
+    assert.equal(
+      loaded.projectState.clipsById["clip-native-second"]
+        .transportSettings.bpm,
+      84,
+    );
+    assert.deepEqual(loaded.editorState, editorState);
   });
 
   test("round-trips ticks and seconds across tempo segments", () => {
@@ -1394,7 +1541,7 @@ try {
       ],
     });
     assert.equal(
-      Object.keys(state.tracksByVoiceId["voice-a"].notesById).length,
+      Object.keys(getActiveTestClip(state).tracksByVoiceId["voice-a"].notesById).length,
       1,
     );
   });
@@ -1451,12 +1598,12 @@ try {
 
     assert.equal(
       Object.keys(
-        resizedState.tracksByVoiceId["voice-a"].notesById,
+        getActiveTestClip(resizedState).tracksByVoiceId["voice-a"].notesById,
       ).length,
       2,
     );
     assert.equal(
-      resizedState.tracksByVoiceId["voice-a"]
+      getActiveTestClip(resizedState).tracksByVoiceId["voice-a"]
         .notesById["third"].durationTicks,
       600,
     );
@@ -1631,12 +1778,12 @@ try {
     });
 
     assert.equal(
-      repositionedState.tracksByVoiceId["voice-a"]
+      getActiveTestClip(repositionedState).tracksByVoiceId["voice-a"]
         .notesById["first"].pitch,
       64,
     );
     assert.equal(
-      repositionedState.tracksByVoiceId["voice-a"]
+      getActiveTestClip(repositionedState).tracksByVoiceId["voice-a"]
         .notesById["second"].startTick,
       240,
     );
@@ -1701,7 +1848,7 @@ try {
       "Merge collisions",
     );
     const notes = Object.values(
-      nextState.tracksByVoiceId["voice-a"].notesById,
+      getActiveTestClip(nextState).tracksByVoiceId["voice-a"].notesById,
     );
 
     assert.equal(notes.length, 1);
@@ -1760,7 +1907,7 @@ try {
       "Slice collisions",
     );
     const notes = Object.values(
-      nextState.tracksByVoiceId["voice-a"].notesById,
+      getActiveTestClip(nextState).tracksByVoiceId["voice-a"].notesById,
     ).sort((left, right) => left.startTick - right.startTick);
 
     assert.equal(notes.length, 3);
@@ -1845,7 +1992,7 @@ try {
       "Consolidate and slice",
     );
     const notes = Object.values(
-      nextState.tracksByVoiceId["voice-a"].notesById,
+      getActiveTestClip(nextState).tracksByVoiceId["voice-a"].notesById,
     ).sort((left, right) => left.startTick - right.startTick);
 
     assert.deepEqual(
@@ -1889,7 +2036,7 @@ try {
       },
     });
     const originalTracks = structuredClone(
-      state.tracksByVoiceId,
+      getActiveTestClip(state).tracksByVoiceId,
     );
     const plan = createNoteCollisionResolutionPlan(
       state,
@@ -1906,7 +2053,7 @@ try {
       "undo-test",
     );
 
-    assert.deepEqual(state.tracksByVoiceId, originalTracks);
+    assert.deepEqual(getActiveTestClip(state).tracksByVoiceId, originalTracks);
 
     const store = new ProjectStore(state);
     store.dispatch({
@@ -1919,7 +2066,7 @@ try {
     assert.equal(store.canUndo(), true);
     store.undo();
     assert.deepEqual(
-      store.getState().tracksByVoiceId,
+      getActiveTestClip(store.getState()).tracksByVoiceId,
       originalTracks,
     );
     assert.equal(store.canUndo(), false);
@@ -2013,7 +2160,7 @@ try {
         "voice-a": [noteA, noteB],
       },
     });
-    const originalTracks = structuredClone(state.tracksByVoiceId);
+    const originalTracks = structuredClone(getActiveTestClip(state).tracksByVoiceId);
     const store = new ProjectStore(state);
 
     store.dispatch({
@@ -2043,16 +2190,16 @@ try {
     });
 
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"].notesById.a.startTick,
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"].notesById.a.startTick,
       200,
     );
     assert.equal(
-      store.getState().tracksByVoiceId["voice-a"].notesById.a.durationTicks,
+      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"].notesById.a.durationTicks,
       100,
     );
     assert.equal(store.canUndo(), true);
     store.undo();
-    assert.deepEqual(store.getState().tracksByVoiceId, originalTracks);
+    assert.deepEqual(getActiveTestClip(store.getState()).tracksByVoiceId, originalTracks);
     assert.equal(store.canUndo(), false);
   });
 
@@ -2084,7 +2231,7 @@ try {
       ],
     });
 
-    const slicedTrack = store.getState().tracksByVoiceId["voice-a"];
+    const slicedTrack = getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"];
 
     assert.deepEqual(
       [
@@ -2102,8 +2249,8 @@ try {
     );
     store.undo();
     assert.deepEqual(
-      store.getState().tracksByVoiceId,
-      state.tracksByVoiceId,
+      getActiveTestClip(store.getState()).tracksByVoiceId,
+      getActiveTestClip(state).tracksByVoiceId,
     );
   });
 
@@ -2159,7 +2306,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       0,
@@ -2191,7 +2338,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
     );
 
     engine.currentTimeSeconds = 1.25;
@@ -2241,7 +2388,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       240,
@@ -2260,7 +2407,7 @@ try {
     };
     scheduler.replacePlaybackState(
       compilePlaybackSnapshot(refreshedState),
-      refreshedState.transportSettings,
+      getActiveTestClip(refreshedState).transportSettings,
     );
 
     const refreshedEvents = engine.events.filter(
@@ -2313,7 +2460,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      soloState.transportSettings,
+      getActiveTestClip(soloState).transportSettings,
     );
 
     await scheduler.play();
@@ -2347,7 +2494,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       0,
@@ -2386,7 +2533,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {
         onError(error) {
           reportedErrors.push(error);
@@ -2432,7 +2579,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       0,
@@ -2489,7 +2636,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       480,
@@ -2525,7 +2672,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       0,
@@ -2567,7 +2714,7 @@ try {
     const scheduler = new LookaheadScheduler(
       engine,
       snapshot,
-      state.transportSettings,
+      getActiveTestClip(state).transportSettings,
       {},
       timer,
       3_600,
@@ -2586,6 +2733,218 @@ try {
     assert.deepEqual(engine.cancelledAt, []);
 
     await scheduler.dispose();
+  });
+
+  test("isolates notes and transport data between clips", () => {
+    const initialState = createProject({
+      notesByVoiceId: {
+        "voice-a": [createNote("clip-a-note", "voice-a", 60, 0)],
+      },
+    });
+    const secondClip = {
+      id: "clip-second",
+      name: "Second Clip",
+      measureCount: 2,
+      tracksByVoiceId: {
+        "voice-a": {
+          voiceId: "voice-a",
+          notesById: {},
+        },
+      },
+      transportSettings: {
+        ...createDefaultTransportState(),
+        bpm: 90,
+      },
+    };
+    const withSecondClip = dispatch(initialState, {
+      type: "AddClip",
+      clip: secondClip,
+    });
+    const editedSecondClip = dispatch(withSecondClip, {
+      type: "AddNotes",
+      trackVoiceId: "voice-a",
+      notes: [createNote("clip-b-note", "voice-a", 67, 480)],
+    });
+
+    assert.deepEqual(
+      Object.keys(
+        editedSecondClip.clipsById["clip-test"]
+          .tracksByVoiceId["voice-a"].notesById,
+      ),
+      ["clip-a-note"],
+    );
+    assert.deepEqual(
+      Object.keys(
+        editedSecondClip.clipsById["clip-second"]
+          .tracksByVoiceId["voice-a"].notesById,
+      ),
+      ["clip-b-note"],
+    );
+    assert.equal(
+      editedSecondClip.clipsById["clip-test"].transportSettings.bpm,
+      120,
+    );
+    assert.equal(
+      editedSecondClip.clipsById["clip-second"].transportSettings.bpm,
+      90,
+    );
+  });
+
+  test("propagates voice lifecycle changes to every clip", () => {
+    const initialState = createProject();
+    const withSecondClip = dispatch(initialState, {
+      type: "AddClip",
+      clip: {
+        id: "clip-second",
+        name: "Second Clip",
+        measureCount: 4,
+        tracksByVoiceId: {
+          "voice-a": {
+            voiceId: "voice-a",
+            notesById: {},
+          },
+        },
+        transportSettings: createDefaultTransportState(),
+      },
+    });
+    const withVoice = dispatch(withSecondClip, {
+      type: "AddVoice",
+      voice: createVoice("voice-b", 1),
+    });
+
+    for (const clipId of withVoice.clipOrder) {
+      assert.ok(
+        withVoice.clipsById[clipId].tracksByVoiceId["voice-b"],
+      );
+    }
+
+    const withoutVoice = dispatch(withVoice, {
+      type: "DeleteVoice",
+      voiceId: "voice-b",
+    });
+
+    for (const clipId of withoutVoice.clipOrder) {
+      assert.equal(
+        withoutVoice.clipsById[clipId].tracksByVoiceId["voice-b"],
+        undefined,
+      );
+    }
+  });
+
+  test("keeps clip navigation outside global undo history", () => {
+    const store = new ProjectStore(createProject());
+
+    store.dispatch({
+      transactionId: "add-second-clip",
+      createdAt: 1,
+      commands: [{
+        type: "AddClip",
+        clip: {
+          id: "clip-second",
+          name: "Second Clip",
+          measureCount: 4,
+          tracksByVoiceId: {
+            "voice-a": {
+              voiceId: "voice-a",
+              notesById: {},
+            },
+          },
+          transportSettings: createDefaultTransportState(),
+        },
+      }],
+    });
+    store.dispatch({
+      transactionId: "select-first-clip",
+      createdAt: 2,
+      commands: [{ type: "ActivateClip", clipId: "clip-test" }],
+    });
+    store.dispatch({
+      transactionId: "edit-first-clip",
+      createdAt: 3,
+      commands: [{
+        type: "AddNotes",
+        trackVoiceId: "voice-a",
+        notes: [createNote("history-note", "voice-a", 60, 0)],
+      }],
+    });
+    store.dispatch({
+      transactionId: "select-second-clip",
+      createdAt: 4,
+      commands: [{ type: "ActivateClip", clipId: "clip-second" }],
+    });
+
+    store.undo();
+    assert.equal(store.getState().activeClipId, "clip-second");
+    assert.equal(
+      store.getState().clipsById["clip-test"]
+        .tracksByVoiceId["voice-a"].notesById["history-note"],
+      undefined,
+    );
+
+    store.redo();
+    assert.equal(store.getState().activeClipId, "clip-second");
+    assert.ok(
+      store.getState().clipsById["clip-test"]
+        .tracksByVoiceId["voice-a"].notesById["history-note"],
+    );
+  });
+
+  test("restores playhead position independently for each clip", () => {
+    const runtime = createEditorRuntime(createProject());
+    const secondClip = {
+      id: "clip-playhead-second",
+      name: "Playhead Second",
+      measureCount: 4,
+      tracksByVoiceId: {
+        "voice-a": {
+          voiceId: "voice-a",
+          notesById: {},
+        },
+      },
+      transportSettings: createDefaultTransportState(),
+    };
+
+    runtime.playheadTick.set(640);
+    runtime.editorCommands.dispatch(
+      [{ type: "AddClip", clip: secondClip }],
+      "Add second clip",
+    );
+    assert.equal(runtime.playheadTick.get(), 0);
+
+    runtime.playheadTick.set(1_280);
+    runtime.editorCommands.dispatch(
+      [{ type: "ActivateClip", clipId: "clip-test" }],
+      "Select first clip",
+    );
+    assert.equal(runtime.playheadTick.get(), 640);
+
+    runtime.editorCommands.dispatch(
+      [{ type: "ActivateClip", clipId: secondClip.id }],
+      "Select second clip",
+    );
+    assert.equal(runtime.playheadTick.get(), 1_280);
+  });
+
+  test("replaces an audio snapshot at a restored clip position", () => {
+    const state = createProject({ measureCount: 1 });
+    const snapshot = compilePlaybackSnapshot(state);
+    const engine = new FakeAudioEngine();
+    const scheduler = new LookaheadScheduler(
+      engine,
+      snapshot,
+      getActiveTestClip(state).transportSettings,
+      {},
+      new FakeSchedulerTimer(),
+      240,
+    );
+
+    scheduler.replacePlaybackState(
+      snapshot,
+      getActiveTestClip(state).transportSettings,
+      1_440,
+    );
+
+    assert.equal(scheduler.getPositionTick(), 1_440);
   });
 
   let passedTestCount = 0;

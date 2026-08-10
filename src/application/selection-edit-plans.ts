@@ -2,6 +2,7 @@ import type {
   PianoRollCommand,
 } from "../domain/commands";
 import {
+  getActiveClip,
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   type Note,
@@ -170,6 +171,8 @@ export function canPlacePastedNotes(
   state: ProjectState,
   notes: readonly Note[],
 ): boolean {
+  const clip = getActiveClip(state);
+
   for (
     let noteIndex = 0;
     noteIndex < notes.length;
@@ -182,7 +185,7 @@ export function canPlacePastedNotes(
     }
 
     const voice = state.voicesById[note.voiceId];
-    const track = state.tracksByVoiceId[note.voiceId];
+    const track = clip.tracksByVoiceId[note.voiceId];
 
     if (
       voice === undefined
@@ -205,6 +208,7 @@ export function getRequiredMeasureCountForNotes(
   state: ProjectState,
   notes: readonly Note[],
 ): number {
+  const clip = getActiveClip(state);
   let maximumEndTick = 0;
 
   for (const note of notes) {
@@ -218,11 +222,11 @@ export function getRequiredMeasureCountForNotes(
   }
 
   const ticksPerMeasure = getTicksPerMeasure(
-    state.transportSettings,
+    clip.transportSettings,
   );
 
   return Math.max(
-    state.measureCount,
+    clip.measureCount,
     Math.ceil(maximumEndTick / ticksPerMeasure),
   );
 }
@@ -232,8 +236,9 @@ export function createVoiceTransferPlan(
   selectedNotes: readonly Note[],
   targetVoiceId: VoiceId,
 ): VoiceTransferPlan {
+  const clip = getActiveClip(state);
   const targetVoice = state.voicesById[targetVoiceId];
-  const targetTrack = state.tracksByVoiceId[targetVoiceId];
+  const targetTrack = clip.tracksByVoiceId[targetVoiceId];
 
   if (targetVoice === undefined || targetTrack === undefined) {
     return {
@@ -265,7 +270,7 @@ export function createVoiceTransferPlan(
     }
 
     const sourceVoice = state.voicesById[selectedNote.voiceId];
-    const sourceTrack = state.tracksByVoiceId[selectedNote.voiceId];
+    const sourceTrack = clip.tracksByVoiceId[selectedNote.voiceId];
 
     if (
       sourceVoice === undefined
@@ -340,6 +345,7 @@ export function findNotesByIds(
   state: ProjectState,
   noteIds: readonly NoteId[],
 ): readonly Note[] {
+  const clip = getActiveClip(state);
   const notes: Note[] = [];
   const acceptedNoteIds = new Set<NoteId>();
 
@@ -349,7 +355,7 @@ export function findNotesByIds(
     }
 
     for (const voiceId of state.voiceOrder) {
-      const note = state.tracksByVoiceId[voiceId]?.notesById[noteId];
+      const note = clip.tracksByVoiceId[voiceId]?.notesById[noteId];
 
       if (note !== undefined) {
         acceptedNoteIds.add(note.id);

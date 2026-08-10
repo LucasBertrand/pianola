@@ -8,8 +8,6 @@ import {
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
-  MINIMUM_HORIZONTAL_ZOOM,
-  MINIMUM_VERTICAL_ZOOM,
   type ViewportState,
 } from "../../geometry/converter";
 import {
@@ -84,11 +82,8 @@ export function useInteractionManager(
       minimumScale: MINIMUM_PINCH_SCALE,
       maximumScale: MAXIMUM_PINCH_SCALE,
       scaleDeadZone: PINCH_SCALE_DEAD_ZONE,
-      minimumZoomX: MINIMUM_HORIZONTAL_ZOOM,
       maximumZoomX: MAXIMUM_HORIZONTAL_ZOOM,
-      minimumZoomY: MINIMUM_VERTICAL_ZOOM,
       maximumZoomY: MAXIMUM_VERTICAL_ZOOM,
-      pitchCount: 128,
     });
     let suppressSinglePointer = false;
     let gestureAnimationFrameId: number | null = null;

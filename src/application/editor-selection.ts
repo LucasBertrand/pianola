@@ -4,6 +4,9 @@ import type {
   ProjectState,
   VoiceId,
 } from "../domain/model";
+import {
+  getActiveClip,
+} from "../domain/model";
 
 export type NoteSelectionPredicate = (note: Note) => boolean;
 
@@ -89,11 +92,11 @@ export class EditorSelection {
     predicate?: NoteSelectionPredicate,
   ): void {
     this.notesById.clear();
+    const tracksByVoiceId = getActiveClip(state).tracksByVoiceId;
 
     for (const noteId of noteIds) {
       for (const voiceId of state.voiceOrder) {
-        const note =
-          state.tracksByVoiceId[voiceId]?.notesById[noteId];
+        const note = tracksByVoiceId[voiceId]?.notesById[noteId];
 
         if (
           note !== undefined
@@ -129,11 +132,11 @@ export class EditorSelection {
     predicate?: NoteSelectionPredicate,
   ): void {
     let changed = false;
+    const tracksByVoiceId = getActiveClip(state).tracksByVoiceId;
 
     for (const [noteId, previousNote] of this.notesById) {
       const currentNote =
-        state
-          .tracksByVoiceId[previousNote.voiceId]
+        tracksByVoiceId[previousNote.voiceId]
           ?.notesById[noteId];
 
       if (
@@ -159,7 +162,7 @@ export class EditorSelection {
     voiceId: VoiceId,
     predicate?: NoteSelectionPredicate,
   ): boolean {
-    const track = state.tracksByVoiceId[voiceId];
+    const track = getActiveClip(state).tracksByVoiceId[voiceId];
 
     if (track === undefined) {
       return false;
@@ -218,7 +221,7 @@ export class EditorSelection {
     let selectedNoteCount = 0;
 
     for (const voiceId of state.voiceOrder) {
-      const track = state.tracksByVoiceId[voiceId];
+      const track = getActiveClip(state).tracksByVoiceId[voiceId];
 
       if (track === undefined) {
         continue;
@@ -253,7 +256,7 @@ export class EditorSelection {
     }
 
     for (const voiceId of state.voiceOrder) {
-      const track = state.tracksByVoiceId[voiceId];
+      const track = getActiveClip(state).tracksByVoiceId[voiceId];
 
       if (track === undefined) {
         continue;

@@ -8,8 +8,6 @@ import {
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
-  MINIMUM_HORIZONTAL_ZOOM,
-  MINIMUM_VERTICAL_ZOOM,
 } from "../../geometry/converter";
 import type {
   PitchSnapSettings,
@@ -23,10 +21,8 @@ export interface ViewControlsProps {
   readonly timelineTimeRef: RefObject<HTMLOutputElement | null>;
   readonly horizontalScrollRef: RefObject<HTMLInputElement | null>;
   readonly horizontalZoomRef: RefObject<HTMLInputElement | null>;
-  readonly horizontalZoomLabelRef: RefObject<HTMLOutputElement | null>;
   readonly verticalScrollRef: RefObject<HTMLInputElement | null>;
   readonly verticalZoomRef: RefObject<HTMLInputElement | null>;
-  readonly verticalZoomLabelRef: RefObject<HTMLOutputElement | null>;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly onPitchSnapSettingsChange: (
     changes: Partial<PitchSnapSettings>,
@@ -38,10 +34,8 @@ export function ViewControls({
   timelineTimeRef,
   horizontalScrollRef,
   horizontalZoomRef,
-  horizontalZoomLabelRef,
   verticalScrollRef,
   verticalZoomRef,
-  verticalZoomLabelRef,
   pitchSnapSettings,
   onPitchSnapSettingsChange,
 }: ViewControlsProps): React.JSX.Element {
@@ -62,7 +56,7 @@ export function ViewControls({
           ref={horizontalScrollRef}
           type="range"
           min="0"
-          step={EDITOR_CONSTANTS.horizontalScrollStep}
+          step="any"
           defaultValue="0"
           aria-label="Horizontal timeline position"
         />
@@ -72,17 +66,12 @@ export function ViewControls({
         <input
           ref={horizontalZoomRef}
           type="range"
-          min={MINIMUM_HORIZONTAL_ZOOM}
+          min={VIEWPORT_CONSTANTS.minimumStoredZoom}
           max={MAXIMUM_HORIZONTAL_ZOOM}
           step={EDITOR_CONSTANTS.zoomStep}
           defaultValue={VIEWPORT_CONSTANTS.initialHorizontalZoom}
           aria-label="Horizontal zoom"
         />
-        <output ref={horizontalZoomLabelRef}>
-          {Math.round(
-            VIEWPORT_CONSTANTS.initialHorizontalZoom * 100,
-          )}%
-        </output>
       </label>
       <div className="pitch-view-controls">
         <label className="view-position-control">
@@ -102,7 +91,7 @@ export function ViewControls({
                 * VIEWPORT_CONSTANTS.initialVerticalZoom
                 - VIEWPORT_CONSTANTS.initialHeightCssPixels,
             )}
-            step={EDITOR_CONSTANTS.verticalScrollStep}
+            step="any"
             defaultValue={String(
               (
                 VIEWPORT_CONSTANTS.maximumMidiPitch
@@ -117,17 +106,12 @@ export function ViewControls({
           <input
             ref={verticalZoomRef}
             type="range"
-            min={MINIMUM_VERTICAL_ZOOM}
+            min={VIEWPORT_CONSTANTS.minimumStoredZoom}
             max={MAXIMUM_VERTICAL_ZOOM}
             step={EDITOR_CONSTANTS.zoomStep}
             defaultValue={VIEWPORT_CONSTANTS.initialVerticalZoom}
             aria-label="Vertical pitch zoom"
           />
-          <output ref={verticalZoomLabelRef}>
-            {Math.round(
-              VIEWPORT_CONSTANTS.initialVerticalZoom * 100,
-            )}%
-          </output>
         </label>
       </div>
       <PitchSnapControls

@@ -43,6 +43,13 @@ Contient les données durables et les règles métier : modèle immuable,
 commandes, reducer, validation, collisions et historique. Une modification de
 `ProjectState` doit normalement passer par une commande du domaine.
 
+`ProjectState` possède les entités globales (`voicesById`, ordre des voix,
+master bus) et la collection ordonnée de clips. `Clip` ne référence pas le
+projet : il porte seulement son ID, son nom, ses pistes, sa longueur et son
+transport. Cette direction unique évite une dépendance circulaire. Les
+commandes de notes et de transport ciblent implicitement `activeClipId`; les
+commandes de voix propagent l’ajout ou la suppression de piste à chaque clip.
+
 Cette couche ne connaît ni React, ni le DOM, ni Canvas, ni Web Audio.
 
 ### `src/application`
@@ -133,6 +140,8 @@ de dialogue et de contrôles de fichiers du navigateur :
 
 - `useVoiceWorkflow.ts` orchestre ajout, suppression, ordre et édition des
   voix ;
+- `useClipWorkflow.ts` orchestre navigation, ajout, suppression, ordre et
+  renommage des clips ;
 - `useSelectionWorkflow.ts` orchestre Undo/Redo, presse-papiers, transfert,
   slice et transformations de sélection ;
 - `useProjectFileWorkflow.ts` possède le cycle nouveau/sauvegarde/chargement
@@ -185,6 +194,12 @@ antérieure du projet, y compris après résolution d'une collision.
 ## État canonique et signaux
 
 - `ProjectState` est la source de vérité persistante.
+- `Clip` est la frontière persistante des données musicales et temporelles
+  locales. Il ne doit jamais contenir une `Voice` complète, seulement des
+  pistes indexées par `VoiceId`.
+- `EditorRuntime` conserve un petit état d’édition par `ClipId` pour la tête de
+  lecture, le viewport, la grille et le snap tonal. Le fichier natif persiste
+  ces valeurs dans `editor.clipStatesById`.
 - `EditorSelection` est la source de vérité transitoire de la sélection. Ne pas
   maintenir en parallèle un `Set` et un tableau indépendants.
 - Les `RenderSignal` servent uniquement à publier une valeur graphique qui

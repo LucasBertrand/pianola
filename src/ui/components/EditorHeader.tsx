@@ -8,8 +8,9 @@ import type {
 import type {
   EditorCommandPort,
 } from "../../application/editor-command-service";
-import type {
-  ProjectState,
+import {
+  getActiveClip,
+  type ProjectState,
 } from "../../domain/model";
 import {
   MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
@@ -91,6 +92,8 @@ export function EditorHeader({
   onMasterMuteToggle: handleMasterMuteToggle,
   onMasterTuningCommit: handleMasterTuningCommit,
 }: EditorHeaderProps): React.JSX.Element {
+  const activeClip = getActiveClip(projectState);
+
   return (
   <header className="topbar">
     <div className="brand">
@@ -128,7 +131,7 @@ export function EditorHeader({
     <TransportControls
       status={playbackStatus}
       loopEnabled={
-        projectState.transportSettings.loopEnabled
+        activeClip.transportSettings.loopEnabled
       }
       onReturnToStart={returnToStart}
       onTogglePlayback={togglePlayback}

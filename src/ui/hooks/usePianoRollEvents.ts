@@ -17,10 +17,11 @@ import type {
   EditorSelectionRequest,
   EditorSelectionRequests,
 } from "../../application/editor-selection-requests";
-import type {
-  Note,
-  NoteId,
-  VoiceId,
+import {
+  getActiveClip,
+  type Note,
+  type NoteId,
+  type VoiceId,
 } from "../../domain/model";
 import type {
   NoteCollisionResolutionRequest,
@@ -826,9 +827,9 @@ export function usePianoRollEvents(
         || pitch > 127
         || activeVoice === undefined
         || activeVoice.locked
-        || editorCommands
-          .getState()
-          .tracksByVoiceId[currentActiveVoiceId] === undefined
+        || getActiveClip(
+          editorCommands.getState(),
+        ).tracksByVoiceId[currentActiveVoiceId] === undefined
       ) {
         return;
       }

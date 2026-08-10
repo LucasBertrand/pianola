@@ -1,6 +1,7 @@
 import type {
   Note,
   NoteId,
+  Clip,
   ProjectState,
   Track,
   Voice,
@@ -214,18 +215,29 @@ function createProjectState(
     }
   }
 
-  return {
-    schemaVersion: PROJECT_SCHEMA_VERSION,
-    revision: 0,
-    title,
+  const clipId = "clip-main";
+  const clip: Clip = {
+    id: clipId,
+    name: "Main Clip",
     measureCount: DEFAULT_MEASURE_COUNT,
-    voicesById,
-    voiceOrder,
     tracksByVoiceId,
     transportSettings: {
       ...createDefaultTransportState(),
       bpm: PROJECT_CONSTANTS.demoTempoBpm,
     },
+  };
+
+  return {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    revision: 0,
+    title,
+    voicesById,
+    voiceOrder,
+    clipsById: {
+      [clipId]: clip,
+    },
+    clipOrder: [clipId],
+    activeClipId: clipId,
     masterBus: createDefaultMasterBusState(),
   };
 }

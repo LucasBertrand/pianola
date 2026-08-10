@@ -197,7 +197,7 @@ function assertTransformedNoteBounds(
     || startTick + durationTicks > projectDurationTicks
   ) {
     throw new SelectionTransformationError(
-      "The transformation would place a note outside the project timeline.",
+      "The transformation would place a note outside the clip timeline.",
     );
   }
 }

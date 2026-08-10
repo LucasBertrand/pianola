@@ -9,7 +9,8 @@ import {
   VIEWPORT_CONSTANTS,
 } from "../../config/program-constants";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getActiveClipDurationTicks,
   type TransportState,
 } from "../../domain/model";
 import type {
@@ -18,6 +19,13 @@ import type {
 import {
   calculateVisibleRegion,
 } from "../../geometry/visible-region";
+import {
+  constrainViewportToContent,
+  getMaximumHorizontalScroll,
+  getMaximumVerticalScroll,
+  getMinimumHorizontalZoom,
+  getMinimumVerticalZoom,
+} from "../../geometry/viewport-bounds";
 import type {
   EditorRuntime,
 } from "../editor-runtime";
@@ -38,10 +46,6 @@ export interface ViewportControls {
     RefObject<HTMLInputElement | null>;
   readonly verticalZoomInputRef:
     RefObject<HTMLInputElement | null>;
-  readonly horizontalZoomLabelRef:
-    RefObject<HTMLOutputElement | null>;
-  readonly verticalZoomLabelRef:
-    RefObject<HTMLOutputElement | null>;
   readonly timelinePositionRef:
     RefObject<HTMLOutputElement | null>;
   readonly timelineTimeRef:
@@ -76,8 +80,6 @@ export function useViewportControls(
   const scrollInputRef = useRef<HTMLInputElement | null>(null);
   const pitchScrollInputRef = useRef<HTMLInputElement | null>(null);
   const pitchZoomInputRef = useRef<HTMLInputElement | null>(null);
-  const zoomLabelRef = useRef<HTMLOutputElement | null>(null);
-  const pitchZoomLabelRef = useRef<HTMLOutputElement | null>(null);
   const barLabelRef = useRef<HTMLOutputElement | null>(null);
   const timeLabelRef = useRef<HTMLOutputElement | null>(null);
   const dimensionsRef = useRef<MutableViewportDimensions>({
@@ -102,7 +104,7 @@ export function useViewportControls(
           viewport,
           dimensionsRef.current.width,
           dimensionsRef.current.height,
-          getProjectDurationTicks(
+          getActiveClipDurationTicks(
             currentScene.projectStore.getState(),
           ),
         ),
@@ -122,71 +124,85 @@ export function useViewportControls(
       width: number,
       stageHeight: number,
     ): void => {
+      const safeWidth = Math.max(1, width);
       const height = Math.max(
         1,
         stageHeight - TIMELINE_HEADER_HEIGHT_CSS_PIXELS,
       );
 
-      dimensionsRef.current.width = width;
+      dimensionsRef.current.width = safeWidth;
       dimensionsRef.current.height = height;
 
       const currentScene = sceneRef.current;
 
       if (currentScene !== null) {
         const viewport = currentScene.viewport.get();
-        const totalTicks = getProjectDurationTicks(
+        const totalTicks = getActiveClipDurationTicks(
           currentScene.projectStore.getState(),
         );
-        const maximumVerticalScroll = getMaximumVerticalScroll(
+        const nextViewport = constrainViewportToContent(
           viewport,
+          safeWidth,
+          height,
+          totalTicks,
+        );
+        const maximumVerticalScroll = getMaximumVerticalScroll(
+          nextViewport,
           height,
         );
-        const scrollY = Math.min(
-          maximumVerticalScroll,
-          viewport.scrollY,
-        );
         const maximumHorizontalScroll =
-          getMaximumHorizontalScroll(viewport, width, totalTicks);
-        const scrollX = Math.min(
-          maximumHorizontalScroll,
-          viewport.scrollX,
-        );
-        const nextViewport: ViewportState = {
-          ...viewport,
-          scrollX,
-          scrollY,
-        };
+          getMaximumHorizontalScroll(
+            nextViewport,
+            safeWidth,
+            totalTicks,
+          );
+
+        if (zoomInputRef.current !== null) {
+          zoomInputRef.current.min = String(
+            getMinimumHorizontalZoom(
+              safeWidth,
+              totalTicks,
+              nextViewport.ticksPerPixel,
+            ),
+          );
+          zoomInputRef.current.value = String(nextViewport.zoomX);
+        }
+
+        if (pitchZoomInputRef.current !== null) {
+          pitchZoomInputRef.current.min = String(
+            getMinimumVerticalZoom(
+              height,
+              nextViewport.pitchHeight,
+            ),
+          );
+          pitchZoomInputRef.current.value = String(nextViewport.zoomY);
+        }
 
         if (pitchScrollInputRef.current !== null) {
           pitchScrollInputRef.current.max = String(
             maximumVerticalScroll,
           );
-          pitchScrollInputRef.current.value = String(scrollY);
+          pitchScrollInputRef.current.value = String(
+            nextViewport.scrollY,
+          );
         }
 
         if (scrollInputRef.current !== null) {
           scrollInputRef.current.max = String(
             maximumHorizontalScroll,
           );
-          scrollInputRef.current.value = String(scrollX);
-          scrollInputRef.current.step = String(
-            getHorizontalScrollStep(
-              viewport,
-              currentScene.gridResolutionTicks.get(),
-            ),
+          scrollInputRef.current.value = String(
+            nextViewport.scrollX,
           );
         }
 
-        if (
-          scrollX !== viewport.scrollX
-          || scrollY !== viewport.scrollY
-        ) {
+        if (!areViewportsEqual(nextViewport, viewport)) {
           publishViewport(nextViewport);
         } else {
           currentScene.visibleRegion.set(
             calculateVisibleRegion(
               nextViewport,
-              width,
+              safeWidth,
               height,
               totalTicks,
             ),
@@ -226,29 +242,18 @@ export function useViewportControls(
       }
 
       const state = currentScene.projectStore.getState();
-      const totalTicks = getProjectDurationTicks(state);
+      const totalTicks = getActiveClipDurationTicks(state);
       const viewport = currentScene.viewport.get();
-      const maximumHorizontalScroll =
-        getMaximumHorizontalScroll(
-          viewport,
-          dimensionsRef.current.width,
-          totalTicks,
-        );
-      const scrollX = Math.min(
-        maximumHorizontalScroll,
-        viewport.scrollX,
+      const nextViewport = constrainViewportToContent(
+        viewport,
+        dimensionsRef.current.width,
+        dimensionsRef.current.height,
+        totalTicks,
       );
 
       if (appShellRef.current !== null) {
         appShellRef.current.dataset["projectRevision"] =
           String(state.revision);
-      }
-
-      if (scrollInputRef.current !== null) {
-        scrollInputRef.current.max = String(
-          maximumHorizontalScroll,
-        );
-        scrollInputRef.current.value = String(scrollX);
       }
 
       const currentPlayheadTick = currentScene.playheadTick.get();
@@ -257,15 +262,12 @@ export function useViewportControls(
         seekPlayback(totalTicks);
       }
 
-      if (scrollX !== viewport.scrollX) {
-        publishViewport({
-          ...viewport,
-          scrollX,
-        });
+      if (!areViewportsEqual(nextViewport, viewport)) {
+        publishViewport(nextViewport);
       } else {
         const visibleRegion = currentScene.visibleRegion.get();
         const nextVisibleRegion = calculateVisibleRegion(
-          viewport,
+          nextViewport,
           dimensionsRef.current.width,
           dimensionsRef.current.height,
           totalTicks,
@@ -300,8 +302,9 @@ export function useViewportControls(
       }
 
       const playheadTick = scene.playheadTick.get();
-      const transport =
-        scene.projectStore.getState().transportSettings;
+      const transport = getActiveClip(
+        scene.projectStore.getState(),
+      ).transportSettings;
 
       barLabelRef.current.value = formatMusicalPosition(
         playheadTick,
@@ -336,26 +339,24 @@ export function useViewportControls(
   useEffect(() => {
     const syncViewportControls = (): void => {
       const viewport = scene.viewport.get();
-      const totalTicks = getProjectDurationTicks(
+      const totalTicks = getActiveClipDurationTicks(
         scene.projectStore.getState(),
+      );
+      const nextViewport = constrainViewportToContent(
+        viewport,
+        dimensionsRef.current.width,
+        dimensionsRef.current.height,
+        totalTicks,
       );
       const maximumHorizontalScroll =
         getMaximumHorizontalScroll(
-          viewport,
+          nextViewport,
           dimensionsRef.current.width,
           totalTicks,
         );
       const maximumVerticalScroll = getMaximumVerticalScroll(
-        viewport,
+        nextViewport,
         dimensionsRef.current.height,
-      );
-      const scrollX = Math.min(
-        maximumHorizontalScroll,
-        viewport.scrollX,
-      );
-      const scrollY = Math.min(
-        maximumVerticalScroll,
-        viewport.scrollY,
       );
 
       if (scrollInputRef.current !== null) {
@@ -363,18 +364,19 @@ export function useViewportControls(
           maximumHorizontalScroll,
         );
         scrollInputRef.current.value = String(
-          scrollX,
-        );
-        scrollInputRef.current.step = String(
-          getHorizontalScrollStep(
-            viewport,
-            scene.gridResolutionTicks.get(),
-          ),
+          nextViewport.scrollX,
         );
       }
 
       if (zoomInputRef.current !== null) {
-        zoomInputRef.current.value = String(viewport.zoomX);
+        zoomInputRef.current.min = String(
+          getMinimumHorizontalZoom(
+            dimensionsRef.current.width,
+            totalTicks,
+            nextViewport.ticksPerPixel,
+          ),
+        );
+        zoomInputRef.current.value = String(nextViewport.zoomX);
       }
 
       if (pitchScrollInputRef.current !== null) {
@@ -382,35 +384,41 @@ export function useViewportControls(
           maximumVerticalScroll,
         );
         pitchScrollInputRef.current.value = String(
-          scrollY,
+          nextViewport.scrollY,
         );
       }
 
       if (pitchZoomInputRef.current !== null) {
-        pitchZoomInputRef.current.value = String(
-          viewport.zoomY,
+        pitchZoomInputRef.current.min = String(
+          getMinimumVerticalZoom(
+            dimensionsRef.current.height,
+            nextViewport.pitchHeight,
+          ),
         );
-      }
-
-      if (zoomLabelRef.current !== null) {
-        zoomLabelRef.current.value =
-          `${Math.round(viewport.zoomX * 100)}%`;
-      }
-
-      if (pitchZoomLabelRef.current !== null) {
-        pitchZoomLabelRef.current.value =
-          `${Math.round(viewport.zoomY * 100)}%`;
+        pitchZoomInputRef.current.value = String(nextViewport.zoomY);
       }
 
       if (
-        scrollX !== viewport.scrollX
-        || scrollY !== viewport.scrollY
+        !areViewportsEqual(nextViewport, viewport)
       ) {
-        publishViewport({
-          ...viewport,
-          scrollX,
-          scrollY,
-        });
+        publishViewport(nextViewport);
+      } else {
+        const currentRegion = scene.visibleRegion.get();
+        const nextRegion = calculateVisibleRegion(
+          nextViewport,
+          dimensionsRef.current.width,
+          dimensionsRef.current.height,
+          totalTicks,
+        );
+
+        if (
+          nextRegion.startTick !== currentRegion.startTick
+          || nextRegion.endTick !== currentRegion.endTick
+          || nextRegion.minPitch !== currentRegion.minPitch
+          || nextRegion.maxPitch !== currentRegion.maxPitch
+        ) {
+          scene.visibleRegion.set(nextRegion);
+        }
       }
     };
     const unsubscribe = scene.viewport.subscribe(
@@ -444,24 +452,34 @@ export function useViewportControls(
 
       const viewport = currentScene.viewport.get();
       const viewportWidth = dimensionsRef.current.width;
+      const totalTicks = getActiveClipDurationTicks(
+        currentScene.projectStore.getState(),
+      );
+      const constrainedZoomX = clamp(
+        zoomX,
+        getMinimumHorizontalZoom(
+          viewportWidth,
+          totalTicks,
+          viewport.ticksPerPixel,
+        ),
+        VIEWPORT_CONSTANTS.maximumHorizontalZoom,
+      );
       const currentPixelsPerTick =
         viewport.zoomX / viewport.ticksPerPixel;
       const nextPixelsPerTick =
-        zoomX / viewport.ticksPerPixel;
+        constrainedZoomX / viewport.ticksPerPixel;
       const centerTick =
         (viewport.scrollX + viewportWidth / 2)
         / currentPixelsPerTick;
       const nextViewport: ViewportState = {
         ...viewport,
-        zoomX,
+        zoomX: constrainedZoomX,
         scrollX: 0,
       };
       const maximumScroll = getMaximumHorizontalScroll(
         nextViewport,
         viewportWidth,
-        getProjectDurationTicks(
-          currentScene.projectStore.getState(),
-        ),
+        totalTicks,
       );
       const scrollX = Math.min(
         maximumScroll,
@@ -479,16 +497,6 @@ export function useViewportControls(
       if (scrollInputRef.current !== null) {
         scrollInputRef.current.max = String(maximumScroll);
         scrollInputRef.current.value = String(scrollX);
-        scrollInputRef.current.step = String(
-          getHorizontalScrollStep(
-            nextViewport,
-            currentScene.gridResolutionTicks.get(),
-          ),
-        );
-      }
-
-      if (zoomLabelRef.current !== null) {
-        zoomLabelRef.current.value = `${Math.round(zoomX * 100)}%`;
       }
 
     },
@@ -507,7 +515,7 @@ export function useViewportControls(
       const maximumScroll = getMaximumHorizontalScroll(
         viewport,
         dimensionsRef.current.width,
-        getProjectDurationTicks(
+        getActiveClipDurationTicks(
           currentScene.projectStore.getState(),
         ),
       );
@@ -560,9 +568,18 @@ export function useViewportControls(
 
       const viewport = currentScene.viewport.get();
       const viewportHeight = dimensionsRef.current.height;
+      const constrainedZoomY = clamp(
+        zoomY,
+        getMinimumVerticalZoom(
+          viewportHeight,
+          viewport.pitchHeight,
+        ),
+        VIEWPORT_CONSTANTS.maximumVerticalZoom,
+      );
       const currentPitchHeight =
         viewport.pitchHeight * viewport.zoomY;
-      const nextPitchHeight = viewport.pitchHeight * zoomY;
+      const nextPitchHeight =
+        viewport.pitchHeight * constrainedZoomY;
       const centerRow =
         (viewport.scrollY + viewportHeight / 2)
         / currentPitchHeight;
@@ -584,7 +601,7 @@ export function useViewportControls(
 
       publishViewport({
         ...viewport,
-        zoomY,
+        zoomY: constrainedZoomY,
         scrollY,
       });
 
@@ -593,10 +610,6 @@ export function useViewportControls(
         pitchScrollInputRef.current.value = String(scrollY);
       }
 
-      if (pitchZoomLabelRef.current !== null) {
-        pitchZoomLabelRef.current.value =
-          `${Math.round(zoomY * 100)}%`;
-      }
     },
     [publishViewport],
   );
@@ -773,24 +786,14 @@ export function useViewportControls(
 
   const restoreViewport = useCallback(
     (viewport: ViewportState, totalTicks: number): void => {
-      publishViewport({
-        ...viewport,
-        scrollX: Math.min(
-          viewport.scrollX,
-          getMaximumHorizontalScroll(
-            viewport,
-            dimensionsRef.current.width,
-            totalTicks,
-          ),
+      publishViewport(
+        constrainViewportToContent(
+          viewport,
+          dimensionsRef.current.width,
+          dimensionsRef.current.height,
+          totalTicks,
         ),
-        scrollY: Math.min(
-          viewport.scrollY,
-          getMaximumVerticalScroll(
-            viewport,
-            dimensionsRef.current.height,
-          ),
-        ),
-      });
+      );
     },
     [publishViewport],
   );
@@ -802,35 +805,11 @@ export function useViewportControls(
     horizontalScrollInputRef: scrollInputRef,
     verticalScrollInputRef: pitchScrollInputRef,
     verticalZoomInputRef: pitchZoomInputRef,
-    horizontalZoomLabelRef: zoomLabelRef,
-    verticalZoomLabelRef: pitchZoomLabelRef,
     timelinePositionRef: barLabelRef,
     timelineTimeRef: timeLabelRef,
     publishViewport,
     restoreViewport,
   };
-}
-
-function getMaximumHorizontalScroll(
-  viewport: ViewportState,
-  viewportWidth: number,
-  totalTicks: number,
-): number {
-  const contentWidth =
-    totalTicks * viewport.zoomX / viewport.ticksPerPixel;
-
-  return Math.max(0, contentWidth - viewportWidth);
-}
-
-function getHorizontalScrollStep(
-  viewport: ViewportState,
-  gridResolutionTicks: number,
-): number {
-  return (
-    gridResolutionTicks
-    * viewport.zoomX
-    / viewport.ticksPerPixel
-  );
 }
 
 function formatMusicalPosition(
@@ -873,16 +852,23 @@ function formatElapsedTime(
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-function getMaximumVerticalScroll(
-  viewport: ViewportState,
-  viewportHeight: number,
+function areViewportsEqual(
+  first: ViewportState,
+  second: ViewportState,
+): boolean {
+  return first.zoomX === second.zoomX
+    && first.zoomY === second.zoomY
+    && first.scrollX === second.scrollX
+    && first.scrollY === second.scrollY
+    && first.pitchHeight === second.pitchHeight
+    && first.ticksPerPixel === second.ticksPerPixel
+    && first.devicePixelRatio === second.devicePixelRatio;
+}
+
+function clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
 ): number {
-  return Math.max(
-    0,
-    (
-      VIEWPORT_CONSTANTS.maximumMidiPitch
-      - VIEWPORT_CONSTANTS.minimumMidiPitch
-      + 1
-    ) * viewport.pitchHeight * viewport.zoomY - viewportHeight,
-  );
+  return Math.min(maximum, Math.max(minimum, value));
 }

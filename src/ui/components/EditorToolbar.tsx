@@ -13,17 +13,22 @@ import type {
 import type {
   SelectionMode,
 } from "../../interaction/core/state";
+import type {
+  NoteColorMode,
+} from "../rendering/note-style";
 
 export interface EditorToolbarProps {
   readonly inspectorOpen: boolean;
+  readonly inspectorSection: "voices" | "clips";
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly measureCount: number;
   readonly selectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
+  readonly noteColorMode: NoteColorMode;
   readonly selectedVoice: Pick<Voice, "color" | "locked"> | undefined;
-  readonly onToggleInspector: () => void;
+  readonly onToggleInspector: (section: "voices" | "clips") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onInsertMeasure: () => void;
@@ -33,6 +38,7 @@ export interface EditorToolbarProps {
   readonly onCut: () => void;
   readonly onPaste: () => void;
   readonly onSelectionModeChange: (mode: SelectionMode) => void;
+  readonly onNoteColorModeToggle: () => void;
   readonly onTransferSelectionToVoice: () => void;
   readonly onSliceSelectionAtPlayhead: () => void;
   readonly onTransformSelection: (
@@ -43,12 +49,14 @@ export interface EditorToolbarProps {
 
 export function EditorToolbar({
   inspectorOpen: generalInspectorOpen,
+  inspectorSection,
   canUndo,
   canRedo,
   measureCount,
   selectionAvailable,
   clipboardAvailable,
   selectionMode,
+  noteColorMode,
   selectedVoice,
   onToggleInspector,
   onUndo,
@@ -60,6 +68,7 @@ export function EditorToolbar({
   onCut,
   onPaste,
   onSelectionModeChange,
+  onNoteColorModeToggle,
   onTransferSelectionToVoice,
   onSliceSelectionAtPlayhead,
   onTransformSelection,
@@ -67,20 +76,39 @@ export function EditorToolbar({
   return (
   <div className="editor-toolbar">
     <div className="editor-toolbar-actions">
-      <button
-        className="general-inspector-toggle-button"
-        type="button"
-        aria-expanded={generalInspectorOpen}
-        aria-controls="general-inspector"
-        onClick={onToggleInspector}
-      >
-        <span className="menu-icon" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-        Voices
-      </button>
+      <div className="inspector-toggle-group">
+        <button
+          className="general-inspector-toggle-button"
+          type="button"
+          aria-expanded={
+            generalInspectorOpen && inspectorSection === "voices"
+          }
+          aria-controls="general-inspector"
+          onClick={() => onToggleInspector("voices")}
+        >
+          <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 8.5h3l2-2.5v12l-2-2.5H5Z" />
+            <path d="M14 8.5c1.5 1 1.5 6 0 7M17 6c3 2.5 3 9.5 0 12" />
+          </svg>
+          Voices
+        </button>
+        <button
+          className="general-inspector-toggle-button"
+          type="button"
+          aria-expanded={
+            generalInspectorOpen && inspectorSection === "clips"
+          }
+          aria-controls="general-inspector"
+          onClick={() => onToggleInspector("clips")}
+        >
+          <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="5" y="5" width="12" height="7" rx="1.5" />
+            <path d="M8 15h11v5H8a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2Z" />
+            <path d="M9 8.5h5M10 17.5h6" />
+          </svg>
+          Clips
+        </button>
+      </div>
       <div
         className="edit-tool-group"
         role="toolbar"
@@ -369,6 +397,29 @@ export function EditorToolbar({
             <path d="M17.5 12h-5M15 9.5 12.5 12l2.5 2.5" />
             <rect x="3" y="15" width="7" height="5" rx="1" />
             <path d="M7 12h3" strokeDasharray="1.5 2" />
+          </svg>
+        </button>
+        <button
+          className={
+            `note-color-toggle${
+              noteColorMode === "voice" ? " is-voice-mode" : ""
+            }`
+          }
+          type="button"
+          title={
+            noteColorMode === "voice"
+              ? "Use pitch colors"
+              : "Use voice colors"
+          }
+          aria-label="Color notes by voice"
+          aria-pressed={noteColorMode === "voice"}
+          onClick={onNoteColorModeToggle}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 2a8 8 0 1 0 0 16h1.2a1.8 1.8 0 0 0 0-3.6h-.6a1.3 1.3 0 0 1 0-2.6H13A5 5 0 0 0 18 7c0-2.8-3.6-5-8-5Z" />
+            <circle cx="6" cy="7" r="1" />
+            <circle cx="9.5" cy="5" r="1" />
+            <circle cx="13" cy="6.5" r="1" />
           </svg>
         </button>
       </div>

@@ -64,7 +64,6 @@ export interface ProjectFileWorkflow {
     project: ProjectState,
     metadata: NativeProjectFileMetadata,
     label: string,
-    playheadTick: number,
     editorState: NativeEditorState,
   ) => void;
 }
@@ -94,7 +93,6 @@ export function useProjectFileWorkflow({
       project: ProjectState,
       metadata: NativeProjectFileMetadata,
       label: string,
-      playheadTick: number,
       restoredEditorState: NativeEditorState,
     ): void => {
       stopPlayback();
@@ -103,15 +101,28 @@ export function useProjectFileWorkflow({
       clearPendingMidiImport();
       onSelectionCleared();
       runtime.selectionRequests.clear();
-      runtime.gridSettings.set(restoredEditorState.gridSettings);
       runtime.noteColorMode.set(restoredEditorState.noteColorMode);
-      runtime.pitchSnapSettings.set(
-        restoredEditorState.pitchSnapSettings,
-      );
       metadataRef.current = metadata;
       runtime.projectStore.replaceState(project, label);
+      const viewportBase = runtime.viewport.get();
+      const clipRuntimeStates = Object.fromEntries(
+        Object.entries(restoredEditorState.clipStatesById).map(
+          ([clipId, clipState]) => [
+            clipId,
+            {
+              ...clipState,
+              viewport: {
+                ...viewportBase,
+                ...clipState.viewport,
+              },
+            },
+          ],
+        ),
+      );
+
+      runtime.restoreClipEditorStates(clipRuntimeStates);
       onEditorStateRestored(project, restoredEditorState);
-      seekPlayback(playheadTick);
+      seekPlayback(runtime.playheadTick.get());
     },
     [
       clearClipboard,
@@ -134,16 +145,8 @@ export function useProjectFileWorkflow({
         savedAt: new Date().toISOString(),
       };
       const state = runtime.projectStore.getState();
-      const stateForSave: ProjectState = {
-        ...state,
-        transportSettings: {
-          ...state.transportSettings,
-          anchorTick: Math.round(runtime.playheadTick.get()),
-          anchorAudioTimeSeconds: null,
-        },
-      };
       const serialized = serializeNativeProjectFile(
-        stateForSave,
+        state,
         metadata,
         getEditorState(),
       );
@@ -192,7 +195,6 @@ export function useProjectFileWorkflow({
           project,
           createNativeProjectFileMetadata(),
           "Create project",
-          0,
           createDefaultNativeEditorState(project),
         );
       },
@@ -232,7 +234,6 @@ export function useProjectFileWorkflow({
           loadedProject.projectState,
           loadedProject.metadata,
           "Load project",
-          loadedProject.projectState.transportSettings.anchorTick,
           loadedProject.editorState,
         );
       } catch (error: unknown) {

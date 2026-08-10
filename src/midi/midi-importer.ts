@@ -6,7 +6,9 @@ import {
 } from "../config/program-constants";
 import type {
   Note,
+  Clip,
   ProjectState,
+  Track,
   TimeSignature,
   Voice,
   VoiceId,
@@ -14,6 +16,7 @@ import type {
 import {
   createDefaultMasterBusState,
   createDefaultTransportState,
+  getActiveClip,
   getTicksPerMeasure,
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
@@ -480,7 +483,7 @@ export function createProjectFromMidiImport(
       ? analysis.voiceCandidates
       : [createEmptyVoiceCandidate()];
   const voicesById: Record<VoiceId, Voice> = {};
-  const tracksByVoiceId: ProjectState["tracksByVoiceId"] = {};
+  const tracksByVoiceId: Record<VoiceId, Track> = {};
   const mutableTracks: Record<
     VoiceId,
     {
@@ -562,13 +565,11 @@ export function createProjectFromMidiImport(
   }
 
   const projectDurationTicks = measureCount * ticksPerMeasure;
-  const projectState: ProjectState = {
-    schemaVersion: PROJECT_SCHEMA_VERSION,
-    revision: 0,
-    title: analysis.title,
+  const clipId = "clip-imported";
+  const clip: Clip = {
+    id: clipId,
+    name: "Imported Clip",
     measureCount,
-    voicesById,
-    voiceOrder,
     tracksByVoiceId,
     transportSettings: {
       ...transport,
@@ -583,6 +584,18 @@ export function createProjectFromMidiImport(
       anchorTick: 0,
       anchorAudioTimeSeconds: null,
     },
+  };
+  const projectState: ProjectState = {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    revision: 0,
+    title: analysis.title,
+    voicesById,
+    voiceOrder,
+    clipsById: {
+      [clipId]: clip,
+    },
+    clipOrder: [clipId],
+    activeClipId: clipId,
     masterBus: createDefaultMasterBusState(),
   };
 
@@ -1402,16 +1415,18 @@ function appendCountWarning(
 }
 
 function assertImportedProjectState(state: ProjectState): void {
+  const activeClip = getActiveClip(state);
   const globalNoteIds = new Set<string>();
   const orderedVoiceIds = new Set<VoiceId>();
   let noteCount = 0;
   const projectDurationTicks =
-    state.measureCount * getTicksPerMeasure(state.transportSettings);
+    activeClip.measureCount
+    * getTicksPerMeasure(activeClip.transportSettings);
 
-  assertValidTransportState(state.transportSettings);
+  assertValidTransportState(activeClip.transportSettings);
   assertValidProjectDuration(
-    state.measureCount,
-    state.transportSettings,
+    activeClip.measureCount,
+    activeClip.transportSettings,
   );
 
   if (
@@ -1433,7 +1448,7 @@ function assertImportedProjectState(state: ProjectState): void {
 
     orderedVoiceIds.add(voiceId);
     const voice = state.voicesById[voiceId];
-    const track = state.tracksByVoiceId[voiceId];
+    const track = activeClip.tracksByVoiceId[voiceId];
 
     if (
       voice === undefined
@@ -1524,17 +1539,17 @@ function assertImportedProjectState(state: ProjectState): void {
   }
 
   if (
-    !Number.isFinite(state.transportSettings.bpm)
-    || state.transportSettings.bpm
+    !Number.isFinite(activeClip.transportSettings.bpm)
+    || activeClip.transportSettings.bpm
       < EDITOR_CONSTANTS.tempoMinimumBpm
-    || state.transportSettings.bpm
+    || activeClip.transportSettings.bpm
       > EDITOR_CONSTANTS.tempoMaximumBpm
     || !Number.isSafeInteger(
-      state.transportSettings.timeSignature.numerator,
+      activeClip.transportSettings.timeSignature.numerator,
     )
-    || state.transportSettings.timeSignature.numerator <= 0
+    || activeClip.transportSettings.timeSignature.numerator <= 0
     || !isSupportedTimeSignatureDenominator(
-      state.transportSettings.timeSignature.denominator,
+      activeClip.transportSettings.timeSignature.denominator,
     )
   ) {
     throw new MidiImportError(

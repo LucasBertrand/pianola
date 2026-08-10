@@ -1,5 +1,7 @@
 import type {
   EffectDescriptor,
+  Clip,
+  ClipId,
   GenerativeRuleDescriptor,
   InstrumentConfig,
   LoopRegion,
@@ -15,15 +17,17 @@ import type {
   VoiceInterpretation,
 } from "./model";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
+  MAXIMUM_CLIP_NAME_LENGTH,
+  MAXIMUM_PROJECT_CLIP_COUNT,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_MEASURE_COUNT,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
-  MAXIMUM_PROJECT_NOTE_COUNT,
+  MAXIMUM_CLIP_NOTE_COUNT,
   MAXIMUM_PROJECT_TITLE_LENGTH,
   MAXIMUM_PROJECT_VOICE_COUNT,
 } from "./model";
@@ -98,6 +102,32 @@ export interface InsertMeasureCommand {
 export interface RemoveMeasureCommand {
   readonly type: "RemoveMeasure";
   readonly measureIndex: number;
+}
+
+export interface AddClipCommand {
+  readonly type: "AddClip";
+  readonly clip: Clip;
+}
+
+export interface DeleteClipCommand {
+  readonly type: "DeleteClip";
+  readonly clipId: ClipId;
+}
+
+export interface ReorderClipsCommand {
+  readonly type: "ReorderClips";
+  readonly clipOrder: readonly ClipId[];
+}
+
+export interface RenameClipCommand {
+  readonly type: "RenameClip";
+  readonly clipId: ClipId;
+  readonly name: string;
+}
+
+export interface ActivateClipCommand {
+  readonly type: "ActivateClip";
+  readonly clipId: ClipId;
 }
 
 export interface AppendMeasuresCommand {
@@ -203,6 +233,11 @@ export interface SetLoopEnabledCommand {
 }
 
 export type PianoRollCommand =
+  | AddClipCommand
+  | DeleteClipCommand
+  | ReorderClipsCommand
+  | RenameClipCommand
+  | ActivateClipCommand
   | AddVoiceCommand
   | UpdateVoiceCommand
   | DeleteVoiceCommand
@@ -303,6 +338,16 @@ function applyCommand(
   command: PianoRollCommand,
 ): ProjectState {
   switch (command.type) {
+    case "AddClip":
+      return applyAddClip(state, command);
+    case "DeleteClip":
+      return applyDeleteClip(state, command);
+    case "ReorderClips":
+      return applyReorderClips(state, command);
+    case "RenameClip":
+      return applyRenameClip(state, command);
+    case "ActivateClip":
+      return applyActivateClip(state, command);
     case "AddVoice":
       return applyAddVoice(state, command);
     case "UpdateVoice":
@@ -319,39 +364,395 @@ function applyCommand(
       return applySetMasterMuted(state, command);
     case "UpdateMasterTuning":
       return applyUpdateMasterTuning(state, command);
+    default:
+      return applyActiveClipCommand(state, command);
+  }
+}
+
+type ActiveClipCommand = Exclude<
+  PianoRollCommand,
+  | AddClipCommand
+  | DeleteClipCommand
+  | ReorderClipsCommand
+  | RenameClipCommand
+  | ActivateClipCommand
+  | AddVoiceCommand
+  | UpdateVoiceCommand
+  | DeleteVoiceCommand
+  | ReorderVoicesCommand
+  | UpdateProjectTitleCommand
+  | UpdateMasterGainCommand
+  | SetMasterMutedCommand
+  | UpdateMasterTuningCommand
+>;
+
+type ActiveClipProjectState = Pick<
+  ProjectState,
+  "voicesById" | "voiceOrder"
+> & Pick<
+  Clip,
+  "measureCount" | "tracksByVoiceId" | "transportSettings"
+>;
+
+function applyActiveClipCommand(
+  state: ProjectState,
+  command: ActiveClipCommand,
+): ProjectState {
+  const clip = getActiveClip(state);
+  const context: ActiveClipProjectState = {
+    voicesById: state.voicesById,
+    voiceOrder: state.voiceOrder,
+    measureCount: clip.measureCount,
+    tracksByVoiceId: clip.tracksByVoiceId,
+    transportSettings: clip.transportSettings,
+  };
+  let nextContext: ActiveClipProjectState;
+
+  switch (command.type) {
     case "InsertMeasure":
-      return applyInsertMeasure(state, command);
+      nextContext = applyInsertMeasure(context, command);
+      break;
     case "RemoveMeasure":
-      return applyRemoveMeasure(state, command);
+      nextContext = applyRemoveMeasure(context, command);
+      break;
     case "AppendMeasures":
-      return applyAppendMeasures(state, command);
+      nextContext = applyAppendMeasures(context, command);
+      break;
     case "AddNotes":
-      return applyAddNotes(state, command);
+      nextContext = applyAddNotes(context, command);
+      break;
     case "MoveNotes":
-      return applyMoveNotes(state, command);
+      nextContext = applyMoveNotes(context, command);
+      break;
     case "RepositionNotes":
-      return applyRepositionNotes(state, command);
+      nextContext = applyRepositionNotes(context, command);
+      break;
     case "ResizeNotes":
-      return applyResizeNotes(state, command);
+      nextContext = applyResizeNotes(context, command);
+      break;
     case "TransformNotes":
-      return applyTransformNotes(state, command);
+      nextContext = applyTransformNotes(context, command);
+      break;
     case "SliceNotes":
-      return applySliceNotes(state, command);
+      nextContext = applySliceNotes(context, command);
+      break;
     case "DeleteNotes":
-      return applyDeleteNotes(state, command);
+      nextContext = applyDeleteNotes(context, command);
+      break;
     case "SetNotesEnabled":
-      return applySetNotesEnabled(state, command);
+      nextContext = applySetNotesEnabled(context, command);
+      break;
     case "UpdateTempo":
-      return applyUpdateTempo(state, command);
+      nextContext = applyUpdateTempo(context, command);
+      break;
     case "UpdateTimeSignature":
-      return applyUpdateTimeSignature(state, command);
+      nextContext = applyUpdateTimeSignature(context, command);
+      break;
     case "UpdateLoop":
-      return applyUpdateLoop(state, command);
+      nextContext = applyUpdateLoop(context, command);
+      break;
     case "SetLoopEnabled":
-      return applySetLoopEnabled(state, command);
+      nextContext = applySetLoopEnabled(context, command);
+      break;
     default:
       return assertNever(command);
   }
+
+  if (nextContext === context) {
+    return state;
+  }
+
+  const nextClip: Clip = {
+    ...clip,
+    measureCount: nextContext.measureCount,
+    tracksByVoiceId: nextContext.tracksByVoiceId,
+    transportSettings: nextContext.transportSettings,
+  };
+
+  return {
+    ...state,
+    clipsById: {
+      ...state.clipsById,
+      [clip.id]: nextClip,
+    },
+  };
+}
+
+function applyAddClip(
+  state: ProjectState,
+  command: AddClipCommand,
+): ProjectState {
+  if (state.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_PROJECT_CLIP_COUNT} clips.`,
+      command.type,
+    );
+  }
+
+  if (hasOwn(state.clipsById, command.clip.id)) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.clip.id}" already exists.`,
+      command.type,
+    );
+  }
+
+  assertValidClip(state, command.clip, command.type);
+
+  return {
+    ...state,
+    clipsById: {
+      ...state.clipsById,
+      [command.clip.id]: command.clip,
+    },
+    clipOrder: [...state.clipOrder, command.clip.id],
+    activeClipId: command.clip.id,
+  };
+}
+
+function applyDeleteClip(
+  state: ProjectState,
+  command: DeleteClipCommand,
+): ProjectState {
+  if (state.clipsById[command.clipId] === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.clipId}" does not exist.`,
+      command.type,
+    );
+  }
+
+  if (state.clipOrder.length <= 1) {
+    reject(
+      "INVALID_COMMAND",
+      "A project must contain at least one clip.",
+      command.type,
+    );
+  }
+
+  const removedIndex = state.clipOrder.indexOf(command.clipId);
+  const clipOrder = state.clipOrder.filter(
+    (clipId) => clipId !== command.clipId,
+  );
+  const clipsById = omitRecordKey(state.clipsById, command.clipId);
+  const fallbackIndex = Math.min(removedIndex, clipOrder.length - 1);
+  const activeClipId =
+    state.activeClipId === command.clipId
+      ? clipOrder[fallbackIndex]
+      : state.activeClipId;
+
+  if (activeClipId === undefined) {
+    reject("INVALID_COMMAND", "A clip must remain active.", command.type);
+  }
+
+  return {
+    ...state,
+    clipsById,
+    clipOrder,
+    activeClipId,
+  };
+}
+
+function applyReorderClips(
+  state: ProjectState,
+  command: ReorderClipsCommand,
+): ProjectState {
+  const currentIds = new Set(state.clipOrder);
+  const requestedIds = new Set(command.clipOrder);
+
+  if (
+    requestedIds.size !== command.clipOrder.length
+    || requestedIds.size !== currentIds.size
+    || [...currentIds].some((clipId) => !requestedIds.has(clipId))
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      "Clip order must contain every clip exactly once.",
+      command.type,
+    );
+  }
+
+  return {
+    ...state,
+    clipOrder: [...command.clipOrder],
+  };
+}
+
+function applyRenameClip(
+  state: ProjectState,
+  command: RenameClipCommand,
+): ProjectState {
+  const clip = state.clipsById[command.clipId];
+  const name = command.name.trim();
+
+  if (clip === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.clipId}" does not exist.`,
+      command.type,
+    );
+  }
+
+  if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip name must contain between 1 and ${MAXIMUM_CLIP_NAME_LENGTH} characters.`,
+      command.type,
+    );
+  }
+
+  if (name === clip.name) {
+    return state;
+  }
+
+  return {
+    ...state,
+    clipsById: {
+      ...state.clipsById,
+      [clip.id]: {
+        ...clip,
+        name,
+      },
+    },
+  };
+}
+
+function applyActivateClip(
+  state: ProjectState,
+  command: ActivateClipCommand,
+): ProjectState {
+  if (state.clipsById[command.clipId] === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.clipId}" does not exist.`,
+      command.type,
+    );
+  }
+
+  return command.clipId === state.activeClipId
+    ? state
+    : {
+        ...state,
+        activeClipId: command.clipId,
+      };
+}
+
+function assertValidClip(
+  state: ProjectState,
+  clip: Clip,
+  commandType: PianoRollCommand["type"],
+): void {
+  if (
+    clip.id.length === 0
+    || clip.name.trim().length === 0
+    || clip.name.length > MAXIMUM_CLIP_NAME_LENGTH
+  ) {
+    reject("INVALID_COMMAND", "Clip identity is invalid.", commandType);
+  }
+
+  assertValidProjectDuration(clip.measureCount, clip.transportSettings);
+  assertValidTransportState(clip.transportSettings);
+  const durationTicks =
+    clip.measureCount * getTicksPerMeasure(clip.transportSettings);
+  const trackIds = Object.keys(clip.tracksByVoiceId);
+
+  if (
+    trackIds.length !== state.voiceOrder.length
+    || trackIds.some(
+      (voiceId) => state.voicesById[voiceId] === undefined,
+    )
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${clip.id}" must contain exactly one track per project voice.`,
+      commandType,
+    );
+  }
+
+  if (
+    clip.transportSettings.anchorTick > durationTicks
+    || clip.transportSettings.loop.endTick > durationTicks
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${clip.id}" transport exceeds its duration.`,
+      commandType,
+    );
+  }
+
+  const noteIds = new Set<NoteId>();
+  let noteCount = 0;
+
+  for (const voiceId of state.voiceOrder) {
+    const track = clip.tracksByVoiceId[voiceId];
+
+    if (track === undefined || track.voiceId !== voiceId) {
+      reject(
+        "INVALID_COMMAND",
+        `Clip "${clip.id}" must contain a track for voice "${voiceId}".`,
+        commandType,
+      );
+    }
+
+    const notes = Object.values(track.notesById);
+    noteCount += notes.length;
+    notes.sort(compareNotesForOverlapValidation);
+
+    for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
+      const note = notes[noteIndex];
+
+      if (note === undefined) {
+        continue;
+      }
+
+      assertValidNoteForTrack(note, voiceId);
+
+      if (
+        track.notesById[note.id] !== note
+        || noteIds.has(note.id)
+        || note.startTick + note.durationTicks > durationTicks
+      ) {
+        reject(
+          "INVALID_COMMAND",
+          `Clip "${clip.id}" contains an invalid or duplicate note.`,
+          commandType,
+        );
+      }
+
+      const previousNote = notes[noteIndex - 1];
+
+      if (
+        previousNote !== undefined
+        && notesOverlapInVoice(previousNote, note)
+      ) {
+        reject(
+          "NOTE_OVERLAP",
+          `Clip "${clip.id}" contains overlapping notes.`,
+          commandType,
+        );
+      }
+
+      noteIds.add(note.id);
+    }
+  }
+
+  if (noteCount > MAXIMUM_CLIP_NOTE_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${clip.id}" exceeds the note limit.`,
+      commandType,
+    );
+  }
+}
+
+function compareNotesForOverlapValidation(left: Note, right: Note): number {
+  return (
+    left.pitch - right.pitch
+    || left.startTick - right.startTick
+    || left.durationTicks - right.durationTicks
+    || left.id.localeCompare(right.id)
+  );
 }
 
 function applyAddVoice(
@@ -376,18 +777,35 @@ function applyAddVoice(
     );
   }
 
-  if (hasOwn(state.tracksByVoiceId, command.voice.id)) {
-    reject(
-      "TRACK_ALREADY_EXISTS",
-      `Track "${command.voice.id}" already exists.`,
-      command.type,
-    );
-  }
-
   const track: Track = {
     voiceId: command.voice.id,
     notesById: {},
   };
+  const clipsById: Record<ClipId, Clip> = {};
+
+  for (const clipId of state.clipOrder) {
+    const clip = state.clipsById[clipId];
+
+    if (clip === undefined) {
+      continue;
+    }
+
+    if (hasOwn(clip.tracksByVoiceId, command.voice.id)) {
+      reject(
+        "TRACK_ALREADY_EXISTS",
+        `Track "${command.voice.id}" already exists in clip "${clip.id}".`,
+        command.type,
+      );
+    }
+
+    clipsById[clipId] = {
+      ...clip,
+      tracksByVoiceId: {
+        ...clip.tracksByVoiceId,
+        [command.voice.id]: track,
+      },
+    };
+  }
 
   return {
     ...state,
@@ -396,10 +814,7 @@ function applyAddVoice(
       [command.voice.id]: command.voice,
     },
     voiceOrder: [...state.voiceOrder, command.voice.id],
-    tracksByVoiceId: {
-      ...state.tracksByVoiceId,
-      [command.voice.id]: track,
-    },
+    clipsById,
   };
 }
 
@@ -429,13 +844,23 @@ function applyDeleteVoice(
   command: DeleteVoiceCommand,
 ): ProjectState {
   requireVoice(state, command.voiceId, command.type);
-  requireTrack(state, command.voiceId, command.type);
 
   const voicesById = omitRecordKey(state.voicesById, command.voiceId);
-  const tracksByVoiceId = omitRecordKey(
-    state.tracksByVoiceId,
-    command.voiceId,
-  );
+  const clipsById: Record<ClipId, Clip> = {};
+
+  for (const clipId of state.clipOrder) {
+    const clip = state.clipsById[clipId];
+
+    if (clip !== undefined) {
+      clipsById[clipId] = {
+        ...clip,
+        tracksByVoiceId: omitRecordKey(
+          clip.tracksByVoiceId,
+          command.voiceId,
+        ),
+      };
+    }
+  }
 
   return {
     ...state,
@@ -443,7 +868,7 @@ function applyDeleteVoice(
     voiceOrder: state.voiceOrder.filter(
       (voiceId) => voiceId !== command.voiceId,
     ),
-    tracksByVoiceId,
+    clipsById,
   };
 }
 
@@ -596,9 +1021,9 @@ function applyUpdateMasterTuning(
 }
 
 function applyInsertMeasure(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: InsertMeasureCommand,
-): ProjectState {
+): ActiveClipProjectState {
   assertMeasureIndex(
     command.measureIndex,
     state.measureCount,
@@ -645,9 +1070,9 @@ function applyInsertMeasure(
 }
 
 function applyRemoveMeasure(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: RemoveMeasureCommand,
-): ProjectState {
+): ActiveClipProjectState {
   assertMeasureIndex(
     command.measureIndex,
     state.measureCount,
@@ -690,9 +1115,9 @@ function applyRemoveMeasure(
 }
 
 function applyAppendMeasures(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: AppendMeasuresCommand,
-): ProjectState {
+): ActiveClipProjectState {
   if (!Number.isSafeInteger(command.count) || command.count <= 0) {
     reject(
       "INVALID_COMMAND",
@@ -720,9 +1145,9 @@ function applyAppendMeasures(
 }
 
 function applyAddNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: AddNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
   assertVoiceEditable(state, command.trackVoiceId, command.type);
   const commandNoteIds = new Set<NoteId>();
@@ -730,11 +1155,11 @@ function applyAddNotes(
 
   if (
     command.notes.length
-    > MAXIMUM_PROJECT_NOTE_COUNT - countProjectNotes(state)
+    > MAXIMUM_CLIP_NOTE_COUNT - countClipNotes(state)
   ) {
     reject(
       "INVALID_COMMAND",
-      `A project cannot contain more than ${MAXIMUM_PROJECT_NOTE_COUNT} notes.`,
+      `A clip cannot contain more than ${MAXIMUM_CLIP_NOTE_COUNT} notes.`,
       command.type,
     );
   }
@@ -818,9 +1243,9 @@ function applyAddNotes(
 }
 
 function applyMoveNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: MoveNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   if (
     !Number.isSafeInteger(command.deltaTicks)
     || !Number.isInteger(command.deltaPitch)
@@ -987,9 +1412,9 @@ function applyMoveNotes(
 }
 
 function applyRepositionNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: RepositionNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(
     state,
     command.trackVoiceId,
@@ -1116,9 +1541,9 @@ function applyRepositionNotes(
 }
 
 function applyResizeNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: ResizeNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
   assertVoiceEditable(state, command.trackVoiceId, command.type);
   const changedNoteIds = new Set<NoteId>();
@@ -1212,9 +1637,9 @@ function applyResizeNotes(
 }
 
 function applyTransformNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: TransformNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
   assertVoiceEditable(state, command.trackVoiceId, command.type);
   const changedNoteIds = new Set<NoteId>();
@@ -1330,9 +1755,9 @@ function applyTransformNotes(
 }
 
 function applySliceNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: SliceNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
   assertVoiceEditable(state, command.trackVoiceId, command.type);
 
@@ -1346,11 +1771,11 @@ function applySliceNotes(
 
   if (
     command.slices.length
-    > MAXIMUM_PROJECT_NOTE_COUNT - countProjectNotes(state)
+    > MAXIMUM_CLIP_NOTE_COUNT - countClipNotes(state)
   ) {
     reject(
       "INVALID_COMMAND",
-      `A project cannot contain more than ${MAXIMUM_PROJECT_NOTE_COUNT} notes.`,
+      `A clip cannot contain more than ${MAXIMUM_CLIP_NOTE_COUNT} notes.`,
       command.type,
     );
   }
@@ -1443,9 +1868,9 @@ function applySliceNotes(
 }
 
 function applyDeleteNotes(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: DeleteNotesCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
   assertVoiceEditable(state, command.trackVoiceId, command.type);
   assertUniqueNoteIds(command.noteIds, command.type);
@@ -1473,9 +1898,9 @@ function applyDeleteNotes(
 }
 
 function applySetNotesEnabled(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: SetNotesEnabledCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const track = requireTrack(state, command.trackVoiceId, command.type);
 
   assertVoiceEditable(state, command.trackVoiceId, command.type);
@@ -1521,9 +1946,9 @@ function applySetNotesEnabled(
 }
 
 function applyUpdateTempo(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: UpdateTempoCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const transportSettings = {
     ...state.transportSettings,
     bpm: command.bpm,
@@ -1543,9 +1968,9 @@ function applyUpdateTempo(
 }
 
 function applyUpdateTimeSignature(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: UpdateTimeSignatureCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const transportSettings = {
     ...state.transportSettings,
     timeSignature: command.timeSignature,
@@ -1570,9 +1995,9 @@ function applyUpdateTimeSignature(
 }
 
 function applyUpdateLoop(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: UpdateLoopCommand,
-): ProjectState {
+): ActiveClipProjectState {
   const transportSettings = {
     ...state.transportSettings,
     loop: command.loop,
@@ -1599,9 +2024,9 @@ function applyUpdateLoop(
 }
 
 function applySetLoopEnabled(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   command: SetLoopEnabledCommand,
-): ProjectState {
+): ActiveClipProjectState {
   if (typeof command.enabled !== "boolean") {
     reject(
       "INVALID_COMMAND",
@@ -1624,10 +2049,10 @@ function applySetLoopEnabled(
 }
 
 function transformTracksForInsertedTime(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   insertionTick: number,
   insertedTicks: number,
-): ProjectState["tracksByVoiceId"] {
+): Clip["tracksByVoiceId"] {
   let tracksByVoiceId = state.tracksByVoiceId;
 
   for (
@@ -1706,10 +2131,10 @@ function transformTracksForInsertedTime(
 }
 
 function transformTracksForRemovedTime(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   removalStartTick: number,
   removalEndTick: number,
-): ProjectState["tracksByVoiceId"] {
+): Clip["tracksByVoiceId"] {
   let tracksByVoiceId = state.tracksByVoiceId;
 
   for (
@@ -1922,7 +2347,10 @@ function assertMeasureIndex(
   }
 }
 
-function replaceTrack(state: ProjectState, track: Track): ProjectState {
+function replaceTrack(
+  state: ActiveClipProjectState,
+  track: Track,
+): ActiveClipProjectState {
   return {
     ...state,
     tracksByVoiceId: {
@@ -1933,11 +2361,11 @@ function replaceTrack(state: ProjectState, track: Track): ProjectState {
 }
 
 function assertNoteWithinProject(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   note: Note,
   commandType: PianoRollCommand["type"],
 ): void {
-  const projectDurationTicks = getProjectDurationTicks(state);
+  const projectDurationTicks = getClipContextDurationTicks(state);
 
   if (
     note.startTick + note.durationTicks
@@ -1945,7 +2373,7 @@ function assertNoteWithinProject(
   ) {
     reject(
       "INVALID_COMMAND",
-      `Note "${note.id}" exceeds the project duration.`,
+      `Note "${note.id}" exceeds the clip duration.`,
       commandType,
     );
   }
@@ -1962,10 +2390,16 @@ function notesOverlapInVoice(left: Note, right: Note): boolean {
   );
 }
 
+function getClipContextDurationTicks(
+  state: ActiveClipProjectState,
+): number {
+  return state.measureCount * getTicksPerMeasure(state.transportSettings);
+}
+
 function trimProjectToDuration(
-  state: ProjectState,
-): ProjectState {
-  const projectDurationTicks = getProjectDurationTicks(state);
+  state: ActiveClipProjectState,
+): ActiveClipProjectState {
+  const projectDurationTicks = getClipContextDurationTicks(state);
   let tracksByVoiceId = state.tracksByVoiceId;
   let tracksChanged = false;
 
@@ -2058,7 +2492,7 @@ function trimProjectToDuration(
 }
 
 function requireVoice(
-  state: ProjectState,
+  state: Pick<ProjectState, "voicesById">,
   voiceId: VoiceId,
   commandType: PianoRollCommand["type"],
 ): Voice {
@@ -2076,7 +2510,7 @@ function requireVoice(
 }
 
 function requireTrack(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   voiceId: VoiceId,
   commandType: PianoRollCommand["type"],
 ): Track {
@@ -2094,7 +2528,7 @@ function requireTrack(
 }
 
 function assertVoiceEditable(
-  state: ProjectState,
+  state: Pick<ProjectState, "voicesById">,
   voiceId: VoiceId,
   commandType: PianoRollCommand["type"],
 ): void {
@@ -2128,7 +2562,7 @@ function requireNote(
 }
 
 function findNoteVoiceId(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   noteId: NoteId,
 ): VoiceId | undefined {
   for (const voiceId in state.tracksByVoiceId) {
@@ -2145,7 +2579,7 @@ function findNoteVoiceId(
   return undefined;
 }
 
-function countProjectNotes(state: ProjectState): number {
+function countClipNotes(state: ActiveClipProjectState): number {
   let noteCount = 0;
 
   for (const voiceId in state.tracksByVoiceId) {
@@ -2160,7 +2594,7 @@ function countProjectNotes(state: ProjectState): number {
 }
 
 function assertTransportWithinProjectDuration(
-  state: ProjectState,
+  state: ActiveClipProjectState,
   transport: TransportState,
   commandType: PianoRollCommand["type"],
 ): void {
@@ -2171,7 +2605,7 @@ function assertTransportWithinProjectDuration(
   if (transport.anchorTick > projectDurationTicks) {
     reject(
       "INVALID_COMMAND",
-      "Transport anchor cannot exceed the project duration.",
+      "Transport anchor cannot exceed the clip duration.",
       commandType,
     );
   }
@@ -2179,7 +2613,7 @@ function assertTransportWithinProjectDuration(
   if (transport.loop.endTick > projectDurationTicks) {
     reject(
       "INVALID_COMMAND",
-      "Loop region cannot exceed the project duration.",
+      "Loop region cannot exceed the clip duration.",
       commandType,
     );
   }

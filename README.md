@@ -48,7 +48,7 @@ Firefox Android et un navigateur desktop.
 
 ## Fonctionnalités principales
 
-- modèle de projet immuable organisé par voix ;
+- modèle de projet immuable organisé en clips partageant les mêmes voix ;
 - commandes atomiques avec Undo/Redo ;
 - édition tactile des notes : sélection, lasso, déplacement, resize, dessin
   par appui long et suppression ;
@@ -56,6 +56,7 @@ Firefox Android et un navigateur desktop.
 - magnétisme temporel et magnétisme tonal par gamme ou accord ;
 - résolution des collisions par annulation, fusion ou découpe aux ancres ;
 - voix configurables : nom, couleur, ordre, volume, mute, solo et verrouillage ;
+- clips configurables : sélection, nom, ordre, ajout et suppression ;
 - synthétiseur soustractif par voix avec forme d’onde, enveloppe ADSR et
   polyphonie de 1 à 16 notes ;
 - moteur audio Web Audio avec scheduler lookahead et vol de la voix la plus
@@ -134,14 +135,18 @@ fluidité ; une seule transaction est envoyée lorsque le geste est validé.
 
 ### Domaine et historique
 
-`src/domain/model.ts` décrit `ProjectState`, les voix, les pistes, les notes,
-le transport et le master bus. Les propriétés persistantes sont en lecture
-seule. `src/domain/commands.ts` est l’unique chemin normal pour modifier le
-projet. Le reducer valide les invariants et renvoie un nouvel état.
+`src/domain/model.ts` sépare les données globales de `ProjectState` des données
+locales de chaque `Clip`. Les voix et le master bus sont globaux. Chaque clip,
+identifié par un ID stable, possède ses pistes de notes, sa longueur et son
+transport. Les propriétés persistantes sont en lecture seule.
+`src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
+Le reducer applique les commandes musicales au seul clip actif, tandis que la
+création ou la suppression d’une voix met à jour les pistes de tous les clips.
 
-`src/domain/project-store.ts` conserve des snapshots bornés pour Undo/Redo.
-Une transaction utilisateur correspond à une étape d’historique, y compris
-une résolution de collision complexe.
+`src/domain/project-store.ts` conserve un historique global de snapshots
+bornés pour Undo/Redo. Il peut donc annuler une action réalisée dans n’importe
+quel clip. La simple navigation entre clips ne crée pas d’entrée d’historique
+et Undo/Redo conserve le clip actuellement affiché lorsqu’il existe encore.
 
 ### Rendu et interactions
 
@@ -430,6 +435,23 @@ Undo/Redo se trouvent à côté. Le titre du projet est éditable dans le header
 Save télécharge un fichier `.pianola`. Il n’existe pas encore d’auto-save ni de
 stockage dans le navigateur.
 
+### Clips
+
+La grille principale affiche uniquement le clip sélectionné dans l’inspecteur.
+La section **Clips** reprend les interactions de la liste des voix :
+
+- `+` crée un clip vide et le sélectionne ;
+- les flèches changent sa position dans la liste ;
+- un appui long sur son nom active le renommage ;
+- la croix supprime le clip après confirmation ; le dernier clip ne peut pas
+  être supprimé.
+
+Les voix, leurs instruments, mute/solo/lock, le master bus et le presse-papier
+sont partagés par tout le projet. Les notes, la longueur, le tempo, la
+métrique, la grille, la tonalité, la boucle, la tête de lecture, le scroll et
+le zoom sont propres à chaque clip. Changer de clip vide la sélection de notes,
+mais conserve le presse-papier afin de permettre un copier-coller entre clips.
+
 ### Notes
 
 - Tap sur une note : sélection.
@@ -484,20 +506,21 @@ Le transport contrôle lecture, pause, stop et retour au début. Le ruler
 positionne la tête de lecture avec snap. Deux drapeaux définissent la région de
 boucle. Ses lignes restent visibles en gris quand elle est inactive.
 
-L’ajout ou la suppression de mesures transforme les données temporelles des
-notes. La boucle ne change que si elle doit être bornée à la nouvelle durée du
-projet.
+L’ajout ou la suppression de mesures transforme uniquement les données
+temporelles du clip actif. Sa boucle ne change que si elle doit être bornée à
+la nouvelle durée du clip.
 
 ## Formats de fichiers
 
 ### Format natif `.pianola`
 
-Le format natif conserve le projet, les voix, les notes, les instruments, le
-master bus, le transport, la boucle et les métadonnées de document. Il restaure
-également le contexte de l’éditeur : voix active, grille, snap tonal, guide
-visuel, preview clavier, mode de sélection, coloration des notes, zoom et
-position de la vue. Les états temporaires comme une sélection de notes ou une
-modale ouverte ne sont volontairement pas sauvegardés.
+Le format natif conserve la liste ordonnée des clips, le clip actif, les voix,
+les notes, les instruments, le master bus et les métadonnées de document. Pour
+chaque clip, il enregistre aussi le transport, la boucle, la tête de lecture,
+la grille, le snap tonal, le guide visuel, le zoom et la position de la vue.
+Les préférences réellement globales — voix active, preview clavier, mode de
+sélection et coloration — sont enregistrées une seule fois. Les états
+temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
 
 Son identité et sa version sont définies dans
 `src/config/program-constants.ts`, puis validées dans
@@ -531,7 +554,8 @@ signalés et ignorés. CC64 n’est pas appliqué.
 Si le MIDI contient des notes incompatibles avec les invariants de Pianola,
 l’import demande de fusionner ou découper les collisions.
 
-L’export produit un fichier format 1 avec une piste conductrice et une piste
+L’import crée un projet contenant un clip. L’export utilise uniquement le clip
+actif et produit un fichier format 1 avec une piste conductrice et une piste
 par voix. MIDI ne conserve pas les couleurs, mute/solo/lock, paramètres du
 synthétiseur, master bus, boucle ou réglages spécifiques à Pianola.
 
@@ -552,7 +576,9 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 | Valeurs par défaut et limites | `src/config/program-constants.ts` |
 | Structure principale de l’UI | `src/app/App.tsx` |
 | État initial et projet vierge | `src/app/demo-scene.ts` |
-| Notes, voix, transport | `src/domain/model.ts` |
+| Clips, notes, voix, transport | `src/domain/model.ts` |
+| Cycle de vie des clips | `src/app/workflows/useClipWorkflow.ts` |
+| Liste des clips | `src/ui/components/ClipInspector.tsx` |
 | Actions mutantes | `src/domain/commands.ts` |
 | Cas d'usage et plans de commandes | `src/application/` |
 | Collisions | `src/domain/note-collision.ts` |

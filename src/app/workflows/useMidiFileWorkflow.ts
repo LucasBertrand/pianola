@@ -55,7 +55,6 @@ export interface MidiFileWorkflowOptions {
     project: ProjectState,
     metadata: NativeProjectFileMetadata,
     label: string,
-    playheadTick: number,
     editorState: NativeEditorState,
   ) => void;
   readonly showDialog: (dialog: ApplicationDialogState) => void;
@@ -96,7 +95,6 @@ export function useMidiFileWorkflow({
           project,
           createNativeProjectFileMetadata(),
           "Import MIDI project",
-          0,
           createDefaultNativeEditorState(project),
         );
       } catch (error: unknown) {

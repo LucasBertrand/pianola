@@ -8,7 +8,8 @@ import type {
   ProjectState,
 } from "../domain/model";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getActiveClipDurationTicks,
 } from "../domain/model";
 import type {
   MidiEvent,
@@ -25,9 +26,10 @@ export interface MidiExportResult {
 export function createMidiExport(
   state: ProjectState,
 ): MidiExportResult {
+  const activeClip = getActiveClip(state);
   const warnings: string[] = [];
   let zeroVelocityNoteCount = 0;
-  const sourcePpqn = state.transportSettings.ppqn;
+  const sourcePpqn = activeClip.transportSettings.ppqn;
 
   if (!Number.isSafeInteger(sourcePpqn) || sourcePpqn < 1) {
     throw new RangeError(
@@ -47,7 +49,7 @@ export function createMidiExport(
   }
 
   const projectEndTick = convertProjectTickForMidi(
-    getProjectDurationTicks(state),
+    getActiveClipDurationTicks(state),
     sourcePpqn,
     outputPpqn,
   );
@@ -62,16 +64,16 @@ export function createMidiExport(
       absoluteTick: 0,
       microsecondsPerQuarterNote:
         bpmToMicrosecondsPerQuarterNote(
-          state.transportSettings.bpm,
+          activeClip.transportSettings.bpm,
         ),
     },
     {
       kind: "time-signature",
       absoluteTick: 0,
       numerator:
-        state.transportSettings.timeSignature.numerator,
+        activeClip.transportSettings.timeSignature.numerator,
       denominator:
-        state.transportSettings.timeSignature.denominator,
+        activeClip.transportSettings.timeSignature.denominator,
       midiClocksPerMetronome: 24,
       thirtySecondNotesPerQuarter: 8,
     },
@@ -98,7 +100,7 @@ export function createMidiExport(
     }
 
     const voice = state.voicesById[voiceId];
-    const track = state.tracksByVoiceId[voiceId];
+    const track = activeClip.tracksByVoiceId[voiceId];
 
     if (voice === undefined || track === undefined) {
       continue;

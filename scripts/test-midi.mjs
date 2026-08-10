@@ -124,11 +124,15 @@ try {
 
   function getProjectNotes(state, voiceId) {
     return Object.values(
-      state.tracksByVoiceId[voiceId].notesById,
+      getActiveTestClip(state).tracksByVoiceId[voiceId].notesById,
     ).sort((left, right) =>
       left.startTick - right.startTick
       || left.pitch - right.pitch
       || left.id.localeCompare(right.id));
+  }
+
+  function getActiveTestClip(state) {
+    return state.clipsById[state.activeClipId];
   }
 
   function normalizeProjectVoices(state) {
@@ -758,7 +762,7 @@ try {
       importedProject.voiceOrder[0],
     )[0];
 
-    assert.equal(importedProject.measureCount, 1);
+    assert.equal(getActiveTestClip(importedProject).measureCount, 1);
     assert.deepEqual(
       [
         importedNote.startTick,
@@ -776,41 +780,50 @@ try {
       color: "#79a7ff",
     });
     const sourceTransport = createDefaultTransportState();
+    const sourceClipId = "boundary-clip";
     const sourceProject = {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision: 0,
       title: "Boundary export",
-      measureCount: 1,
       voicesById: {
         [voice.id]: voice,
       },
       voiceOrder: [
         voice.id,
       ],
-      tracksByVoiceId: {
-        [voice.id]: {
-          voiceId: voice.id,
-          notesById: {
-            boundary: {
-              id: "boundary",
-              pitch: 72,
-              startTick: 191_999,
-              durationTicks: 1,
-              velocity: 100,
+      clipsById: {
+        [sourceClipId]: {
+          id: sourceClipId,
+          name: "Boundary Clip",
+          measureCount: 1,
+          tracksByVoiceId: {
+            [voice.id]: {
               voiceId: voice.id,
-              enabled: true,
+              notesById: {
+                boundary: {
+                  id: "boundary",
+                  pitch: 72,
+                  startTick: 191_999,
+                  durationTicks: 1,
+                  velocity: 100,
+                  voiceId: voice.id,
+                  enabled: true,
+                },
+              },
+            },
+          },
+          transportSettings: {
+            ...sourceTransport,
+            ppqn: 48_000,
+            loop: {
+              startTick: 0,
+              endTick: 192_000,
             },
           },
         },
       },
-      transportSettings: {
-        ...sourceTransport,
-        ppqn: 48_000,
-        loop: {
-          startTick: 0,
-          endTick: 192_000,
-        },
-      },
+      clipOrder: [sourceClipId],
+      activeClipId: sourceClipId,
       masterBus: createDefaultMasterBusState(),
     };
     const exported = createMidiExport(sourceProject);
@@ -841,11 +854,11 @@ try {
       color: "#a77bf3",
     });
     const defaultTransport = createDefaultTransportState();
+    const sourceClipId = "round-trip-clip";
     const sourceProject = {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision: 7,
       title: "MIDI round trip",
-      measureCount: 4,
       voicesById: {
         [lead.id]: lead,
         [bass.id]: bass,
@@ -854,7 +867,12 @@ try {
         lead.id,
         bass.id,
       ],
-      tracksByVoiceId: {
+      clipsById: {
+        [sourceClipId]: {
+          id: sourceClipId,
+          name: "Round Trip Clip",
+          measureCount: 4,
+          tracksByVoiceId: {
         [lead.id]: {
           voiceId: lead.id,
           notesById: {
@@ -901,19 +919,23 @@ try {
             },
           },
         },
-      },
-      transportSettings: {
-        ...defaultTransport,
-        bpm: 120,
-        timeSignature: {
-          numerator: 3,
-          denominator: 4,
+          },
+          transportSettings: {
+            ...defaultTransport,
+            bpm: 120,
+            timeSignature: {
+              numerator: 3,
+              denominator: 4,
+            },
+            loop: {
+              startTick: 0,
+              endTick: 2_880,
+            },
+          },
         },
-        loop: {
-          startTick: 0,
-          endTick: 2_880,
-        },
       },
+      clipOrder: [sourceClipId],
+      activeClipId: sourceClipId,
       masterBus: createDefaultMasterBusState(),
     };
     const exported = createMidiExport(sourceProject);
@@ -930,10 +952,16 @@ try {
     assert.deepEqual(exported.warnings, []);
     assert.equal(exported.file.format, 1);
     assert.equal(exported.file.tracks.length, 3);
-    assert.equal(imported.transportSettings.bpm, 120);
-    assert.equal(imported.measureCount, sourceProject.measureCount);
+    assert.equal(
+      getActiveTestClip(imported).transportSettings.bpm,
+      120,
+    );
+    assert.equal(
+      getActiveTestClip(imported).measureCount,
+      getActiveTestClip(sourceProject).measureCount,
+    );
     assert.deepEqual(
-      imported.transportSettings.timeSignature,
+      getActiveTestClip(imported).transportSettings.timeSignature,
       {
         numerator: 3,
         denominator: 4,
@@ -946,20 +974,26 @@ try {
 
     const disabledNoteProject = {
       ...sourceProject,
-      tracksByVoiceId: {
-        ...sourceProject.tracksByVoiceId,
-        [bass.id]: {
-          ...sourceProject.tracksByVoiceId[bass.id],
-          notesById: {
-            ...sourceProject.tracksByVoiceId[bass.id].notesById,
-            disabled: {
-              id: "disabled",
-              pitch: 71,
-              startTick: 0,
-              durationTicks: 240,
-              velocity: 100,
-              voiceId: bass.id,
-              enabled: false,
+      clipsById: {
+        ...sourceProject.clipsById,
+        [sourceClipId]: {
+          ...getActiveTestClip(sourceProject),
+          tracksByVoiceId: {
+            ...getActiveTestClip(sourceProject).tracksByVoiceId,
+            [bass.id]: {
+              ...getActiveTestClip(sourceProject).tracksByVoiceId[bass.id],
+              notesById: {
+                ...getActiveTestClip(sourceProject).tracksByVoiceId[bass.id].notesById,
+                disabled: {
+                  id: "disabled",
+                  pitch: 71,
+                  startTick: 0,
+                  durationTicks: 240,
+                  velocity: 100,
+                  voiceId: bass.id,
+                  enabled: false,
+                },
+              },
             },
           },
         },
@@ -978,9 +1012,15 @@ try {
 
     const alternatePpqnProject = {
       ...sourceProject,
-      transportSettings: {
-        ...sourceProject.transportSettings,
-        ppqn: 480,
+      clipsById: {
+        ...sourceProject.clipsById,
+        [sourceClipId]: {
+          ...getActiveTestClip(sourceProject),
+          transportSettings: {
+            ...getActiveTestClip(sourceProject).transportSettings,
+            ppqn: 480,
+          },
+        },
       },
     };
     const alternatePpqnExport =

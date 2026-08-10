@@ -27,7 +27,8 @@ import {
   CommandRejectedError,
 } from "../../domain/commands";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getActiveClipDurationTicks,
   type Note,
   type NoteId,
   type VoiceId,
@@ -227,7 +228,7 @@ export function useSelectionWorkflow({
         const proposedNotes = transformNoteSelection(
           originalNotes,
           kind,
-          getProjectDurationTicks(state),
+          getActiveClipDurationTicks(state),
         );
         const intent = {
           originalNotes,
@@ -338,20 +339,21 @@ export function useSelectionWorkflow({
       nextSequence(),
     );
     const state = commands.getState();
+    const activeClip = getActiveClip(state);
     const requiredMeasureCount =
       getRequiredMeasureCountForNotes(state, pastedNotes);
     const timelineCommands =
-      requiredMeasureCount > state.measureCount
+      requiredMeasureCount > activeClip.measureCount
         ? [{
             type: "AppendMeasures" as const,
-            count: requiredMeasureCount - state.measureCount,
+            count: requiredMeasureCount - activeClip.measureCount,
           }]
         : [];
 
     if (!canPlacePastedNotes(state, pastedNotes)) {
       alert(
         "Paste unavailable",
-        "Paste is unavailable because it exceeds the project limit or targets an unavailable or locked voice.",
+        "Paste is unavailable because it exceeds the clip limit or targets an unavailable or locked voice.",
       );
       return;
     }
@@ -389,10 +391,11 @@ export function useSelectionWorkflow({
     }
 
     const selectedPastedNotes: Note[] = [];
+    const nextClip = getActiveClip(nextState);
 
     for (const pastedNote of pastedNotes) {
       const storedNote =
-        nextState.tracksByVoiceId[pastedNote.voiceId]
+        nextClip.tracksByVoiceId[pastedNote.voiceId]
           ?.notesById[pastedNote.id];
 
       if (storedNote !== undefined) {
@@ -476,7 +479,8 @@ export function useSelectionWorkflow({
         return;
       }
 
-      const targetTrack = nextState.tracksByVoiceId[targetVoiceId];
+      const targetTrack = getActiveClip(nextState)
+        .tracksByVoiceId[targetVoiceId];
       const nextSelection: Note[] = [];
 
       if (targetTrack !== undefined) {

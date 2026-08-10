@@ -49,6 +49,14 @@ export class ProjectStore implements ProjectStorePort {
       return previousState;
     }
 
+    if (isClipActivationTransaction(transaction)) {
+      // Navigation changes the editing context without invalidating redo or
+      // consuming an undo step. Musical edits remain globally ordered.
+      this.currentState = nextState;
+      this.notify(nextState, previousState, transaction);
+      return nextState;
+    }
+
     this.pastStates.push(previousState);
 
     if (
@@ -104,7 +112,7 @@ export class ProjectStore implements ProjectStorePort {
     const previousState = this.currentState;
     this.futureStates.push(previousState);
     this.currentState = {
-      ...previousSnapshot,
+      ...preserveActiveClip(previousSnapshot, previousState),
       revision: previousState.revision + 1,
     };
     this.notify(
@@ -134,7 +142,7 @@ export class ProjectStore implements ProjectStorePort {
     }
 
     this.currentState = {
-      ...nextSnapshot,
+      ...preserveActiveClip(nextSnapshot, previousState),
       revision: previousState.revision + 1,
     };
     this.notify(
@@ -176,4 +184,27 @@ export class ProjectStore implements ProjectStorePort {
       listener(state, previousState, transaction);
     }
   }
+}
+
+function isClipActivationTransaction(
+  transaction: Transaction,
+): boolean {
+  return (
+    transaction.commands.length === 1
+    && transaction.commands[0]?.type === "ActivateClip"
+  );
+}
+
+function preserveActiveClip(
+  snapshot: ProjectState,
+  currentState: ProjectState,
+): ProjectState {
+  // Undo/redo restores musical data globally while keeping the user's current
+  // editing context whenever that clip still exists in the target snapshot.
+  return snapshot.clipsById[currentState.activeClipId] === undefined
+    ? snapshot
+    : {
+        ...snapshot,
+        activeClipId: currentState.activeClipId,
+      };
 }

@@ -7,6 +7,9 @@ import type {
   ProjectState,
   VoiceId,
 } from "./model";
+import {
+  getActiveClip,
+} from "./model";
 
 export type NoteCollisionResolutionMode = "merge" | "slice";
 
@@ -34,6 +37,7 @@ export function countNoteEditCollisions(
   state: ProjectState,
   intent: NoteEditIntent,
 ): number {
+  const activeClip = getActiveClip(state);
   const originalNoteIds = createNoteIdSet(intent.originalNotes);
   let collisionCount = 0;
 
@@ -48,7 +52,7 @@ export function countNoteEditCollisions(
       continue;
     }
 
-    const track = state.tracksByVoiceId[proposedNote.voiceId];
+    const track = activeClip.tracksByVoiceId[proposedNote.voiceId];
 
     if (track !== undefined) {
       for (const existingNoteId in track.notesById) {
@@ -97,6 +101,7 @@ export function createNoteCollisionResolutionPlan(
   fragmentIdNamespace: string,
 ): NoteCollisionResolutionPlan {
   const originalNoteIds = createNoteIdSet(intent.originalNotes);
+  const activeClip = getActiveClip(state);
   const groups = createAffectedNoteGroups(
     state,
     intent.proposedNotes,
@@ -110,7 +115,7 @@ export function createNoteCollisionResolutionPlan(
 
   for (const originalNote of intent.originalNotes) {
     const storedNote =
-      state
+      activeClip
         .tracksByVoiceId[originalNote.voiceId]
         ?.notesById[originalNote.id];
 
@@ -215,6 +220,7 @@ function createAffectedNoteGroups(
   originalNoteIds: ReadonlySet<NoteId>,
 ): Map<VoiceId, Map<number, NoteGroup>> {
   const groups = new Map<VoiceId, Map<number, NoteGroup>>();
+  const activeClip = getActiveClip(state);
 
   for (const proposedNote of proposedNotes) {
     const group = getOrCreateNoteGroup(
@@ -227,7 +233,7 @@ function createAffectedNoteGroups(
   }
 
   for (const [voiceId, pitchGroups] of groups) {
-    const track = state.tracksByVoiceId[voiceId];
+    const track = activeClip.tracksByVoiceId[voiceId];
 
     if (track === undefined) {
       continue;
@@ -573,9 +579,10 @@ function createNoteIdSet(notes: readonly Note[]): Set<NoteId> {
 
 function collectProjectNoteIds(state: ProjectState): Set<NoteId> {
   const noteIds = new Set<NoteId>();
+  const activeClip = getActiveClip(state);
 
   for (const voiceId of state.voiceOrder) {
-    const track = state.tracksByVoiceId[voiceId];
+    const track = activeClip.tracksByVoiceId[voiceId];
 
     if (track === undefined) {
       continue;

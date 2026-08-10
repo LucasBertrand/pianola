@@ -11,10 +11,11 @@ import {
 import {
   RENDERING_CONSTANTS,
 } from "../../config/program-constants";
-import type {
-  Note,
-  ProjectState,
-  VoiceId,
+import {
+  getActiveClip,
+  type Note,
+  type TransportState,
+  type VoiceId,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
@@ -281,7 +282,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         gridResolutionTicks.get(),
         pitchSnapSettings.get(),
         highlightedPitch.get(),
-        projectStore.getState().transportSettings,
+        getActiveClip(projectStore.getState()).transportSettings,
       );
     },
     [
@@ -693,7 +694,7 @@ function paintGrid(
   gridResolutionTicks: number,
   pitchSnapSettings: PitchSnapSettings,
   highlightedPitch: number | null,
-  transport: ProjectState["transportSettings"],
+  transport: TransportState,
 ): void {
   const width = frame.widthCssPixels;
   const height = frame.heightCssPixels;

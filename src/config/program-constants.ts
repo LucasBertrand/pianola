@@ -21,7 +21,7 @@ export const APPLICATION_CONSTANTS = Object.freeze({
 /** Persistent project defaults and hard domain limits. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 6,
+  schemaVersion: 7,
   defaultMeasureCount: 16,
   demoProjectTitle: APPLICATION_CONSTANTS.demoProjectTitle,
   defaultTempoBpm: 120,
@@ -43,8 +43,12 @@ export const PROJECT_CONSTANTS = Object.freeze({
   maximumInstrumentPolyphony: 16,
   maximumEntityIdLength: 160,
   maximumProjectTitleLength: 200,
+  // Clip limits protect native-file parsing and inspector usability.
+  maximumClipNameLength: 128,
+  maximumClipCount: 256,
   maximumVoiceNameLength: 128,
   maximumVoiceCount: 256,
+  // This rendering and validation budget is applied independently per clip.
   maximumNoteCount: 250_000,
   maximumVoiceDescriptorCount: 128,
   maximumDescriptorParameterCount: 256,
@@ -138,10 +142,11 @@ export const AUDIO_CONSTANTS = Object.freeze({
 export const VIEWPORT_CONSTANTS = Object.freeze({
   minimumMidiPitch: PROJECT_CONSTANTS.minimumMidiPitch,
   maximumMidiPitch: PROJECT_CONSTANTS.maximumMidiPitch,
-  minimumHorizontalZoom: 0.1,
   maximumHorizontalZoom: 2.5,
-  minimumVerticalZoom: 0.5,
   maximumVerticalZoom: 2.2,
+  // This is only a serialization and numerical-safety guard. The actual
+  // minimum zoom is calculated from the clip extent and viewport dimensions.
+  minimumStoredZoom: 0.000001,
   initialPitchHeightCssPixels: 18,
   initialMaximumVisiblePitch: 84,
   initialTicksPerPixel: 5,
@@ -392,8 +397,6 @@ export const EDITOR_CONSTANTS = Object.freeze({
   sustainStep: 0.005,
   gainStep: 0.01,
   parameterSliderPositionStep: 0.001,
-  horizontalScrollStep: 48,
-  verticalScrollStep: 4,
   zoomStep: 0.05,
   defaultDrawVelocity: 100,
   defaultNoteColorMode: "voice",

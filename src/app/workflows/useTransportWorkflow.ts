@@ -2,7 +2,8 @@ import {
   useCallback,
 } from "react";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getActiveClipDurationTicks,
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
@@ -46,14 +47,15 @@ export function useTransportWorkflow({
 
   const insertMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
+    const activeClip = getActiveClip(state);
 
-    if (state.measureCount >= MAXIMUM_MEASURE_COUNT) {
+    if (activeClip.measureCount >= MAXIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureTicks = getTicksPerMeasure(state.transportSettings);
+    const measureTicks = getTicksPerMeasure(activeClip.transportSettings);
     const measureIndex = Math.min(
-      state.measureCount - 1,
+      activeClip.measureCount - 1,
       Math.floor(runtime.playheadTick.get() / measureTicks),
     );
 
@@ -69,14 +71,15 @@ export function useTransportWorkflow({
 
   const removeMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
+    const activeClip = getActiveClip(state);
 
-    if (state.measureCount <= MINIMUM_MEASURE_COUNT) {
+    if (activeClip.measureCount <= MINIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureTicks = getTicksPerMeasure(state.transportSettings);
+    const measureTicks = getTicksPerMeasure(activeClip.transportSettings);
     const measureIndex = Math.min(
-      state.measureCount - 1,
+      activeClip.measureCount - 1,
       Math.floor(runtime.playheadTick.get() / measureTicks),
     );
     const currentPlayheadTick = runtime.playheadTick.get();
@@ -93,7 +96,7 @@ export function useTransportWorkflow({
     if (nextState !== null) {
       const boundedPlayheadTick = Math.min(
         currentPlayheadTick,
-        getProjectDurationTicks(nextState),
+        getActiveClipDurationTicks(nextState),
       );
 
       if (boundedPlayheadTick !== currentPlayheadTick) {
@@ -165,7 +168,7 @@ export function useTransportWorkflow({
       [{
         type: "SetLoopEnabled",
         enabled:
-          !runtime.projectStore.getState()
+          !getActiveClip(runtime.projectStore.getState())
             .transportSettings.loopEnabled,
       }],
       "Toggle loop",

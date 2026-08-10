@@ -1,5 +1,7 @@
 import type {
   AdsrEnvelope,
+  Clip,
+  ClipId,
   EffectDescriptor,
   EffectParameterValue,
   GenerativeRuleDescriptor,
@@ -21,6 +23,7 @@ import {
   APPLICATION_CONSTANTS,
   EDITOR_CONSTANTS,
   FILE_CONSTANTS,
+  PROJECT_CONSTANTS,
   TONAL_SNAP_CONSTANTS,
   VIEWPORT_CONSTANTS,
 } from "../config/program-constants";
@@ -41,14 +44,14 @@ import type {
   NoteColorMode,
 } from "../ui/rendering/note-style";
 import {
-  getProjectDurationTicks,
+  getTicksPerMeasure,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_MEASURE_COUNT,
-  MAXIMUM_PROJECT_NOTE_COUNT,
+  MAXIMUM_CLIP_NOTE_COUNT,
   MAXIMUM_PROJECT_TITLE_LENGTH,
   MAXIMUM_PROJECT_VOICE_COUNT,
   MAXIMUM_VOICE_DESCRIPTOR_COUNT,
@@ -78,7 +81,7 @@ export const MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH =
   MAXIMUM_PROJECT_TITLE_LENGTH;
 
 const MAXIMUM_VOICE_COUNT = MAXIMUM_PROJECT_VOICE_COUNT;
-const MAXIMUM_NOTE_COUNT = MAXIMUM_PROJECT_NOTE_COUNT;
+const MAXIMUM_NOTE_COUNT = MAXIMUM_CLIP_NOTE_COUNT;
 const MAXIMUM_NAME_LENGTH = MAXIMUM_VOICE_NAME_LENGTH;
 const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
 const MAXIMUM_DESCRIPTOR_COUNT = MAXIMUM_VOICE_DESCRIPTOR_COUNT;
@@ -93,21 +96,14 @@ export interface NativeProjectFileMetadata {
   readonly savedAt: string;
 }
 
-export type NativeTransportState = Omit<
-  TransportState,
-  "anchorAudioTimeSeconds"
-> & {
-  readonly anchorAudioTimeSeconds: null;
-};
-
 export interface NativeProjectSnapshot {
   readonly schemaVersion: number;
   readonly title: string;
-  readonly measureCount: number;
   readonly voicesById: Readonly<Record<VoiceId, Voice>>;
   readonly voiceOrder: readonly VoiceId[];
-  readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
-  readonly transportSettings: NativeTransportState;
+  readonly clipsById: Readonly<Record<ClipId, Clip>>;
+  readonly clipOrder: readonly ClipId[];
+  readonly activeClipId: ClipId;
   readonly masterBus: MasterBusState;
 }
 
@@ -126,15 +122,22 @@ export type NativeViewportState = Pick<
 
 export type NativeSelectionMode = "replace" | "add" | "subtract";
 
+export interface NativeClipEditorState {
+  readonly playheadTick: number;
+  readonly pitchSnapSettings: PitchSnapSettings;
+  readonly gridSettings: GridSettings;
+  readonly viewport: NativeViewportState;
+}
+
 /** Durable editor preferences that define the user's project workspace. */
 export interface NativeEditorState {
   readonly selectedVoiceId: VoiceId | null;
   readonly selectionMode: NativeSelectionMode;
   readonly noteColorMode: NoteColorMode;
   readonly pitchPreviewEnabled: boolean;
-  readonly pitchSnapSettings: PitchSnapSettings;
-  readonly gridSettings: GridSettings;
-  readonly viewport: NativeViewportState;
+  readonly clipStatesById: Readonly<
+    Record<ClipId, NativeClipEditorState>
+  >;
 }
 
 export interface LoadedNativeProject {
@@ -170,6 +173,22 @@ export function serializeNativeProjectFile(
   metadata: NativeProjectFileMetadata,
   editorState: NativeEditorState,
 ): string {
+  const clipsById: Record<ClipId, Clip> = {};
+
+  for (const clipId of state.clipOrder) {
+    const clip = state.clipsById[clipId];
+
+    if (clip !== undefined) {
+      clipsById[clipId] = {
+        ...clip,
+        transportSettings: {
+          ...clip.transportSettings,
+          anchorAudioTimeSeconds: null,
+        },
+      };
+    }
+  }
+
   const document: NativeProjectFile = {
     format: NATIVE_PROJECT_FILE_FORMAT,
     formatVersion: NATIVE_PROJECT_FILE_VERSION,
@@ -177,15 +196,12 @@ export function serializeNativeProjectFile(
     project: {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       title: state.title,
-      measureCount: state.measureCount,
       voicesById: state.voicesById,
       voiceOrder: state.voiceOrder,
-      tracksByVoiceId: state.tracksByVoiceId,
+      clipsById,
+      clipOrder: state.clipOrder,
+      activeClipId: state.activeClipId,
       masterBus: state.masterBus,
-      transportSettings: {
-        ...state.transportSettings,
-        anchorAudioTimeSeconds: null,
-      },
     },
     editor: editorState,
   };
@@ -370,6 +386,51 @@ function parseEditorState(
     );
   }
 
+  const sourceClipStates = readRecord(
+    editor["clipStatesById"],
+    `${path}.clipStatesById`,
+  );
+  assertExactRecordKeys(
+    sourceClipStates,
+    projectState.clipOrder,
+    `${path}.clipStatesById`,
+  );
+  const clipStatesById: Record<ClipId, NativeClipEditorState> = {};
+
+  for (const clipId of projectState.clipOrder) {
+    const clip = projectState.clipsById[clipId];
+    const clipStatePath = `${path}.clipStatesById.${clipId}`;
+    const clipState = readRecord(
+      sourceClipStates[clipId],
+      clipStatePath,
+    );
+
+    if (clip === undefined) {
+      fail("INVALID_DATA", clipStatePath, "The clip does not exist.");
+    }
+
+    clipStatesById[clipId] = {
+      playheadTick: readNumberInRange(
+        clipState["playheadTick"],
+        `${clipStatePath}.playheadTick`,
+        0,
+        clip.measureCount * getTicksPerMeasure(clip.transportSettings),
+      ),
+      pitchSnapSettings: parsePitchSnapSettings(
+        clipState["pitchSnapSettings"],
+        `${clipStatePath}.pitchSnapSettings`,
+      ),
+      gridSettings: parseGridSettings(
+        clipState["gridSettings"],
+        `${clipStatePath}.gridSettings`,
+      ),
+      viewport: parseNativeViewport(
+        clipState["viewport"],
+        `${clipStatePath}.viewport`,
+      ),
+    };
+  }
+
   return {
     selectedVoiceId,
     selectionMode,
@@ -378,18 +439,7 @@ function parseEditorState(
       editor["pitchPreviewEnabled"],
       `${path}.pitchPreviewEnabled`,
     ),
-    pitchSnapSettings: parsePitchSnapSettings(
-      editor["pitchSnapSettings"],
-      `${path}.pitchSnapSettings`,
-    ),
-    gridSettings: parseGridSettings(
-      editor["gridSettings"],
-      `${path}.gridSettings`,
-    ),
-    viewport: parseNativeViewport(
-      editor["viewport"],
-      `${path}.viewport`,
-    ),
+    clipStatesById,
   };
 }
 
@@ -510,13 +560,13 @@ function parseNativeViewport(
     zoomX: readNumberInRange(
       viewport["zoomX"],
       `${path}.zoomX`,
-      VIEWPORT_CONSTANTS.minimumHorizontalZoom,
+      VIEWPORT_CONSTANTS.minimumStoredZoom,
       VIEWPORT_CONSTANTS.maximumHorizontalZoom,
     ),
     zoomY: readNumberInRange(
       viewport["zoomY"],
       `${path}.zoomY`,
-      VIEWPORT_CONSTANTS.minimumVerticalZoom,
+      VIEWPORT_CONSTANTS.minimumStoredZoom,
       VIEWPORT_CONSTANTS.maximumVerticalZoom,
     ),
     scrollX: readNumberInRange(
@@ -557,12 +607,6 @@ function parseProjectSnapshot(
     `${path}.title`,
     MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
   );
-  const measureCount = readIntegerInRange(
-    project["measureCount"],
-    `${path}.measureCount`,
-    MINIMUM_MEASURE_COUNT,
-    MAXIMUM_MEASURE_COUNT,
-  );
   const voiceOrder = parseVoiceOrder(
     project["voiceOrder"],
     `${path}.voiceOrder`,
@@ -572,25 +616,132 @@ function parseProjectSnapshot(
     voiceOrder,
     `${path}.voicesById`,
   );
-  const transportSettings = parseTransport(
-    project["transportSettings"],
-    `${path}.transportSettings`,
-  );
   const masterBus = parseMasterBus(
     project["masterBus"],
     `${path}.masterBus`,
   );
-  const partialState: ProjectState = {
+  const clipOrder = parseClipOrder(
+    project["clipOrder"],
+    `${path}.clipOrder`,
+  );
+  const sourceClips = readRecord(
+    project["clipsById"],
+    `${path}.clipsById`,
+  );
+  assertExactRecordKeys(sourceClips, clipOrder, `${path}.clipsById`);
+  const clipsById: Record<ClipId, Clip> = {};
+
+  for (const clipId of clipOrder) {
+    clipsById[clipId] = parseClip(
+      sourceClips[clipId],
+      clipId,
+      voiceOrder,
+      `${path}.clipsById.${clipId}`,
+    );
+  }
+
+  const activeClipId = readNonEmptyString(
+    project["activeClipId"],
+    `${path}.activeClipId`,
+    MAXIMUM_ID_LENGTH,
+  );
+
+  if (clipsById[activeClipId] === undefined) {
+    fail(
+      "INVALID_DATA",
+      `${path}.activeClipId`,
+      "The active clip does not exist.",
+    );
+  }
+
+  const projectState: ProjectState = {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title,
-    measureCount,
     voicesById,
     voiceOrder,
-    tracksByVoiceId: {},
-    transportSettings,
+    clipsById,
+    clipOrder,
+    activeClipId,
     masterBus,
   };
+  return projectState;
+}
+
+function parseClipOrder(
+  source: unknown,
+  path: string,
+): readonly ClipId[] {
+  const values = readArray(source, path);
+
+  if (
+    values.length < 1
+    || values.length > PROJECT_CONSTANTS.maximumClipCount
+  ) {
+    fail(
+      "INVALID_DATA",
+      path,
+      `A project must contain between 1 and ${PROJECT_CONSTANTS.maximumClipCount} clips.`,
+    );
+  }
+
+  const clipOrder: ClipId[] = [];
+  const uniqueIds = new Set<ClipId>();
+
+  for (let index = 0; index < values.length; index += 1) {
+    const clipId = readNonEmptyString(
+      values[index],
+      `${path}[${index}]`,
+      MAXIMUM_ID_LENGTH,
+    );
+
+    if (uniqueIds.has(clipId)) {
+      fail(
+        "INVALID_DATA",
+        `${path}[${index}]`,
+        "Clip IDs must be unique.",
+      );
+    }
+
+    uniqueIds.add(clipId);
+    clipOrder.push(clipId);
+  }
+
+  return clipOrder;
+}
+
+function parseClip(
+  source: unknown,
+  clipId: ClipId,
+  voiceOrder: readonly VoiceId[],
+  path: string,
+): Clip {
+  const clip = readRecord(source, path);
+  const storedId = readNonEmptyString(
+    clip["id"],
+    `${path}.id`,
+    MAXIMUM_ID_LENGTH,
+  );
+
+  if (storedId !== clipId) {
+    fail("INVALID_DATA", `${path}.id`, "Clip ID must match its record key.");
+  }
+
+  const name = readNonEmptyString(
+    clip["name"],
+    `${path}.name`,
+    PROJECT_CONSTANTS.maximumClipNameLength,
+  );
+  const measureCount = readIntegerInRange(
+    clip["measureCount"],
+    `${path}.measureCount`,
+    MINIMUM_MEASURE_COUNT,
+    MAXIMUM_MEASURE_COUNT,
+  );
+  const transportSettings = parseTransport(
+    clip["transportSettings"],
+    `${path}.transportSettings`,
+  );
   const durationValidation = validateProjectDuration(
     measureCount,
     transportSettings,
@@ -600,24 +751,27 @@ function parseProjectSnapshot(
     fail(
       "INVALID_DATA",
       `${path}.measureCount`,
-      durationValidation.issues[0]?.message
-        ?? "Project duration is invalid.",
+      durationValidation.issues[0]?.message ?? "Clip duration is invalid.",
     );
   }
 
+  const durationTicks = measureCount * getTicksPerMeasure(transportSettings);
   const tracksByVoiceId = parseTracks(
-    project["tracksByVoiceId"],
+    clip["tracksByVoiceId"],
     voiceOrder,
-    partialState,
+    durationTicks,
     `${path}.tracksByVoiceId`,
   );
-  const projectState: ProjectState = {
-    ...partialState,
+  const parsedClip: Clip = {
+    id: clipId,
+    name,
+    measureCount,
     tracksByVoiceId,
+    transportSettings,
   };
 
-  assertTransportWithinProject(projectState, path);
-  return projectState;
+  assertTransportWithinClip(parsedClip, path);
+  return parsedClip;
 }
 
 function parseVoiceOrder(
@@ -1198,7 +1352,7 @@ function parseLoop(
 function parseTracks(
   source: unknown,
   voiceOrder: readonly VoiceId[],
-  partialState: ProjectState,
+  projectDurationTicks: number,
   path: string,
 ): Readonly<Record<VoiceId, Track>> {
   const sourceTracks = readRecord(source, path);
@@ -1239,7 +1393,7 @@ function parseTracks(
     const notesById = parseNotes(
       track["notesById"],
       voiceId,
-      partialState,
+      projectDurationTicks,
       globalNoteIds,
       trackPath,
     );
@@ -1266,7 +1420,7 @@ function parseTracks(
 function parseNotes(
   source: unknown,
   voiceId: VoiceId,
-  partialState: ProjectState,
+  projectDurationTicks: number,
   globalNoteIds: Set<NoteId>,
   trackPath: string,
 ): Readonly<Record<NoteId, Note>> {
@@ -1276,9 +1430,6 @@ function parseNotes(
   );
   const notesById =
     Object.create(null) as Record<NoteId, Note>;
-  const projectDurationTicks =
-    getProjectDurationTicks(partialState);
-
   for (const [noteKey, sourceNote] of Object.entries(sourceNotes)) {
     const notePath = `${trackPath}.notesById.${noteKey}`;
     const noteRecord = readRecord(sourceNote, notePath);
@@ -1327,7 +1478,7 @@ function parseNotes(
       fail(
         "INVALID_DATA",
         `${notePath}.id`,
-        `Note ID "${note.id}" must be unique across the project.`,
+        `Note ID "${note.id}" must be unique within its clip.`,
       );
     }
 
@@ -1350,7 +1501,7 @@ function parseNotes(
       fail(
         "INVALID_DATA",
         notePath,
-        `Note "${note.id}" exceeds the project duration.`,
+        `Note "${note.id}" exceeds the clip duration.`,
       );
     }
 
@@ -1361,18 +1512,19 @@ function parseNotes(
   return notesById;
 }
 
-function assertTransportWithinProject(
-  state: ProjectState,
-  projectPath: string,
+function assertTransportWithinClip(
+  clip: Clip,
+  clipPath: string,
 ): void {
-  const durationTicks = getProjectDurationTicks(state);
-  const transport = state.transportSettings;
+  const durationTicks =
+    clip.measureCount * getTicksPerMeasure(clip.transportSettings);
+  const transport = clip.transportSettings;
 
   if (transport.anchorTick > durationTicks) {
     fail(
       "INVALID_DATA",
-      `${projectPath}.transportSettings.anchorTick`,
-      "Transport anchor exceeds the project duration.",
+      `${clipPath}.transportSettings.anchorTick`,
+      "Transport anchor exceeds the clip duration.",
     );
   }
 
@@ -1381,8 +1533,8 @@ function assertTransportWithinProject(
   ) {
     fail(
       "INVALID_DATA",
-      `${projectPath}.transportSettings.loop`,
-      "Loop region exceeds the project duration.",
+      `${clipPath}.transportSettings.loop`,
+      "Loop region exceeds the clip duration.",
     );
   }
 }

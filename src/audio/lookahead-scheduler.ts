@@ -132,12 +132,14 @@ export class LookaheadScheduler implements AudioTransportController {
   public replacePlaybackState(
     snapshot: PlaybackSnapshot,
     transport: TransportState,
+    positionTickOverride?: Tick,
   ): void {
     this.assertUsable();
     assertCompatiblePlaybackState(snapshot, transport);
     this.invalidatePendingStart();
     const wasPlaying = this.currentStatus === "playing";
-    const currentTick = this.getPositionTick();
+    const currentTick = positionTickOverride
+      ?? this.getPositionTick();
 
     if (wasPlaying) {
       this.clearTimer();

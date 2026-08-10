@@ -4,6 +4,7 @@ import {
 
 export type NoteId = string;
 export type VoiceId = string;
+export type ClipId = string;
 export type EffectId = string;
 export type RuleId = string;
 export type Tick = number;
@@ -41,11 +42,15 @@ export const MAXIMUM_ENTITY_ID_LENGTH =
   PROJECT_CONSTANTS.maximumEntityIdLength;
 export const MAXIMUM_PROJECT_TITLE_LENGTH =
   PROJECT_CONSTANTS.maximumProjectTitleLength;
+export const MAXIMUM_CLIP_NAME_LENGTH =
+  PROJECT_CONSTANTS.maximumClipNameLength;
+export const MAXIMUM_PROJECT_CLIP_COUNT =
+  PROJECT_CONSTANTS.maximumClipCount;
 export const MAXIMUM_VOICE_NAME_LENGTH =
   PROJECT_CONSTANTS.maximumVoiceNameLength;
 export const MAXIMUM_PROJECT_VOICE_COUNT =
   PROJECT_CONSTANTS.maximumVoiceCount;
-export const MAXIMUM_PROJECT_NOTE_COUNT =
+export const MAXIMUM_CLIP_NOTE_COUNT =
   PROJECT_CONSTANTS.maximumNoteCount;
 export const MAXIMUM_VOICE_DESCRIPTOR_COUNT =
   PROJECT_CONSTANTS.maximumVoiceDescriptorCount;
@@ -157,15 +162,24 @@ export interface MasterBusState {
   readonly tuningFrequencyHz: number;
 }
 
+/** Self-contained musical material rendered by the piano-roll editor. */
+export interface Clip {
+  readonly id: ClipId;
+  readonly name: string;
+  readonly measureCount: number;
+  readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
+  readonly transportSettings: TransportState;
+}
+
 export interface ProjectState {
   readonly schemaVersion: number;
   readonly revision: number;
   readonly title: string;
-  readonly measureCount: number;
   readonly voicesById: Readonly<Record<VoiceId, Voice>>;
   readonly voiceOrder: readonly VoiceId[];
-  readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
-  readonly transportSettings: TransportState;
+  readonly clipsById: Readonly<Record<ClipId, Clip>>;
+  readonly clipOrder: readonly ClipId[];
+  readonly activeClipId: ClipId;
   readonly masterBus: MasterBusState;
 }
 
@@ -214,13 +228,31 @@ export function createDefaultMasterBusState(): MasterBusState {
   };
 }
 
-export function getProjectDurationTicks(
-  state: Pick<ProjectState, "measureCount" | "transportSettings">,
+export function getActiveClipDurationTicks(
+  state: ProjectState,
+): number {
+  return getClipDurationTicks(getActiveClip(state));
+}
+
+export function getClipDurationTicks(
+  clip: Pick<Clip, "measureCount" | "transportSettings">,
 ): number {
   return (
-    state.measureCount
-    * getTicksPerMeasure(state.transportSettings)
+    clip.measureCount
+    * getTicksPerMeasure(clip.transportSettings)
   );
+}
+
+export function getActiveClip(state: ProjectState): Clip {
+  const clip = state.clipsById[state.activeClipId];
+
+  if (clip === undefined) {
+    throw new Error(
+      `Active clip "${state.activeClipId}" does not exist.`,
+    );
+  }
+
+  return clip;
 }
 
 export function getTicksPerMeasure(

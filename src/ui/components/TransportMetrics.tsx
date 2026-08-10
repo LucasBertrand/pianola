@@ -17,8 +17,9 @@ import {
 import type {
   PianoRollCommand,
 } from "../../domain/commands";
-import type {
-  TimeSignature,
+import {
+  getActiveClip,
+  type TimeSignature,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
@@ -52,12 +53,14 @@ export function TransportMetrics(
     useRef<HTMLSelectElement | null>(null);
   const [meterValue, setMeterValue] = useState(() =>
     formatTimeSignatureValue(
-      projectStore.getState().transportSettings.timeSignature,
+      getActiveClip(projectStore.getState()).transportSettings.timeSignature,
     ));
 
   useEffect(() => {
     const updateTransportControls = (): void => {
-      const transport = projectStore.getState().transportSettings;
+      const transport = getActiveClip(
+        projectStore.getState(),
+      ).transportSettings;
 
       if (
         tempoInputRef.current !== null
@@ -112,7 +115,9 @@ export function TransportMetrics(
 
       if (!Number.isFinite(requestedBpm)) {
         event.currentTarget.value =
-          projectStore.getState().transportSettings.bpm.toFixed(1);
+          getActiveClip(
+            projectStore.getState(),
+          ).transportSettings.bpm.toFixed(1);
         return;
       }
 

@@ -6,12 +6,8 @@ export const MIN_MIDI_PITCH =
   VIEWPORT_CONSTANTS.minimumMidiPitch;
 export const MAX_MIDI_PITCH =
   VIEWPORT_CONSTANTS.maximumMidiPitch;
-export const MINIMUM_HORIZONTAL_ZOOM =
-  VIEWPORT_CONSTANTS.minimumHorizontalZoom;
 export const MAXIMUM_HORIZONTAL_ZOOM =
   VIEWPORT_CONSTANTS.maximumHorizontalZoom;
-export const MINIMUM_VERTICAL_ZOOM =
-  VIEWPORT_CONSTANTS.minimumVerticalZoom;
 export const MAXIMUM_VERTICAL_ZOOM =
   VIEWPORT_CONSTANTS.maximumVerticalZoom;
 

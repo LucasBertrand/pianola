@@ -10,7 +10,8 @@ import {
   APPLICATION_COLORS,
 } from "../../config/application-colors";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getActiveClipDurationTicks,
   type LoopRegion,
 } from "../../domain/model";
 import type {
@@ -141,8 +142,9 @@ export function TimelineLoopRegion(
         return;
       }
 
-      const transport =
-        projectStore.getState().transportSettings;
+      const transport = getActiveClip(
+        projectStore.getState(),
+      ).transportSettings;
 
       updateElements(
         transport.loop.startTick,
@@ -300,7 +302,9 @@ export function TimelineLoopRegion(
       updateElements(
         draftStartTick,
         draftEndTick,
-        projectStore.getState().transportSettings.loopEnabled,
+        getActiveClip(
+          projectStore.getState(),
+        ).transportSettings.loopEnabled,
       );
     };
     const handlePointerDown = (event: PointerEvent): void => {
@@ -318,7 +322,7 @@ export function TimelineLoopRegion(
       const requestedMode =
         gestureTarget?.dataset["loopMode"];
       const state = projectStore.getState();
-      const loop = state.transportSettings.loop;
+      const loop = getActiveClip(state).transportSettings.loop;
       const layerBounds = layer.getBoundingClientRect();
       const currentViewport = viewport.get();
       const absolutePointerTick =
@@ -358,7 +362,7 @@ export function TimelineLoopRegion(
         1,
         gridResolutionTicks.get(),
       );
-      projectDurationTicks = getProjectDurationTicks(state);
+      projectDurationTicks = getActiveClipDurationTicks(state);
       layerLeft = layerBounds.left;
       pendingClickMode =
         absolutePointerTick
@@ -562,8 +566,9 @@ export function BarRuler(
     (frame: CanvasFrame): void => {
       const currentViewport = viewport.get();
       const projectState = projectStore.getState();
-      const transport = projectState.transportSettings;
-      const totalTicks = getProjectDurationTicks(projectState);
+      const activeClip = getActiveClip(projectState);
+      const transport = activeClip.transportSettings;
+      const totalTicks = getActiveClipDurationTicks(projectState);
       const pixelsPerTick =
         currentViewport.zoomX / currentViewport.ticksPerPixel;
       const firstVisibleTick =
@@ -642,7 +647,7 @@ export function BarRuler(
       const lastBarIndex = Math.ceil(
         lastVisibleTick / ticksPerBar,
       );
-      const maximumBarIndex = projectState.measureCount - 1;
+      const maximumBarIndex = activeClip.measureCount - 1;
 
       for (
         let barIndex = firstBarIndex;
@@ -717,7 +722,7 @@ export function BarRuler(
         Math.round(rawTick / resolutionTicks) * resolutionTicks;
 
       draftTick = Math.min(
-        getProjectDurationTicks(projectStore.getState()),
+        getActiveClipDurationTicks(projectStore.getState()),
         Math.max(0, snappedTick),
       );
       onSeekPreview(draftTick);
@@ -920,4 +925,3 @@ function drawRulerTicks(
     );
   }
 }
-

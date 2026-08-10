@@ -1,6 +1,12 @@
 import type {
   ViewportState,
 } from "../../geometry/converter";
+import {
+  getMaximumHorizontalScroll,
+  getMaximumVerticalScroll,
+  getMinimumHorizontalZoom,
+  getMinimumVerticalZoom,
+} from "../../geometry/viewport-bounds";
 import type {
   PointerSample,
 } from "./input";
@@ -13,11 +19,8 @@ export interface PinchViewportGestureSettings {
   readonly minimumScale: number;
   readonly maximumScale: number;
   readonly scaleDeadZone: number;
-  readonly minimumZoomX: number;
   readonly maximumZoomX: number;
-  readonly minimumZoomY: number;
   readonly maximumZoomY: number;
-  readonly pitchCount: number;
 }
 
 /**
@@ -146,23 +149,35 @@ export class PinchViewportGesture {
       / currentPitchHeight;
     const zoomX = clamp(
       currentViewport.zoomX * scaleX,
-      this.settings.minimumZoomX,
+      getMinimumHorizontalZoom(
+        viewportWidth,
+        totalTicks,
+        currentViewport.ticksPerPixel,
+      ),
       this.settings.maximumZoomX,
     );
     const zoomY = clamp(
       currentViewport.zoomY * scaleY,
-      this.settings.minimumZoomY,
+      getMinimumVerticalZoom(
+        viewportHeight,
+        currentViewport.pitchHeight,
+      ),
       this.settings.maximumZoomY,
     );
     const pitchHeight = currentViewport.pitchHeight * zoomY;
-    const maximumScrollX = Math.max(
-      0,
-      totalTicks * zoomX / currentViewport.ticksPerPixel
-        - viewportWidth,
+    const scaledViewport = {
+      ...currentViewport,
+      zoomX,
+      zoomY,
+    };
+    const maximumScrollX = getMaximumHorizontalScroll(
+      scaledViewport,
+      viewportWidth,
+      totalTicks,
     );
-    const maximumScrollY = Math.max(
-      0,
-      this.settings.pitchCount * pitchHeight - viewportHeight,
+    const maximumScrollY = getMaximumVerticalScroll(
+      scaledViewport,
+      viewportHeight,
     );
     const scrollX = clamp(
       anchorTick * zoomX / currentViewport.ticksPerPixel

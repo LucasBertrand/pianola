@@ -9,7 +9,9 @@ import {
   VIEWPORT_CONSTANTS,
 } from "../config/program-constants";
 import {
-  getProjectDurationTicks,
+  getActiveClipDurationTicks,
+  getActiveClip,
+  type ClipId,
   type Note,
   type ProjectState,
   type VoiceId,
@@ -69,6 +71,19 @@ export interface EditorRuntime {
   readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
   readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly captureClipEditorStates: () => Readonly<
+    Record<ClipId, ClipEditorRuntimeState>
+  >;
+  readonly restoreClipEditorStates: (
+    states: Readonly<Record<ClipId, ClipEditorRuntimeState>>,
+  ) => void;
+}
+
+export interface ClipEditorRuntimeState {
+  readonly playheadTick: number;
+  readonly viewport: ViewportState;
+  readonly pitchSnapSettings: PitchSnapSettings;
+  readonly gridSettings: GridSettings;
 }
 
 /** Creates the runtime for one project. A future tab system can own one per tab. */
@@ -80,6 +95,7 @@ export function createEditorRuntime(
   const projectStore = new ProjectStore(initialProjectState);
   const indexedNotesBuffer: Note[] = [];
   const editorCommands = new EditorCommandService(projectStore);
+  const activeClip = getActiveClip(initialProjectState);
 
   rebuildSpatialIndex(
     initialProjectState,
@@ -91,8 +107,42 @@ export function createEditorRuntime(
     createVoiceRenderStyles(initialProjectState),
   );
 
+  const viewport = new MutableRenderSignal(viewportState);
+  const playheadTick = new MutableRenderSignal(
+    activeClip.transportSettings.anchorTick,
+  );
+  const pitchSnapSettings = new MutableRenderSignal(
+    DEFAULT_PITCH_SNAP_SETTINGS,
+  );
+  const gridSettings = new MutableRenderSignal<GridSettings>(
+    DEFAULT_GRID_SETTINGS,
+  );
+  const clipEditorStates = new Map<ClipId, ClipEditorRuntimeState>();
+
   projectStore.subscribe((state, previousState) => {
-    if (state.tracksByVoiceId !== previousState.tracksByVoiceId) {
+    const nextClip = getActiveClip(state);
+    const previousClip = getActiveClip(previousState);
+
+    if (state.activeClipId !== previousState.activeClipId) {
+      clipEditorStates.set(previousState.activeClipId, {
+        playheadTick: playheadTick.get(),
+        viewport: viewport.get(),
+        pitchSnapSettings: pitchSnapSettings.get(),
+        gridSettings: gridSettings.get(),
+      });
+      const restored = clipEditorStates.get(state.activeClipId)
+        ?? createDefaultClipEditorRuntimeState(nextClip);
+
+      playheadTick.set(restored.playheadTick);
+      viewport.set(restored.viewport);
+      pitchSnapSettings.set(restored.pitchSnapSettings);
+      gridSettings.set(restored.gridSettings);
+    }
+
+    if (
+      nextClip.tracksByVoiceId !== previousClip.tracksByVoiceId
+      || state.activeClipId !== previousState.activeClipId
+    ) {
       rebuildSpatialIndex(state, spatialIndex, indexedNotesBuffer);
     }
 
@@ -101,43 +151,87 @@ export function createEditorRuntime(
     }
   });
 
-  const gridSettings = new MutableRenderSignal<GridSettings>(
-    DEFAULT_GRID_SETTINGS,
-  );
-
-  return {
+  const runtime: EditorRuntime = {
     projectStore,
     editorCommands,
     selectionRequests: new EditorSelectionRequests(),
     spatialIndex,
-    viewport: new MutableRenderSignal(viewportState),
+    viewport,
     visibleRegion: new MutableRenderSignal(
       calculateVisibleRegion(
         viewportState,
         VIEWPORT_CONSTANTS.initialWidthCssPixels,
         VIEWPORT_CONSTANTS.initialHeightCssPixels,
-        getProjectDurationTicks(initialProjectState),
+        getActiveClipDurationTicks(initialProjectState),
       ),
     ),
     voiceStyles,
     noteColorMode: new MutableRenderSignal<NoteColorMode>(
       EDITOR_CONSTANTS.defaultNoteColorMode,
     ),
-    playheadTick: new MutableRenderSignal(
-      initialProjectState.transportSettings.ppqn
-      * 4
-      * initialProjectState.transportSettings.timeSignature.numerator
-      / initialProjectState.transportSettings.timeSignature.denominator,
-    ),
+    playheadTick,
     highlightedPitch: new MutableRenderSignal<number | null>(null),
-    pitchSnapSettings: new MutableRenderSignal(
-      DEFAULT_PITCH_SNAP_SETTINGS,
-    ),
+    pitchSnapSettings,
     gridSettings,
     gridResolutionTicks: new MappedRenderSignal(
       gridSettings,
       (settings) => settings.resolutionTicks,
     ),
+    captureClipEditorStates(): Readonly<Record<ClipId, ClipEditorRuntimeState>> {
+      const state = projectStore.getState();
+
+      clipEditorStates.set(state.activeClipId, {
+        playheadTick: playheadTick.get(),
+        viewport: viewport.get(),
+        pitchSnapSettings: pitchSnapSettings.get(),
+        gridSettings: gridSettings.get(),
+      });
+
+      const result: Record<ClipId, ClipEditorRuntimeState> = {};
+
+      for (const clipId of state.clipOrder) {
+        const clip = state.clipsById[clipId];
+
+        if (clip !== undefined) {
+          result[clipId] = clipEditorStates.get(clipId)
+            ?? createDefaultClipEditorRuntimeState(clip);
+        }
+      }
+
+      return result;
+    },
+    restoreClipEditorStates(
+      states: Readonly<Record<ClipId, ClipEditorRuntimeState>>,
+    ): void {
+      clipEditorStates.clear();
+
+      for (const [clipId, clipState] of Object.entries(states)) {
+        clipEditorStates.set(clipId, clipState);
+      }
+
+      const currentState = projectStore.getState();
+      const currentClip = getActiveClip(currentState);
+      const restored = clipEditorStates.get(currentState.activeClipId)
+        ?? createDefaultClipEditorRuntimeState(currentClip);
+
+      playheadTick.set(restored.playheadTick);
+      viewport.set(restored.viewport);
+      pitchSnapSettings.set(restored.pitchSnapSettings);
+      gridSettings.set(restored.gridSettings);
+    },
+  };
+
+  return runtime;
+}
+
+function createDefaultClipEditorRuntimeState(
+  clip: ReturnType<typeof getActiveClip>,
+): ClipEditorRuntimeState {
+  return {
+    playheadTick: clip.transportSettings.anchorTick,
+    viewport: createInitialViewportState(),
+    pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+    gridSettings: DEFAULT_GRID_SETTINGS,
   };
 }
 
@@ -183,9 +277,10 @@ function rebuildSpatialIndex(
   target: Note[],
 ): void {
   target.length = 0;
+  const activeClip = getActiveClip(state);
 
   for (const voiceId of state.voiceOrder) {
-    const track = state.tracksByVoiceId[voiceId];
+    const track = activeClip.tracksByVoiceId[voiceId];
 
     if (track === undefined) {
       continue;

@@ -4,14 +4,15 @@ import type {
 } from "../../domain/commands";
 import type {
   AdsrEnvelope,
+  ClipId,
   OscillatorWaveform,
   ProjectState,
   Voice,
   VoiceId,
 } from "../../domain/model";
-import type {
-  NoteColorMode,
-} from "../rendering/note-style";
+import {
+  ClipInspector,
+} from "./ClipInspector";
 import {
   InstrumentInspector,
 } from "./InstrumentInspector";
@@ -22,14 +23,18 @@ import {
 
 export interface GeneralInspectorProps {
   readonly open: boolean;
+  readonly portraitSection: "voices" | "clips";
   readonly projectState: ProjectState;
   readonly selectedVoiceId: VoiceId | null;
   readonly selectedVoiceIndex: number;
   readonly selectedVoice: Voice | undefined;
-  readonly noteColorMode: NoteColorMode;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClose: () => void;
-  readonly onNoteColorModeToggle: () => void;
+  readonly onClipSelect: (clipId: ClipId) => void;
+  readonly onAddClip: () => void;
+  readonly onMoveActiveClip: (direction: -1 | 1) => void;
+  readonly onDeleteClip: (clipId: ClipId) => void;
+  readonly onRenameClip: (clipId: ClipId, name: string) => void;
   readonly onMoveSelectedVoice: (direction: -1 | 1) => void;
   readonly onAddVoice: () => void;
   readonly onVoiceSelect: (voiceId: VoiceId) => void;
@@ -62,14 +67,18 @@ export interface GeneralInspectorProps {
 
 export function GeneralInspector({
   open,
+  portraitSection,
   projectState,
   selectedVoiceId,
   selectedVoiceIndex,
   selectedVoice,
-  noteColorMode,
   setToolbarHost,
   onClose,
-  onNoteColorModeToggle,
+  onClipSelect,
+  onAddClip,
+  onMoveActiveClip,
+  onDeleteClip,
+  onRenameClip,
   onMoveSelectedVoice,
   onAddVoice,
   onVoiceSelect,
@@ -86,7 +95,7 @@ export function GeneralInspector({
   <aside
     id="general-inspector"
     className={
-      `general-inspector${
+      `general-inspector is-${portraitSection}-panel${
         open ? " is-open" : ""
       }`
     }
@@ -96,37 +105,22 @@ export function GeneralInspector({
       className="general-inspector-toolbar-host"
     />
     <div className="general-inspector-scroll-content">
+    <ClipInspector
+      projectState={projectState}
+      onClose={onClose}
+      onSelect={onClipSelect}
+      onAdd={onAddClip}
+      onMoveActive={onMoveActiveClip}
+      onDelete={onDeleteClip}
+      onRename={onRenameClip}
+    />
+    <section className="voice-inspector-section">
     <div className="general-inspector-heading">
       <div>
-        <small>Arrangement</small>
+        <small>Project voices</small>
         <h1>Voices</h1>
       </div>
       <div className="general-inspector-heading-actions">
-        <button
-          className={
-            `voice-order-button note-color-toggle${
-              noteColorMode === "voice"
-                ? " is-voice-mode"
-                : ""
-            }`
-          }
-          type="button"
-          title={
-            noteColorMode === "voice"
-              ? "Use pitch colors"
-              : "Use voice colors"
-          }
-          aria-label="Color notes by voice"
-          aria-pressed={noteColorMode === "voice"}
-          onClick={onNoteColorModeToggle}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M10 2a8 8 0 1 0 0 16h1.2a1.8 1.8 0 0 0 0-3.6h-.6a1.3 1.3 0 0 1 0-2.6H13A5 5 0 0 0 18 7c0-2.8-3.6-5-8-5Z" />
-            <circle cx="6" cy="7" r="1" />
-            <circle cx="9.5" cy="5" r="1" />
-            <circle cx="13" cy="6.5" r="1" />
-          </svg>
-        </button>
         <button
           className="voice-order-button"
           type="button"
@@ -154,14 +148,6 @@ export function GeneralInspector({
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <path d="M10 5v10M5.5 10.5 10 15l4.5-4.5" />
           </svg>
-        </button>
-        <button
-          className="general-inspector-close-button"
-          type="button"
-          aria-label="Close voices"
-          onClick={() => onClose()}
-        >
-          ×
         </button>
         <button
           className="add-button"
@@ -381,8 +367,8 @@ export function GeneralInspector({
       onPolyphonyCommit={onPolyphonyCommit}
       onEnvelopeCommit={onEnvelopeCommit}
     />
+    </section>
     </div>
   </aside>
   );
 }
-

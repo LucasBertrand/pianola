@@ -6,7 +6,8 @@ import type {
   VoiceId,
 } from "../domain/model";
 import {
-  getProjectDurationTicks,
+  getActiveClip,
+  getActiveClipDurationTicks,
   MAXIMUM_INSTRUMENT_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
@@ -32,12 +33,13 @@ export class PlaybackSnapshotCompilationError extends Error {
 export function compilePlaybackSnapshot(
   projectState: ProjectState,
 ): PlaybackSnapshot {
-  const transport = projectState.transportSettings;
+  const activeClip = getActiveClip(projectState);
+  const transport = activeClip.transportSettings;
 
   assertPositiveSafeInteger(transport.ppqn, "Project PPQN");
   assertPositiveFiniteNumber(transport.bpm, "Project BPM");
 
-  const durationTicks = getProjectDurationTicks(projectState);
+  const durationTicks = getActiveClipDurationTicks(projectState);
 
   if (
     !Number.isFinite(projectState.masterBus.gain)
@@ -94,7 +96,7 @@ export function compilePlaybackSnapshot(
     }
 
     const voice = projectState.voicesById[voiceId];
-    const track = projectState.tracksByVoiceId[voiceId];
+    const track = activeClip.tracksByVoiceId[voiceId];
 
     if (voice === undefined) {
       throw new PlaybackSnapshotCompilationError(
