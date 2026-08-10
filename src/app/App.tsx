@@ -266,9 +266,6 @@ export function App(): React.JSX.Element {
     auditionPitch,
     previewVoiceGain,
     previewMasterGain,
-    beginSeekGesture,
-    previewSeek,
-    commitSeekGesture,
   } = useAudioPlayback({
     projectStore: scene.projectStore,
     playheadTick: scene.playheadTick,
@@ -732,9 +729,7 @@ export function App(): React.JSX.Element {
                 viewport={scene.viewport}
                 projectStore={scene.projectStore}
                 gridResolutionTicks={scene.gridResolutionTicks}
-                onSeekStart={beginSeekGesture}
-                onSeekPreview={previewSeek}
-                onSeekCommit={commitSeekGesture}
+                onSeek={seekPlayback}
               />
               <TimelineLoopRegion
                 viewport={scene.viewport}
@@ -755,6 +750,7 @@ export function App(): React.JSX.Element {
                   onHorizontalViewportInteractionEnd={
                     endHorizontalViewportInteraction
                   }
+                  onTwoFingerDoubleTap={handleUndo}
                   eventControllerRef={
                     pianoRollEventControllerRef
                   }

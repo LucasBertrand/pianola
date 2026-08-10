@@ -51,9 +51,6 @@ export interface AudioPlaybackActions {
     gain: number,
   ) => void;
   readonly previewMasterGain: (gain: number) => void;
-  readonly beginSeekGesture: () => void;
-  readonly previewSeek: (tick: Tick) => void;
-  readonly commitSeekGesture: (tick: Tick) => void;
 }
 
 export function useAudioPlayback(
@@ -68,7 +65,6 @@ export function useAudioPlayback(
   const [status, setStatus] =
     useState<PlaybackStatus>("stopped");
   const schedulerRef = useRef<LookaheadScheduler | null>(null);
-  const resumeAfterSeekGestureRef = useRef(false);
 
   onErrorRef.current = onError;
 
@@ -198,17 +194,14 @@ export function useAudioPlayback(
   ]);
 
   const stopPlayback = useCallback((): void => {
-    resumeAfterSeekGestureRef.current = false;
     schedulerRef.current?.stop();
   }, []);
 
   const returnToStart = useCallback((): void => {
-    resumeAfterSeekGestureRef.current = false;
     schedulerRef.current?.seek(0);
   }, []);
 
   const seek = useCallback((tick: Tick): void => {
-    resumeAfterSeekGestureRef.current = false;
     schedulerRef.current?.seek(tick);
   }, []);
 
@@ -242,43 +235,6 @@ export function useAudioPlayback(
     schedulerRef.current?.previewMasterGain(gain);
   }, []);
 
-  const beginSeekGesture = useCallback((): void => {
-    const scheduler = schedulerRef.current;
-
-    if (scheduler === null) {
-      return;
-    }
-
-    resumeAfterSeekGestureRef.current =
-      scheduler.status === "playing";
-    scheduler.pause();
-  }, []);
-
-  const previewSeek = useCallback((tick: Tick): void => {
-    playheadTick.set(tick);
-  }, [
-    playheadTick,
-  ]);
-
-  const commitSeekGesture = useCallback((tick: Tick): void => {
-    const scheduler = schedulerRef.current;
-
-    if (scheduler === null) {
-      return;
-    }
-
-    const shouldResume = resumeAfterSeekGestureRef.current;
-
-    resumeAfterSeekGestureRef.current = false;
-    scheduler.seek(tick);
-
-    if (shouldResume) {
-      void scheduler.play(tick).catch(() => {
-        // The scheduler reports initialization errors through onError.
-      });
-    }
-  }, []);
-
   return {
     status,
     togglePlayback,
@@ -288,9 +244,6 @@ export function useAudioPlayback(
     auditionPitch,
     previewVoiceGain,
     previewMasterGain,
-    beginSeekGesture,
-    previewSeek,
-    commitSeekGesture,
   };
 }
 

@@ -35,9 +35,7 @@ export interface BarRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
-  readonly onSeekStart: () => void;
-  readonly onSeekPreview: (tick: number) => void;
-  readonly onSeekCommit: (tick: number) => void;
+  readonly onSeek: (tick: number) => void;
 }
 
 type LoopGestureMode =
@@ -558,9 +556,7 @@ export function BarRuler(
     viewport,
     projectStore,
     gridResolutionTicks,
-    onSeekStart,
-    onSeekPreview,
-    onSeekCommit,
+    onSeek,
   } = props;
   const paintRuler = useCallback(
     (frame: CanvasFrame): void => {
@@ -706,10 +702,7 @@ export function BarRuler(
       return undefined;
     }
 
-    let activePointerId = -1;
-    let draftTick = 0;
-
-    const updatePlayhead = (clientX: number): number => {
+    const resolveSeekTick = (clientX: number): number => {
       const bounds = canvas.getBoundingClientRect();
       const currentViewport = viewport.get();
       const localX = clientX - bounds.left;
@@ -721,87 +714,28 @@ export function BarRuler(
       const snappedTick =
         Math.round(rawTick / resolutionTicks) * resolutionTicks;
 
-      draftTick = Math.min(
+      return Math.min(
         getActiveClipDurationTicks(projectStore.getState()),
         Math.max(0, snappedTick),
       );
-      onSeekPreview(draftTick);
-      return draftTick;
     };
-    const handlePointerDown = (event: PointerEvent): void => {
+    const handleClick = (event: MouseEvent): void => {
       if (event.button !== 0) {
         return;
       }
 
-      activePointerId = event.pointerId;
-      canvas.setPointerCapture(event.pointerId);
-      onSeekStart();
-      updatePlayhead(event.clientX);
+      onSeek(resolveSeekTick(event.clientX));
       event.preventDefault();
     };
-    const handlePointerMove = (event: PointerEvent): void => {
-      if (event.pointerId !== activePointerId) {
-        return;
-      }
 
-      updatePlayhead(event.clientX);
-      event.preventDefault();
-    };
-    const finishPointer = (event: PointerEvent): void => {
-      if (event.pointerId !== activePointerId) {
-        return;
-      }
-
-      const committedTick = updatePlayhead(event.clientX);
-      activePointerId = -1;
-
-      if (canvas.hasPointerCapture(event.pointerId)) {
-        canvas.releasePointerCapture(event.pointerId);
-      }
-
-      onSeekCommit(committedTick);
-      event.preventDefault();
-    };
-    const cancelPointer = (event: PointerEvent): void => {
-      if (event.pointerId === activePointerId) {
-        activePointerId = -1;
-        onSeekCommit(draftTick);
-      }
-    };
-
-    canvas.addEventListener("pointerdown", handlePointerDown);
-    canvas.addEventListener("pointermove", handlePointerMove);
-    canvas.addEventListener("pointerup", finishPointer);
-    canvas.addEventListener("pointercancel", cancelPointer);
-    canvas.addEventListener(
-      "lostpointercapture",
-      cancelPointer,
-    );
+    canvas.addEventListener("click", handleClick);
 
     return (): void => {
-      canvas.removeEventListener(
-        "pointerdown",
-        handlePointerDown,
-      );
-      canvas.removeEventListener(
-        "pointermove",
-        handlePointerMove,
-      );
-      canvas.removeEventListener("pointerup", finishPointer);
-      canvas.removeEventListener(
-        "pointercancel",
-        cancelPointer,
-      );
-      canvas.removeEventListener(
-        "lostpointercapture",
-        cancelPointer,
-      );
+      canvas.removeEventListener("click", handleClick);
     };
   }, [
     gridResolutionTicks,
-    onSeekCommit,
-    onSeekPreview,
-    onSeekStart,
+    onSeek,
     projectStore,
     renderer.canvasRef,
     viewport,

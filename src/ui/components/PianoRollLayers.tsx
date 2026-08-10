@@ -110,6 +110,7 @@ export interface PianoRollLayersProps {
   readonly setViewport: (viewport: ViewportState) => void;
   readonly onHorizontalViewportInteractionStart: () => void;
   readonly onHorizontalViewportInteractionEnd: () => void;
+  readonly onTwoFingerDoubleTap: () => void;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
   >;
@@ -188,6 +189,7 @@ export function PianoRollLayers(
     setViewport,
     onHorizontalViewportInteractionStart,
     onHorizontalViewportInteractionEnd,
+    onTwoFingerDoubleTap,
     eventControllerRef,
     onSelectionChange,
     onGridSeek,
@@ -244,6 +246,7 @@ export function PianoRollLayers(
         onHorizontalViewportInteractionEnd={
           onHorizontalViewportInteractionEnd
         }
+        onTwoFingerDoubleTap={onTwoFingerDoubleTap}
         editingNoteMask={editingNoteMask}
         eventControllerRef={eventControllerRef}
         onSelectionChange={onSelectionChange}

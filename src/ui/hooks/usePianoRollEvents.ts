@@ -301,45 +301,6 @@ export function usePianoRollEvents(
       return false;
     };
 
-    const toggleSelectedNotesEnabled = (): void => {
-      const selectedNotes = selection.notes;
-
-      if (selectedNotes.length === 0) {
-        return;
-      }
-
-      let enableNotes = true;
-
-      for (const selectedNote of selectedNotes) {
-        if (selectedNote.enabled) {
-          enableNotes = false;
-          break;
-        }
-      }
-
-      try {
-        const nextState = editorCommands.dispatch(
-          buildSetNotesEnabledCommands(
-            selectedNotes,
-            enableNotes,
-          ),
-          enableNotes
-            ? "Enable selected notes"
-            : "Disable selected notes",
-        );
-
-        if (nextState !== null) {
-          selection.reconcile(
-            nextState,
-            (note) => !isVoiceLocked(note.voiceId),
-          );
-          showSelection();
-        }
-      } catch (error: unknown) {
-        onTransactionRejected?.(error);
-      }
-    };
-
     const registerDirectPointerTap = (
       event: PointerSample,
       noteId: NoteId,
@@ -379,6 +340,45 @@ export function usePianoRollEvents(
       tapState.timeStamp = event.timeStamp;
       tapState.clientX = event.clientX;
       tapState.clientY = event.clientY;
+    };
+
+    const toggleSelectedNotesEnabled = (): void => {
+      const selectedNotes = selection.notes;
+
+      if (selectedNotes.length === 0) {
+        return;
+      }
+
+      let enableNotes = true;
+
+      for (const selectedNote of selectedNotes) {
+        if (selectedNote.enabled) {
+          enableNotes = false;
+          break;
+        }
+      }
+
+      try {
+        const nextState = editorCommands.dispatch(
+          buildSetNotesEnabledCommands(
+            selectedNotes,
+            enableNotes,
+          ),
+          enableNotes
+            ? "Enable selected notes"
+            : "Disable selected notes",
+        );
+
+        if (nextState !== null) {
+          selection.reconcile(
+            nextState,
+            (note) => !isVoiceLocked(note.voiceId),
+          );
+          showSelection();
+        }
+      } catch (error: unknown) {
+        onTransactionRejected?.(error);
+      }
     };
 
     const handlePointerDown = (event: PointerSample): void => {
@@ -727,7 +727,10 @@ export function usePianoRollEvents(
 
         visualsRef.current?.endLasso();
         showSelection();
-      } else if (completedMode === "PENDING_LASSO") {
+      } else if (
+        completedMode === "PENDING_LASSO"
+        && pointerWasTap
+      ) {
         clearSelection();
 
         const pointerTick = converter.cssPixelXToTick(

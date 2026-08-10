@@ -108,6 +108,11 @@ try {
     "/src/interaction/core/pinch-viewport-gesture.ts",
   );
   const {
+    TwoPointerDoubleTapGesture,
+  } = await vite.ssrLoadModule(
+    "/src/interaction/core/two-pointer-double-tap.ts",
+  );
+  const {
     constrainViewportToContent,
     getMaximumHorizontalScroll,
     getMaximumVerticalScroll,
@@ -919,6 +924,21 @@ try {
     assert.equal(nextViewport.zoomY, 1);
     gesture.reset();
     assert.equal(gesture.active, false);
+  });
+
+  test("recognizes only nearby consecutive two-pointer taps", () => {
+    const gesture = new TwoPointerDoubleTapGesture({
+      maximumDelayMs: 360,
+      maximumDistanceCssPixels: 32,
+    });
+
+    assert.equal(gesture.recordTap(1_000, 100, 120), false);
+    assert.equal(gesture.recordTap(1_240, 112, 128), true);
+    assert.equal(gesture.recordTap(2_000, 100, 120), false);
+    assert.equal(gesture.recordTap(2_200, 180, 120), false);
+    gesture.reset();
+    assert.equal(gesture.recordTap(3_000, 100, 120), false);
+    assert.equal(gesture.recordTap(3_500, 100, 120), false);
   });
 
   test("derives zoom limits from the current content and viewport", () => {

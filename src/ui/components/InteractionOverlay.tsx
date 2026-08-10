@@ -49,6 +49,7 @@ export interface InteractionOverlayProps {
   readonly setViewport: (viewport: ViewportState) => void;
   readonly onHorizontalViewportInteractionStart: () => void;
   readonly onHorizontalViewportInteractionEnd: () => void;
+  readonly onTwoFingerDoubleTap: () => void;
   readonly editingNoteMask: EditingNoteMask;
   readonly eventControllerRef: MutableRefObject<
     PianoRollEventController | null
@@ -109,6 +110,7 @@ export function InteractionOverlay(
     setViewport,
     onHorizontalViewportInteractionStart,
     onHorizontalViewportInteractionEnd,
+    onTwoFingerDoubleTap,
     editingNoteMask,
     eventControllerRef,
     onSelectionChange,
@@ -149,6 +151,7 @@ export function InteractionOverlay(
     setViewport,
     onHorizontalViewportInteractionStart,
     onHorizontalViewportInteractionEnd,
+    onTwoFingerDoubleTap,
   });
 
   const eventController = usePianoRollEvents({
