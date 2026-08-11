@@ -9,13 +9,17 @@ import type {
   VoiceId,
 } from "./model";
 import {
+  EDITOR_CONSTANTS,
+  VOICE_CONSTANTS,
+} from "../config/program-constants";
+import {
   getTicksPerMeasure,
-  MAXIMUM_INSTRUMENT_POLYPHONY,
+  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_VOICE_DESCRIPTOR_COUNT,
   MAXIMUM_VOICE_NAME_LENGTH,
-  MINIMUM_INSTRUMENT_POLYPHONY,
+  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
 } from "./model";
 
 export type ValidationCode =
@@ -463,13 +467,13 @@ function validateInstrument(
   );
   if (
     !Number.isSafeInteger(instrument.polyphony)
-    || instrument.polyphony < MINIMUM_INSTRUMENT_POLYPHONY
-    || instrument.polyphony > MAXIMUM_INSTRUMENT_POLYPHONY
+    || instrument.polyphony < MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+    || instrument.polyphony > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
   ) {
     pushVoiceIssue(
       issues,
       "instrument.polyphony",
-      `Instrument polyphony must be an integer between ${MINIMUM_INSTRUMENT_POLYPHONY} and ${MAXIMUM_INSTRUMENT_POLYPHONY}.`,
+      `Subtractive synth polyphony must be an integer between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
     );
   }
   validateFiniteNumber(
@@ -477,15 +481,38 @@ function validateInstrument(
     "instrument.oscillatorDetuneCents",
     issues,
   );
-  validateEnvelope(instrument.envelope, "instrument.envelope", issues);
-  validatePositiveNumber(
-    instrument.filterCutoffHz,
-    "instrument.filterCutoffHz",
+  validateNumberInRange(
+    instrument.pulseWidth,
+    "instrument.pulseWidth",
+    VOICE_CONSTANTS.minimumPulseWidth,
+    VOICE_CONSTANTS.maximumPulseWidth,
     issues,
   );
-  validateNonNegativeNumber(
+  validateEnvelope(instrument.envelope, "instrument.envelope", issues);
+  validateNumberInRange(
+    instrument.filterCutoffHz,
+    "instrument.filterCutoffHz",
+    VOICE_CONSTANTS.minimumFilterCutoffHz,
+    VOICE_CONSTANTS.maximumFilterCutoffHz,
+    issues,
+  );
+  validateNumberInRange(
     instrument.filterResonance,
     "instrument.filterResonance",
+    VOICE_CONSTANTS.minimumFilterResonance,
+    VOICE_CONSTANTS.maximumFilterResonance,
+    issues,
+  );
+  validateNumberInRange(
+    instrument.filterEnvelopeAmountOctaves,
+    "instrument.filterEnvelopeAmountOctaves",
+    VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
+    VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
+    issues,
+  );
+  validateEnvelope(
+    instrument.filterEnvelope,
+    "instrument.filterEnvelope",
     issues,
   );
 }
@@ -495,14 +522,18 @@ function validateEnvelope(
   path: string,
   issues: ValidationIssue[],
 ): void {
-  validateNonNegativeNumber(
+  validateNumberInRange(
     envelope.attackSeconds,
     `${path}.attackSeconds`,
+    0,
+    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds,
     issues,
   );
-  validateNonNegativeNumber(
+  validateNumberInRange(
     envelope.decaySeconds,
     `${path}.decaySeconds`,
+    0,
+    EDITOR_CONSTANTS.envelopeDecayMaximumSeconds,
     issues,
   );
 
@@ -518,9 +549,11 @@ function validateEnvelope(
     );
   }
 
-  validateNonNegativeNumber(
+  validateNumberInRange(
     envelope.releaseSeconds,
     `${path}.releaseSeconds`,
+    0,
+    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds,
     issues,
   );
 }
@@ -734,6 +767,26 @@ function validateNonNegativeNumber(
       issues,
       path,
       "Value must be non-negative and finite.",
+    );
+  }
+}
+
+function validateNumberInRange(
+  value: number,
+  path: string,
+  minimum: number,
+  maximum: number,
+  issues: ValidationIssue[],
+): void {
+  if (
+    !Number.isFinite(value)
+    || value < minimum
+    || value > maximum
+  ) {
+    pushVoiceIssue(
+      issues,
+      path,
+      `Value must be a finite number between ${minimum} and ${maximum}.`,
     );
   }
 }

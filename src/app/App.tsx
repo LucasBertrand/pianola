@@ -442,6 +442,7 @@ export function App(): React.JSX.Element {
     commitEnvelopeParameter: handleEnvelopeParameterCommit,
     commitWaveform: handleWaveformCommit,
     commitPolyphony: handleInstrumentPolyphonyCommit,
+    commitInstrumentParameter: handleInstrumentParameterCommit,
     selectNotes: handleSelectVoiceNotes,
     toggleLock: handleToggleVoiceLock,
   } = useVoiceWorkflow({
@@ -806,6 +807,7 @@ export function App(): React.JSX.Element {
           onWaveformCommit={handleWaveformCommit}
           onPolyphonyCommit={handleInstrumentPolyphonyCommit}
           onEnvelopeCommit={handleEnvelopeParameterCommit}
+          onInstrumentParameterCommit={handleInstrumentParameterCommit}
         />
       </section>
       <ApplicationDialogOverlay

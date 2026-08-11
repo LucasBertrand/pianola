@@ -57,10 +57,10 @@ Firefox Android et un navigateur desktop.
 - résolution des collisions par annulation, fusion ou découpe aux ancres ;
 - voix configurables : nom, couleur, ordre, volume, mute, solo et verrouillage ;
 - clips configurables : sélection, nom, ordre, ajout et suppression ;
-- synthétiseur soustractif par voix avec forme d’onde, enveloppe ADSR et
-  polyphonie de 1 à 16 notes ;
-- moteur audio Web Audio avec scheduler lookahead et vol de la voix la plus
-  ancienne lorsque la polyphonie est saturée ;
+- synthétiseur soustractif par voix avec pulse width, filtre modulé et deux
+  enveloppes ADSR ;
+- polyphonie soustractive de 1 à 16 oscillateurs et vol de l’occurrence la plus
+  ancienne lorsque cette limite est saturée ;
 - tête de lecture, tempo, métrique, grille straight/triplet/dotted et boucle ;
 - import MIDI SMF 0/1 et export MIDI SMF 1 ;
 - sauvegarde et chargement du format natif `.pianola` ;
@@ -191,6 +191,10 @@ un état immuable et `lookahead-scheduler.ts` programme les événements à
 l’avance. `web-audio-engine.ts` possède le contexte, le master et les bus de
 voix. Les renderers de `src/audio/instruments/` construisent les graphes propres
 à chaque type d’instrument ; le renderer soustractif est le seul disponible.
+Les contrats audio représentent chaque famille d’instrument par un snapshot
+discriminé et immuable. Chaque renderer expose sa propre politique de
+polyphonie : la limite du synthétiseur soustractif ne s’applique donc pas aux
+futurs instruments comme le drumkit.
 
 Les événements futurs sont recalculés après une édition sans couper les notes
 déjà audibles. La vélocité est conservée dans les fichiers, mais le niveau de
@@ -499,8 +503,11 @@ créées utilisent la voix sélectionnée.
 - La cible sélectionne les notes de la voix sans supprimer la sélection des
   autres voix.
 
-Chaque voix possède un synthétiseur soustractif, une forme d’onde, une
-polyphonie, une enveloppe ADSR, une couleur et un volume.
+Chaque voix possède une couleur et un volume. Son synthétiseur soustractif
+possède sa propre limite de polyphonie et propose quatre formes d’onde, une largeur
+d’impulsion pour l’onde carrée, un filtre passe-bas avec cutoff et résonance,
+ainsi que deux enveloppes ADSR indépendantes pour l’amplitude et le filtre. Le
+decay de chaque enveloppe peut atteindre 10 secondes.
 
 ### Transport et boucle
 
@@ -701,6 +708,11 @@ Préserver les responsabilités :
 - `web-audio-engine.ts` possède le contexte, le master et les bus de voix ;
 - `audio/instruments/` crée et contrôle les sources propres aux instruments ;
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
+
+La polyphonie est une propriété de `SubtractiveSynthConfig`. Elle est copiée
+dans `SubtractivePlaybackVoiceSnapshot`, puis interprétée par le renderer
+soustractif. Ne pas généraliser cette limite à tous les instruments : un futur
+drumkit définira sa propre politique de superposition et de choke groups.
 
 Toute correction de timing doit être testable avec un faux moteur dans
 `scripts/test-audio.mjs`. Éviter de dépendre de l’horloge murale directement

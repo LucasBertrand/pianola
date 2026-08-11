@@ -28,12 +28,12 @@ export const MINIMUM_MASTER_TUNING_FREQUENCY_HZ =
   PROJECT_CONSTANTS.minimumMasterTuningFrequencyHz;
 export const MAXIMUM_MASTER_TUNING_FREQUENCY_HZ =
   PROJECT_CONSTANTS.maximumMasterTuningFrequencyHz;
-export const DEFAULT_INSTRUMENT_POLYPHONY =
-  PROJECT_CONSTANTS.defaultInstrumentPolyphony;
-export const MINIMUM_INSTRUMENT_POLYPHONY =
-  PROJECT_CONSTANTS.minimumInstrumentPolyphony;
-export const MAXIMUM_INSTRUMENT_POLYPHONY =
-  PROJECT_CONSTANTS.maximumInstrumentPolyphony;
+export const DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.defaultSubtractiveSynthPolyphony;
+export const MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.minimumSubtractiveSynthPolyphony;
+export const MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.maximumSubtractiveSynthPolyphony;
 export const MINIMUM_MEASURE_COUNT =
   PROJECT_CONSTANTS.minimumMeasureCount;
 export const MAXIMUM_MEASURE_COUNT =
@@ -85,10 +85,19 @@ export interface SubtractiveSynthConfig {
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
+  readonly pulseWidth: number;
   readonly envelope: AdsrEnvelope;
   readonly filterCutoffHz: number;
   readonly filterResonance: number;
+  readonly filterEnvelopeAmountOctaves: number;
+  readonly filterEnvelope: AdsrEnvelope;
 }
+
+export type SubtractiveSynthContinuousParameter =
+  | "pulseWidth"
+  | "filterCutoffHz"
+  | "filterResonance"
+  | "filterEnvelopeAmountOctaves";
 
 export type InstrumentConfig = SubtractiveSynthConfig;
 
@@ -192,7 +201,7 @@ export interface AudioEngineConfig {
   readonly lateEventToleranceSeconds: number;
   readonly latencyCompensationSeconds: number;
   readonly masterGain: number;
-  readonly maxPolyphonyPerVoice: number;
+  readonly maximumRendererPolyphony: number;
   readonly releaseTailSeconds: number;
 }
 

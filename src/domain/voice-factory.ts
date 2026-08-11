@@ -33,9 +33,10 @@ export function createDefaultVoice(
       oscillatorWaveform:
         options.oscillatorWaveform
         ?? VOICE_CONSTANTS.defaultOscillatorWaveform,
-      polyphony: PROJECT_CONSTANTS.defaultInstrumentPolyphony,
+      polyphony: PROJECT_CONSTANTS.defaultSubtractiveSynthPolyphony,
       oscillatorDetuneCents:
         VOICE_CONSTANTS.oscillatorDetuneCents,
+      pulseWidth: VOICE_CONSTANTS.pulseWidth,
       envelope: {
         attackSeconds: VOICE_CONSTANTS.attackSeconds,
         decaySeconds: VOICE_CONSTANTS.decaySeconds,
@@ -44,6 +45,14 @@ export function createDefaultVoice(
       },
       filterCutoffHz: VOICE_CONSTANTS.filterCutoffHz,
       filterResonance: VOICE_CONSTANTS.filterResonance,
+      filterEnvelopeAmountOctaves:
+        VOICE_CONSTANTS.filterEnvelopeAmountOctaves,
+      filterEnvelope: {
+        attackSeconds: VOICE_CONSTANTS.filterAttackSeconds,
+        decaySeconds: VOICE_CONSTANTS.filterDecaySeconds,
+        sustainLevel: VOICE_CONSTANTS.filterSustainLevel,
+        releaseSeconds: VOICE_CONSTANTS.filterReleaseSeconds,
+      },
     },
     effects: [],
     generativeRules: [],

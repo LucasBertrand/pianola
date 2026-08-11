@@ -16,6 +16,8 @@ export interface ParameterSliderProps {
   readonly minimum: number;
   readonly maximum: number;
   readonly step: number;
+  readonly scale?: "linear" | "exponential" | "logarithmic";
+  readonly orientation?: "horizontal" | "vertical";
   readonly formatValue: (value: number) => string;
   readonly onCommit: (value: number) => void;
 }
@@ -29,6 +31,8 @@ export function ParameterSlider(
     minimum,
     maximum,
     step,
+    scale = "exponential",
+    orientation = "vertical",
     formatValue,
     onCommit,
   } = props;
@@ -51,6 +55,7 @@ export function ParameterSlider(
           value,
           minimum,
           maximum,
+          scale,
         ),
       );
     }
@@ -60,6 +65,9 @@ export function ParameterSlider(
   }, [
     updateVisual,
     value,
+    minimum,
+    maximum,
+    scale,
   ]);
 
   const commitValue = (): void => {
@@ -74,6 +82,7 @@ export function ParameterSlider(
       minimum,
       maximum,
       step,
+      scale,
     );
 
     if (
@@ -89,7 +98,11 @@ export function ParameterSlider(
 
   return (
     <label
-      className="parameter"
+      className={
+        orientation === "horizontal"
+          ? "parameter is-horizontal"
+          : "parameter"
+      }
       onContextMenu={(event) => {
         event.preventDefault();
       }}
@@ -98,7 +111,13 @@ export function ParameterSlider(
         <span>{label}</span>
         <strong ref={valueRef}>{formatValue(value)}</strong>
       </div>
-      <div className="parameter-input-vertical">
+      <div
+        className={
+          orientation === "horizontal"
+            ? "parameter-input-horizontal"
+            : "parameter-input-vertical"
+        }
+      >
         <input
           ref={inputRef}
           className="parameter-input"
@@ -110,6 +129,7 @@ export function ParameterSlider(
             value,
             minimum,
             maximum,
+            scale,
           )}
           aria-label={label}
           onInput={(event) => {
@@ -119,6 +139,7 @@ export function ParameterSlider(
                 minimum,
                 maximum,
                 step,
+                scale,
               ),
             );
           }}
@@ -139,6 +160,7 @@ function parameterValueToSliderPosition(
   value: number,
   minimum: number,
   maximum: number,
+  scale: "linear" | "exponential" | "logarithmic",
 ): number {
   const range = maximum - minimum;
 
@@ -151,6 +173,14 @@ function parameterValueToSliderPosition(
     Math.max(0, (value - minimum) / range),
   );
 
+  if (scale === "linear") {
+    return normalizedValue;
+  }
+
+  if (scale === "logarithmic" && minimum > 0) {
+    return Math.log(value / minimum) / Math.log(maximum / minimum);
+  }
+
   return normalizedValue ** (
     1 / ENVELOPE_SLIDER_CURVE_EXPONENT
   );
@@ -161,15 +191,24 @@ function sliderPositionToParameterValue(
   minimum: number,
   maximum: number,
   step: number,
+  scale: "linear" | "exponential" | "logarithmic",
 ): number {
   const normalizedPosition = Math.min(
     1,
     Math.max(0, Number.isFinite(position) ? position : 0),
   );
-  const rawValue =
-    minimum
-    + (maximum - minimum)
-      * normalizedPosition ** ENVELOPE_SLIDER_CURVE_EXPONENT;
+  let rawValue: number;
+
+  if (scale === "linear") {
+    rawValue = minimum + (maximum - minimum) * normalizedPosition;
+  } else if (scale === "logarithmic" && minimum > 0) {
+    rawValue = minimum * (maximum / minimum) ** normalizedPosition;
+  } else {
+    rawValue =
+      minimum
+      + (maximum - minimum)
+        * normalizedPosition ** ENVELOPE_SLIDER_CURVE_EXPONENT;
+  }
   const steppedValue =
     minimum
     + Math.round((rawValue - minimum) / step) * step;
@@ -179,5 +218,3 @@ function sliderPositionToParameterValue(
     Math.max(minimum, Number(steppedValue.toFixed(6))),
   );
 }
-
-

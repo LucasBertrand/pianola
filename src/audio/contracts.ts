@@ -31,23 +31,38 @@ export interface PlaybackEnvelope {
   readonly releaseSeconds: number;
 }
 
-export interface SubtractivePlaybackInstrument {
+export interface SubtractivePlaybackInstrumentSnapshot {
   readonly kind: "subtractive";
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
+  readonly pulseWidth: number;
   readonly envelope: PlaybackEnvelope;
   readonly filterCutoffHz: number;
   readonly filterResonance: number;
+  readonly filterEnvelopeAmountOctaves: number;
+  readonly filterEnvelope: PlaybackEnvelope;
 }
 
-export interface PlaybackVoiceSnapshot extends PackedVoiceEvents {
+export interface PlaybackVoiceSnapshotBase extends PackedVoiceEvents {
   readonly gain: number;
   readonly pan: number;
   readonly muted: boolean;
   readonly solo: boolean;
-  readonly instrument: SubtractivePlaybackInstrument;
 }
+
+/** Immutable audio representation of one subtractive project voice. */
+export interface SubtractivePlaybackVoiceSnapshot
+  extends PlaybackVoiceSnapshotBase {
+  readonly instrument: SubtractivePlaybackInstrumentSnapshot;
+}
+
+/**
+ * Discriminated playback voice variants consumed by the scheduler.
+ * Add a new member only when its instrument renderer is implemented.
+ */
+export type PlaybackVoiceSnapshot =
+  SubtractivePlaybackVoiceSnapshot;
 
 export interface PlaybackSnapshot {
   readonly projectRevision: number;
@@ -62,10 +77,12 @@ export interface PlaybackSnapshot {
 
 export type PlaybackStatus = "stopped" | "playing" | "paused";
 
-export interface ScheduledNoteEvent {
+export interface ScheduledNoteEvent<
+  TVoice extends PlaybackVoiceSnapshot = PlaybackVoiceSnapshot,
+> {
   readonly occurrenceId: string;
   readonly generation: number;
-  readonly voice: PlaybackVoiceSnapshot;
+  readonly voice: TVoice;
   readonly pitch: number;
   readonly velocity: number;
   readonly startAudioTimeSeconds: number;

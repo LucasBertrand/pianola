@@ -19,6 +19,7 @@ import {
   MAXIMUM_VOICE_NAME_LENGTH,
   type AdsrEnvelope,
   type OscillatorWaveform,
+  type SubtractiveSynthContinuousParameter,
   type Voice,
   type VoiceId,
 } from "../../domain/model";
@@ -52,6 +53,7 @@ export interface VoiceWorkflow {
   ) => void;
   readonly commitEnvelopeParameter: (
     voiceId: VoiceId,
+    envelopeKind: "amplitude" | "filter",
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
@@ -62,6 +64,11 @@ export interface VoiceWorkflow {
   readonly commitPolyphony: (
     voiceId: VoiceId,
     polyphony: number,
+  ) => void;
+  readonly commitInstrumentParameter: (
+    voiceId: VoiceId,
+    parameter: SubtractiveSynthContinuousParameter,
+    value: number,
   ) => void;
   readonly selectNotes: (voiceId: VoiceId) => void;
   readonly toggleLock: (voice: Voice) => void;
@@ -181,6 +188,9 @@ export function useVoiceWorkflow({
       instrument: {
         ...sourceVoice.instrument,
         envelope: { ...sourceVoice.instrument.envelope },
+        filterEnvelope: {
+          ...sourceVoice.instrument.filterEnvelope,
+        },
       },
       effects: sourceVoice.effects.map((effect) => ({
         ...effect,
@@ -254,6 +264,7 @@ export function useVoiceWorkflow({
   const commitEnvelopeParameter = useCallback(
     (
       voiceId: VoiceId,
+      envelopeKind: "amplitude" | "filter",
       parameter: keyof AdsrEnvelope,
       value: number,
     ): void => {
@@ -268,13 +279,17 @@ export function useVoiceWorkflow({
         {
           instrument: {
             ...voice.instrument,
-            envelope: {
-              ...voice.instrument.envelope,
+            [envelopeKind === "amplitude"
+              ? "envelope"
+              : "filterEnvelope"]: {
+              ...(envelopeKind === "amplitude"
+                ? voice.instrument.envelope
+                : voice.instrument.filterEnvelope),
               [parameter]: value,
             },
           },
         },
-        `Update ${parameter}`,
+        `Update ${envelopeKind} ${parameter}`,
       );
     },
     [commands, update],
@@ -318,7 +333,33 @@ export function useVoiceWorkflow({
             polyphony,
           },
         },
-        "Update instrument polyphony",
+        "Update subtractive synth polyphony",
+      );
+    },
+    [commands, update],
+  );
+
+  const commitInstrumentParameter = useCallback(
+    (
+      voiceId: VoiceId,
+      parameter: SubtractiveSynthContinuousParameter,
+      value: number,
+    ): void => {
+      const voice = commands.getState().voicesById[voiceId];
+
+      if (voice === undefined) {
+        return;
+      }
+
+      update(
+        voiceId,
+        {
+          instrument: {
+            ...voice.instrument,
+            [parameter]: value,
+          },
+        },
+        `Update ${parameter}`,
       );
     },
     [commands, update],
@@ -363,6 +404,7 @@ export function useVoiceWorkflow({
     commitEnvelopeParameter,
     commitWaveform,
     commitPolyphony,
+    commitInstrumentParameter,
     selectNotes,
     toggleLock,
   };

@@ -19,10 +19,12 @@ export interface ActiveInstrumentVoice extends VoiceAllocationWindow {
   cancelBeforeStart(atAudioTimeSeconds: number): void;
 }
 
-export interface InstrumentScheduleRequest {
+export interface InstrumentScheduleRequest<
+  TVoice extends PlaybackVoiceSnapshot = PlaybackVoiceSnapshot,
+> {
   readonly context: AudioContext;
   readonly destination: AudioNode;
-  readonly event: ScheduledNoteEvent;
+  readonly event: ScheduledNoteEvent<TVoice>;
   readonly startAudioTimeSeconds: number;
   readonly noteEndAudioTimeSeconds: number;
   readonly tuningFrequencyHz: number;
@@ -34,11 +36,15 @@ export interface InstrumentScheduleRequest {
  * Converts an instrument-neutral scheduled event into a Web Audio source.
  * Renderers never own the AudioContext, master graph, or voice buses.
  */
-export interface InstrumentRenderer {
-  readonly kind: PlaybackVoiceSnapshot["instrument"]["kind"];
+export interface InstrumentRenderer<
+  TVoice extends PlaybackVoiceSnapshot = PlaybackVoiceSnapshot,
+> {
+  readonly kind: TVoice["instrument"]["kind"];
   getMaximumPolyphony(
-    voice: PlaybackVoiceSnapshot,
+    voice: TVoice,
     engineConfig: AudioEngineConfig,
   ): number;
-  schedule(request: InstrumentScheduleRequest): ActiveInstrumentVoice;
+  schedule(
+    request: InstrumentScheduleRequest<TVoice>,
+  ): ActiveInstrumentVoice;
 }

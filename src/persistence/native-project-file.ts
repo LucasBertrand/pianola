@@ -26,6 +26,7 @@ import {
   PROJECT_CONSTANTS,
   TONAL_SNAP_CONSTANTS,
   VIEWPORT_CONSTANTS,
+  VOICE_CONSTANTS,
 } from "../config/program-constants";
 import type {
   ViewportState,
@@ -45,7 +46,7 @@ import type {
 } from "../ui/rendering/note-style";
 import {
   getTicksPerMeasure,
-  MAXIMUM_INSTRUMENT_POLYPHONY,
+  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
@@ -58,7 +59,7 @@ import {
   MAXIMUM_VOICE_NAME_LENGTH,
   MINIMUM_MEASURE_COUNT,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
-  MINIMUM_INSTRUMENT_POLYPHONY,
+  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MINIMUM_MASTER_GAIN,
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
@@ -960,27 +961,47 @@ function parseSubtractiveSynth(
       instrument["oscillatorWaveform"],
       `${path}.oscillatorWaveform`,
     ),
-    polyphony: readIntegerInRange(
-      instrument["polyphony"],
-      `${path}.polyphony`,
-      MINIMUM_INSTRUMENT_POLYPHONY,
-      MAXIMUM_INSTRUMENT_POLYPHONY,
-    ),
     oscillatorDetuneCents: readFiniteNumber(
       instrument["oscillatorDetuneCents"],
       `${path}.oscillatorDetuneCents`,
+    ),
+    polyphony: readIntegerInRange(
+      instrument["polyphony"],
+      `${path}.polyphony`,
+      MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+      MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+    ),
+    pulseWidth: readNumberInRange(
+      instrument["pulseWidth"],
+      `${path}.pulseWidth`,
+      VOICE_CONSTANTS.minimumPulseWidth,
+      VOICE_CONSTANTS.maximumPulseWidth,
     ),
     envelope: parseEnvelope(
       instrument["envelope"],
       `${path}.envelope`,
     ),
-    filterCutoffHz: readPositiveNumber(
+    filterCutoffHz: readNumberInRange(
       instrument["filterCutoffHz"],
       `${path}.filterCutoffHz`,
+      VOICE_CONSTANTS.minimumFilterCutoffHz,
+      VOICE_CONSTANTS.maximumFilterCutoffHz,
     ),
-    filterResonance: readNonNegativeNumber(
+    filterResonance: readNumberInRange(
       instrument["filterResonance"],
       `${path}.filterResonance`,
+      VOICE_CONSTANTS.minimumFilterResonance,
+      VOICE_CONSTANTS.maximumFilterResonance,
+    ),
+    filterEnvelopeAmountOctaves: readNumberInRange(
+      instrument["filterEnvelopeAmountOctaves"],
+      `${path}.filterEnvelopeAmountOctaves`,
+      VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
+      VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
+    ),
+    filterEnvelope: parseEnvelope(
+      instrument["filterEnvelope"],
+      `${path}.filterEnvelope`,
     ),
   };
 }

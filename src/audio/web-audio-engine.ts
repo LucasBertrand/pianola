@@ -184,7 +184,7 @@ export class WebAudioEngine implements AudioEnginePort {
       || maximumPolyphony <= 0
     ) {
       throw new RangeError(
-        `Renderer "${renderer.kind}" returned invalid polyphony.`,
+        `Voice "${event.voice.voiceId}" has an invalid simultaneous-note limit.`,
       );
     }
 
@@ -632,8 +632,8 @@ function assertValidAudioEngineConfig(
     || config.latencyCompensationSeconds < 0
     || !Number.isFinite(config.masterGain)
     || config.masterGain < 0
-    || !Number.isSafeInteger(config.maxPolyphonyPerVoice)
-    || config.maxPolyphonyPerVoice <= 0
+    || !Number.isSafeInteger(config.maximumRendererPolyphony)
+    || config.maximumRendererPolyphony <= 0
     || !Number.isFinite(config.releaseTailSeconds)
     || config.releaseTailSeconds < 0
     || config.scheduleAheadSeconds

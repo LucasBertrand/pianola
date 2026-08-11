@@ -1527,7 +1527,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .clip-inspector-section {
   padding-bottom: 18px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
 }
 
 .clip-inspector-section + .voice-inspector-section
@@ -1577,14 +1577,21 @@ input[type="range"]::-webkit-slider-thumb {
   position: relative;
   display: grid;
   min-height: 78px;
-  padding: 8px 8px 8px 11px;
+  padding: 9px;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 9px;
   background: var(--color-surface-panel);
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) 72px 42px;
   grid-template-rows: auto auto;
   align-items: center;
+  gap: 7px;
+}
+
+.voice-card.clip-card {
+  min-height: 58px;
+  grid-template-columns: 36px minmax(0, 1fr) 36px 36px;
+  grid-template-rows: auto;
   gap: 9px;
 }
 
@@ -1626,7 +1633,7 @@ input[type="range"]::-webkit-slider-thumb {
   position: relative;
   z-index: 1;
   display: grid;
-  width: 36px;
+  width: 32px;
   height: 36px;
   grid-row: 1;
   place-items: center;
@@ -1803,6 +1810,50 @@ input[type="range"]::-webkit-slider-thumb {
   line-height: 1;
 }
 
+.subtractive-polyphony-control {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 42px;
+  height: 30px;
+  padding: 2px 3px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 7px;
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
+  grid-template-columns: 9px minmax(0, 1fr);
+  align-items: center;
+  gap: 1px;
+  touch-action: manipulation;
+}
+
+.subtractive-polyphony-control span {
+  font-size: 10px;
+  text-align: center;
+}
+
+.subtractive-polyphony-control select {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-control);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  text-align: center;
+}
+
+.subtractive-polyphony-control:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--voice-color) 55%,
+    var(--color-border-control)
+  );
+}
+
 .voice-duplicate-button svg {
   display: block;
   width: 17px;
@@ -1828,10 +1879,20 @@ input[type="range"]::-webkit-slider-thumb {
 
 .instrument-card {
   margin-top: 16px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--color-border);
-  border-radius: 11px;
-  background: linear-gradient(155deg, var(--color-surface-card), var(--color-surface-low));
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--voice-color, var(--color-accent-primary)) 7%,
+        var(--color-surface-card)
+      ),
+      var(--color-surface-low)
+    );
+  box-shadow: inset 0 1px 0 var(--color-white-faint);
 }
 
 .section-title strong {
@@ -1845,17 +1906,9 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 9px;
 }
 
-.instrument-selectors {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  gap: 4px;
-}
-
-.waveform-select,
-.polyphony-select {
+.waveform-select {
   min-width: 86px;
-  min-height: 28px;
+  min-height: 27px;
   padding: 0 18px 0 7px;
   border: 1px solid color-mix(
     in srgb,
@@ -1873,16 +1926,7 @@ input[type="range"]::-webkit-slider-thumb {
   touch-action: manipulation;
 }
 
-.polyphony-select {
-  min-width: 58px;
-  width: 58px;
-  padding-right: 15px;
-  padding-left: 4px;
-  text-align: center;
-}
-
-.waveform-select:focus-visible,
-.polyphony-select:focus-visible {
+.waveform-select:focus-visible {
   border-color: var(--voice-color, var(--color-accent-primary));
 }
 
@@ -1897,9 +1941,58 @@ input[type="range"]::-webkit-slider-thumb {
   white-space: nowrap;
 }
 
+.instrument-card-title {
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.instrument-card-title small {
+  color: var(--voice-color, var(--color-accent-primary));
+}
+
+.instrument-module {
+  padding: 9px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 9px;
+  background: var(--color-shadow-soft);
+}
+
+.instrument-module + .instrument-module {
+  margin-top: 8px;
+}
+
+.instrument-envelope-grid {
+  display: grid;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.instrument-module-heading {
+  display: flex;
+  min-height: 27px;
+  margin-bottom: 7px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.instrument-module-heading strong {
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.instrument-module-heading span {
+  color: var(--color-text-disabled);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+}
+
 .wave-display {
-  height: 58px;
-  margin: 13px 0 16px;
+  height: 44px;
+  margin: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -1931,17 +2024,27 @@ input[type="range"]::-webkit-slider-thumb {
 .parameter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 5px;
+}
+
+.parameter-grid.is-filter-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.parameter-grid.is-single-parameter {
+  width: 100%;
+  margin-top: 7px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .parameter {
   display: flex;
-  min-height: 128px;
+  min-height: 101px;
   min-width: 0;
-  padding: 6px 3px;
+  padding: 5px 2px;
   border: 1px solid var(--color-border-subtle);
   border-radius: 7px;
-  background: var(--color-shadow-soft);
+  background: var(--color-surface-deep);
   flex-direction: column;
   align-items: center;
   cursor: pointer;
@@ -1997,9 +2100,9 @@ input[type="range"]::-webkit-slider-thumb {
 .parameter-input-vertical {
   position: relative;
   width: 30px;
-  height: 92px;
-  margin: 4px auto 0;
-  flex: 0 0 92px;
+  height: 66px;
+  margin: 3px auto 0;
+  flex: 0 0 66px;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -2007,12 +2110,46 @@ input[type="range"]::-webkit-slider-thumb {
   -webkit-tap-highlight-color: transparent;
 }
 
+.parameter.is-horizontal {
+  display: grid;
+  min-height: 32px;
+  padding: 2px 7px;
+  grid-template-columns: 62px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.parameter.is-horizontal .parameter-copy {
+  text-align: left;
+}
+
+.parameter-input-horizontal {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  place-items: center;
+  touch-action: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.parameter-input-horizontal .parameter-input {
+  position: static;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  transform: none;
+}
+
 .parameter-input {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 88px;
-  height: 28px;
+  width: 64px;
+  height: 24px;
   margin: 0;
   transform: translate(-50%, -50%) rotate(-90deg);
   transform-origin: center;
@@ -2358,6 +2495,79 @@ input[type="range"]::-webkit-slider-thumb {
     height: 28px;
     padding: 0 4px;
     font-size: 9px;
+  }
+
+  .instrument-card {
+    margin-top: 10px;
+    padding: 9px;
+  }
+
+  .instrument-card-title {
+    margin-bottom: 7px;
+  }
+
+  .instrument-module {
+    padding: 7px;
+  }
+
+  .instrument-module + .instrument-module {
+    margin-top: 6px;
+  }
+
+  .instrument-envelope-grid {
+    margin-top: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .instrument-envelope-grid .parameter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .envelope-module .instrument-module-heading strong {
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .envelope-module .instrument-module-heading span {
+    display: none;
+  }
+
+  .instrument-module-heading {
+    min-height: 24px;
+    margin-bottom: 4px;
+  }
+
+  .wave-display {
+    height: 36px;
+  }
+
+  .parameter-grid {
+    gap: 3px;
+  }
+
+  .parameter {
+    min-height: 88px;
+    padding: 4px 2px;
+  }
+
+  .parameter-input-vertical {
+    height: 54px;
+    margin-top: 2px;
+    flex-basis: 54px;
+  }
+
+  .parameter-input {
+    width: 52px;
+  }
+
+  .parameter.is-horizontal {
+    min-height: 30px;
+    padding: 2px 6px;
+  }
+
+  .parameter-input-horizontal .parameter-input {
+    width: 100%;
   }
 
   .general-inspector.is-voices-panel .clip-inspector-section,

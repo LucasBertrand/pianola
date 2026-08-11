@@ -2,12 +2,12 @@ import {
   AUDIO_CONSTANTS,
 } from "../../config/program-constants";
 import type {
+  SubtractivePlaybackVoiceSnapshot,
+} from "../contracts";
+import type {
   AudioEngineConfig,
   VoiceId,
 } from "../../domain/model";
-import type {
-  PlaybackVoiceSnapshot,
-} from "../contracts";
 import {
   resolveNoteEnvelopePeakLevel,
 } from "../note-dynamics";
@@ -19,21 +19,23 @@ import type {
 
 /** Builds and owns oscillator-based voices for subtractive instruments. */
 export class SubtractiveInstrumentRenderer
-  implements InstrumentRenderer {
+  implements InstrumentRenderer<SubtractivePlaybackVoiceSnapshot> {
   public readonly kind = "subtractive" as const;
+  private readonly pulseWavesByContext =
+    new WeakMap<AudioContext, Map<number, PeriodicWave>>();
 
   public getMaximumPolyphony(
-    voice: PlaybackVoiceSnapshot,
+    voice: SubtractivePlaybackVoiceSnapshot,
     engineConfig: AudioEngineConfig,
   ): number {
     return Math.min(
       voice.instrument.polyphony,
-      engineConfig.maxPolyphonyPerVoice,
+      engineConfig.maximumRendererPolyphony,
     );
   }
 
   public schedule(
-    request: InstrumentScheduleRequest,
+    request: InstrumentScheduleRequest<SubtractivePlaybackVoiceSnapshot>,
   ): ActiveInstrumentVoice {
     const {
       context,
@@ -66,7 +68,12 @@ export class SubtractiveInstrumentRenderer
       onEnded,
     );
 
-    oscillator.type = instrument.oscillatorWaveform;
+    this.configureOscillator(
+      context,
+      oscillator,
+      instrument.oscillatorWaveform,
+      instrument.pulseWidth,
+    );
     oscillator.frequency.setValueAtTime(
       midiPitchToFrequency(event.pitch, tuningFrequencyHz),
       startAudioTimeSeconds,
@@ -77,26 +84,55 @@ export class SubtractiveInstrumentRenderer
     );
 
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(
-      Math.min(
-        instrument.filterCutoffHz,
-        context.sampleRate * 0.49,
-      ),
-      startAudioTimeSeconds,
-    );
     filter.Q.setValueAtTime(
       instrument.filterResonance,
       startAudioTimeSeconds,
     );
 
-    scheduleEnvelope(
+    const baseFilterFrequency = clampFilterFrequency(
+      instrument.filterCutoffHz,
+      context.sampleRate,
+    );
+    const peakFilterFrequency = clampFilterFrequency(
+      baseFilterFrequency
+        * 2 ** instrument.filterEnvelopeAmountOctaves,
+      context.sampleRate,
+    );
+    const sustainFilterFrequency = clampFilterFrequency(
+      baseFilterFrequency
+        * 2 ** (
+          instrument.filterEnvelopeAmountOctaves
+          * instrument.filterEnvelope.sustainLevel
+        ),
+      context.sampleRate,
+    );
+    const amplitudePeakLevel = resolveNoteEnvelopePeakLevel(
+      event.velocity,
+    );
+
+    scheduleAdsrParameter(
+      filter.frequency,
+      baseFilterFrequency,
+      peakFilterFrequency,
+      sustainFilterFrequency,
+      baseFilterFrequency,
+      startAudioTimeSeconds,
+      noteEndAudioTimeSeconds,
+      instrument.filterEnvelope.attackSeconds,
+      instrument.filterEnvelope.decaySeconds,
+      instrument.filterEnvelope.releaseSeconds,
+    );
+
+    scheduleAdsrParameter(
       envelopeGain.gain,
-      resolveNoteEnvelopePeakLevel(event.velocity),
+      0,
+      amplitudePeakLevel,
+      amplitudePeakLevel * instrument.envelope.sustainLevel,
+      0,
       startAudioTimeSeconds,
       noteEndAudioTimeSeconds,
       instrument.envelope.attackSeconds,
       instrument.envelope.decaySeconds,
-      instrument.envelope.sustainLevel,
       releaseSeconds,
     );
 
@@ -109,6 +145,38 @@ export class SubtractiveInstrumentRenderer
     );
 
     return activeVoice;
+  }
+
+  private configureOscillator(
+    context: AudioContext,
+    oscillator: OscillatorNode,
+    waveform: OscillatorType,
+    pulseWidth: number,
+  ): void {
+    if (
+      waveform !== "square"
+      || Math.abs(pulseWidth - 0.5) < 0.000_001
+    ) {
+      oscillator.type = waveform;
+      return;
+    }
+
+    let wavesByWidth = this.pulseWavesByContext.get(context);
+
+    if (wavesByWidth === undefined) {
+      wavesByWidth = new Map<number, PeriodicWave>();
+      this.pulseWavesByContext.set(context, wavesByWidth);
+    }
+
+    const normalizedPulseWidth = Number(pulseWidth.toFixed(4));
+    let periodicWave = wavesByWidth.get(normalizedPulseWidth);
+
+    if (periodicWave === undefined) {
+      periodicWave = createPulseWave(context, normalizedPulseWidth);
+      wavesByWidth.set(normalizedPulseWidth, periodicWave);
+    }
+
+    oscillator.setPeriodicWave(periodicWave);
   }
 }
 
@@ -187,23 +255,24 @@ class SubtractiveActiveVoice implements ActiveInstrumentVoice {
   }
 }
 
-function scheduleEnvelope(
+function scheduleAdsrParameter(
   parameter: AudioParam,
+  startValue: number,
   peakLevel: number,
+  sustainValue: number,
+  releaseValue: number,
   startAudioTimeSeconds: number,
   noteEndAudioTimeSeconds: number,
   attackSeconds: number,
   decaySeconds: number,
-  sustainLevel: number,
   releaseSeconds: number,
 ): void {
   const attackEnd = startAudioTimeSeconds + attackSeconds;
   const decayEnd = attackEnd + decaySeconds;
-  const sustainGain = peakLevel * sustainLevel;
-  let noteOffGain = sustainGain;
+  let noteOffValue = startValue;
 
   parameter.cancelScheduledValues(startAudioTimeSeconds);
-  parameter.setValueAtTime(0, startAudioTimeSeconds);
+  parameter.setValueAtTime(startValue, startAudioTimeSeconds);
 
   if (attackSeconds > 0) {
     const attackTimeConstant =
@@ -217,18 +286,20 @@ function scheduleEnvelope(
     );
 
     if (noteEndAudioTimeSeconds < attackEnd) {
-      noteOffGain = calculateExponentialApproach(
-        0,
+      noteOffValue = calculateExponentialApproach(
+        startValue,
         peakLevel,
         noteEndAudioTimeSeconds - startAudioTimeSeconds,
         attackTimeConstant,
       );
-      parameter.setValueAtTime(noteOffGain, noteEndAudioTimeSeconds);
+      parameter.setValueAtTime(noteOffValue, noteEndAudioTimeSeconds);
     } else {
       parameter.setValueAtTime(peakLevel, attackEnd);
+      noteOffValue = peakLevel;
     }
   } else {
     parameter.setValueAtTime(peakLevel, startAudioTimeSeconds);
+    noteOffValue = peakLevel;
   }
 
   if (noteEndAudioTimeSeconds > attackEnd) {
@@ -238,48 +309,81 @@ function scheduleEnvelope(
         / AUDIO_CONSTANTS.envelopeTimeConstantDivisor;
 
       parameter.setTargetAtTime(
-        sustainGain,
+        sustainValue,
         attackEnd,
         decayTimeConstant,
       );
-      noteOffGain = calculateExponentialApproach(
+      noteOffValue = calculateExponentialApproach(
         peakLevel,
-        sustainGain,
+        sustainValue,
         noteEndAudioTimeSeconds - attackEnd,
         decayTimeConstant,
       );
-      parameter.setValueAtTime(noteOffGain, noteEndAudioTimeSeconds);
+      parameter.setValueAtTime(noteOffValue, noteEndAudioTimeSeconds);
     } else {
       if (decaySeconds > 0) {
         parameter.setTargetAtTime(
-          sustainGain,
+          sustainValue,
           attackEnd,
           decaySeconds / AUDIO_CONSTANTS.envelopeTimeConstantDivisor,
         );
-        parameter.setValueAtTime(sustainGain, decayEnd);
+        parameter.setValueAtTime(sustainValue, decayEnd);
       } else {
-        parameter.setValueAtTime(sustainGain, attackEnd);
+        parameter.setValueAtTime(sustainValue, attackEnd);
       }
 
-      parameter.setValueAtTime(sustainGain, noteEndAudioTimeSeconds);
+      parameter.setValueAtTime(sustainValue, noteEndAudioTimeSeconds);
     }
   }
 
-  parameter.setValueAtTime(noteOffGain, noteEndAudioTimeSeconds);
+  parameter.setValueAtTime(noteOffValue, noteEndAudioTimeSeconds);
 
   if (releaseSeconds > 0) {
     parameter.setTargetAtTime(
-      0,
+      releaseValue,
       noteEndAudioTimeSeconds,
       releaseSeconds / AUDIO_CONSTANTS.envelopeTimeConstantDivisor,
     );
     parameter.setValueAtTime(
-      0,
+      releaseValue,
       noteEndAudioTimeSeconds + releaseSeconds,
     );
   } else {
-    parameter.setValueAtTime(0, noteEndAudioTimeSeconds);
+    parameter.setValueAtTime(releaseValue, noteEndAudioTimeSeconds);
   }
+}
+
+function clampFilterFrequency(
+  frequencyHz: number,
+  sampleRate: number,
+): number {
+  return Math.min(
+    Math.max(20, frequencyHz),
+    sampleRate * 0.49,
+  );
+}
+
+function createPulseWave(
+  context: AudioContext,
+  pulseWidth: number,
+): PeriodicWave {
+  const harmonicCount = 64;
+  const real = new Float32Array(harmonicCount + 1);
+  const imaginary = new Float32Array(harmonicCount + 1);
+
+  for (
+    let harmonic = 1;
+    harmonic <= harmonicCount;
+    harmonic += 1
+  ) {
+    const phase = 2 * Math.PI * harmonic * pulseWidth;
+    const scale = 2 / (Math.PI * harmonic);
+
+    real[harmonic] = scale * Math.sin(phase);
+    imaginary[harmonic] = scale * (1 - Math.cos(phase));
+  }
+
+  return context.createPeriodicWave(real, imaginary);
 }
 
 function calculateExponentialApproach(

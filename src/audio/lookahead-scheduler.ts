@@ -9,7 +9,7 @@ import {
   PROJECT_CONSTANTS,
 } from "../config/program-constants";
 import {
-  MAXIMUM_INSTRUMENT_POLYPHONY,
+  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
 } from "../domain/model";
 import type {
   AudioEnginePort,
@@ -36,7 +36,8 @@ export const DEFAULT_AUDIO_ENGINE_CONFIG: AudioEngineConfig =
     latencyCompensationSeconds:
       AUDIO_CONSTANTS.latencyCompensationSeconds,
     masterGain: PROJECT_CONSTANTS.defaultMasterGain,
-    maxPolyphonyPerVoice: MAXIMUM_INSTRUMENT_POLYPHONY,
+    maximumRendererPolyphony:
+      MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
     releaseTailSeconds: AUDIO_CONSTANTS.releaseTailSeconds,
   });
 

@@ -130,7 +130,7 @@ try {
     "/src/interaction/piano-roll-interaction-session.ts",
   );
   const {
-    DEFAULT_INSTRUMENT_POLYPHONY,
+    DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     PROJECT_SCHEMA_VERSION,
     createDefaultMasterBusState,
     createDefaultTransportState,
@@ -150,6 +150,11 @@ try {
   const {
     WebAudioEngine,
   } = await vite.ssrLoadModule("/src/audio/web-audio-engine.ts");
+  const {
+    SubtractiveInstrumentRenderer,
+  } = await vite.ssrLoadModule(
+    "/src/audio/instruments/subtractive-instrument-renderer.ts",
+  );
   const {
     countOverlappingVoiceWindows,
     findOldestOverlappingVoiceIndex,
@@ -199,16 +204,24 @@ try {
       instrument: {
         kind: "subtractive",
         oscillatorWaveform: voiceIndex % 2 === 0 ? "sawtooth" : "sine",
-        polyphony: DEFAULT_INSTRUMENT_POLYPHONY,
+        polyphony: DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
         oscillatorDetuneCents: 0,
+        pulseWidth: 0.5,
         envelope: {
           attackSeconds: 0.01,
           decaySeconds: 0.15,
           sustainLevel: 0.7,
           releaseSeconds: 0.3,
         },
-        filterCutoffHz: 12_000,
+        filterCutoffHz: 8_000,
         filterResonance: 0.2,
+        filterEnvelopeAmountOctaves: 1,
+        filterEnvelope: {
+          attackSeconds: 0.008,
+          decaySeconds: 0.32,
+          sustainLevel: 0.28,
+          releaseSeconds: 0.36,
+        },
       },
       effects: [],
       generativeRules: [],
@@ -1324,12 +1337,125 @@ try {
     assert.equal(voiceA.instrument.kind, "subtractive");
     assert.equal(
       voiceA.instrument.polyphony,
-      DEFAULT_INSTRUMENT_POLYPHONY,
+      DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
     assert.notEqual(
       voiceA.instrument,
       state.voicesById["voice-a"].instrument,
     );
+    assert.equal(voiceA.instrument.pulseWidth, 0.5);
+    assert.equal(voiceA.instrument.filterEnvelopeAmountOctaves, 1);
+    assert.equal(Object.isFrozen(voiceA.instrument), true);
+    assert.equal(Object.isFrozen(voiceA.instrument.envelope), true);
+    assert.equal(Object.isFrozen(voiceA.instrument.filterEnvelope), true);
+  });
+
+  test("renders pulse width and filter modulation from the subtractive snapshot", () => {
+    const baseSnapshot = compilePlaybackSnapshot(createProject());
+    const baseVoice = baseSnapshot.voices[0];
+    const parameterEvents = [];
+    const oscillators = [];
+    const filters = [];
+    let periodicWaveCount = 0;
+    const createAudioParam = (value) => ({
+      value,
+      cancelScheduledValues(time) {
+        parameterEvents.push(["cancel", time]);
+      },
+      setValueAtTime(nextValue, time) {
+        this.value = nextValue;
+        parameterEvents.push(["set", nextValue, time]);
+      },
+      setTargetAtTime(nextValue, time, constant) {
+        this.value = nextValue;
+        parameterEvents.push(["target", nextValue, time, constant]);
+      },
+    });
+    const context = {
+      currentTime: 0,
+      sampleRate: 48_000,
+      createOscillator() {
+        const oscillator = {
+          type: "sine",
+          frequency: createAudioParam(440),
+          detune: createAudioParam(0),
+          periodicWave: null,
+          setPeriodicWave(periodicWave) {
+            this.periodicWave = periodicWave;
+          },
+          connect() {},
+          disconnect() {},
+          start() {},
+          stop() {},
+          onended: null,
+        };
+
+        oscillators.push(oscillator);
+        return oscillator;
+      },
+      createBiquadFilter() {
+        const filter = {
+          type: "allpass",
+          frequency: createAudioParam(350),
+          Q: createAudioParam(1),
+          connect() {},
+          disconnect() {},
+        };
+
+        filters.push(filter);
+        return filter;
+      },
+      createGain() {
+        return {
+          gain: createAudioParam(1),
+          connect() {},
+          disconnect() {},
+        };
+      },
+      createPeriodicWave() {
+        periodicWaveCount += 1;
+        return { id: periodicWaveCount };
+      },
+    };
+    const voice = {
+      ...baseVoice,
+      instrument: {
+        ...baseVoice.instrument,
+        oscillatorWaveform: "square",
+        pulseWidth: 0.25,
+        filterCutoffHz: 1_000,
+        filterEnvelopeAmountOctaves: 2,
+      },
+    };
+    const renderer = new SubtractiveInstrumentRenderer();
+    const schedule = (occurrenceId) => renderer.schedule({
+      context,
+      destination: {},
+      event: {
+        occurrenceId,
+        generation: 1,
+        voice,
+        pitch: 60,
+        velocity: 100,
+        startAudioTimeSeconds: 1,
+        endAudioTimeSeconds: 2,
+      },
+      startAudioTimeSeconds: 1,
+      noteEndAudioTimeSeconds: 2,
+      tuningFrequencyHz: 440,
+      releaseTailSeconds: 2,
+      onEnded() {},
+    });
+
+    schedule("pulse-a");
+    schedule("pulse-b");
+
+    assert.equal(periodicWaveCount, 1);
+    assert.equal(oscillators[0].periodicWave.id, 1);
+    assert.equal(filters[0].type, "lowpass");
+    assert.ok(parameterEvents.some(
+      ([kind, value]) => kind === "target" && value === 4_000,
+    ));
   });
 
   test("delegates instrument rendering while retaining shared audio buses", async () => {
@@ -1385,7 +1511,7 @@ try {
       getMaximumPolyphony(voice, config) {
         return Math.min(
           voice.instrument.polyphony,
-          config.maxPolyphonyPerVoice,
+          config.maximumRendererPolyphony,
         );
       },
       schedule(request) {
@@ -1492,7 +1618,7 @@ try {
     );
   });
 
-  test("updates subtractive waveform, envelope, and polyphony immutably", () => {
+  test("updates subtractive parameters and voice allocation immutably", () => {
     const state = createProject();
     const voice = state.voicesById["voice-a"];
     const updatedState = dispatch(state, {
@@ -1502,7 +1628,8 @@ try {
         instrument: {
           ...voice.instrument,
           oscillatorWaveform: "square",
-          polyphony: 1,
+          polyphony: 4,
+          pulseWidth: 0.3,
           envelope: {
             ...voice.instrument.envelope,
             attackSeconds: 0.42,
@@ -1529,7 +1656,11 @@ try {
     );
     assert.equal(
       updatedState.voicesById["voice-a"].instrument.polyphony,
-      1,
+      4,
+    );
+    assert.equal(
+      updatedState.voicesById["voice-a"].instrument.pulseWidth,
+      0.3,
     );
     assert.equal(
       state.voicesById["voice-a"]
@@ -1596,7 +1727,7 @@ try {
     assert.equal(
       loaded.projectState.voicesById["voice-a"]
         .instrument.polyphony,
-      DEFAULT_INSTRUMENT_POLYPHONY,
+      DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);

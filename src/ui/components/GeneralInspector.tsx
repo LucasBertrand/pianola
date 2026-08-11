@@ -8,6 +8,7 @@ import {
   type ClipId,
   type OscillatorWaveform,
   type ProjectState,
+  type SubtractiveSynthContinuousParameter,
   type Voice,
   type VoiceId,
 } from "../../domain/model";
@@ -20,6 +21,7 @@ import {
 import {
   VoiceGainSlider,
   VoiceNameEditor,
+  SubtractivePolyphonySelect,
 } from "./VoiceControls";
 
 export interface GeneralInspectorProps {
@@ -63,7 +65,13 @@ export interface GeneralInspectorProps {
   ) => void;
   readonly onEnvelopeCommit: (
     voiceId: VoiceId,
+    envelopeKind: "amplitude" | "filter",
     parameter: keyof AdsrEnvelope,
+    value: number,
+  ) => void;
+  readonly onInstrumentParameterCommit: (
+    voiceId: VoiceId,
+    parameter: SubtractiveSynthContinuousParameter,
     value: number,
   ) => void;
 }
@@ -95,6 +103,7 @@ export function GeneralInspector({
   onWaveformCommit,
   onPolyphonyCommit,
   onEnvelopeCommit,
+  onInstrumentParameterCommit,
 }: GeneralInspectorProps): React.JSX.Element {
   return (
   <aside
@@ -238,6 +247,16 @@ export function GeneralInspector({
                     gain,
                   },
                   "Update voice volume",
+                );
+              }}
+            />
+            <SubtractivePolyphonySelect
+              value={voice.instrument.polyphony}
+              voiceName={voice.name}
+              onCommit={(polyphony) => {
+                onPolyphonyCommit(
+                  voice.id,
+                  polyphony,
                 );
               }}
             />
@@ -388,8 +407,8 @@ export function GeneralInspector({
     <InstrumentInspector
       voice={selectedVoice}
       onWaveformCommit={onWaveformCommit}
-      onPolyphonyCommit={onPolyphonyCommit}
       onEnvelopeCommit={onEnvelopeCommit}
+      onInstrumentParameterCommit={onInstrumentParameterCommit}
     />
     </section>
     </div>

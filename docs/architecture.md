@@ -91,7 +91,7 @@ Le pipeline audio comporte trois niveaux aux responsabilités distinctes :
 - `LookaheadScheduler` convertit le transport et les snapshots en événements
   horodatés, sans connaître Web Audio ni la construction d'un instrument ;
 - `WebAudioEngine` possède l'`AudioContext`, le master, les bus de voix,
-  l'annulation et l'allocation de polyphonie ;
+  l'annulation et l'application des limites fournies par les renderers ;
 - les renderers de `audio/instruments` construisent et arrêtent les sources
   propres à un type d'instrument. Le renderer soustractif possède donc les
   oscillateurs, filtres et enveloppes, mais jamais le contexte ou le master.
@@ -99,6 +99,13 @@ Le pipeline audio comporte trois niveaux aux responsabilités distinctes :
 Un nouvel instrument doit implémenter `InstrumentRenderer` et ne doit pas
 ajouter de branche spécialisée dans le scheduler. Le moteur commun sélectionne
 le renderer à partir du discriminant `instrument.kind`.
+
+`PlaybackVoiceSnapshot` est le point d'extension typé du pipeline. Sa variante
+actuelle, `SubtractivePlaybackVoiceSnapshot`, contient uniquement les données
+nécessaires au renderer soustractif. Les propriétés communes de mixage,
+d'événements compactés restent dans `PlaybackVoiceSnapshotBase`. La polyphonie
+du synthétiseur reste dans sa variante instrument. Une future variante doit étendre cette base sans
+ajouter de champs optionnels à la variante soustractive.
 
 ### `src/interaction/core`
 

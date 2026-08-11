@@ -8,18 +8,21 @@ import type {
 import {
   getActiveClip,
   getActiveClipDurationTicks,
-  MAXIMUM_INSTRUMENT_POLYPHONY,
+  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
-  MINIMUM_INSTRUMENT_POLYPHONY,
+  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
 } from "../domain/model";
+import {
+  validateVoice,
+} from "../domain/validation";
 import type {
   PackedVoiceEvents,
   PlaybackSnapshot,
   PlaybackVoiceSnapshot,
-  SubtractivePlaybackInstrument,
+  SubtractivePlaybackInstrumentSnapshot,
   TempoMapSnapshot,
 } from "./contracts";
 
@@ -150,13 +153,27 @@ function compileVoiceSnapshot(
     );
   }
 
+  const voiceValidation = validateVoice(voice);
+
+  if (!voiceValidation.valid) {
+    const firstIssue = voiceValidation.issues[0];
+
+    throw new PlaybackSnapshotCompilationError(
+      firstIssue === undefined
+        ? `Voice "${voice.id}" is invalid.`
+        : `Voice "${voice.id}" is invalid at ${firstIssue.path}: ${firstIssue.message}`,
+    );
+  }
+
   if (
     !Number.isSafeInteger(voice.instrument.polyphony)
-    || voice.instrument.polyphony < MINIMUM_INSTRUMENT_POLYPHONY
-    || voice.instrument.polyphony > MAXIMUM_INSTRUMENT_POLYPHONY
+    || voice.instrument.polyphony
+      < MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+    || voice.instrument.polyphony
+      > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
   ) {
     throw new PlaybackSnapshotCompilationError(
-      `Voice "${voice.id}" polyphony must be between ${MINIMUM_INSTRUMENT_POLYPHONY} and ${MAXIMUM_INSTRUMENT_POLYPHONY}.`,
+      `Voice "${voice.id}" subtractive synth polyphony must be between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
     );
   }
 
@@ -247,7 +264,7 @@ function packVoiceEvents(
 
 function cloneInstrument(
   voice: Voice,
-): SubtractivePlaybackInstrument {
+): SubtractivePlaybackInstrumentSnapshot {
   const instrument = voice.instrument;
 
   if (instrument.kind !== "subtractive") {
@@ -268,9 +285,18 @@ function cloneInstrument(
     oscillatorWaveform: instrument.oscillatorWaveform,
     polyphony: instrument.polyphony,
     oscillatorDetuneCents: instrument.oscillatorDetuneCents,
+    pulseWidth: instrument.pulseWidth,
     envelope,
     filterCutoffHz: instrument.filterCutoffHz,
     filterResonance: instrument.filterResonance,
+    filterEnvelopeAmountOctaves:
+      instrument.filterEnvelopeAmountOctaves,
+    filterEnvelope: Object.freeze({
+      attackSeconds: instrument.filterEnvelope.attackSeconds,
+      decaySeconds: instrument.filterEnvelope.decaySeconds,
+      sustainLevel: instrument.filterEnvelope.sustainLevel,
+      releaseSeconds: instrument.filterEnvelope.releaseSeconds,
+    }),
   });
 }
 
