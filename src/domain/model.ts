@@ -134,7 +134,7 @@ export interface ProjectInstrument {
   readonly id: InstrumentId;
   readonly name: string;
   readonly color: string;
-  readonly presetId: PresetId;
+  readonly instrument: InstrumentConfig;
   readonly gain: number;
   readonly muted: boolean;
   readonly solo: boolean;

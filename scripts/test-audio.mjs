@@ -137,7 +137,7 @@ try {
   } = await vite.ssrLoadModule("/src/domain/model.ts");
   const {
     createDefaultInstrumentPresetLibrary,
-    getDefaultInstrumentPresetId,
+    createDefaultInstrumentConfig,
   } = await vite.ssrLoadModule(
     "/src/domain/instrument-presets.ts",
   );
@@ -202,7 +202,7 @@ try {
       id: instrumentId,
       name: `Instrument ${instrumentIndex + 1}`,
       color: instrumentIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
-      presetId: getDefaultInstrumentPresetId(instrumentIndex),
+      instrument: createDefaultInstrumentConfig(instrumentIndex),
       gain: 0.8,
       muted: false,
       solo: false,
@@ -1340,9 +1340,7 @@ try {
     );
     assert.notEqual(
       instrumentA.instrument,
-      state.instrumentPresetsById[
-        state.projectInstrumentsById["voice-a"].presetId
-      ].config,
+      state.projectInstrumentsById["voice-a"].instrument,
     );
     assert.equal(instrumentA.instrument.pulseWidth, 0.5);
     assert.equal(instrumentA.instrument.filterEnvelopeAmountOctaves, 0.25);
@@ -1716,36 +1714,61 @@ try {
     );
   });
 
-  test("keeps preset selection on the global project instrument", () => {
+  test("stores independent settings on the global project instrument", () => {
     const state = createProject();
     const projectInstrument = state.projectInstrumentsById["voice-a"];
 
     assert.equal(
-      projectInstrument.presetId,
-      getDefaultInstrumentPresetId(0),
-    );
-    assert.equal(
-      "presetId" in getActiveTestClip(state).instrumentStatesById["voice-a"],
+      "instrument" in getActiveTestClip(state).instrumentStatesById["voice-a"],
       false,
     );
+    const replacement = createDefaultInstrumentConfig(1);
     const renamedState = dispatch(state, {
       type: "UpdateProjectInstrument",
       instrumentId: projectInstrument.id,
       changes: {
         name: "Renamed Instrument",
-        presetId: getDefaultInstrumentPresetId(1),
+        instrument: replacement,
       },
     });
     assert.equal(
-      renamedState.projectInstrumentsById["voice-a"].presetId,
-      getDefaultInstrumentPresetId(1),
+      renamedState.projectInstrumentsById["voice-a"].instrument.oscillatorWaveform,
+      "sine",
+    );
+    const store = new ProjectStore(state);
+
+    store.dispatch({
+      transactionId: "update-instrument-settings",
+      createdAt: 1,
+      commands: [{
+        type: "UpdateProjectInstrument",
+        instrumentId: projectInstrument.id,
+        changes: { instrument: replacement },
+      }],
+    });
+    assert.equal(
+      store.getState().projectInstrumentsById["voice-a"].instrument.oscillatorWaveform,
+      "sine",
+    );
+    store.undo();
+    assert.equal(
+      store.getState().projectInstrumentsById["voice-a"].instrument.oscillatorWaveform,
+      "sawtooth",
+    );
+    store.redo();
+    assert.equal(
+      store.getState().projectInstrumentsById["voice-a"].instrument.oscillatorWaveform,
+      "sine",
     );
     assert.throws(
       () => dispatch(state, {
         type: "AddProjectInstrument",
         instrument: {
-          ...createProjectInstrument("missing-preset-instrument", 1),
-          presetId: "missing-preset",
+          ...createProjectInstrument("invalid-instrument", 1),
+          instrument: {
+            ...createDefaultInstrumentConfig(0),
+            polyphony: 0,
+          },
         },
         clipInstrumentStatesById: {
           "clip-test": {
@@ -1800,9 +1823,7 @@ try {
       PROJECT_SCHEMA_VERSION,
     );
     assert.equal(
-      loaded.projectState.instrumentPresetsById[
-        loaded.projectState.projectInstrumentsById["voice-a"].presetId
-      ].config.polyphony,
+      loaded.projectState.projectInstrumentsById["voice-a"].instrument.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
 
@@ -3415,8 +3436,8 @@ try {
         false,
       );
       assert.equal(
-        withInstrument.projectInstrumentsById["voice-b"].presetId,
-        getDefaultInstrumentPresetId(1),
+        withInstrument.projectInstrumentsById["voice-b"].instrument.oscillatorWaveform,
+        "sine",
       );
     }
 

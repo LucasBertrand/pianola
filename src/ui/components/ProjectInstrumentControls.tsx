@@ -6,43 +6,6 @@ import {
   EDITOR_CONSTANTS,
   INSTRUMENT_CONSTANTS,
 } from "../../config/program-constants";
-import {
-  MAXIMUM_INSTRUMENT_NAME_LENGTH,
-  type ProjectInstrument,
-  type InstrumentId,
-} from "../../domain/model";
-import {
-  LongPressNameEditor,
-} from "./LongPressNameEditor";
-
-export interface InstrumentNameEditorProps {
-  readonly instrument: ProjectInstrument;
-  readonly onSelect: (instrumentId: InstrumentId) => void;
-  readonly onRename: (name: string) => void;
-}
-
-export function InstrumentNameEditor(
-  props: InstrumentNameEditorProps,
-): React.JSX.Element {
-  const {
-    instrument,
-    onSelect,
-    onRename,
-  } = props;
-  return (
-    <LongPressNameEditor
-      entityId={instrument.id}
-      name={instrument.name}
-      maximumLength={MAXIMUM_INSTRUMENT_NAME_LENGTH}
-      className="instrument-name-input"
-      onSelect={(instrumentId) => onSelect(instrumentId)}
-      onRename={(name) => {
-        onRename(name);
-      }}
-    />
-  );
-}
-
 export interface InstrumentGainSliderProps {
   readonly gain: number;
   readonly instrumentName: string;

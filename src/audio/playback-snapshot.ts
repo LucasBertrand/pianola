@@ -18,7 +18,6 @@ import {
 } from "../domain/model";
 import {
   validateProjectInstrument,
-  validateInstrumentPreset,
 } from "../domain/validation";
 import type {
   PackedInstrumentEvents,
@@ -122,28 +121,11 @@ export function compilePlaybackSnapshot(
       );
     }
 
-    const preset =
-      projectState.instrumentPresetsById[projectInstrument.presetId];
-
-    if (preset === undefined) {
-      throw new PlaybackSnapshotCompilationError(
-        `Instrument "${instrumentId}" references unavailable preset "${projectInstrument.presetId}".`,
-      );
-    }
-
-    const presetValidation = validateInstrumentPreset(preset);
-
-    if (!presetValidation.valid) {
-      throw new PlaybackSnapshotCompilationError(
-        `Instrument preset "${preset.id}" is invalid.`,
-      );
-    }
-
     compiledInstrumentIds.add(instrumentId);
     instruments.push(
       compileInstrumentSnapshot(
         projectInstrument,
-        preset.config,
+        projectInstrument.instrument,
         track.notesById,
         durationTicks,
       ),

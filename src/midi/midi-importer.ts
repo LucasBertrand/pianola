@@ -27,10 +27,9 @@ import {
 } from "../domain/project-instrument-factory";
 import {
   createDefaultInstrumentPresetLibrary,
-  getDefaultInstrumentPresetId,
+  createDefaultInstrumentConfig,
 } from "../domain/instrument-presets";
 import {
-  assertValidInstrumentPreset,
   assertValidProjectDuration,
   assertValidTrack,
   assertValidTransportState,
@@ -380,7 +379,7 @@ export function analyzeMidiImport(
         id: instrumentId,
         name: instrumentName,
         color,
-        presetId: getDefaultInstrumentPresetId(groupIndex),
+        instrument: createDefaultInstrumentConfig(groupIndex),
       }),
       notes,
     });
@@ -1278,7 +1277,7 @@ function createEmptyInstrumentCandidate(): MidiImportInstrumentCandidate {
       color:
         RENDERING_CONSTANTS.userInstrumentColors[0]
         ?? RENDERING_CONSTANTS.defaultNoteColor,
-      presetId: getDefaultInstrumentPresetId(0),
+      instrument: createDefaultInstrumentConfig(0),
     }),
     notes: [],
   };
@@ -1478,15 +1477,6 @@ function assertImportedProjectState(state: ProjectState): void {
     }
 
     assertValidProjectInstrument(instrument);
-    const preset = state.instrumentPresetsById[instrument.presetId];
-
-    if (preset === undefined) {
-      throw new MidiImportError(
-        `The imported instrument references unavailable preset "${instrument.presetId}".`,
-      );
-    }
-
-    assertValidInstrumentPreset(preset);
     assertValidTrack(track);
 
     const notesByPitch = new Map<number, Note[]>();

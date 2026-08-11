@@ -228,9 +228,9 @@ export function validateProjectInstrument(instrument: ProjectInstrument): Valida
 
   validateBoundedIdentifier(instrument.id, "id", "ProjectInstrument ID", issues);
   validateBoundedIdentifier(
-    instrument.presetId,
-    "presetId",
-    "Instrument preset ID",
+    instrument.instrument.kind,
+    "instrument.kind",
+    "Instrument engine kind",
     issues,
   );
 
@@ -271,6 +271,15 @@ export function validateProjectInstrument(instrument: ProjectInstrument): Valida
 
   if (typeof instrument.solo !== "boolean") {
     pushProjectInstrumentIssue(issues, "solo", "ProjectInstrument solo must be boolean.");
+  }
+
+  const instrumentValidation = validateInstrumentConfig(instrument.instrument);
+
+  for (const issue of instrumentValidation.issues) {
+    issues.push({
+      ...issue,
+      path: `instrument.${issue.path}`,
+    });
   }
 
   if (

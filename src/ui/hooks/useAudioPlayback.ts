@@ -297,7 +297,7 @@ function didPlaybackStateChange(
       || instrumentState === undefined
       || previousInstrumentState === undefined
       || instrument.pan !== previousInstrument.pan
-      || instrument.presetId !== previousInstrument.presetId
+      || instrument.instrument !== previousInstrument.instrument
       || instrument.gain !== previousInstrument.gain
       || instrument.muted !== previousInstrument.muted
       || instrument.solo !== previousInstrument.solo

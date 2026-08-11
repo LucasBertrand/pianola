@@ -7,7 +7,7 @@ import type {
   Track,
   ProjectInstrument,
   InstrumentId,
-  PresetId,
+  InstrumentConfig,
 } from "../domain/model";
 import {
   APPLICATION_CONSTANTS,
@@ -27,7 +27,7 @@ import {
 } from "../domain/project-instrument-factory";
 import {
   createDefaultInstrumentPresetLibrary,
-  getDefaultInstrumentPresetId,
+  createDefaultInstrumentConfig,
 } from "../domain/instrument-presets";
 
 export const DEMO_NOTE_COUNT = EDITOR_CONSTANTS.demoNoteCount;
@@ -191,7 +191,7 @@ function createProjectState(
 
     const instrument = createDomainInstrument(
       demoInstrument,
-      getDefaultInstrumentPresetId(instrumentIndex),
+      createDefaultInstrumentConfig(instrumentIndex),
     );
     projectInstrumentsById[instrument.id] = instrument;
     instrumentStatesById[instrument.id] = createDefaultClipInstrumentState();
@@ -259,12 +259,12 @@ function createProjectState(
 
 function createDomainInstrument(
   demoInstrument: DemoInstrument,
-  presetId: PresetId,
+  instrument: InstrumentConfig,
 ): ProjectInstrument {
   return createDefaultProjectInstrument({
     id: demoInstrument.id,
     name: demoInstrument.name,
     color: demoInstrument.color,
-    presetId,
+    instrument,
   });
 }

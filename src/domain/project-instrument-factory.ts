@@ -4,7 +4,7 @@ import {
 } from "../config/program-constants";
 import type {
   ClipInstrumentState,
-  PresetId,
+  InstrumentConfig,
   ProjectInstrument,
   InstrumentId,
 } from "./model";
@@ -12,7 +12,7 @@ export interface CreateDefaultProjectInstrumentOptions {
   readonly id: InstrumentId;
   readonly name: string;
   readonly color: string;
-  readonly presetId: PresetId;
+  readonly instrument: InstrumentConfig;
 }
 
 /** Creates a global instrument identity using the shared product defaults. */
@@ -23,7 +23,7 @@ export function createDefaultProjectInstrument(
     id: options.id,
     name: options.name,
     color: options.color,
-    presetId: options.presetId,
+    instrument: options.instrument,
     gain: PROJECT_CONSTANTS.defaultInstrumentGain,
     muted: PROJECT_CONSTANTS.defaultInstrumentMuted,
     solo: PROJECT_CONSTANTS.defaultInstrumentSolo,

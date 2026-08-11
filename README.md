@@ -137,17 +137,17 @@ fluidité ; une seule transaction est envoyée lorsque le geste est validé.
 ### Domaine et historique
 
 `src/domain/model.ts` sépare les données globales de `ProjectState` des données
-locales de chaque `Clip`. Les identités d’instruments, leur `presetId`, la
-bibliothèque de presets et le master bus sont globaux. Chaque clip, identifié
+locales de chaque `Clip`. Les identités d’instruments, leur configuration audio,
+la bibliothèque de presets et le master bus sont globaux. Chaque clip, identifié
 par un ID stable, possède ses pistes de notes, sa longueur, son transport et,
-pour chaque instrument, uniquement ses réglages volume/mute/solo/lock. Les
-paramètres et le choix de synthèse ne sont donc jamais dupliqués dans les clips.
+pour chaque instrument, uniquement son verrouillage. Le mixage et les
+paramètres de synthèse ne sont donc jamais dupliqués dans les clips.
 Les propriétés persistantes sont en lecture seule.
 
 `src/domain/instrument-presets.ts` constitue le catalogue intégré. Les presets
-sont nommés, identifiés par un ID stable et profondément immuables. Chaque
-instrument global choisit un preset lors de sa création ;
-`playback-snapshot.ts` résout cet ID à la frontière du moteur audio.
+sont nommés, identifiés par un ID stable et profondément immuables. Un preset
+initialise le brouillon de la modale, puis sa configuration est copiée dans
+l’instrument. `playback-snapshot.ts` compile ensuite directement cette copie.
 `src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
 Le reducer applique les commandes musicales au seul clip actif, tandis que la
 création ou la suppression d’un instrument met à jour les pistes de tous les clips.
@@ -205,10 +205,9 @@ discriminé et immuable. Chaque renderer expose sa propre politique de
 polyphonie : la limite du synthétiseur soustractif ne s’applique donc pas aux
 futurs instruments comme le drumkit.
 
-Le compilateur audio reçoit le `presetId` de l’instrument global, récupère sa
-définition dans la bibliothèque globale, la valide, puis produit le snapshot
-discriminé attendu par le renderer. Le scheduler n’a aucune connaissance du
-stockage des presets et ne doit pas en acquérir.
+Le compilateur audio reçoit et valide la configuration propre à l’instrument,
+puis produit le snapshot discriminé attendu par le renderer. Les presets ne
+font pas partie du chemin de lecture et le scheduler ne doit pas les connaître.
 
 Les événements futurs sont recalculés après une édition sans couper les notes
 déjà audibles. La vélocité est conservée dans les fichiers, mais le niveau de
@@ -466,9 +465,9 @@ La section **Clips** reprend les interactions de la liste des instruments :
 - la croix supprime le clip après confirmation ; le dernier clip ne peut pas
   être supprimé.
 
-L’identité des instruments, leur choix de preset, la bibliothèque de presets,
-le master bus et le presse-papier sont partagés par tout le projet. Les réglages
-volume/mute/solo/lock de chaque instrument, les notes, la longueur, le tempo,
+L’identité, la configuration, le volume, le mute et le solo des instruments,
+la bibliothèque de presets, le master bus et le presse-papier sont partagés par
+tout le projet. Le verrouillage de chaque instrument, les notes, la longueur, le tempo,
 la métrique, la grille, la tonalité, la boucle, la tête de lecture, le scroll et
 le zoom sont propres à chaque clip. Changer de clip vide la sélection de notes,
 mais conserve le presse-papier afin de permettre un copier-coller entre clips.
@@ -541,9 +540,9 @@ la nouvelle durée du clip.
 ### Format natif `.pianola`
 
 Le format natif conserve la liste ordonnée des clips, le clip actif, l’identité
-et le `presetId` des instruments, la bibliothèque ordonnée de presets, les
+et la configuration propre des instruments, la bibliothèque ordonnée de presets, les
 notes, le master bus et les métadonnées de document. Pour chaque clip, il
-enregistre volume/mute/solo/lock par instrument, le transport, la boucle, la
+enregistre uniquement le verrouillage par instrument, le transport, la boucle, la
 tête de lecture, la grille, le snap tonal, le guide visuel, le zoom et la
 position de la vue.
 Les préférences réellement globales — instrument actif, preview clavier, mode de
@@ -677,10 +676,11 @@ audio complète. Pour ajouter un preset soustractif :
    sa lecture dans plusieurs clips.
 
 Ne jamais remettre la configuration audio ou le mixage dans
-`ClipInstrumentState`. `ProjectInstrument` porte le preset, le gain, le mute et
-le solo : tous les clips partagent donc le même son et le même état de mixage.
-Le sélecteur de preset de l’inspecteur modifie cette référence globale dans une
-transaction Undo/Redo. Le clip ne conserve que son verrouillage d’édition.
+`ClipInstrumentState`. `ProjectInstrument` porte sa configuration, le gain, le
+mute et le solo : tous les clips partagent donc le même son et le même état de
+mixage. Les presets servent uniquement à initialiser le brouillon de la modale.
+La confirmation copie ce brouillon dans une transaction Undo/Redo. Le clip ne
+conserve que son verrouillage d’édition.
 
 Lors de l’ajout d’un nouveau type d’instrument, créer une nouvelle variante de
 `InstrumentPreset` et de `PlaybackInstrumentSnapshot`, puis un renderer dédié.
@@ -756,9 +756,9 @@ Préserver les responsabilités :
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
 La polyphonie est une propriété du `SubtractiveSynthConfig` contenu dans un
-preset global. `ProjectInstrument` conserve son `presetId` et ses réglages
-globaux de mixage, tandis que `ClipInstrumentState` reste limité au
-verrouillage d’édition. Le compilateur résout cette référence et copie la configuration dans
+preset de départ. `ProjectInstrument` conserve une copie indépendante de sa
+configuration et ses réglages globaux de mixage, tandis que
+`ClipInstrumentState` reste limité au verrouillage d’édition. Le compilateur copie cette configuration dans
 `SubtractivePlaybackInstrumentSnapshot`, puis le renderer soustractif
 l’interprète. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.

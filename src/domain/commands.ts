@@ -14,6 +14,7 @@ import type {
   TransportState,
   ProjectInstrument,
   InstrumentId,
+  InstrumentConfig,
   ProjectInstrumentInterpretation,
 } from "./model";
 import {
@@ -32,7 +33,6 @@ import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
 } from "./model";
 import {
-  assertValidInstrumentPreset,
   assertValidNoteForTrack,
   assertValidProjectDuration,
   assertValidTransportState,
@@ -49,7 +49,7 @@ export interface AddProjectInstrumentCommand {
 export interface UpdateProjectInstrumentChanges {
   readonly name?: string;
   readonly color?: string;
-  readonly presetId?: ProjectInstrument["presetId"];
+  readonly instrument?: InstrumentConfig;
   readonly gain?: number;
   readonly muted?: boolean;
   readonly solo?: boolean;
@@ -803,18 +803,6 @@ function applyAddProjectInstrument(
   command: AddProjectInstrumentCommand,
 ): ProjectState {
   assertValidProjectInstrument(command.instrument);
-  const preset = state.instrumentPresetsById[command.instrument.presetId];
-
-  if (preset === undefined) {
-    reject(
-      "INVALID_COMMAND",
-      `Project instrument references unavailable preset "${command.instrument.presetId}".`,
-      command.type,
-    );
-  }
-
-  assertValidInstrumentPreset(preset);
-
   if (state.instrumentOrder.length >= MAXIMUM_PROJECT_INSTRUMENT_COUNT) {
     reject(
       "INVALID_COMMAND",
@@ -916,7 +904,7 @@ function applyUpdateProjectInstrument(
     ...instrument,
     name: command.changes.name ?? instrument.name,
     color: command.changes.color ?? instrument.color,
-    presetId: command.changes.presetId ?? instrument.presetId,
+    instrument: command.changes.instrument ?? instrument.instrument,
     gain: command.changes.gain ?? instrument.gain,
     muted: command.changes.muted ?? instrument.muted,
     solo: command.changes.solo ?? instrument.solo,
@@ -928,13 +916,6 @@ function applyUpdateProjectInstrument(
       command.changes.interpretation ?? instrument.interpretation,
   };
 
-  if (state.instrumentPresetsById[updatedInstrument.presetId] === undefined) {
-    reject(
-      "INVALID_COMMAND",
-      `Project instrument references unavailable preset "${updatedInstrument.presetId}".`,
-      command.type,
-    );
-  }
 
   assertValidProjectInstrument(updatedInstrument);
 

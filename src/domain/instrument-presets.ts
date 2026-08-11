@@ -143,6 +143,31 @@ export function getDefaultInstrumentPresetId(
   );
 }
 
+/** Returns an independent instrument configuration initialized from a preset. */
+export function createInstrumentConfigFromPreset(
+  preset: InstrumentPreset,
+): SubtractiveSynthConfig {
+  return {
+    ...preset.config,
+    envelope: { ...preset.config.envelope },
+    filterEnvelope: { ...preset.config.filterEnvelope },
+  };
+}
+
+/** Creates the deterministic built-in configuration used by generated instruments. */
+export function createDefaultInstrumentConfig(
+  instrumentIndex: number,
+): SubtractiveSynthConfig {
+  const presetId = getDefaultInstrumentPresetId(instrumentIndex);
+  const preset = BUILT_IN_PRESETS_BY_ID[presetId];
+
+  if (preset === undefined) {
+    throw new Error(`Instrument preset "${presetId}" is unavailable.`);
+  }
+
+  return createInstrumentConfigFromPreset(preset);
+}
+
 /** Selects a preset deterministically from a validated project order. */
 export function selectInstrumentPresetId(
   presetOrder: readonly PresetId[],

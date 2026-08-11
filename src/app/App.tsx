@@ -10,7 +10,9 @@ import {
 import {
   APPLICATION_CONSTANTS,
   EDITOR_CONSTANTS,
+  RENDERING_CONSTANTS,
 } from "../config/program-constants";
+import { APPLICATION_COLORS } from "../config/application-colors";
 import type {
   NoteCollisionResolutionRequest,
 } from "../application/note-collision-resolution";
@@ -22,6 +24,7 @@ import type {
   PresetId,
   ProjectState,
   InstrumentId,
+  SubtractiveSynthConfig,
 } from "../domain/model";
 import {
   getActiveClip,
@@ -120,6 +123,7 @@ import type {
 } from "./workflows/dialog-types";
 import {
   selectInstrumentPresetId,
+  createInstrumentConfigFromPreset,
 } from "../domain/instrument-presets";
 
 export function App(): React.JSX.Element {
@@ -172,8 +176,14 @@ export function App(): React.JSX.Element {
   const [applicationDialog, setApplicationDialog] =
     useState<ApplicationDialogState | null>(null);
   const [pendingInstrumentPresetId, setPendingInstrumentPresetId] =
-    useState<PresetId | null>(null);
+    useState<PresetId | "" | null>(null);
   const [pendingInstrumentName, setPendingInstrumentName] = useState("");
+  const [pendingInstrumentColor, setPendingInstrumentColor] =
+    useState<string>(APPLICATION_COLORS.accent.primary);
+  const [pendingInstrumentConfig, setPendingInstrumentConfig] =
+    useState<SubtractiveSynthConfig | null>(null);
+  const [pendingEditedInstrumentId, setPendingEditedInstrumentId] =
+    useState<InstrumentId | null>(null);
   const selectedInstrument =
     selectedInstrumentId === null
       ? undefined
@@ -472,10 +482,52 @@ export function App(): React.JSX.Element {
 
     setApplicationDialog(null);
     setPendingInstrumentName(`Instrument ${state.instrumentOrder.length + 1}`);
+    setPendingInstrumentColor(
+      RENDERING_CONSTANTS.userInstrumentColors[
+        state.instrumentOrder.length
+        % RENDERING_CONSTANTS.userInstrumentColors.length
+      ] ?? APPLICATION_COLORS.accent.primary,
+    );
+    const preset = state.instrumentPresetsById[presetId];
+
+    if (preset === undefined) {
+      return;
+    }
+
+    setPendingEditedInstrumentId(null);
+    setPendingInstrumentConfig(createInstrumentConfigFromPreset(preset));
     setPendingInstrumentPresetId(presetId);
   }, [scene]);
+  const handleOpenEditInstrumentDialog = useCallback((instrumentId: InstrumentId): void => {
+    const instrument = scene.projectStore.getState().projectInstrumentsById[instrumentId];
+
+    if (instrument === undefined || instrument.instrument.kind !== "subtractive") {
+      return;
+    }
+
+    setApplicationDialog(null);
+    setPendingEditedInstrumentId(instrumentId);
+    setPendingInstrumentName(instrument.name);
+    setPendingInstrumentColor(instrument.color);
+    setPendingInstrumentConfig({
+      ...instrument.instrument,
+      envelope: { ...instrument.instrument.envelope },
+      filterEnvelope: { ...instrument.instrument.filterEnvelope },
+    });
+    setPendingInstrumentPresetId("");
+  }, [scene]);
+  const handleInstrumentPresetSelection = useCallback((presetId: PresetId): void => {
+    const preset = scene.projectStore.getState().instrumentPresetsById[presetId];
+
+    if (preset === undefined) {
+      return;
+    }
+
+    setPendingInstrumentPresetId(presetId);
+    setPendingInstrumentConfig(createInstrumentConfigFromPreset(preset));
+  }, [scene]);
   const handleConfirmAddInstrument = useCallback((): void => {
-    if (pendingInstrumentPresetId === null) {
+    if (pendingInstrumentPresetId === null || pendingInstrumentConfig === null) {
       return;
     }
 
@@ -483,10 +535,36 @@ export function App(): React.JSX.Element {
       return;
     }
 
-    addProjectInstrument(pendingInstrumentPresetId, pendingInstrumentName);
+    if (pendingEditedInstrumentId === null) {
+      addProjectInstrument(
+        pendingInstrumentName,
+        pendingInstrumentConfig,
+        pendingInstrumentColor,
+      );
+    } else {
+      handleUpdateProjectInstrument(
+        pendingEditedInstrumentId,
+        {
+          name: pendingInstrumentName.trim(),
+          color: pendingInstrumentColor,
+          instrument: pendingInstrumentConfig,
+        },
+        "Update instrument settings",
+      );
+    }
     setPendingInstrumentPresetId(null);
+    setPendingInstrumentConfig(null);
+    setPendingEditedInstrumentId(null);
     setPendingInstrumentName("");
-  }, [addProjectInstrument, pendingInstrumentName, pendingInstrumentPresetId]);
+  }, [
+    addProjectInstrument,
+    handleUpdateProjectInstrument,
+    pendingEditedInstrumentId,
+    pendingInstrumentConfig,
+    pendingInstrumentColor,
+    pendingInstrumentName,
+    pendingInstrumentPresetId,
+  ]);
   const getPianoRollEventController = useCallback(
     (): PianoRollEventController | null =>
       pianoRollEventControllerRef.current,
@@ -837,6 +915,7 @@ export function App(): React.JSX.Element {
           onMoveSelectedInstrument={handleMoveSelectedInstrument}
           onAddProjectInstrument={handleOpenAddInstrumentDialog}
           onInstrumentSelect={handleInstrumentSelect}
+          onEditProjectInstrument={handleOpenEditInstrumentDialog}
           onUpdateProjectInstrument={handleUpdateProjectInstrument}
           onInstrumentGainPreview={previewInstrumentGain}
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
@@ -850,17 +929,24 @@ export function App(): React.JSX.Element {
         onAlternate={handleApplicationDialogAlternate}
         onCancel={handleApplicationDialogCancel}
       />
-      {pendingInstrumentPresetId === null ? null : (
+      {pendingInstrumentPresetId === null || pendingInstrumentConfig === null ? null : (
         <InstrumentPresetDialog
+          mode={pendingEditedInstrumentId === null ? "create" : "edit"}
           presetsById={projectState.instrumentPresetsById}
           presetOrder={projectState.instrumentPresetOrder}
           selectedPresetId={pendingInstrumentPresetId}
           instrumentName={pendingInstrumentName}
-          onSelectionChange={setPendingInstrumentPresetId}
+          instrumentColor={pendingInstrumentColor}
+          instrument={pendingInstrumentConfig}
+          onPresetSelectionChange={handleInstrumentPresetSelection}
           onInstrumentNameChange={setPendingInstrumentName}
+          onInstrumentColorChange={setPendingInstrumentColor}
+          onInstrumentChange={setPendingInstrumentConfig}
           onConfirm={handleConfirmAddInstrument}
           onCancel={() => {
             setPendingInstrumentPresetId(null);
+            setPendingInstrumentConfig(null);
+            setPendingEditedInstrumentId(null);
             setPendingInstrumentName("");
           }}
         />

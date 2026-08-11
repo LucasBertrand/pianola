@@ -21,7 +21,7 @@ export const APPLICATION_CONSTANTS = Object.freeze({
 /** Persistent project defaults and hard domain limits. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 10,
+  schemaVersion: 11,
   defaultMeasureCount: 16,
   demoProjectTitle: APPLICATION_CONSTANTS.demoProjectTitle,
   defaultTempoBpm: 120,

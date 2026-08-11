@@ -14,7 +14,6 @@ import {
 } from "./ClipInspector";
 import {
   InstrumentGainSlider,
-  InstrumentNameEditor,
 } from "./ProjectInstrumentControls";
 
 export interface GeneralInspectorProps {
@@ -34,6 +33,7 @@ export interface GeneralInspectorProps {
   readonly onMoveSelectedInstrument: (direction: -1 | 1) => void;
   readonly onAddProjectInstrument: () => void;
   readonly onInstrumentSelect: (instrumentId: InstrumentId) => void;
+  readonly onEditProjectInstrument: (instrumentId: InstrumentId) => void;
   readonly onUpdateProjectInstrument: (
     instrumentId: InstrumentId,
     changes: UpdateProjectInstrumentChanges,
@@ -65,6 +65,7 @@ export function GeneralInspector({
   onMoveSelectedInstrument,
   onAddProjectInstrument,
   onInstrumentSelect,
+  onEditProjectInstrument,
   onUpdateProjectInstrument,
   onInstrumentGainPreview,
   onSelectInstrumentNotes,
@@ -169,40 +170,11 @@ export function GeneralInspector({
             } as React.CSSProperties}
             onClickCapture={() => onInstrumentSelect(instrument.id)}
           >
-            <label
-              className="instrument-color-control"
-              aria-label={`Color for ${instrument.name}`}
-              title="Change instrument color"
-            >
+            <span className="instrument-color-control" aria-hidden="true">
               <span className="instrument-color" />
-              <input
-                type="color"
-                value={instrument.color}
-                onChange={(event) => {
-                  onUpdateProjectInstrument(
-                    instrument.id,
-                    {
-                      color: event.currentTarget.value,
-                    },
-                    "Update instrument color",
-                  );
-                }}
-              />
-            </label>
+            </span>
             <div className="instrument-copy instrument-identity">
-              <InstrumentNameEditor
-                instrument={instrument}
-                onSelect={onInstrumentSelect}
-                onRename={(name) => {
-                  onUpdateProjectInstrument(
-                    instrument.id,
-                    {
-                      name,
-                    },
-                    "Rename instrument",
-                  );
-                }}
-              />
+              <strong className="instrument-name">{instrument.name}</strong>
               <div className="instrument-local-actions">
                 <button
                   className="instrument-select-all-button"
@@ -250,50 +222,11 @@ export function GeneralInspector({
                   </svg>
                 </button>
               </div>
-              <select
-                className="instrument-preset-select"
-                aria-label={`Preset for ${instrument.name}`}
-                title="Instrument preset"
-                value={instrument.presetId}
-                onChange={(event) => {
-                  onUpdateProjectInstrument(
-                    instrument.id,
-                    { presetId: event.currentTarget.value },
-                    "Change instrument preset",
-                  );
-                }}
-              >
-                {projectState.instrumentPresetOrder.map((presetId) => {
-                  const preset = projectState.instrumentPresetsById[presetId];
-
-                  return preset === undefined ? null : (
-                    <option key={presetId} value={presetId}>
-                      {preset.name}
-                    </option>
-                  );
-                })}
-              </select>
             </div>
             <div
               className="instrument-sound-controls"
               onClick={(event) => event.stopPropagation()}
             >
-              <InstrumentGainSlider
-                gain={instrument.gain}
-                instrumentName={instrument.name}
-                onPreview={(gain) => {
-                  onInstrumentGainPreview(instrument.id, gain);
-                }}
-                onCommit={(gain) => {
-                  onUpdateProjectInstrument(
-                    instrument.id,
-                    {
-                      gain,
-                    },
-                    "Update instrument volume",
-                  );
-                }}
-              />
               <button
                 className={instrument.muted
                   ? "instrument-mute-button is-active"
@@ -332,6 +265,39 @@ export function GeneralInspector({
                 }}
               >
                 S
+              </button>
+              <InstrumentGainSlider
+                gain={instrument.gain}
+                instrumentName={instrument.name}
+                onPreview={(gain) => {
+                  onInstrumentGainPreview(instrument.id, gain);
+                }}
+                onCommit={(gain) => {
+                  onUpdateProjectInstrument(
+                    instrument.id,
+                    {
+                      gain,
+                    },
+                    "Update instrument volume",
+                  );
+                }}
+              />
+              <button
+                className="instrument-settings-button"
+                type="button"
+                aria-label={`Edit ${instrument.name}`}
+                title="Edit instrument"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditProjectInstrument(instrument.id);
+                }}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4 5h7M15 5h1M4 10h1M9 10h7M4 15h5M13 15h3" />
+                  <circle cx="13" cy="5" r="2" />
+                  <circle cx="7" cy="10" r="2" />
+                  <circle cx="11" cy="15" r="2" />
+                </svg>
               </button>
               <button
                 className="instrument-delete-button"

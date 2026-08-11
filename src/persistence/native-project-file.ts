@@ -989,7 +989,7 @@ function parseClipInstrumentStates(
 function parseProjectInstruments(
   source: unknown,
   instrumentOrder: readonly InstrumentId[],
-  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
+  _presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): Readonly<Record<InstrumentId, ProjectInstrument>> {
   const sourceInstruments = readRecord(source, path);
@@ -1008,7 +1008,6 @@ function parseProjectInstruments(
       projectInstrumentsById[instrumentId] = parseProjectInstrument(
         sourceInstruments[instrumentId],
         instrumentId,
-        presetsById,
         `${path}.${instrumentId}`,
       );
     }
@@ -1020,7 +1019,6 @@ function parseProjectInstruments(
 function parseProjectInstrument(
   source: unknown,
   expectedInstrumentId: InstrumentId,
-  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): ProjectInstrument {
   const instrument = readRecord(source, path);
@@ -1052,20 +1050,6 @@ function parseProjectInstrument(
     );
   }
 
-  const presetId = readNonEmptyString(
-    instrument["presetId"],
-    `${path}.presetId`,
-    MAXIMUM_ID_LENGTH,
-  );
-
-  if (presetsById[presetId] === undefined) {
-    fail(
-      "INVALID_DATA",
-      `${path}.presetId`,
-      `Preset "${presetId}" does not exist.`,
-    );
-  }
-
   const parsedInstrument: ProjectInstrument = {
     id,
     name: readNonEmptyString(
@@ -1074,7 +1058,10 @@ function parseProjectInstrument(
       MAXIMUM_NAME_LENGTH,
     ),
     color,
-    presetId,
+    instrument: parseInstrument(
+      instrument["instrument"],
+      `${path}.instrument`,
+    ),
     gain: readNumberInRange(
       instrument["gain"],
       `${path}.gain`,

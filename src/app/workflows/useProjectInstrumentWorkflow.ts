@@ -5,19 +5,13 @@ import {
 import type {
   EditorCommandPort,
 } from "../../application/editor-command-service";
-import {
-  APPLICATION_COLORS,
-} from "../../config/application-colors";
-import {
-  RENDERING_CONSTANTS,
-} from "../../config/program-constants";
 import type {
   UpdateProjectInstrumentChanges,
 } from "../../domain/commands";
 import {
   getActiveClip,
   type ClipId,
-  type PresetId,
+  type InstrumentConfig,
   type ProjectInstrument,
   type InstrumentId,
   type ClipInstrumentState,
@@ -41,7 +35,11 @@ export interface ProjectInstrumentWorkflowOptions {
 
 export interface ProjectInstrumentWorkflow {
   readonly select: (instrumentId: InstrumentId) => void;
-  readonly add: (presetId: PresetId, name: string) => void;
+  readonly add: (
+    name: string,
+    instrument: InstrumentConfig,
+    color: string,
+  ) => void;
   readonly moveSelected: (direction: -1 | 1) => void;
   readonly remove: (instrumentId: InstrumentId) => void;
   readonly update: (
@@ -104,23 +102,24 @@ export function useProjectInstrumentWorkflow({
     );
   }, [commands]);
 
-  const add = useCallback((presetId: PresetId, name: string): void => {
+  const add = useCallback((
+    name: string,
+    instrumentConfig: InstrumentConfig,
+    color: string,
+  ): void => {
     const state = commands.getState();
     const normalizedName = name.trim();
 
-    if (
-      state.instrumentPresetsById[presetId] === undefined
-      || normalizedName.length === 0
-    ) {
+    if (normalizedName.length === 0) {
       return;
     }
 
     instrumentSequenceRef.current += 1;
     const instrument = createUserInstrument(
-      state.instrumentOrder.length,
       instrumentSequenceRef.current,
-      presetId,
+      cloneInstrumentConfig(instrumentConfig),
       normalizedName,
+      color,
     );
     const clipInstrumentStatesById = createInitialClipInstrumentStates(
       state.clipOrder,
@@ -276,23 +275,25 @@ export function useProjectInstrumentWorkflow({
 }
 
 function createUserInstrument(
-  instrumentIndex: number,
   sequence: number,
-  presetId: PresetId,
+  instrument: InstrumentConfig,
   name: string,
+  color: string,
 ): ProjectInstrument {
-  const color =
-    RENDERING_CONSTANTS.userInstrumentColors[
-      instrumentIndex % RENDERING_CONSTANTS.userInstrumentColors.length
-    ]
-    ?? APPLICATION_COLORS.accent.primary;
-
   return createDefaultProjectInstrument({
     id: `instrument-${Date.now()}-${sequence}`,
     name,
     color,
-    presetId,
+    instrument,
   });
+}
+
+function cloneInstrumentConfig(config: InstrumentConfig): InstrumentConfig {
+  return {
+    ...config,
+    envelope: { ...config.envelope },
+    filterEnvelope: { ...config.filterEnvelope },
+  };
 }
 
 function createInitialClipInstrumentStates(
