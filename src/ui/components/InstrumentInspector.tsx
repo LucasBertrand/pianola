@@ -26,7 +26,18 @@ export interface InstrumentInspectorProps {
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
+  readonly onEnvelopePreview: (
+    voiceId: VoiceId,
+    envelopeKind: "amplitude" | "filter",
+    parameter: keyof AdsrEnvelope,
+    value: number,
+  ) => void;
   readonly onInstrumentParameterCommit: (
+    voiceId: VoiceId,
+    parameter: SubtractiveSynthContinuousParameter,
+    value: number,
+  ) => void;
+  readonly onInstrumentParameterPreview: (
     voiceId: VoiceId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
@@ -37,7 +48,9 @@ export function InstrumentInspector({
   voice,
   onWaveformCommit,
   onEnvelopeCommit,
+  onEnvelopePreview,
   onInstrumentParameterCommit,
+  onInstrumentParameterPreview,
 }: InstrumentInspectorProps): React.JSX.Element {
   if (voice === undefined) {
     return (
@@ -115,6 +128,13 @@ export function InstrumentInspector({
               scale="linear"
               orientation="horizontal"
               formatValue={formatPercentage}
+              onPreview={(value) => {
+                onInstrumentParameterPreview(
+                  voice.id,
+                  "pulseWidth",
+                  value,
+                );
+              }}
               onCommit={(value) => {
                 onInstrumentParameterCommit(
                   voice.id,
@@ -142,6 +162,13 @@ export function InstrumentInspector({
             step={EDITOR_CONSTANTS.filterCutoffStepHz}
             scale="logarithmic"
             formatValue={formatFrequency}
+            onPreview={(value) => {
+              onInstrumentParameterPreview(
+                voice.id,
+                "filterCutoffHz",
+                value,
+              );
+            }}
             onCommit={(value) => {
               onInstrumentParameterCommit(
                 voice.id,
@@ -159,6 +186,13 @@ export function InstrumentInspector({
             step={EDITOR_CONSTANTS.filterResonanceStep}
             scale="linear"
             formatValue={formatDecimal}
+            onPreview={(value) => {
+              onInstrumentParameterPreview(
+                voice.id,
+                "filterResonance",
+                value,
+              );
+            }}
             onCommit={(value) => {
               onInstrumentParameterCommit(
                 voice.id,
@@ -176,6 +210,13 @@ export function InstrumentInspector({
             step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
             scale="linear"
             formatValue={formatOctaves}
+            onPreview={(value) => {
+              onInstrumentParameterPreview(
+                voice.id,
+                "filterEnvelopeAmountOctaves",
+                value,
+              );
+            }}
             onCommit={(value) => {
               onInstrumentParameterCommit(
                 voice.id,
@@ -193,6 +234,7 @@ export function InstrumentInspector({
           title="Amplitude Envelope"
           envelopeKind="amplitude"
           envelope={instrument.envelope}
+          onPreview={onEnvelopePreview}
           onCommit={onEnvelopeCommit}
         />
         <EnvelopeModule
@@ -200,6 +242,7 @@ export function InstrumentInspector({
           title="Filter Envelope"
           envelopeKind="filter"
           envelope={instrument.filterEnvelope}
+          onPreview={onEnvelopePreview}
           onCommit={onEnvelopeCommit}
         />
       </div>
@@ -212,6 +255,7 @@ interface EnvelopeModuleProps {
   readonly title: string;
   readonly envelopeKind: "amplitude" | "filter";
   readonly envelope: AdsrEnvelope;
+  readonly onPreview: InstrumentInspectorProps["onEnvelopePreview"];
   readonly onCommit: InstrumentInspectorProps["onEnvelopeCommit"];
 }
 
@@ -220,6 +264,7 @@ function EnvelopeModule({
   title,
   envelopeKind,
   envelope,
+  onPreview,
   onCommit,
 }: EnvelopeModuleProps): React.JSX.Element {
   return (
@@ -237,6 +282,9 @@ function EnvelopeModule({
           maximum={EDITOR_CONSTANTS.envelopeTimeMaximumSeconds}
           step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
           formatValue={formatEnvelopeTime}
+          onPreview={(value) => {
+            onPreview(voiceId, envelopeKind, "attackSeconds", value);
+          }}
           onCommit={(value) => {
             onCommit(voiceId, envelopeKind, "attackSeconds", value);
           }}
@@ -249,6 +297,9 @@ function EnvelopeModule({
           maximum={EDITOR_CONSTANTS.envelopeDecayMaximumSeconds}
           step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
           formatValue={formatEnvelopeTime}
+          onPreview={(value) => {
+            onPreview(voiceId, envelopeKind, "decaySeconds", value);
+          }}
           onCommit={(value) => {
             onCommit(voiceId, envelopeKind, "decaySeconds", value);
           }}
@@ -261,6 +312,9 @@ function EnvelopeModule({
           maximum={1}
           step={EDITOR_CONSTANTS.sustainStep}
           formatValue={formatPercentage}
+          onPreview={(value) => {
+            onPreview(voiceId, envelopeKind, "sustainLevel", value);
+          }}
           onCommit={(value) => {
             onCommit(voiceId, envelopeKind, "sustainLevel", value);
           }}
@@ -273,6 +327,9 @@ function EnvelopeModule({
           maximum={EDITOR_CONSTANTS.envelopeTimeMaximumSeconds}
           step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
           formatValue={formatEnvelopeTime}
+          onPreview={(value) => {
+            onPreview(voiceId, envelopeKind, "releaseSeconds", value);
+          }}
           onCommit={(value) => {
             onCommit(voiceId, envelopeKind, "releaseSeconds", value);
           }}

@@ -34,6 +34,7 @@ export interface EditorToolbarProps {
   readonly onInsertMeasure: () => void;
   readonly onRemoveMeasure: () => void;
   readonly onDeleteSelection: () => void;
+  readonly onToggleSelectionEnabled: () => void;
   readonly onCopy: () => void;
   readonly onCut: () => void;
   readonly onPaste: () => void;
@@ -64,6 +65,7 @@ export function EditorToolbar({
   onInsertMeasure,
   onRemoveMeasure,
   onDeleteSelection,
+  onToggleSelectionEnabled,
   onCopy,
   onCut,
   onPaste,
@@ -181,6 +183,19 @@ export function EditorToolbar({
             <path d="m9 7 .7-2h4.6l.7 2" />
             <path d="m6.5 7 .8 13h9.4l.8-13" />
             <path d="M10 11v5M14 11v5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          title="Enable or disable selected notes"
+          aria-label="Enable or disable selected notes"
+          disabled={!selectionAvailable}
+          onClick={onToggleSelectionEnabled}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3.5" y="6" width="13" height="12" rx="2" />
+            <path d="M7 10h6M7 14h4" />
+            <path d="m15 8 6 8M21 8l-6 8" />
           </svg>
         </button>
         <button

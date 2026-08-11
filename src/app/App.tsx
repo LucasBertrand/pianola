@@ -265,6 +265,7 @@ export function App(): React.JSX.Element {
     seek: seekPlayback,
     auditionPitch,
     previewVoiceGain,
+    previewVoiceInstrument,
     previewMasterGain,
   } = useAudioPlayback({
     projectStore: scene.projectStore,
@@ -440,9 +441,11 @@ export function App(): React.JSX.Element {
     remove: handleDeleteVoice,
     update: handleUpdateVoice,
     commitEnvelopeParameter: handleEnvelopeParameterCommit,
+    previewEnvelopeParameter: handleEnvelopeParameterPreview,
     commitWaveform: handleWaveformCommit,
     commitPolyphony: handleInstrumentPolyphonyCommit,
     commitInstrumentParameter: handleInstrumentParameterCommit,
+    previewInstrumentParameter: handleInstrumentParameterPreview,
     selectNotes: handleSelectVoiceNotes,
     toggleLock: handleToggleVoiceLock,
   } = useVoiceWorkflow({
@@ -457,6 +460,7 @@ export function App(): React.JSX.Element {
         ?.removeVoiceFromSelection(voiceId);
     },
     confirm: showApplicationConfirmation,
+    previewInstrument: previewVoiceInstrument,
   });
   const getPianoRollEventController = useCallback(
     (): PianoRollEventController | null =>
@@ -510,6 +514,7 @@ export function App(): React.JSX.Element {
     copy: handleCopy,
     cut: handleCut,
     remove: handleDeleteSelection,
+    toggleEnabled: handleToggleSelectionEnabled,
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
     paste: handlePaste,
@@ -699,6 +704,7 @@ export function App(): React.JSX.Element {
             onInsertMeasure={handleInsertMeasureAtPlayhead}
             onRemoveMeasure={handleRemoveMeasureAtPlayhead}
             onDeleteSelection={handleDeleteSelection}
+            onToggleSelectionEnabled={handleToggleSelectionEnabled}
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={handlePaste}
@@ -806,7 +812,9 @@ export function App(): React.JSX.Element {
           onDeleteVoice={handleDeleteVoice}
           onWaveformCommit={handleWaveformCommit}
           onPolyphonyCommit={handleInstrumentPolyphonyCommit}
+          onEnvelopePreview={handleEnvelopeParameterPreview}
           onEnvelopeCommit={handleEnvelopeParameterCommit}
+          onInstrumentParameterPreview={handleInstrumentParameterPreview}
           onInstrumentParameterCommit={handleInstrumentParameterCommit}
         />
       </section>

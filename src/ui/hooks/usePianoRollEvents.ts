@@ -10,9 +10,6 @@ import {
 import {
   NoteGestureWorkflow,
 } from "../../application/note-gesture-workflow";
-import {
-  buildSetNotesEnabledCommands,
-} from "../../application/note-edit-commands";
 import type {
   EditorSelectionRequest,
   EditorSelectionRequests,
@@ -340,45 +337,6 @@ export function usePianoRollEvents(
       tapState.timeStamp = event.timeStamp;
       tapState.clientX = event.clientX;
       tapState.clientY = event.clientY;
-    };
-
-    const toggleSelectedNotesEnabled = (): void => {
-      const selectedNotes = selection.notes;
-
-      if (selectedNotes.length === 0) {
-        return;
-      }
-
-      let enableNotes = true;
-
-      for (const selectedNote of selectedNotes) {
-        if (selectedNote.enabled) {
-          enableNotes = false;
-          break;
-        }
-      }
-
-      try {
-        const nextState = editorCommands.dispatch(
-          buildSetNotesEnabledCommands(
-            selectedNotes,
-            enableNotes,
-          ),
-          enableNotes
-            ? "Enable selected notes"
-            : "Disable selected notes",
-        );
-
-        if (nextState !== null) {
-          selection.reconcile(
-            nextState,
-            (note) => !isVoiceLocked(note.voiceId),
-          );
-          showSelection();
-        }
-      } catch (error: unknown) {
-        onTransactionRejected?.(error);
-      }
     };
 
     const handlePointerDown = (event: PointerSample): void => {
@@ -810,14 +768,8 @@ export function usePianoRollEvents(
       );
 
       if (note !== undefined) {
-        cancelGesture();
-        restoreGestureSelection();
-
-        if (!selection.has(note.id)) {
-          selectHitNote(note, false);
-        }
-
-        toggleSelectedNotesEnabled();
+        // Holding an existing note must not change its musical state. The
+        // pending drag remains active and may continue when the pointer moves.
         return;
       }
 
@@ -946,13 +898,9 @@ export function usePianoRollEvents(
     const strategy: PointerInteractionStrategy = {
       onPointerDown: handlePointerDown,
       shouldScheduleLongPress(): boolean {
-        return (
-          draft.mode === "PENDING_LASSO"
-          || draft.mode === "PENDING_NOTE_SELECTION"
-          || draft.mode === "DRAGGING"
-          || draft.mode === "RESIZING_START"
-          || draft.mode === "RESIZING_END"
-        );
+        // Long press is reserved for drawing from an empty grid cell. Notes
+        // never arm the timer, so holding one cannot cancel a pending move.
+        return draft.mode === "PENDING_LASSO";
       },
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,

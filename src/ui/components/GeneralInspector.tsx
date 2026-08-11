@@ -69,7 +69,18 @@ export interface GeneralInspectorProps {
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
+  readonly onEnvelopePreview: (
+    voiceId: VoiceId,
+    envelopeKind: "amplitude" | "filter",
+    parameter: keyof AdsrEnvelope,
+    value: number,
+  ) => void;
   readonly onInstrumentParameterCommit: (
+    voiceId: VoiceId,
+    parameter: SubtractiveSynthContinuousParameter,
+    value: number,
+  ) => void;
+  readonly onInstrumentParameterPreview: (
     voiceId: VoiceId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
@@ -103,7 +114,9 @@ export function GeneralInspector({
   onWaveformCommit,
   onPolyphonyCommit,
   onEnvelopeCommit,
+  onEnvelopePreview,
   onInstrumentParameterCommit,
+  onInstrumentParameterPreview,
 }: GeneralInspectorProps): React.JSX.Element {
   return (
   <aside
@@ -407,7 +420,9 @@ export function GeneralInspector({
     <InstrumentInspector
       voice={selectedVoice}
       onWaveformCommit={onWaveformCommit}
+      onEnvelopePreview={onEnvelopePreview}
       onEnvelopeCommit={onEnvelopeCommit}
+      onInstrumentParameterPreview={onInstrumentParameterPreview}
       onInstrumentParameterCommit={onInstrumentParameterCommit}
     />
     </section>

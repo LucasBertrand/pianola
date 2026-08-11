@@ -1458,6 +1458,103 @@ try {
     ));
   });
 
+  test("keeps a zero-sustain envelope silent until note-off", () => {
+    const baseSnapshot = compilePlaybackSnapshot(createProject());
+    const baseVoice = baseSnapshot.voices[0];
+    const amplitudeEvents = [];
+    const createAudioParam = (value, events = undefined) => ({
+      value,
+      cancelScheduledValues(time) {
+        events?.push(["cancel", time]);
+      },
+      setValueAtTime(nextValue, time) {
+        this.value = nextValue;
+        events?.push(["set", nextValue, time]);
+      },
+      setTargetAtTime(nextValue, time, constant) {
+        this.value = nextValue;
+        events?.push(["target", nextValue, time, constant]);
+      },
+    });
+    const context = {
+      currentTime: 0,
+      sampleRate: 48_000,
+      createOscillator() {
+        return {
+          type: "sine",
+          frequency: createAudioParam(440),
+          detune: createAudioParam(0),
+          connect() {},
+          disconnect() {},
+          start() {},
+          stop() {},
+          onended: null,
+        };
+      },
+      createBiquadFilter() {
+        return {
+          type: "allpass",
+          frequency: createAudioParam(350),
+          Q: createAudioParam(1),
+          connect() {},
+          disconnect() {},
+        };
+      },
+      createGain() {
+        return {
+          gain: createAudioParam(1, amplitudeEvents),
+          connect() {},
+          disconnect() {},
+        };
+      },
+    };
+    const voice = {
+      ...baseVoice,
+      instrument: {
+        ...baseVoice.instrument,
+        envelope: {
+          attackSeconds: 0,
+          decaySeconds: 0,
+          sustainLevel: 0,
+          releaseSeconds: 2,
+        },
+        filterEnvelope: {
+          attackSeconds: 0,
+          decaySeconds: 0,
+          sustainLevel: 0,
+          releaseSeconds: 2,
+        },
+      },
+    };
+    const renderer = new SubtractiveInstrumentRenderer();
+
+    renderer.schedule({
+      context,
+      destination: {},
+      event: {
+        occurrenceId: "zero-sustain",
+        generation: 1,
+        voice,
+        pitch: 60,
+        velocity: 100,
+        startAudioTimeSeconds: 1,
+        endAudioTimeSeconds: 2,
+      },
+      startAudioTimeSeconds: 1,
+      noteEndAudioTimeSeconds: 2,
+      tuningFrequencyHz: 440,
+      releaseTailSeconds: 2,
+      onEnded() {},
+    });
+
+    const noteOffValues = amplitudeEvents
+      .filter(([kind, , time]) => kind === "set" && time === 2)
+      .map(([, value]) => value);
+
+    assert.ok(noteOffValues.length > 0);
+    assert.ok(noteOffValues.every((value) => value === 0));
+  });
+
   test("delegates instrument rendering while retaining shared audio buses", async () => {
     const snapshot = compilePlaybackSnapshot(createProject());
     const gainNodes = [];
@@ -2794,6 +2891,36 @@ try {
     assert.equal(engine.config.masterGain, 0.29);
     assert.equal(engine.configurations.length, 1);
     assert.deepEqual(engine.cancelledAt, []);
+
+    const previewVoice = refreshedState.voicesById["voice-a"];
+    assert.ok(previewVoice !== undefined);
+    const previewState = {
+      ...refreshedState,
+      voicesById: {
+        ...refreshedState.voicesById,
+        "voice-a": {
+          ...previewVoice,
+          instrument: {
+            ...previewVoice.instrument,
+            filterCutoffHz: 777,
+          },
+        },
+      },
+    };
+
+    scheduler.previewPlaybackSnapshot(
+      compilePlaybackSnapshot(previewState),
+    );
+
+    const previewSnapshot = engine.snapshots.at(-1);
+
+    assert.deepEqual(engine.cancelledFutureAt, [0.05]);
+    assert.deepEqual(engine.cancelledAt, []);
+    assert.ok(previewSnapshot !== undefined);
+    assert.equal(
+      previewSnapshot.voices[0].instrument.filterCutoffHz,
+      777,
+    );
 
     await scheduler.dispose();
   });

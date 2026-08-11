@@ -7,6 +7,7 @@ import {
 import {
   getActiveClip,
   type ProjectState,
+  type SubtractiveSynthConfig,
   type Tick,
   type VoiceId,
 } from "../../domain/model";
@@ -50,6 +51,10 @@ export interface AudioPlaybackActions {
     voiceId: VoiceId,
     gain: number,
   ) => void;
+  readonly previewVoiceInstrument: (
+    voiceId: VoiceId,
+    instrument: SubtractiveSynthConfig,
+  ) => void;
   readonly previewMasterGain: (gain: number) => void;
 }
 
@@ -65,6 +70,11 @@ export function useAudioPlayback(
   const [status, setStatus] =
     useState<PlaybackStatus>("stopped");
   const schedulerRef = useRef<LookaheadScheduler | null>(null);
+  const instrumentPreviewFrameRef = useRef(0);
+  const pendingInstrumentPreviewRef = useRef<{
+    readonly voiceId: VoiceId;
+    readonly instrument: SubtractiveSynthConfig;
+  } | null>(null);
 
   onErrorRef.current = onError;
 
@@ -105,6 +115,15 @@ export function useAudioPlayback(
     const unsubscribe = projectStore.subscribe(
       (state, previousState) => {
         if (
+          state.voicesById !== previousState.voicesById
+          && instrumentPreviewFrameRef.current !== 0
+        ) {
+          cancelAnimationFrame(instrumentPreviewFrameRef.current);
+          instrumentPreviewFrameRef.current = 0;
+          pendingInstrumentPreviewRef.current = null;
+        }
+
+        if (
           state.masterBus.gain
           !== previousState.masterBus.gain
         ) {
@@ -132,6 +151,12 @@ export function useAudioPlayback(
     );
 
     return (): void => {
+      if (instrumentPreviewFrameRef.current !== 0) {
+        cancelAnimationFrame(instrumentPreviewFrameRef.current);
+        instrumentPreviewFrameRef.current = 0;
+      }
+
+      pendingInstrumentPreviewRef.current = null;
       unsubscribe();
       void scheduler.dispose().catch(() => {
         // Teardown errors cannot be surfaced after the UI has unmounted.
@@ -231,6 +256,56 @@ export function useAudioPlayback(
     }
   }, []);
 
+  const previewVoiceInstrument = useCallback((
+    voiceId: VoiceId,
+    instrument: SubtractiveSynthConfig,
+  ): void => {
+    pendingInstrumentPreviewRef.current = {
+      voiceId,
+      instrument,
+    };
+
+    if (instrumentPreviewFrameRef.current !== 0) {
+      return;
+    }
+
+    instrumentPreviewFrameRef.current = requestAnimationFrame(() => {
+      instrumentPreviewFrameRef.current = 0;
+      const preview = pendingInstrumentPreviewRef.current;
+
+      pendingInstrumentPreviewRef.current = null;
+
+      if (preview === null) {
+        return;
+      }
+
+      const state = projectStore.getState();
+      const voice = state.voicesById[preview.voiceId];
+      const scheduler = schedulerRef.current;
+
+      if (voice === undefined || scheduler === null) {
+        return;
+      }
+
+      try {
+        scheduler.previewPlaybackSnapshot(
+          compilePlaybackSnapshot({
+            ...state,
+            voicesById: {
+              ...state.voicesById,
+              [preview.voiceId]: {
+                ...voice,
+                instrument: preview.instrument,
+              },
+            },
+          }),
+        );
+      } catch (error: unknown) {
+        onErrorRef.current(error);
+      }
+    });
+  }, [projectStore]);
+
   const previewMasterGain = useCallback((gain: number): void => {
     schedulerRef.current?.previewMasterGain(gain);
   }, []);
@@ -243,6 +318,7 @@ export function useAudioPlayback(
     seek,
     auditionPitch,
     previewVoiceGain,
+    previewVoiceInstrument,
     previewMasterGain,
   };
 }

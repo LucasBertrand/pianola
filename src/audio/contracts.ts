@@ -109,6 +109,7 @@ export interface AudioTransportController {
     snapshot: PlaybackSnapshot,
     transport: TransportState,
   ): void;
+  previewPlaybackSnapshot(snapshot: PlaybackSnapshot): void;
   play(startTick?: Tick): Promise<void>;
   pause(): void;
   stop(): void;

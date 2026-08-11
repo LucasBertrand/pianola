@@ -9,6 +9,7 @@ import type {
 import {
   buildAddNoteCommands,
   buildDeleteNoteCommands,
+  buildSetNotesEnabledCommands,
 } from "../../application/note-edit-commands";
 import type {
   NoteCollisionResolutionRequest,
@@ -74,6 +75,7 @@ export interface SelectionWorkflow {
   readonly copy: () => void;
   readonly cut: () => void;
   readonly remove: () => void;
+  readonly toggleEnabled: () => void;
   readonly transform: (
     kind: SelectionTransformationKind,
     label: string,
@@ -195,6 +197,41 @@ export function useSelectionWorkflow({
       ) !== null
     ) {
       controller?.clearSelection();
+    }
+  }, [commands, getController]);
+
+  const toggleEnabled = useCallback((): void => {
+    const controller = getController();
+    const notes = controller?.getSelectedNotes() ?? [];
+
+    if (controller === null || notes.length === 0) {
+      return;
+    }
+
+    let enableNotes = true;
+
+    for (const note of notes) {
+      if (note.enabled) {
+        enableNotes = false;
+        break;
+      }
+    }
+
+    const nextState = commands.dispatch(
+      buildSetNotesEnabledCommands(notes, enableNotes),
+      enableNotes
+        ? "Enable selected notes"
+        : "Disable selected notes",
+    );
+
+    if (nextState !== null) {
+      const noteIds: NoteId[] = [];
+
+      for (const note of notes) {
+        noteIds.push(note.id);
+      }
+
+      controller.replaceSelection(findNotesByIds(nextState, noteIds));
     }
   }, [commands, getController]);
 
@@ -527,6 +564,7 @@ export function useSelectionWorkflow({
     copy,
     cut,
     remove,
+    toggleEnabled,
     transform,
     sliceAtPlayhead,
     paste,

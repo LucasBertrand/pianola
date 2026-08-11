@@ -20,6 +20,7 @@ import {
   type AdsrEnvelope,
   type OscillatorWaveform,
   type SubtractiveSynthContinuousParameter,
+  type SubtractiveSynthConfig,
   type Voice,
   type VoiceId,
 } from "../../domain/model";
@@ -38,6 +39,10 @@ export interface VoiceWorkflowOptions {
   readonly toggleVoiceSelection: (voiceId: VoiceId) => void;
   readonly removeVoiceFromSelection: (voiceId: VoiceId) => void;
   readonly confirm: ShowApplicationConfirmation;
+  readonly previewInstrument: (
+    voiceId: VoiceId,
+    instrument: SubtractiveSynthConfig,
+  ) => void;
 }
 
 export interface VoiceWorkflow {
@@ -57,6 +62,12 @@ export interface VoiceWorkflow {
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
+  readonly previewEnvelopeParameter: (
+    voiceId: VoiceId,
+    envelopeKind: "amplitude" | "filter",
+    parameter: keyof AdsrEnvelope,
+    value: number,
+  ) => void;
   readonly commitWaveform: (
     voiceId: VoiceId,
     waveform: OscillatorWaveform,
@@ -66,6 +77,11 @@ export interface VoiceWorkflow {
     polyphony: number,
   ) => void;
   readonly commitInstrumentParameter: (
+    voiceId: VoiceId,
+    parameter: SubtractiveSynthContinuousParameter,
+    value: number,
+  ) => void;
+  readonly previewInstrumentParameter: (
     voiceId: VoiceId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
@@ -81,6 +97,7 @@ export function useVoiceWorkflow({
   toggleVoiceSelection,
   removeVoiceFromSelection,
   confirm,
+  previewInstrument,
 }: VoiceWorkflowOptions): VoiceWorkflow {
   const voiceSequenceRef = useRef(0);
 
@@ -295,6 +312,34 @@ export function useVoiceWorkflow({
     [commands, update],
   );
 
+  const previewEnvelopeParameter = useCallback(
+    (
+      voiceId: VoiceId,
+      envelopeKind: "amplitude" | "filter",
+      parameter: keyof AdsrEnvelope,
+      value: number,
+    ): void => {
+      const voice = commands.getState().voicesById[voiceId];
+
+      if (voice === undefined) {
+        return;
+      }
+
+      previewInstrument(voiceId, {
+        ...voice.instrument,
+        [envelopeKind === "amplitude"
+          ? "envelope"
+          : "filterEnvelope"]: {
+          ...(envelopeKind === "amplitude"
+            ? voice.instrument.envelope
+            : voice.instrument.filterEnvelope),
+          [parameter]: value,
+        },
+      });
+    },
+    [commands, previewInstrument],
+  );
+
   const commitWaveform = useCallback(
     (voiceId: VoiceId, waveform: OscillatorWaveform): void => {
       const voice = commands.getState().voicesById[voiceId];
@@ -365,6 +410,26 @@ export function useVoiceWorkflow({
     [commands, update],
   );
 
+  const previewInstrumentParameter = useCallback(
+    (
+      voiceId: VoiceId,
+      parameter: SubtractiveSynthContinuousParameter,
+      value: number,
+    ): void => {
+      const voice = commands.getState().voicesById[voiceId];
+
+      if (voice === undefined) {
+        return;
+      }
+
+      previewInstrument(voiceId, {
+        ...voice.instrument,
+        [parameter]: value,
+      });
+    },
+    [commands, previewInstrument],
+  );
+
   const selectNotes = useCallback(
     (voiceId: VoiceId): void => {
       if (commands.getState().voicesById[voiceId]?.locked !== false) {
@@ -402,9 +467,11 @@ export function useVoiceWorkflow({
     remove,
     update,
     commitEnvelopeParameter,
+    previewEnvelopeParameter,
     commitWaveform,
     commitPolyphony,
     commitInstrumentParameter,
+    previewInstrumentParameter,
     selectNotes,
     toggleLock,
   };

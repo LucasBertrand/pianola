@@ -332,6 +332,7 @@ function scheduleAdsrParameter(
         parameter.setValueAtTime(sustainValue, attackEnd);
       }
 
+      noteOffValue = sustainValue;
       parameter.setValueAtTime(sustainValue, noteEndAudioTimeSeconds);
     }
   }

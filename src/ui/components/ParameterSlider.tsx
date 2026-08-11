@@ -19,6 +19,7 @@ export interface ParameterSliderProps {
   readonly scale?: "linear" | "exponential" | "logarithmic";
   readonly orientation?: "horizontal" | "vertical";
   readonly formatValue: (value: number) => string;
+  readonly onPreview?: (value: number) => void;
   readonly onCommit: (value: number) => void;
 }
 
@@ -34,6 +35,7 @@ export function ParameterSlider(
     scale = "exponential",
     orientation = "vertical",
     formatValue,
+    onPreview,
     onCommit,
   } = props;
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -133,15 +135,16 @@ export function ParameterSlider(
           )}
           aria-label={label}
           onInput={(event) => {
-            updateVisual(
-              sliderPositionToParameterValue(
-                Number(event.currentTarget.value),
-                minimum,
-                maximum,
-                step,
-                scale,
-              ),
+            const nextValue = sliderPositionToParameterValue(
+              Number(event.currentTarget.value),
+              minimum,
+              maximum,
+              step,
+              scale,
             );
+
+            updateVisual(nextValue);
+            onPreview?.(nextValue);
           }}
           onContextMenu={(event) => {
             event.preventDefault();
