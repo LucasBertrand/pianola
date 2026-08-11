@@ -170,7 +170,8 @@ adaptateurs React de cas d'usage qui ont besoin à la fois du runtime, de boîte
 de dialogue et de contrôles de fichiers du navigateur :
 
 - `useProjectInstrumentWorkflow.ts` orchestre ajout, suppression, ordre et édition des
-  instruments du projet ;
+  instruments du projet. La création reçoit un `PresetId` déjà choisi par la
+  modale UI et l’enregistre une seule fois dans `ProjectInstrument` ;
 - `useClipWorkflow.ts` orchestre navigation, ajout, suppression, ordre et
   renommage des clips ;
 - `useSelectionWorkflow.ts` orchestre Undo/Redo, presse-papiers, transfert,

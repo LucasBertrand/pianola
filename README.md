@@ -605,8 +605,10 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 | Structure principale de l’UI | `src/app/App.tsx` |
 | État initial et projet vierge | `src/app/demo-scene.ts` |
 | Clips, notes, instruments, transport | `src/domain/model.ts` |
+| Catalogue et paramètres des presets | `src/domain/instrument-presets.ts` |
 | Cycle de vie des clips | `src/app/workflows/useClipWorkflow.ts` |
 | Liste des clips | `src/ui/components/ClipInspector.tsx` |
+| Modale de création d’instrument | `src/ui/components/InstrumentPresetDialog.tsx` |
 | Actions mutantes | `src/domain/commands.ts` |
 | Cas d'usage et plans de commandes | `src/application/` |
 | Collisions | `src/domain/note-collision.ts` |
@@ -659,6 +661,31 @@ tablette si elle touche au rendu ou aux interactions.
 6. Vérifier Undo et Redo.
 
 Ne pas modifier directement `ProjectState` dans un composant React.
+
+### Ajouter ou modifier un preset d’instrument
+
+Les presets intégrés sont définis dans `src/domain/instrument-presets.ts`. Un
+preset possède un ID stable, un nom, un discriminant `kind` et sa configuration
+audio complète. Pour ajouter un preset soustractif :
+
+1. ajouter une entrée à `BUILT_IN_PRESETS` avec un ID unique et durable ;
+2. construire sa configuration avec `createSubtractiveConfig` afin de conserver
+   les valeurs par défaut et les enveloppes immuables ;
+3. respecter les bornes documentées dans `INSTRUMENT_CONSTANTS` ;
+4. lancer `npm run verify` ;
+5. créer manuellement un instrument et vérifier le preset dans la modale, puis
+   sa lecture dans plusieurs clips.
+
+Ne jamais remettre la configuration audio dans `ClipInstrumentState`.
+`ProjectInstrument.presetId` est l’unique choix de son de l’instrument et tous
+les clips le partagent. Les clips ne conservent que gain, mute, solo et lock.
+Le nom affiché à côté du volume est volontairement en lecture seule : changer
+le son d’un instrument existant n’est pas encore une fonctionnalité publique.
+
+Lors de l’ajout d’un nouveau type d’instrument, créer une nouvelle variante de
+`InstrumentPreset` et de `PlaybackInstrumentSnapshot`, puis un renderer dédié.
+Ne pas ajouter de propriétés optionnelles propres à ce type dans la variante
+soustractive ou de branche spécialisée dans le scheduler commun.
 
 ### Modifier les couleurs
 
