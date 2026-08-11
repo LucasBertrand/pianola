@@ -837,7 +837,7 @@ function applyAddProjectInstrument(
   ) {
     reject(
       "INVALID_COMMAND",
-      "Adding a instrument requires exactly one initial state per clip.",
+      "Adding an instrument requires exactly one initial state per clip.",
       command.type,
     );
   }

@@ -8,15 +8,11 @@ import type {
   ProjectInstrument,
   InstrumentId,
 } from "./model";
-import {
-  DEFAULT_INSTRUMENT_PRESET_ID,
-} from "./instrument-presets";
-
 export interface CreateDefaultProjectInstrumentOptions {
   readonly id: InstrumentId;
   readonly name: string;
   readonly color: string;
-  readonly presetId?: PresetId;
+  readonly presetId: PresetId;
 }
 
 /** Creates a global instrument identity using the shared product defaults. */
@@ -27,7 +23,7 @@ export function createDefaultProjectInstrument(
     id: options.id,
     name: options.name,
     color: options.color,
-    presetId: options.presetId ?? DEFAULT_INSTRUMENT_PRESET_ID,
+    presetId: options.presetId,
     pan: INSTRUMENT_CONSTANTS.pan,
     effects: [],
     generativeRules: [],

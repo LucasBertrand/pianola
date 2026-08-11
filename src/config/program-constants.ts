@@ -70,12 +70,6 @@ export const INSTRUMENT_CONSTANTS = Object.freeze({
   maximumGain: 1,
   pan: 0,
   defaultOscillatorWaveform: "sawtooth",
-  oscillatorWaveformCycle: Object.freeze([
-    "sawtooth",
-    "sine",
-    "square",
-    "triangle",
-  ] as const),
   oscillatorWaveformOptions: Object.freeze([
     Object.freeze({
       value: "sine",

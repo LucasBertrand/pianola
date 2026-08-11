@@ -635,7 +635,7 @@ function validateDescriptors(
     pushProjectInstrumentIssue(
       issues,
       path,
-      `A instrument cannot contain more than ${MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT} descriptors of one type.`,
+      `An instrument cannot contain more than ${MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT} descriptors of one type.`,
     );
   }
 

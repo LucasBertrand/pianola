@@ -1724,6 +1724,18 @@ try {
       "presetId" in getActiveTestClip(state).instrumentStatesById["voice-a"],
       false,
     );
+    const renamedState = dispatch(state, {
+      type: "UpdateProjectInstrument",
+      instrumentId: projectInstrument.id,
+      changes: {
+        name: "Renamed Instrument",
+        presetId: getDefaultInstrumentPresetId(1),
+      },
+    });
+    assert.equal(
+      renamedState.projectInstrumentsById["voice-a"].presetId,
+      projectInstrument.presetId,
+    );
     assert.throws(
       () => dispatch(state, {
         type: "AddProjectInstrument",

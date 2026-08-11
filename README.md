@@ -488,7 +488,7 @@ mais conserve le presse-papier afin de permettre un copier-coller entre clips.
   dépasse la fin du projet, Pianola ajoute automatiquement les mesures
   nécessaires dans la même opération Undo/Redo.
 
-Une note désactivée reste visible, sélectionnable et transformable tant que sa
+Une note désactivée reste visible, sélectionnable et transformable tant que son
 instrument n'est pas verrouillé, mais elle n'est ni jouée ni exportée en MIDI. Son
 état est conservé dans le fichier natif `.pianola`.
 
@@ -507,7 +507,7 @@ se superposer dans le temps.
 - Le snap tonal limite les déplacements aux notes de la tonique et du motif
   sélectionnés.
 
-### Voix et instrument
+### Instruments
 
 L’inspecteur permet d’ajouter, supprimer et réordonner les instruments. Le
 bouton d’ajout ouvre une modale dans laquelle le preset partagé est choisi une

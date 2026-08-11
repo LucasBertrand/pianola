@@ -38,6 +38,9 @@ try {
   const {
     createDefaultProjectInstrument,
   } = await vite.ssrLoadModule("/src/domain/project-instrument-factory.ts");
+  const {
+    getDefaultInstrumentPresetId,
+  } = await vite.ssrLoadModule("/src/domain/instrument-presets.ts");
   const tests = [];
 
   function test(name, callback) {
@@ -524,6 +527,7 @@ try {
       id: "collision-instrument",
       name: "Collision Instrument",
       color: "#79a7ff",
+      presetId: getDefaultInstrumentPresetId(0),
     });
     const notes = [
       {
@@ -777,6 +781,7 @@ try {
       id: "boundary-instrument",
       name: "Boundary Instrument",
       color: "#79a7ff",
+      presetId: getDefaultInstrumentPresetId(0),
     });
     const sourceTransport = createDefaultTransportState();
     const sourceClipId = "boundary-clip";
@@ -846,11 +851,13 @@ try {
       id: "lead",
       name: "Lead",
       color: "#79a7ff",
+      presetId: getDefaultInstrumentPresetId(0),
     });
     const bass = createDefaultProjectInstrument({
       id: "bass",
       name: "Bass",
       color: "#a77bf3",
+      presetId: getDefaultInstrumentPresetId(1),
     });
     const defaultTransport = createDefaultTransportState();
     const sourceClipId = "round-trip-clip";
