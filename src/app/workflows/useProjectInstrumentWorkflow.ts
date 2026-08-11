@@ -16,11 +16,8 @@ import type {
 } from "../../domain/commands";
 import {
   getActiveClip,
-  type AdsrEnvelope,
   type ClipId,
-  type OscillatorWaveform,
-  type SubtractiveSynthContinuousParameter,
-  type SubtractiveSynthConfig,
+  type PresetId,
   type ProjectInstrument,
   type InstrumentId,
   type ClipInstrumentState,
@@ -28,8 +25,10 @@ import {
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
-  getDefaultOscillatorWaveform,
 } from "../../domain/project-instrument-factory";
+import {
+  selectInstrumentPresetId,
+} from "../../domain/instrument-presets";
 import type {
   ShowApplicationConfirmation,
 } from "./dialog-types";
@@ -41,10 +40,6 @@ export interface ProjectInstrumentWorkflowOptions {
   readonly toggleInstrumentSelection: (instrumentId: InstrumentId) => void;
   readonly removeInstrumentFromSelection: (instrumentId: InstrumentId) => void;
   readonly confirm: ShowApplicationConfirmation;
-  readonly previewInstrument: (
-    instrumentId: InstrumentId,
-    instrument: SubtractiveSynthConfig,
-  ) => void;
 }
 
 export interface ProjectInstrumentWorkflow {
@@ -62,36 +57,6 @@ export interface ProjectInstrumentWorkflow {
     changes: Partial<ClipInstrumentState>,
     label: string,
   ) => void;
-  readonly commitEnvelopeParameter: (
-    instrumentId: InstrumentId,
-    envelopeKind: "amplitude" | "filter",
-    parameter: keyof AdsrEnvelope,
-    value: number,
-  ) => void;
-  readonly previewEnvelopeParameter: (
-    instrumentId: InstrumentId,
-    envelopeKind: "amplitude" | "filter",
-    parameter: keyof AdsrEnvelope,
-    value: number,
-  ) => void;
-  readonly commitWaveform: (
-    instrumentId: InstrumentId,
-    waveform: OscillatorWaveform,
-  ) => void;
-  readonly commitPolyphony: (
-    instrumentId: InstrumentId,
-    polyphony: number,
-  ) => void;
-  readonly commitInstrumentParameter: (
-    instrumentId: InstrumentId,
-    parameter: SubtractiveSynthContinuousParameter,
-    value: number,
-  ) => void;
-  readonly previewInstrumentParameter: (
-    instrumentId: InstrumentId,
-    parameter: SubtractiveSynthContinuousParameter,
-    value: number,
-  ) => void;
   readonly selectNotes: (instrumentId: InstrumentId) => void;
   readonly toggleLock: (instrument: ProjectInstrument) => void;
 }
@@ -103,7 +68,6 @@ export function useProjectInstrumentWorkflow({
   toggleInstrumentSelection,
   removeInstrumentFromSelection,
   confirm,
-  previewInstrument,
 }: ProjectInstrumentWorkflowOptions): ProjectInstrumentWorkflow {
   const instrumentSequenceRef = useRef(0);
 
@@ -152,7 +116,10 @@ export function useProjectInstrumentWorkflow({
     );
     const clipInstrumentStatesById = createInitialClipInstrumentStates(
       state.clipOrder,
-      getDefaultOscillatorWaveform(state.instrumentOrder.length),
+      selectInstrumentPresetId(
+        state.instrumentPresetOrder,
+        state.instrumentOrder.length,
+      ),
     );
 
     commands.dispatch(
@@ -250,170 +217,6 @@ export function useProjectInstrumentWorkflow({
     ],
   );
 
-  const commitEnvelopeParameter = useCallback(
-    (
-      instrumentId: InstrumentId,
-      envelopeKind: "amplitude" | "filter",
-      parameter: keyof AdsrEnvelope,
-      value: number,
-    ): void => {
-      const instrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[instrumentId];
-
-      if (instrumentState === undefined) {
-        return;
-      }
-
-      updateClipState(
-        instrumentId,
-        {
-          instrument: {
-            ...instrumentState.instrument,
-            [envelopeKind === "amplitude"
-              ? "envelope"
-              : "filterEnvelope"]: {
-              ...(envelopeKind === "amplitude"
-                ? instrumentState.instrument.envelope
-                : instrumentState.instrument.filterEnvelope),
-              [parameter]: value,
-            },
-          },
-        },
-        `Update ${envelopeKind} ${parameter}`,
-      );
-    },
-    [commands, updateClipState],
-  );
-
-  const previewEnvelopeParameter = useCallback(
-    (
-      instrumentId: InstrumentId,
-      envelopeKind: "amplitude" | "filter",
-      parameter: keyof AdsrEnvelope,
-      value: number,
-    ): void => {
-      const instrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[instrumentId];
-
-      if (instrumentState === undefined) {
-        return;
-      }
-
-      previewInstrument(instrumentId, {
-        ...instrumentState.instrument,
-        [envelopeKind === "amplitude"
-          ? "envelope"
-          : "filterEnvelope"]: {
-          ...(envelopeKind === "amplitude"
-            ? instrumentState.instrument.envelope
-            : instrumentState.instrument.filterEnvelope),
-          [parameter]: value,
-        },
-      });
-    },
-    [commands, previewInstrument],
-  );
-
-  const commitWaveform = useCallback(
-    (instrumentId: InstrumentId, waveform: OscillatorWaveform): void => {
-      const instrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[instrumentId];
-
-      if (instrumentState === undefined) {
-        return;
-      }
-
-      updateClipState(
-        instrumentId,
-        {
-          instrument: {
-            ...instrumentState.instrument,
-            oscillatorWaveform: waveform,
-          },
-        },
-        "Update oscillator waveform",
-      );
-    },
-    [commands, updateClipState],
-  );
-
-  const commitPolyphony = useCallback(
-    (instrumentId: InstrumentId, polyphony: number): void => {
-      const instrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[instrumentId];
-
-      if (instrumentState === undefined) {
-        return;
-      }
-
-      updateClipState(
-        instrumentId,
-        {
-          instrument: {
-            ...instrumentState.instrument,
-            polyphony,
-          },
-        },
-        "Update subtractive synth polyphony",
-      );
-    },
-    [commands, updateClipState],
-  );
-
-  const commitInstrumentParameter = useCallback(
-    (
-      instrumentId: InstrumentId,
-      parameter: SubtractiveSynthContinuousParameter,
-      value: number,
-    ): void => {
-      const instrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[instrumentId];
-
-      if (instrumentState === undefined) {
-        return;
-      }
-
-      updateClipState(
-        instrumentId,
-        {
-          instrument: {
-            ...instrumentState.instrument,
-            [parameter]: value,
-          },
-        },
-        `Update ${parameter}`,
-      );
-    },
-    [commands, updateClipState],
-  );
-
-  const previewInstrumentParameter = useCallback(
-    (
-      instrumentId: InstrumentId,
-      parameter: SubtractiveSynthContinuousParameter,
-      value: number,
-    ): void => {
-      const instrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[instrumentId];
-
-      if (instrumentState === undefined) {
-        return;
-      }
-
-      previewInstrument(instrumentId, {
-        ...instrumentState.instrument,
-        [parameter]: value,
-      });
-    },
-    [commands, previewInstrument],
-  );
-
   const selectNotes = useCallback(
     (instrumentId: InstrumentId): void => {
       const state = commands.getState();
@@ -463,12 +266,6 @@ export function useProjectInstrumentWorkflow({
     remove,
     update,
     updateClipState,
-    commitEnvelopeParameter,
-    previewEnvelopeParameter,
-    commitWaveform,
-    commitPolyphony,
-    commitInstrumentParameter,
-    previewInstrumentParameter,
     selectNotes,
     toggleLock,
   };
@@ -493,12 +290,12 @@ function createUserInstrument(
 
 function createInitialClipInstrumentStates(
   clipIds: readonly ClipId[],
-  waveform: OscillatorWaveform,
+  presetId: PresetId,
 ): Record<ClipId, ClipInstrumentState> {
   const states: Record<ClipId, ClipInstrumentState> = {};
 
   for (const clipId of clipIds) {
-    states[clipId] = createDefaultClipInstrumentState(waveform);
+    states[clipId] = createDefaultClipInstrumentState(presetId);
   }
 
   return states;

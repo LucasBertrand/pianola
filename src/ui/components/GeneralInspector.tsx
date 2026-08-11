@@ -4,21 +4,15 @@ import type {
 } from "../../domain/commands";
 import {
   getActiveClip,
-  type AdsrEnvelope,
   type ClipId,
   type ClipInstrumentState,
-  type OscillatorWaveform,
   type ProjectState,
-  type SubtractiveSynthContinuousParameter,
   type ProjectInstrument,
   type InstrumentId,
 } from "../../domain/model";
 import {
   ClipInspector,
 } from "./ClipInspector";
-import {
-  InstrumentInspector,
-} from "./InstrumentInspector";
 import {
   InstrumentGainSlider,
   InstrumentNameEditor,
@@ -30,7 +24,6 @@ export interface GeneralInspectorProps {
   readonly projectState: ProjectState;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly selectedInstrumentIndex: number;
-  readonly selectedInstrument: ProjectInstrument | undefined;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClose: () => void;
   readonly onClipSelect: (clipId: ClipId) => void;
@@ -59,36 +52,6 @@ export interface GeneralInspectorProps {
   readonly onSelectInstrumentNotes: (instrumentId: InstrumentId) => void;
   readonly onToggleInstrumentLock: (instrument: ProjectInstrument) => void;
   readonly onDeleteProjectInstrument: (instrumentId: InstrumentId) => void;
-  readonly onWaveformCommit: (
-    instrumentId: InstrumentId,
-    waveform: OscillatorWaveform,
-  ) => void;
-  readonly onPolyphonyCommit: (
-    instrumentId: InstrumentId,
-    polyphony: number,
-  ) => void;
-  readonly onEnvelopeCommit: (
-    instrumentId: InstrumentId,
-    envelopeKind: "amplitude" | "filter",
-    parameter: keyof AdsrEnvelope,
-    value: number,
-  ) => void;
-  readonly onEnvelopePreview: (
-    instrumentId: InstrumentId,
-    envelopeKind: "amplitude" | "filter",
-    parameter: keyof AdsrEnvelope,
-    value: number,
-  ) => void;
-  readonly onInstrumentParameterCommit: (
-    instrumentId: InstrumentId,
-    parameter: SubtractiveSynthContinuousParameter,
-    value: number,
-  ) => void;
-  readonly onInstrumentParameterPreview: (
-    instrumentId: InstrumentId,
-    parameter: SubtractiveSynthContinuousParameter,
-    value: number,
-  ) => void;
 }
 
 export function GeneralInspector({
@@ -97,7 +60,6 @@ export function GeneralInspector({
   projectState,
   selectedInstrumentId,
   selectedInstrumentIndex,
-  selectedInstrument,
   setToolbarHost,
   onClose,
   onClipSelect,
@@ -115,12 +77,6 @@ export function GeneralInspector({
   onSelectInstrumentNotes,
   onToggleInstrumentLock,
   onDeleteProjectInstrument,
-  onWaveformCommit,
-  onPolyphonyCommit,
-  onEnvelopeCommit,
-  onEnvelopePreview,
-  onInstrumentParameterCommit,
-  onInstrumentParameterPreview,
 }: GeneralInspectorProps): React.JSX.Element {
   const activeClip = getActiveClip(projectState);
 
@@ -255,22 +211,53 @@ export function GeneralInspector({
                 }}
               />
             </div>
-            <InstrumentGainSlider
-              gain={instrumentState.gain}
-              instrumentName={instrument.name}
-              onPreview={(gain) => {
-                onInstrumentGainPreview(instrument.id, gain);
-              }}
-              onCommit={(gain) => {
-                onUpdateClipInstrumentState(
-                  instrument.id,
-                  {
-                    gain,
-                  },
-                  "Update instrument volume",
-                );
-              }}
-            />
+            <div
+              className="instrument-sound-controls"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <InstrumentGainSlider
+                gain={instrumentState.gain}
+                instrumentName={instrument.name}
+                onPreview={(gain) => {
+                  onInstrumentGainPreview(instrument.id, gain);
+                }}
+                onCommit={(gain) => {
+                  onUpdateClipInstrumentState(
+                    instrument.id,
+                    {
+                      gain,
+                    },
+                    "Update instrument volume",
+                  );
+                }}
+              />
+              <select
+                className="instrument-preset-select"
+                value={instrumentState.presetId}
+                aria-label={`Preset for ${instrument.name}`}
+                title={`Preset for ${instrument.name}`}
+                onChange={(event) => {
+                  onUpdateClipInstrumentState(
+                    instrument.id,
+                    {
+                      presetId: event.currentTarget.value,
+                    },
+                    "Change instrument preset",
+                  );
+                }}
+              >
+                {projectState.instrumentPresetOrder.map((presetId) => {
+                  const preset =
+                    projectState.instrumentPresetsById[presetId];
+
+                  return preset === undefined ? null : (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
             <div className="instrument-actions">
               <button
                 className="instrument-select-all-button"
@@ -391,26 +378,12 @@ export function GeneralInspector({
       })}
       {projectState.instrumentOrder.length === 0 ? (
         <p className="instrument-empty-state">
-          Add a instrument to start drawing notes.
+          Add an instrument to start drawing notes.
         </p>
       ) : null}
     </div>
     </div>
 
-    <InstrumentInspector
-      instrument={selectedInstrument}
-      instrumentState={
-        selectedInstrument === undefined
-          ? undefined
-          : activeClip.instrumentStatesById[selectedInstrument.id]
-      }
-      onWaveformCommit={onWaveformCommit}
-      onPolyphonyCommit={onPolyphonyCommit}
-      onEnvelopePreview={onEnvelopePreview}
-      onEnvelopeCommit={onEnvelopeCommit}
-      onInstrumentParameterPreview={onInstrumentParameterPreview}
-      onInstrumentParameterCommit={onInstrumentParameterCommit}
-    />
     </section>
     </div>
   </aside>

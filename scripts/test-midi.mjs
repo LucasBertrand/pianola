@@ -36,9 +36,11 @@ try {
     createDefaultTransportState,
   } = await vite.ssrLoadModule("/src/domain/model.ts");
   const {
-    createDefaultSubtractiveSynthConfig,
     createDefaultProjectInstrument,
   } = await vite.ssrLoadModule("/src/domain/project-instrument-factory.ts");
+  const {
+    getDefaultInstrumentPresetId,
+  } = await vite.ssrLoadModule("/src/domain/instrument-presets.ts");
 
   const tests = [];
 
@@ -112,7 +114,7 @@ try {
       instrumentCandidates: [
         {
           projectInstrument,
-          instrumentConfig: createDefaultSubtractiveSynthConfig(),
+          presetId: getDefaultInstrumentPresetId(0),
           notes,
         },
       ],

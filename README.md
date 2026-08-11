@@ -55,13 +55,13 @@ Firefox Android et un navigateur desktop.
 - panoramique et zoom à deux doigts ;
 - magnétisme temporel et magnétisme tonal par gamme ou accord ;
 - résolution des collisions par annulation, fusion ou découpe aux ancres ;
-- instruments configurables : nom, couleur et ordre, avec preset de synthèse, volume,
-  mute, solo et verrouillage propres à chaque clip ;
+- instruments configurables : nom, couleur et ordre globaux, avec choix de
+  preset, volume, mute, solo et verrouillage propres à chaque clip ;
 - clips configurables : sélection, nom, ordre, ajout et suppression ;
-- synthétiseur soustractif par instrument avec pulse width, filtre modulé et deux
-  enveloppes ADSR ;
-- polyphonie soustractive de 1 à 16 oscillateurs et vol de l’occurrence la plus
-  ancienne lorsque cette limite est saturée ;
+- presets intégrés de synthétiseur soustractif avec pulse width, filtre modulé
+  et deux enveloppes ADSR ;
+- polyphonie définie par preset de 1 à 16 occurrences, avec vol de l’occurrence
+  la plus ancienne lorsque cette limite est saturée ;
 - tête de lecture, tempo, métrique, grille straight/triplet/dotted et boucle ;
 - import MIDI SMF 0/1 et export MIDI SMF 1 ;
 - sauvegarde et chargement du format natif `.pianola` ;
@@ -137,11 +137,17 @@ fluidité ; une seule transaction est envoyée lorsque le geste est validé.
 ### Domaine et historique
 
 `src/domain/model.ts` sépare les données globales de `ProjectState` des données
-locales de chaque `Clip`. La définition des instruments et le master bus sont globaux.
-Chaque clip, identifié par un ID stable, possède ses pistes de notes, sa
-longueur, son transport et ses réglages volume/mute/solo/lock ainsi que le
-preset de synthèse complet de chaque instrument. Les propriétés persistantes sont en
-lecture seule.
+locales de chaque `Clip`. Les identités d’instruments, la bibliothèque de
+presets et le master bus sont globaux. Chaque clip, identifié par un ID stable,
+possède ses pistes de notes, sa longueur, son transport et, pour chaque
+instrument, ses réglages volume/mute/solo/lock ainsi qu’une référence
+`presetId`. Les paramètres de synthèse ne sont donc jamais dupliqués dans les
+clips. Les propriétés persistantes sont en lecture seule.
+
+`src/domain/instrument-presets.ts` constitue le catalogue intégré. Les presets
+sont nommés, identifiés par un ID stable et profondément immuables. Le clip ne
+choisit qu’un ID ; `playback-snapshot.ts` résout cet ID à la frontière du moteur
+audio.
 `src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
 Le reducer applique les commandes musicales au seul clip actif, tandis que la
 création ou la suppression d’un instrument met à jour les pistes de tous les clips.
@@ -169,7 +175,7 @@ pas des composants React individuels :
 - `render-signal.ts` permet de redessiner sans re-render React.
 
 Les grandes surfaces React sont séparées dans `src/ui/components` (timeline,
-clavier, transport, toolbar, inspecteur général et instrument). Les workflows
+clavier, transport, toolbar et inspecteur général). Les workflows
 qui coordonnent le runtime avec les dialogues ou les fichiers du navigateur
 sont dans `src/app/workflows`. `App.tsx` sert de point de câblage entre ces
 modules et ne doit pas redevenir le lieu d'implémentation des cas d'usage.
@@ -198,6 +204,11 @@ Les contrats audio représentent chaque famille d’instrument par un snapshot
 discriminé et immuable. Chaque renderer expose sa propre politique de
 polyphonie : la limite du synthétiseur soustractif ne s’applique donc pas aux
 futurs instruments comme le drumkit.
+
+Le compilateur audio reçoit un `presetId` local au clip, récupère sa définition
+dans la bibliothèque globale, la valide, puis produit le snapshot discriminé
+attendu par le renderer. Le scheduler n’a aucune connaissance du stockage des
+presets et ne doit pas en acquérir.
 
 Les événements futurs sont recalculés après une édition sans couper les notes
 déjà audibles. La vélocité est conservée dans les fichiers, mais le niveau de
@@ -455,12 +466,13 @@ La section **Clips** reprend les interactions de la liste des instruments :
 - la croix supprime le clip après confirmation ; le dernier clip ne peut pas
   être supprimé.
 
-L’identité des instruments, le master bus et le presse-papier sont partagés par tout
-le projet. Le preset d’instrument complet et les réglages volume/mute/solo/lock
-de chaque instrument, les notes, la longueur, le tempo, la métrique, la grille, la
-tonalité, la boucle, la tête de lecture, le scroll et le zoom sont propres à
-chaque clip. Changer de clip vide la sélection de notes, mais conserve le
-presse-papier afin de permettre un copier-coller entre clips.
+L’identité des instruments, la bibliothèque de presets, le master bus et le
+presse-papier sont partagés par tout le projet. Le choix du preset par
+`presetId`, les réglages volume/mute/solo/lock de chaque instrument, les notes,
+la longueur, le tempo, la métrique, la grille, la tonalité, la boucle, la tête
+de lecture, le scroll et le zoom sont propres à chaque clip. Changer de clip
+vide la sélection de notes, mais conserve le presse-papier afin de permettre
+un copier-coller entre clips.
 
 ### Notes
 
@@ -507,13 +519,11 @@ créées utilisent l’instrument sélectionné.
 - La cible sélectionne les notes de l’instrument sans supprimer la sélection des
   autres instruments.
 
-Chaque instrument possède une identité et une couleur globales. Dans chaque clip,
-elle possède son propre volume et son propre preset de synthétiseur soustractif
-: limite de polyphonie, quatre formes d’onde, largeur d’impulsion pour l’onde
-carrée, filtre passe-bas avec cutoff et résonance, ainsi que deux enveloppes
-ADSR indépendantes pour l’amplitude et le filtre. Le decay de chaque enveloppe
-peut atteindre 10 secondes. Le contrôle de polyphonie se trouve à côté de la
-forme d’onde dans le module Oscillator.
+Chaque instrument possède une identité et une couleur globales. Dans chaque
+clip, il possède son propre volume et choisit un preset dans le menu situé à
+côté du slider. Les paramètres complets du preset — polyphonie, forme d’onde,
+largeur d’impulsion, filtre et enveloppes ADSR — résident dans la bibliothèque
+globale et ne sont plus éditables depuis l’inspecteur dans cette version.
 
 ### Transport et boucle
 
@@ -530,10 +540,11 @@ la nouvelle durée du clip.
 ### Format natif `.pianola`
 
 Le format natif conserve la liste ordonnée des clips, le clip actif, l’identité
-des instruments, les notes, le master bus et les métadonnées de document. Pour chaque
-clip, il enregistre aussi le preset d’instrument et volume/mute/solo/lock par
-instrument, le transport, la boucle, la tête de lecture, la grille, le snap tonal, le
-guide visuel, le zoom et la position de la vue.
+des instruments, la bibliothèque ordonnée de presets, les notes, le master bus
+et les métadonnées de document. Pour chaque clip, il enregistre aussi le
+`presetId` et volume/mute/solo/lock par instrument, le transport, la boucle, la
+tête de lecture, la grille, le snap tonal, le guide visuel, le zoom et la
+position de la vue.
 Les préférences réellement globales — instrument actif, preview clavier, mode de
 sélection et coloration — sont enregistrées une seule fois. Les états
 temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
@@ -716,10 +727,11 @@ Préserver les responsabilités :
 - `audio/instruments/` crée et contrôle les sources propres aux instruments ;
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
-La polyphonie est une propriété du `SubtractiveSynthConfig` conservé dans le
-`ClipInstrumentState` du clip actif. Elle est copiée dans
-`SubtractivePlaybackInstrumentSnapshot`, puis interprétée par le renderer
-soustractif. Ne pas généraliser cette limite à tous les instruments : un futur
+La polyphonie est une propriété du `SubtractiveSynthConfig` contenu dans un
+preset global. `ClipInstrumentState` ne conserve que son `presetId`. Le
+compilateur résout cette référence et copie la configuration dans
+`SubtractivePlaybackInstrumentSnapshot`, puis le renderer soustractif
+l’interprète. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.
 
 Toute correction de timing doit être testable avec un faux moteur dans

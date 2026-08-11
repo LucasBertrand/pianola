@@ -4,12 +4,13 @@ import {
 } from "../config/program-constants";
 import type {
   ClipInstrumentState,
-  InstrumentConfig,
-  OscillatorWaveform,
-  SubtractiveSynthConfig,
+  PresetId,
   ProjectInstrument,
   InstrumentId,
 } from "./model";
+import {
+  DEFAULT_INSTRUMENT_PRESET_ID,
+} from "./instrument-presets";
 
 export interface CreateDefaultProjectInstrumentOptions {
   readonly id: InstrumentId;
@@ -40,72 +41,15 @@ export function createDefaultProjectInstrument(
   };
 }
 
-/** Creates the default subtractive preset owned by one clip instrument. */
-export function createDefaultSubtractiveSynthConfig(
-  oscillatorWaveform: OscillatorWaveform =
-    INSTRUMENT_CONSTANTS.defaultOscillatorWaveform,
-): SubtractiveSynthConfig {
-  return {
-    kind: "subtractive",
-    oscillatorWaveform,
-    polyphony: PROJECT_CONSTANTS.defaultSubtractiveSynthPolyphony,
-    oscillatorDetuneCents: INSTRUMENT_CONSTANTS.oscillatorDetuneCents,
-    pulseWidth: INSTRUMENT_CONSTANTS.pulseWidth,
-    envelope: {
-      attackSeconds: INSTRUMENT_CONSTANTS.attackSeconds,
-      decaySeconds: INSTRUMENT_CONSTANTS.decaySeconds,
-      sustainLevel: INSTRUMENT_CONSTANTS.sustainLevel,
-      releaseSeconds: INSTRUMENT_CONSTANTS.releaseSeconds,
-    },
-    filterCutoffHz: INSTRUMENT_CONSTANTS.filterCutoffHz,
-    filterResonance: INSTRUMENT_CONSTANTS.filterResonance,
-    filterEnvelopeAmountOctaves:
-      INSTRUMENT_CONSTANTS.filterEnvelopeAmountOctaves,
-    filterEnvelope: {
-      attackSeconds: INSTRUMENT_CONSTANTS.filterAttackSeconds,
-      decaySeconds: INSTRUMENT_CONSTANTS.filterDecaySeconds,
-      sustainLevel: INSTRUMENT_CONSTANTS.filterSustainLevel,
-      releaseSeconds: INSTRUMENT_CONSTANTS.filterReleaseSeconds,
-    },
-  };
-}
-
-/** Creates mutable-independent defaults for one instrument inside one clip. */
+/** Creates default mixer and preset-selection state for one clip instrument. */
 export function createDefaultClipInstrumentState(
-  oscillatorWaveform?: OscillatorWaveform,
+  presetId: PresetId = DEFAULT_INSTRUMENT_PRESET_ID,
 ): ClipInstrumentState {
   return {
     gain: PROJECT_CONSTANTS.defaultClipInstrumentGain,
     muted: PROJECT_CONSTANTS.defaultClipInstrumentMuted,
     locked: PROJECT_CONSTANTS.defaultClipInstrumentLocked,
     solo: PROJECT_CONSTANTS.defaultClipInstrumentSolo,
-    instrument: createDefaultSubtractiveSynthConfig(
-      oscillatorWaveform,
-    ),
+    presetId,
   };
-}
-
-/** Clones a preset without leaking nested references between clips. */
-export function cloneInstrumentConfig(
-  instrument: InstrumentConfig,
-): InstrumentConfig {
-  switch (instrument.kind) {
-    case "subtractive":
-      return {
-        ...instrument,
-        envelope: { ...instrument.envelope },
-        filterEnvelope: { ...instrument.filterEnvelope },
-      };
-  }
-}
-
-/** Cycles through the four oscillator shapes used for generated instruments. */
-export function getDefaultOscillatorWaveform(
-  instrumentIndex: number,
-): OscillatorWaveform {
-  const sequence = INSTRUMENT_CONSTANTS.oscillatorWaveformCycle;
-
-  return sequence[
-    instrumentIndex % sequence.length
-  ] ?? INSTRUMENT_CONSTANTS.defaultOscillatorWaveform;
 }

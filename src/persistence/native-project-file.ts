@@ -7,12 +7,14 @@ import type {
   EffectParameterValue,
   GenerativeRuleDescriptor,
   InstrumentConfig,
+  InstrumentPreset,
   LoopRegion,
   MasterBusState,
   Note,
   NoteId,
   OscillatorWaveform,
   ProjectState,
+  PresetId,
   SubtractiveSynthConfig,
   Track,
   TransportState,
@@ -69,6 +71,7 @@ import {
   validateProjectDuration,
   validateTransportState,
   validateProjectInstrument,
+  validateInstrumentPreset,
 } from "../domain/validation";
 
 export const NATIVE_PROJECT_FILE_FORMAT =
@@ -103,6 +106,8 @@ export interface NativeProjectSnapshot {
   readonly title: string;
   readonly projectInstrumentsById: Readonly<Record<InstrumentId, ProjectInstrument>>;
   readonly instrumentOrder: readonly InstrumentId[];
+  readonly instrumentPresetsById: Readonly<Record<PresetId, InstrumentPreset>>;
+  readonly instrumentPresetOrder: readonly PresetId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipOrder: readonly ClipId[];
   readonly activeClipId: ClipId;
@@ -200,6 +205,8 @@ export function serializeNativeProjectFile(
       title: state.title,
       projectInstrumentsById: state.projectInstrumentsById,
       instrumentOrder: state.instrumentOrder,
+      instrumentPresetsById: state.instrumentPresetsById,
+      instrumentPresetOrder: state.instrumentPresetOrder,
       clipsById,
       clipOrder: state.clipOrder,
       activeClipId: state.activeClipId,
@@ -626,6 +633,15 @@ function parseProjectSnapshot(
     project["clipOrder"],
     `${path}.clipOrder`,
   );
+  const instrumentPresetOrder = parsePresetOrder(
+    project["instrumentPresetOrder"],
+    `${path}.instrumentPresetOrder`,
+  );
+  const instrumentPresetsById = parseInstrumentPresets(
+    project["instrumentPresetsById"],
+    instrumentPresetOrder,
+    `${path}.instrumentPresetsById`,
+  );
   const sourceClips = readRecord(
     project["clipsById"],
     `${path}.clipsById`,
@@ -638,6 +654,7 @@ function parseProjectSnapshot(
       sourceClips[clipId],
       clipId,
       instrumentOrder,
+      instrumentPresetsById,
       `${path}.clipsById.${clipId}`,
     );
   }
@@ -662,6 +679,8 @@ function parseProjectSnapshot(
     title,
     projectInstrumentsById,
     instrumentOrder,
+    instrumentPresetsById,
+    instrumentPresetOrder,
     clipsById,
     clipOrder,
     activeClipId,
@@ -716,6 +735,7 @@ function parseClip(
   source: unknown,
   clipId: ClipId,
   instrumentOrder: readonly InstrumentId[],
+  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): Clip {
   const clip = readRecord(source, path);
@@ -767,6 +787,7 @@ function parseClip(
   const instrumentStatesById = parseClipInstrumentStates(
     clip["instrumentStatesById"],
     instrumentOrder,
+    presetsById,
     `${path}.instrumentStatesById`,
   );
   const parsedClip: Clip = {
@@ -825,9 +846,130 @@ function parseInstrumentOrder(
   return instrumentOrder;
 }
 
+function parsePresetOrder(
+  source: unknown,
+  path: string,
+): readonly PresetId[] {
+  const values = readArray(source, path);
+
+  if (
+    values.length < 1
+    || values.length > MAXIMUM_INSTRUMENT_COUNT
+  ) {
+    fail(
+      "INVALID_DATA",
+      path,
+      `A project must contain between 1 and ${MAXIMUM_INSTRUMENT_COUNT} presets.`,
+    );
+  }
+
+  const presetOrder: PresetId[] = [];
+  const uniquePresetIds = new Set<PresetId>();
+
+  for (let presetIndex = 0; presetIndex < values.length; presetIndex += 1) {
+    const presetId = readNonEmptyString(
+      values[presetIndex],
+      `${path}[${presetIndex}]`,
+      MAXIMUM_ID_LENGTH,
+    );
+
+    if (uniquePresetIds.has(presetId)) {
+      fail(
+        "INVALID_DATA",
+        `${path}[${presetIndex}]`,
+        `Preset ID "${presetId}" appears more than once.`,
+      );
+    }
+
+    uniquePresetIds.add(presetId);
+    presetOrder.push(presetId);
+  }
+
+  return presetOrder;
+}
+
+function parseInstrumentPresets(
+  source: unknown,
+  presetOrder: readonly PresetId[],
+  path: string,
+): Readonly<Record<PresetId, InstrumentPreset>> {
+  const sourcePresets = readRecord(source, path);
+
+  assertExactRecordKeys(sourcePresets, presetOrder, path);
+  const presetsById = Object.create(null) as Record<
+    PresetId,
+    InstrumentPreset
+  >;
+
+  for (const presetId of presetOrder) {
+    const presetPath = `${path}.${presetId}`;
+    const sourcePreset = readRecord(sourcePresets[presetId], presetPath);
+    const storedId = readNonEmptyString(
+      sourcePreset["id"],
+      `${presetPath}.id`,
+      MAXIMUM_ID_LENGTH,
+    );
+
+    if (storedId !== presetId) {
+      fail(
+        "INVALID_DATA",
+        `${presetPath}.id`,
+        "Preset ID must match its record key.",
+      );
+    }
+
+    const kind = readString(
+      sourcePreset["kind"],
+      `${presetPath}.kind`,
+      MAXIMUM_NAME_LENGTH,
+    );
+    const config = parseInstrument(
+      sourcePreset["config"],
+      `${presetPath}.config`,
+    );
+
+    if (kind !== "subtractive" || kind !== config.kind) {
+      fail(
+        "INVALID_DATA",
+        `${presetPath}.kind`,
+        `Preset kind "${kind}" is not supported or does not match its configuration.`,
+      );
+    }
+
+    const preset: InstrumentPreset = {
+      id: storedId,
+      name: readNonEmptyString(
+        sourcePreset["name"],
+        `${presetPath}.name`,
+        MAXIMUM_NAME_LENGTH,
+      ),
+      kind,
+      config,
+    };
+    const validation = validateInstrumentPreset(preset);
+
+    if (!validation.valid) {
+      const issue = validation.issues[0];
+
+      fail(
+        "INVALID_DATA",
+        issue === undefined
+          ? presetPath
+          : `${presetPath}.${issue.path}`,
+        issue?.message ?? "Instrument preset is invalid.",
+      );
+    }
+
+    presetsById[presetId] = preset;
+  }
+
+  return presetsById;
+}
+
 function parseClipInstrumentStates(
   source: unknown,
   instrumentOrder: readonly InstrumentId[],
+  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): Readonly<Record<InstrumentId, ClipInstrumentState>> {
   const sourceStates = readRecord(source, path);
@@ -839,6 +981,20 @@ function parseClipInstrumentStates(
     const statePath = `${path}.${instrumentId}`;
     const state = readRecord(sourceStates[instrumentId], statePath);
 
+    const presetId = readNonEmptyString(
+      state["presetId"],
+      `${statePath}.presetId`,
+      MAXIMUM_ID_LENGTH,
+    );
+
+    if (presetsById[presetId] === undefined) {
+      fail(
+        "INVALID_DATA",
+        `${statePath}.presetId`,
+        `Preset "${presetId}" does not exist.`,
+      );
+    }
+
     states[instrumentId] = {
       gain: readNumberInRange(
         state["gain"],
@@ -849,10 +1005,7 @@ function parseClipInstrumentStates(
       muted: readBoolean(state["muted"], `${statePath}.muted`),
       locked: readBoolean(state["locked"], `${statePath}.locked`),
       solo: readBoolean(state["solo"], `${statePath}.solo`),
-      instrument: parseInstrument(
-        state["instrument"],
-        `${statePath}.instrument`,
-      ),
+      presetId,
     };
   }
 

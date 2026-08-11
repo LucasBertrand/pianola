@@ -13,7 +13,7 @@ import type {
   ProjectInstrument,
   InstrumentId,
   ClipInstrumentState,
-  SubtractiveSynthConfig,
+  PresetId,
 } from "../domain/model";
 import {
   createDefaultMasterBusState,
@@ -24,12 +24,14 @@ import {
 } from "../domain/model";
 import {
   createDefaultClipInstrumentState,
-  createDefaultSubtractiveSynthConfig,
   createDefaultProjectInstrument,
-  getDefaultOscillatorWaveform,
 } from "../domain/project-instrument-factory";
 import {
-  assertValidInstrumentConfig,
+  createDefaultInstrumentPresetLibrary,
+  getDefaultInstrumentPresetId,
+} from "../domain/instrument-presets";
+import {
+  assertValidInstrumentPreset,
   assertValidProjectDuration,
   assertValidTrack,
   assertValidTransportState,
@@ -45,7 +47,7 @@ export type MidiImportCollisionStrategy = "merge" | "slice";
 
 export interface MidiImportInstrumentCandidate {
   readonly projectInstrument: ProjectInstrument;
-  readonly instrumentConfig: SubtractiveSynthConfig;
+  readonly presetId: PresetId;
   readonly notes: readonly Note[];
 }
 
@@ -381,9 +383,7 @@ export function analyzeMidiImport(
         name: instrumentName,
         color,
       }),
-      instrumentConfig: createDefaultSubtractiveSynthConfig(
-        getDefaultOscillatorWaveform(groupIndex),
-      ),
+      presetId: getDefaultInstrumentPresetId(groupIndex),
       notes,
     });
   }
@@ -531,8 +531,7 @@ export function createProjectFromMidiImport(
     projectInstrumentsById[candidate.projectInstrument.id] =
       candidate.projectInstrument;
     instrumentStatesById[candidate.projectInstrument.id] = {
-      ...createDefaultClipInstrumentState(),
-      instrument: candidate.instrumentConfig,
+      ...createDefaultClipInstrumentState(candidate.presetId),
     };
     instrumentOrder.push(candidate.projectInstrument.id);
     mutableTracks[candidate.projectInstrument.id] = {
@@ -599,12 +598,15 @@ export function createProjectFromMidiImport(
       anchorAudioTimeSeconds: null,
     },
   };
+  const presetLibrary = createDefaultInstrumentPresetLibrary();
   const projectState: ProjectState = {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title: analysis.title,
     projectInstrumentsById,
     instrumentOrder,
+    instrumentPresetsById: presetLibrary.instrumentPresetsById,
+    instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById: {
       [clipId]: clip,
     },
@@ -1280,7 +1282,7 @@ function createEmptyInstrumentCandidate(): MidiImportInstrumentCandidate {
         RENDERING_CONSTANTS.userInstrumentColors[0]
         ?? RENDERING_CONSTANTS.defaultNoteColor,
     }),
-    instrumentConfig: createDefaultSubtractiveSynthConfig(),
+    presetId: getDefaultInstrumentPresetId(0),
     notes: [],
   };
 }
@@ -1479,7 +1481,15 @@ function assertImportedProjectState(state: ProjectState): void {
     }
 
     assertValidProjectInstrument(instrument);
-    assertValidInstrumentConfig(instrumentState.instrument);
+    const preset = state.instrumentPresetsById[instrumentState.presetId];
+
+    if (preset === undefined) {
+      throw new MidiImportError(
+        `The imported instrument references unavailable preset "${instrumentState.presetId}".`,
+      );
+    }
+
+    assertValidInstrumentPreset(preset);
     assertValidTrack(track);
 
     const notesByPitch = new Map<number, Note[]>();

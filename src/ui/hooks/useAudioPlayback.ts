@@ -7,7 +7,6 @@ import {
 import {
   getActiveClip,
   type ProjectState,
-  type SubtractiveSynthConfig,
   type Tick,
   type InstrumentId,
 } from "../../domain/model";
@@ -51,10 +50,6 @@ export interface AudioPlaybackActions {
     instrumentId: InstrumentId,
     gain: number,
   ) => void;
-  readonly previewInstrumentPreset: (
-    instrumentId: InstrumentId,
-    instrument: SubtractiveSynthConfig,
-  ) => void;
   readonly previewMasterGain: (gain: number) => void;
 }
 
@@ -70,11 +65,6 @@ export function useAudioPlayback(
   const [status, setStatus] =
     useState<PlaybackStatus>("stopped");
   const schedulerRef = useRef<LookaheadScheduler | null>(null);
-  const instrumentPreviewFrameRef = useRef(0);
-  const pendingInstrumentPreviewRef = useRef<{
-    readonly instrumentId: InstrumentId;
-    readonly instrument: SubtractiveSynthConfig;
-  } | null>(null);
 
   onErrorRef.current = onError;
 
@@ -115,21 +105,6 @@ export function useAudioPlayback(
     const unsubscribe = projectStore.subscribe(
       (state, previousState) => {
         const activeClip = getActiveClip(state);
-        const previousActiveClip = getActiveClip(previousState);
-
-        if (
-          (
-            state.projectInstrumentsById !== previousState.projectInstrumentsById
-            || state.activeClipId !== previousState.activeClipId
-            || activeClip.instrumentStatesById
-              !== previousActiveClip.instrumentStatesById
-          )
-          && instrumentPreviewFrameRef.current !== 0
-        ) {
-          cancelAnimationFrame(instrumentPreviewFrameRef.current);
-          instrumentPreviewFrameRef.current = 0;
-          pendingInstrumentPreviewRef.current = null;
-        }
 
         if (
           state.masterBus.gain
@@ -159,12 +134,6 @@ export function useAudioPlayback(
     );
 
     return (): void => {
-      if (instrumentPreviewFrameRef.current !== 0) {
-        cancelAnimationFrame(instrumentPreviewFrameRef.current);
-        instrumentPreviewFrameRef.current = 0;
-      }
-
-      pendingInstrumentPreviewRef.current = null;
       unsubscribe();
       void scheduler.dispose().catch(() => {
         // Teardown errors cannot be surfaced after the UI has unmounted.
@@ -264,68 +233,6 @@ export function useAudioPlayback(
     }
   }, []);
 
-  const previewInstrumentPreset = useCallback((
-    instrumentId: InstrumentId,
-    instrument: SubtractiveSynthConfig,
-  ): void => {
-    pendingInstrumentPreviewRef.current = {
-      instrumentId,
-      instrument,
-    };
-
-    if (instrumentPreviewFrameRef.current !== 0) {
-      return;
-    }
-
-    instrumentPreviewFrameRef.current = requestAnimationFrame(() => {
-      instrumentPreviewFrameRef.current = 0;
-      const preview = pendingInstrumentPreviewRef.current;
-
-      pendingInstrumentPreviewRef.current = null;
-
-      if (preview === null) {
-        return;
-      }
-
-      const state = projectStore.getState();
-      const instrument = state.projectInstrumentsById[preview.instrumentId];
-      const activeClip = getActiveClip(state);
-      const instrumentState = activeClip.instrumentStatesById[preview.instrumentId];
-      const scheduler = schedulerRef.current;
-
-      if (
-        instrument === undefined
-        || instrumentState === undefined
-        || scheduler === null
-      ) {
-        return;
-      }
-
-      try {
-        scheduler.previewPlaybackSnapshot(
-          compilePlaybackSnapshot({
-            ...state,
-            clipsById: {
-              ...state.clipsById,
-              [activeClip.id]: {
-                ...activeClip,
-                instrumentStatesById: {
-                  ...activeClip.instrumentStatesById,
-                  [preview.instrumentId]: {
-                    ...instrumentState,
-                    instrument: preview.instrument,
-                  },
-                },
-              },
-            },
-          }),
-        );
-      } catch (error: unknown) {
-        onErrorRef.current(error);
-      }
-    });
-  }, [projectStore]);
-
   const previewMasterGain = useCallback((gain: number): void => {
     schedulerRef.current?.previewMasterGain(gain);
   }, []);
@@ -338,7 +245,6 @@ export function useAudioPlayback(
     seek,
     auditionPitch,
     previewInstrumentGain,
-    previewInstrumentPreset,
     previewMasterGain,
   };
 }
@@ -355,6 +261,8 @@ function didPlaybackStateChange(
     || activeClip.measureCount !== previousActiveClip.measureCount
     || activeClip.tracksByInstrumentId !== previousActiveClip.tracksByInstrumentId
     || activeClip.transportSettings !== previousActiveClip.transportSettings
+    || state.instrumentPresetsById
+      !== previousState.instrumentPresetsById
     || state.masterBus.muted !== previousState.masterBus.muted
     || state.masterBus.tuningFrequencyHz
       !== previousState.masterBus.tuningFrequencyHz
@@ -392,7 +300,7 @@ function didPlaybackStateChange(
       || instrumentState.gain !== previousInstrumentState.gain
       || instrumentState.muted !== previousInstrumentState.muted
       || instrumentState.solo !== previousInstrumentState.solo
-      || instrumentState.instrument !== previousInstrumentState.instrument
+      || instrumentState.presetId !== previousInstrumentState.presetId
     ) {
       return true;
     }

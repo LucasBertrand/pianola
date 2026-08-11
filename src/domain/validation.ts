@@ -1,6 +1,7 @@
 import type {
   AdsrEnvelope,
   InstrumentConfig,
+  InstrumentPreset,
   MidiPitch,
   MidiVelocity,
   Note,
@@ -35,6 +36,7 @@ export type ValidationCode =
   | "INSTRUMENT_TRACK_MISMATCH"
   | "NOTE_KEY_MISMATCH"
   | "INVALID_INSTRUMENT"
+  | "INVALID_PRESET"
   | "INVALID_BPM"
   | "INVALID_PPQN"
   | "INVALID_TIME_SIGNATURE"
@@ -282,6 +284,49 @@ export function validateInstrumentConfig(
   };
 }
 
+export function validateInstrumentPreset(
+  preset: InstrumentPreset,
+): ValidationResult {
+  const issues: ValidationIssue[] = [];
+
+  validateBoundedIdentifier(preset.id, "id", "Preset ID", issues);
+
+  if (
+    preset.name.trim().length === 0
+    || preset.name.length > MAXIMUM_INSTRUMENT_NAME_LENGTH
+  ) {
+    issues.push({
+      code: "INVALID_PRESET",
+      path: "name",
+      message:
+        `Preset name must contain between 1 and ${MAXIMUM_INSTRUMENT_NAME_LENGTH} characters.`,
+    });
+  }
+
+  if (preset.kind !== preset.config.kind) {
+    issues.push({
+      code: "INVALID_PRESET",
+      path: "kind",
+      message: "Preset kind must match its instrument configuration kind.",
+    });
+  }
+
+  const configValidation = validateInstrumentConfig(preset.config);
+
+  for (const issue of configValidation.issues) {
+    issues.push({
+      ...issue,
+      code: "INVALID_PRESET",
+      path: `config.${issue.path}`,
+    });
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+  };
+}
+
 export function validateTransportState(
   transport: TransportState,
 ): ValidationResult {
@@ -402,10 +447,10 @@ export function assertValidProjectInstrument(instrument: ProjectInstrument): voi
   assertValidationResult(validateProjectInstrument(instrument));
 }
 
-export function assertValidInstrumentConfig(
-  instrument: InstrumentConfig,
+export function assertValidInstrumentPreset(
+  preset: InstrumentPreset,
 ): void {
-  assertValidationResult(validateInstrumentConfig(instrument));
+  assertValidationResult(validateInstrumentPreset(preset));
 }
 
 export function assertValidTransportState(transport: TransportState): void {

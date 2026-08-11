@@ -19,6 +19,7 @@ import {
 } from "../domain/model";
 import {
   validateProjectInstrument,
+  validateInstrumentPreset,
 } from "../domain/validation";
 import type {
   PackedInstrumentEvents,
@@ -122,11 +123,29 @@ export function compilePlaybackSnapshot(
       );
     }
 
+    const preset =
+      projectState.instrumentPresetsById[instrumentState.presetId];
+
+    if (preset === undefined) {
+      throw new PlaybackSnapshotCompilationError(
+        `Instrument "${instrumentId}" references unavailable preset "${instrumentState.presetId}".`,
+      );
+    }
+
+    const presetValidation = validateInstrumentPreset(preset);
+
+    if (!presetValidation.valid) {
+      throw new PlaybackSnapshotCompilationError(
+        `Instrument preset "${preset.id}" is invalid.`,
+      );
+    }
+
     compiledInstrumentIds.add(instrumentId);
     instruments.push(
       compileInstrumentSnapshot(
         projectInstrument,
         instrumentState,
+        preset.config,
         track.notesById,
         durationTicks,
       ),
@@ -154,11 +173,10 @@ export function compilePlaybackSnapshot(
 function compileInstrumentSnapshot(
   projectInstrument: ProjectInstrument,
   instrumentState: ClipInstrumentState,
+  instrument: InstrumentConfig,
   notesById: Readonly<Record<string, Note>>,
   projectDurationTicks: number,
 ): PlaybackInstrumentSnapshot {
-  const instrument = instrumentState.instrument;
-
   if (instrument.kind !== "subtractive") {
     throw new PlaybackSnapshotCompilationError(
       `Project instrument "${projectInstrument.id}" uses unsupported instrument kind`

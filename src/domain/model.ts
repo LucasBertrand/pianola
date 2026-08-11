@@ -4,6 +4,7 @@ import {
 
 export type NoteId = string;
 export type InstrumentId = string;
+export type PresetId = string;
 export type ClipId = string;
 export type EffectId = string;
 export type RuleId = string;
@@ -93,13 +94,17 @@ export interface SubtractiveSynthConfig {
   readonly filterEnvelope: AdsrEnvelope;
 }
 
-export type SubtractiveSynthContinuousParameter =
-  | "pulseWidth"
-  | "filterCutoffHz"
-  | "filterResonance"
-  | "filterEnvelopeAmountOctaves";
-
 export type InstrumentConfig = SubtractiveSynthConfig;
+
+export interface SubtractiveSynthPreset {
+  readonly id: PresetId;
+  readonly name: string;
+  readonly kind: "subtractive";
+  readonly config: SubtractiveSynthConfig;
+}
+
+/** A named, reusable sound definition shared by every clip. */
+export type InstrumentPreset = SubtractiveSynthPreset;
 
 export type EffectParameterValue = number | boolean | string;
 
@@ -135,13 +140,13 @@ export interface ProjectInstrument {
   readonly interpretation: ProjectInstrumentInterpretation;
 }
 
-/** Per-clip mixer, editing, and instrument preset for one global instrument. */
+/** Per-clip mixer, editing, and preset selection for one global instrument. */
 export interface ClipInstrumentState {
   readonly gain: number;
   readonly muted: boolean;
   readonly locked: boolean;
   readonly solo: boolean;
-  readonly instrument: InstrumentConfig;
+  readonly presetId: PresetId;
 }
 
 export interface Track {
@@ -198,6 +203,8 @@ export interface ProjectState {
   readonly title: string;
   readonly projectInstrumentsById: Readonly<Record<InstrumentId, ProjectInstrument>>;
   readonly instrumentOrder: readonly InstrumentId[];
+  readonly instrumentPresetsById: Readonly<Record<PresetId, InstrumentPreset>>;
+  readonly instrumentPresetOrder: readonly PresetId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipOrder: readonly ClipId[];
   readonly activeClipId: ClipId;

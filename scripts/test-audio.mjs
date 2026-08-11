@@ -136,6 +136,12 @@ try {
     createDefaultTransportState,
   } = await vite.ssrLoadModule("/src/domain/model.ts");
   const {
+    createDefaultInstrumentPresetLibrary,
+    getDefaultInstrumentPresetId,
+  } = await vite.ssrLoadModule(
+    "/src/domain/instrument-presets.ts",
+  );
+  const {
     compilePlaybackSnapshot,
   } = await vite.ssrLoadModule("/src/audio/playback-snapshot.ts");
   const {
@@ -205,31 +211,6 @@ try {
         gateRatio: 1,
         velocityScale: 1,
         probability: 1,
-      },
-    };
-  }
-
-  function createInstrument(instrumentIndex = 0) {
-    return {
-      kind: "subtractive",
-      oscillatorWaveform: instrumentIndex % 2 === 0 ? "sawtooth" : "sine",
-      polyphony: DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
-      oscillatorDetuneCents: 0,
-      pulseWidth: 0.5,
-      envelope: {
-        attackSeconds: 0.01,
-        decaySeconds: 0.15,
-        sustainLevel: 0.7,
-        releaseSeconds: 0.3,
-      },
-      filterCutoffHz: 8_000,
-      filterResonance: 0.2,
-      filterEnvelopeAmountOctaves: 1,
-      filterEnvelope: {
-        attackSeconds: 0.008,
-        decaySeconds: 0.32,
-        sustainLevel: 0.28,
-        releaseSeconds: 0.36,
       },
     };
   }
@@ -311,12 +292,14 @@ try {
         muted: false,
         locked: false,
         solo: false,
-        instrument: createInstrument(instrumentIndex),
+        presetId: getDefaultInstrumentPresetId(instrumentIndex),
         ...instrumentStateChangesById[instrumentId],
       };
     }
 
     const clipId = "clip-test";
+
+    const presetLibrary = createDefaultInstrumentPresetLibrary();
 
     return {
       schemaVersion: PROJECT_SCHEMA_VERSION,
@@ -324,6 +307,8 @@ try {
       title: "Audio test project",
       projectInstrumentsById,
       instrumentOrder: [...instrumentOrder],
+      instrumentPresetsById: presetLibrary.instrumentPresetsById,
+      instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
       clipsById: {
         [clipId]: {
           id: clipId,
@@ -1351,10 +1336,12 @@ try {
     );
     assert.notEqual(
       instrumentA.instrument,
-      getActiveTestClip(state).instrumentStatesById["voice-a"].instrument,
+      state.instrumentPresetsById[
+        getActiveTestClip(state).instrumentStatesById["voice-a"].presetId
+      ].config,
     );
     assert.equal(instrumentA.instrument.pulseWidth, 0.5);
-    assert.equal(instrumentA.instrument.filterEnvelopeAmountOctaves, 1);
+    assert.equal(instrumentA.instrument.filterEnvelopeAmountOctaves, 0.25);
     assert.equal(Object.isFrozen(instrumentA.instrument), true);
     assert.equal(Object.isFrozen(instrumentA.instrument.envelope), true);
     assert.equal(Object.isFrozen(instrumentA.instrument.filterEnvelope), true);
@@ -1725,68 +1712,34 @@ try {
     );
   });
 
-  test("updates subtractive parameters and voice allocation immutably", () => {
+  test("updates clip preset selection immutably", () => {
     const state = createProject();
     const projectInstrument = state.projectInstrumentsById["voice-a"];
-    const instrumentState = getActiveTestClip(state)
-      .instrumentStatesById[projectInstrument.id];
+    const nextPresetId = state.instrumentPresetOrder[1];
     const updatedState = dispatch(state, {
       type: "UpdateClipInstrumentState",
       instrumentId: projectInstrument.id,
       changes: {
-        instrument: {
-          ...instrumentState.instrument,
-          oscillatorWaveform: "square",
-          polyphony: 4,
-          pulseWidth: 0.3,
-          envelope: {
-            ...instrumentState.instrument.envelope,
-            attackSeconds: 0.42,
-            sustainLevel: 0.55,
-          },
-        },
+        presetId: nextPresetId,
       },
     });
 
     assert.equal(
       getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
-        .instrument.oscillatorWaveform,
-      "square",
-    );
-    assert.equal(
-      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
-        .instrument.envelope.attackSeconds,
-      0.42,
-    );
-    assert.equal(
-      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
-        .instrument.envelope.sustainLevel,
-      0.55,
-    );
-    assert.equal(
-      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
-        .instrument.polyphony,
-      4,
-    );
-    assert.equal(
-      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
-        .instrument.pulseWidth,
-      0.3,
+        .presetId,
+      nextPresetId,
     );
     assert.equal(
       getActiveTestClip(state).instrumentStatesById["voice-a"]
-        .instrument.oscillatorWaveform,
-      "sawtooth",
+        .presetId,
+      getDefaultInstrumentPresetId(0),
     );
     assert.throws(
       () => dispatch(state, {
         type: "UpdateClipInstrumentState",
         instrumentId: projectInstrument.id,
         changes: {
-          instrument: {
-            ...instrumentState.instrument,
-            polyphony: 17,
-          },
+          presetId: "missing-preset",
         },
       }),
       (error) => (
@@ -1836,21 +1789,24 @@ try {
       PROJECT_SCHEMA_VERSION,
     );
     assert.equal(
-      getActiveTestClip(loaded.projectState).instrumentStatesById["voice-a"]
-        .instrument.polyphony,
+      loaded.projectState.instrumentPresetsById[
+        getActiveTestClip(loaded.projectState)
+          .instrumentStatesById["voice-a"].presetId
+      ].config.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);
-    delete invalidCurrentDocument.project.clipsById["clip-test"]
-      .instrumentStatesById["voice-a"].instrument.polyphony;
+    delete invalidCurrentDocument.project.instrumentPresetsById[
+      invalidCurrentDocument.project.instrumentPresetOrder[0]
+    ].config.polyphony;
     assert.throws(
       () => parseNativeProjectFile(
         JSON.stringify(invalidCurrentDocument),
       ),
       (error) => (
         error.code === "INVALID_DATA"
-        && error.path.endsWith(".instrument.polyphony")
+        && error.path.endsWith(".config.polyphony")
       ),
     );
   });
@@ -1876,11 +1832,7 @@ try {
             muted: true,
             locked: true,
             solo: true,
-            instrument: {
-              ...createInstrument(),
-              oscillatorWaveform: "triangle",
-              filterCutoffHz: 1_234,
-            },
+            presetId: getDefaultInstrumentPresetId(2),
           },
         },
         transportSettings: {
@@ -1938,11 +1890,7 @@ try {
         muted: true,
         locked: true,
         solo: true,
-        instrument: {
-          ...createInstrument(),
-          oscillatorWaveform: "triangle",
-          filterCutoffHz: 1_234,
-        },
+        presetId: getDefaultInstrumentPresetId(2),
       },
     );
     assert.deepEqual(loaded.editorState, editorState);
@@ -2934,43 +2882,6 @@ try {
     assert.equal(engine.configurations.length, 1);
     assert.deepEqual(engine.cancelledAt, []);
 
-    const previewClip = getActiveTestClip(refreshedState);
-    const previewVoiceState = previewClip.instrumentStatesById["voice-a"];
-    assert.ok(previewVoiceState !== undefined);
-    const previewState = {
-      ...refreshedState,
-      clipsById: {
-        ...refreshedState.clipsById,
-        [previewClip.id]: {
-          ...previewClip,
-          instrumentStatesById: {
-            ...previewClip.instrumentStatesById,
-            "voice-a": {
-              ...previewVoiceState,
-              instrument: {
-                ...previewVoiceState.instrument,
-                filterCutoffHz: 777,
-              },
-            },
-          },
-        },
-      },
-    };
-
-    scheduler.previewPlaybackSnapshot(
-      compilePlaybackSnapshot(previewState),
-    );
-
-    const previewSnapshot = engine.snapshots.at(-1);
-
-    assert.deepEqual(engine.cancelledFutureAt, [0.05]);
-    assert.deepEqual(engine.cancelledAt, []);
-    assert.ok(previewSnapshot !== undefined);
-    assert.equal(
-      previewSnapshot.instruments[0].instrument.filterCutoffHz,
-      777,
-    );
-
     await scheduler.dispose();
   });
 
@@ -3293,7 +3204,7 @@ try {
           muted: false,
           locked: false,
           solo: false,
-          instrument: createInstrument(),
+          presetId: getDefaultInstrumentPresetId(0),
         },
       },
       transportSettings: {
@@ -3355,7 +3266,7 @@ try {
             muted: false,
             locked: false,
             solo: false,
-            instrument: createInstrument(1),
+            presetId: getDefaultInstrumentPresetId(1),
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -3374,12 +3285,7 @@ try {
           muted: true,
           locked: true,
           solo: true,
-          instrument: {
-            ...getActiveTestClip(withSecondClip)
-              .instrumentStatesById["voice-a"].instrument,
-            oscillatorWaveform: "triangle",
-            filterCutoffHz: 1_234,
-          },
+          presetId: getDefaultInstrumentPresetId(2),
         },
       }],
     });
@@ -3392,7 +3298,7 @@ try {
         muted: false,
         locked: false,
         solo: false,
-        instrument: createInstrument(),
+        presetId: getDefaultInstrumentPresetId(0),
       },
     );
     assert.deepEqual(
@@ -3403,11 +3309,7 @@ try {
         muted: true,
         locked: true,
         solo: true,
-        instrument: {
-          ...createInstrument(1),
-          oscillatorWaveform: "triangle",
-          filterCutoffHz: 1_234,
-        },
+        presetId: getDefaultInstrumentPresetId(2),
       },
     );
     assert.equal(
@@ -3425,7 +3327,7 @@ try {
         muted: false,
         locked: false,
         solo: false,
-        instrument: createInstrument(1),
+        presetId: getDefaultInstrumentPresetId(1),
       },
     );
 
@@ -3438,11 +3340,7 @@ try {
         muted: true,
         locked: true,
         solo: true,
-        instrument: {
-          ...createInstrument(1),
-          oscillatorWaveform: "triangle",
-          filterCutoffHz: 1_234,
-        },
+        presetId: getDefaultInstrumentPresetId(2),
       },
     );
   });
@@ -3492,7 +3390,7 @@ try {
             muted: false,
             locked: false,
             solo: false,
-            instrument: createInstrument(),
+            presetId: getDefaultInstrumentPresetId(0),
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -3507,14 +3405,14 @@ try {
           muted: false,
           locked: false,
           solo: false,
-          instrument: createInstrument(1),
+          presetId: getDefaultInstrumentPresetId(1),
         },
         "clip-second": {
           gain: 0.82,
           muted: false,
           locked: false,
           solo: false,
-          instrument: createInstrument(1),
+          presetId: getDefaultInstrumentPresetId(1),
         },
       },
     });
@@ -3530,8 +3428,8 @@ try {
       );
       assert.equal(
         withInstrument.clipsById[clipId]
-          .instrumentStatesById["voice-b"].instrument.oscillatorWaveform,
-        "sine",
+          .instrumentStatesById["voice-b"].presetId,
+        getDefaultInstrumentPresetId(1),
       );
     }
 
@@ -3576,7 +3474,7 @@ try {
             muted: false,
             locked: false,
             solo: false,
-            instrument: createInstrument(),
+            presetId: getDefaultInstrumentPresetId(0),
           },
           },
           transportSettings: createDefaultTransportState(),
@@ -3637,7 +3535,7 @@ try {
           muted: false,
           locked: false,
           solo: false,
-          instrument: createInstrument(),
+          presetId: getDefaultInstrumentPresetId(0),
         },
       },
       transportSettings: createDefaultTransportState(),

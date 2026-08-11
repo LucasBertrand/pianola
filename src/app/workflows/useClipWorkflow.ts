@@ -15,11 +15,14 @@ import {
   type Track,
   type InstrumentId,
   type ClipInstrumentState,
+  type PresetId,
 } from "../../domain/model";
 import {
-  cloneInstrumentConfig,
   createDefaultClipInstrumentState,
 } from "../../domain/project-instrument-factory";
+import {
+  selectInstrumentPresetId,
+} from "../../domain/instrument-presets";
 import type {
   ShowApplicationConfirmation,
 } from "./dialog-types";
@@ -79,6 +82,7 @@ export function useClipWorkflow({
     clipSequenceRef.current += 1;
     const clip = createEmptyClip(
       state.instrumentOrder,
+      selectInstrumentPresetId(state.instrumentPresetOrder, 0),
       state.clipOrder.length,
       clipSequenceRef.current,
     );
@@ -226,6 +230,7 @@ function createCopyName(name: string, maximumLength: number): string {
 
 function createEmptyClip(
   instrumentOrder: readonly InstrumentId[],
+  presetId: PresetId,
   clipIndex: number,
   sequence: number,
 ): Clip {
@@ -237,7 +242,8 @@ function createEmptyClip(
       instrumentId,
       notesById: {},
     };
-    instrumentStatesById[instrumentId] = createDefaultClipInstrumentState();
+    instrumentStatesById[instrumentId] =
+      createDefaultClipInstrumentState(presetId);
   }
 
   return {
@@ -258,7 +264,6 @@ function cloneClipInstrumentStates(
   for (const [instrumentId, state] of Object.entries(sourceStates)) {
     states[instrumentId] = {
       ...state,
-      instrument: cloneInstrumentConfig(state.instrument),
     };
   }
 

@@ -168,18 +168,6 @@ export class LookaheadScheduler implements AudioTransportController {
     }
   }
 
-  /**
-   * Applies a transient sound edit without moving the transport or replaying
-   * notes that are already sounding. Subsequent lookahead windows use the new
-   * sound while already scheduled events remain stable.
-   */
-  public previewPlaybackSnapshot(snapshot: PlaybackSnapshot): void {
-    this.assertUsable();
-    assertCompatiblePlaybackState(snapshot, this.transport);
-    this.snapshot = snapshot;
-    this.engine.replacePlaybackSnapshot(snapshot);
-  }
-
   public async play(startTick: Tick = this.positionTick): Promise<void> {
     this.assertUsable();
 

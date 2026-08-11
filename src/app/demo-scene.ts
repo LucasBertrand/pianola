@@ -23,8 +23,11 @@ import {
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
-  getDefaultOscillatorWaveform,
 } from "../domain/project-instrument-factory";
+import {
+  createDefaultInstrumentPresetLibrary,
+  getDefaultInstrumentPresetId,
+} from "../domain/instrument-presets";
 
 export const DEMO_NOTE_COUNT = EDITOR_CONSTANTS.demoNoteCount;
 const DEMO_INITIAL_NOTE_SPAN_TICKS =
@@ -188,7 +191,7 @@ function createProjectState(
     const instrument = createDomainInstrument(demoInstrument);
     projectInstrumentsById[instrument.id] = instrument;
     instrumentStatesById[instrument.id] = createDefaultClipInstrumentState(
-      getDefaultOscillatorWaveform(instrumentIndex),
+      getDefaultInstrumentPresetId(instrumentIndex),
     );
     mutableNotesByInstrumentId[instrument.id] = {};
     instrumentOrder.push(instrument.id);
@@ -233,6 +236,7 @@ function createProjectState(
       bpm: PROJECT_CONSTANTS.demoTempoBpm,
     },
   };
+  const presetLibrary = createDefaultInstrumentPresetLibrary();
 
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
@@ -240,6 +244,8 @@ function createProjectState(
     title,
     projectInstrumentsById,
     instrumentOrder,
+    instrumentPresetsById: presetLibrary.instrumentPresetsById,
+    instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById: {
       [clipId]: clip,
     },

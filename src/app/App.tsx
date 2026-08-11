@@ -265,7 +265,6 @@ export function App(): React.JSX.Element {
     seek: seekPlayback,
     auditionPitch,
     previewInstrumentGain,
-    previewInstrumentPreset,
     previewMasterGain,
   } = useAudioPlayback({
     projectStore: scene.projectStore,
@@ -440,12 +439,6 @@ export function App(): React.JSX.Element {
     remove: handleDeleteProjectInstrument,
     update: handleUpdateProjectInstrument,
     updateClipState: handleUpdateClipInstrumentState,
-    commitEnvelopeParameter: handleEnvelopeParameterCommit,
-    previewEnvelopeParameter: handleEnvelopeParameterPreview,
-    commitWaveform: handleWaveformCommit,
-    commitPolyphony: handleInstrumentPolyphonyCommit,
-    commitInstrumentParameter: handleInstrumentParameterCommit,
-    previewInstrumentParameter: handleInstrumentParameterPreview,
     selectNotes: handleSelectInstrumentNotes,
     toggleLock: handleToggleInstrumentLock,
   } = useProjectInstrumentWorkflow({
@@ -460,7 +453,6 @@ export function App(): React.JSX.Element {
         ?.removeInstrumentFromSelection(instrumentId);
     },
     confirm: showApplicationConfirmation,
-    previewInstrument: previewInstrumentPreset,
   });
   const getPianoRollEventController = useCallback(
     (): PianoRollEventController | null =>
@@ -799,7 +791,6 @@ export function App(): React.JSX.Element {
           projectState={projectState}
           selectedInstrumentId={selectedInstrumentId}
           selectedInstrumentIndex={selectedInstrumentIndex}
-          selectedInstrument={selectedInstrument}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClose={() => {
             setGeneralInspectorOpen(false);
@@ -819,12 +810,6 @@ export function App(): React.JSX.Element {
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
           onToggleInstrumentLock={handleToggleInstrumentLock}
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
-          onWaveformCommit={handleWaveformCommit}
-          onPolyphonyCommit={handleInstrumentPolyphonyCommit}
-          onEnvelopePreview={handleEnvelopeParameterPreview}
-          onEnvelopeCommit={handleEnvelopeParameterCommit}
-          onInstrumentParameterPreview={handleInstrumentParameterPreview}
-          onInstrumentParameterCommit={handleInstrumentParameterCommit}
         />
       </section>
       <ApplicationDialogOverlay
