@@ -148,6 +148,9 @@ try {
     LookaheadScheduler,
   } = await vite.ssrLoadModule("/src/audio/lookahead-scheduler.ts");
   const {
+    WebAudioEngine,
+  } = await vite.ssrLoadModule("/src/audio/web-audio-engine.ts");
+  const {
     countOverlappingVoiceWindows,
     findOldestOverlappingVoiceIndex,
   } = await vite.ssrLoadModule("/src/audio/voice-allocation.ts");
@@ -1327,6 +1330,113 @@ try {
       voiceA.instrument,
       state.voicesById["voice-a"].instrument,
     );
+  });
+
+  test("delegates instrument rendering while retaining shared audio buses", async () => {
+    const snapshot = compilePlaybackSnapshot(createProject());
+    const gainNodes = [];
+    const panNodes = [];
+    const createAudioParam = (value) => ({
+      value,
+      cancelAndHoldAtTime() {},
+      cancelScheduledValues() {},
+      linearRampToValueAtTime(nextValue) {
+        this.value = nextValue;
+      },
+      setValueAtTime(nextValue) {
+        this.value = nextValue;
+      },
+    });
+    const createNode = (parameterName, initialValue, collection) => {
+      const node = {
+        [parameterName]: createAudioParam(initialValue),
+        connections: [],
+        connect(destination) {
+          this.connections.push(destination);
+        },
+        disconnect() {
+          this.connections.length = 0;
+        },
+      };
+
+      collection.push(node);
+      return node;
+    };
+    const context = {
+      currentTime: 2,
+      state: "running",
+      sampleRate: 48_000,
+      destination: {},
+      createGain() {
+        return createNode("gain", 1, gainNodes);
+      },
+      createStereoPanner() {
+        return createNode("pan", 0, panNodes);
+      },
+      async resume() {},
+      async close() {
+        this.state = "closed";
+      },
+    };
+    const scheduledRequests = [];
+    const cancelledAt = [];
+    const renderer = {
+      kind: "subtractive",
+      getMaximumPolyphony(voice, config) {
+        return Math.min(
+          voice.instrument.polyphony,
+          config.maxPolyphonyPerVoice,
+        );
+      },
+      schedule(request) {
+        scheduledRequests.push(request);
+        return {
+          occurrenceId: request.event.occurrenceId,
+          voiceId: request.event.voice.voiceId,
+          startAudioTimeSeconds: request.startAudioTimeSeconds,
+          stopAudioTimeSeconds: request.noteEndAudioTimeSeconds,
+          ended: false,
+          stop() {},
+          cancelBeforeStart(atAudioTimeSeconds) {
+            cancelledAt.push(atAudioTimeSeconds);
+          },
+        };
+      },
+    };
+    const engine = new WebAudioEngine(
+      DEFAULT_AUDIO_ENGINE_CONFIG,
+      snapshot,
+      () => context,
+      [renderer],
+    );
+    const voice = snapshot.voices[0];
+
+    assert.ok(voice !== undefined);
+    await engine.resume();
+    engine.scheduleNote({
+      occurrenceId: "delegated-note",
+      generation: 1,
+      voice,
+      pitch: 64,
+      velocity: 100,
+      startAudioTimeSeconds: 4,
+      endAudioTimeSeconds: 5,
+    });
+
+    assert.equal(scheduledRequests.length, 1);
+    assert.equal(scheduledRequests[0].context, context);
+    assert.equal(scheduledRequests[0].destination, gainNodes[1]);
+    assert.equal(
+      scheduledRequests[0].tuningFrequencyHz,
+      snapshot.masterTuningFrequencyHz,
+    );
+    assert.equal(gainNodes.length, 2);
+    assert.equal(panNodes.length, 1);
+
+    engine.cancelScheduledAfter(3);
+    assert.deepEqual(cancelledAt, [3]);
+    await engine.dispose();
+    assert.equal(context.state, "closed");
   });
 
   test("updates and validates persistent master controls", () => {

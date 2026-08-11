@@ -24,8 +24,8 @@ import {
   compilePlaybackSnapshot,
 } from "../../audio/playback-snapshot";
 import {
-  SubtractiveAudioEngine,
-} from "../../audio/subtractive-audio-engine";
+  WebAudioEngine,
+} from "../../audio/web-audio-engine";
 import type {
   MutableRenderSignal,
 } from "../rendering/render-signal";
@@ -74,7 +74,7 @@ export function useAudioPlayback(
     try {
       const state = projectStore.getState();
       const snapshot = compilePlaybackSnapshot(state);
-      const engine = new SubtractiveAudioEngine(
+      const engine = new WebAudioEngine(
         DEFAULT_AUDIO_ENGINE_CONFIG,
         snapshot,
       );

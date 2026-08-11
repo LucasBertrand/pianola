@@ -84,6 +84,22 @@ Contient les conversions ticks/pixels, les rectangles visibles et l'index
 spatial. Le type `Rect` appartient à cette couche : le domaine géométrique ne
 doit pas dépendre d'un composant Canvas.
 
+### `src/audio`
+
+Le pipeline audio comporte trois niveaux aux responsabilités distinctes :
+
+- `LookaheadScheduler` convertit le transport et les snapshots en événements
+  horodatés, sans connaître Web Audio ni la construction d'un instrument ;
+- `WebAudioEngine` possède l'`AudioContext`, le master, les bus de voix,
+  l'annulation et l'allocation de polyphonie ;
+- les renderers de `audio/instruments` construisent et arrêtent les sources
+  propres à un type d'instrument. Le renderer soustractif possède donc les
+  oscillateurs, filtres et enveloppes, mais jamais le contexte ou le master.
+
+Un nouvel instrument doit implémenter `InstrumentRenderer` et ne doit pas
+ajouter de branche spécialisée dans le scheduler. Le moteur commun sélectionne
+le renderer à partir du discriminant `instrument.kind`.
+
 ### `src/interaction/core`
 
 Contient les entrées et calculs de gestes indépendants du navigateur :

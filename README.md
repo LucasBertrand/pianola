@@ -188,7 +188,9 @@ pour poursuivre la modularisation sont décrits dans
 `useAudioPlayback.ts` relie le store au moteur. Un `AudioContext` est créé de
 façon paresseuse après une action utilisateur. `playback-snapshot.ts` compile
 un état immuable et `lookahead-scheduler.ts` programme les événements à
-l’avance. `subtractive-audio-engine.ts` construit le graphe Web Audio.
+l’avance. `web-audio-engine.ts` possède le contexte, le master et les bus de
+voix. Les renderers de `src/audio/instruments/` construisent les graphes propres
+à chaque type d’instrument ; le renderer soustractif est le seul disponible.
 
 Les événements futurs sont recalculés après une édition sans couper les notes
 déjà audibles. La vélocité est conservée dans les fichiers, mais le niveau de
@@ -696,7 +698,8 @@ Préserver les responsabilités :
 - `playback-snapshot.ts` transforme le projet en données de lecture ;
 - `time-math.ts` convertit ticks, secondes et boucles ;
 - `lookahead-scheduler.ts` décide quand programmer ;
-- `subtractive-audio-engine.ts` crée et contrôle les nœuds Web Audio ;
+- `web-audio-engine.ts` possède le contexte, le master et les bus de voix ;
+- `audio/instruments/` crée et contrôle les sources propres aux instruments ;
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
 Toute correction de timing doit être testable avec un faux moteur dans

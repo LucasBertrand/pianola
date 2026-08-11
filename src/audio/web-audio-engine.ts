@@ -15,9 +15,13 @@ import {
   countOverlappingVoiceWindows,
   findOldestOverlappingVoiceIndex,
 } from "./voice-allocation";
+import type {
+  ActiveInstrumentVoice,
+  InstrumentRenderer,
+} from "./instruments/contracts";
 import {
-  resolveNoteEnvelopePeakLevel,
-} from "./note-dynamics";
+  SubtractiveInstrumentRenderer,
+} from "./instruments/subtractive-instrument-renderer";
 
 export type AudioContextFactory = (
   config: AudioEngineConfig,
@@ -28,18 +32,13 @@ interface VoiceBus {
   readonly panNode: StereoPannerNode;
 }
 
-interface ActiveVoice {
-  readonly occurrenceId: string;
-  readonly voiceId: VoiceId;
-  readonly oscillator: OscillatorNode;
-  readonly envelopeGain: GainNode;
-  readonly filter: BiquadFilterNode;
-  readonly startAudioTimeSeconds: number;
-  stopAudioTimeSeconds: number;
-  ended: boolean;
-}
+const DEFAULT_INSTRUMENT_RENDERERS: readonly InstrumentRenderer[] =
+  Object.freeze([
+    new SubtractiveInstrumentRenderer(),
+  ]);
 
-export class SubtractiveAudioEngine implements AudioEnginePort {
+/** Owns the shared Web Audio graph and delegates sound creation by kind. */
+export class WebAudioEngine implements AudioEnginePort {
   private currentConfig: AudioEngineConfig;
   private currentSnapshot: PlaybackSnapshot;
   private readonly contextFactory: AudioContextFactory;
@@ -47,7 +46,9 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
   private masterGainNode: GainNode | null = null;
   private readonly voiceBuses = new Map<VoiceId, VoiceBus>();
   private readonly activeVoicesByVoiceId =
-    new Map<VoiceId, ActiveVoice[]>();
+    new Map<VoiceId, ActiveInstrumentVoice[]>();
+  private readonly instrumentRenderers =
+    new Map<string, InstrumentRenderer>();
   private readonly scheduledOccurrenceIds = new Set<string>();
   private latestGeneration = 0;
   private disposed = false;
@@ -56,6 +57,8 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     config: AudioEngineConfig,
     snapshot: PlaybackSnapshot,
     contextFactory: AudioContextFactory = createBrowserAudioContext,
+    instrumentRenderers: readonly InstrumentRenderer[] =
+      DEFAULT_INSTRUMENT_RENDERERS,
   ) {
     this.currentConfig = {
       ...config,
@@ -63,6 +66,16 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     };
     this.currentSnapshot = snapshot;
     this.contextFactory = contextFactory;
+
+    for (const renderer of instrumentRenderers) {
+      if (this.instrumentRenderers.has(renderer.kind)) {
+        throw new Error(
+          `Instrument renderer "${renderer.kind}" is registered more than once.`,
+        );
+      }
+
+      this.instrumentRenderers.set(renderer.kind, renderer);
+    }
   }
 
   public get config(): AudioEngineConfig {
@@ -151,78 +164,57 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
       startAudioTimeSeconds + AUDIO_CONSTANTS.minimumNoteSeconds,
       event.endAudioTimeSeconds,
     );
+    const renderer = this.instrumentRenderers.get(
+      event.voice.instrument.kind,
+    );
+
+    if (renderer === undefined) {
+      throw new Error(
+        `No renderer is registered for instrument kind "${event.voice.instrument.kind}".`,
+      );
+    }
+
+    const maximumPolyphony = renderer.getMaximumPolyphony(
+      event.voice,
+      this.currentConfig,
+    );
+
+    if (
+      !Number.isSafeInteger(maximumPolyphony)
+      || maximumPolyphony <= 0
+    ) {
+      throw new RangeError(
+        `Renderer "${renderer.kind}" returned invalid polyphony.`,
+      );
+    }
 
     this.reservePolyphonySlot(
       event.voice.voiceId,
       startAudioTimeSeconds,
       noteEndAudioTimeSeconds,
-      Math.min(
-        event.voice.instrument.polyphony,
-        this.currentConfig.maxPolyphonyPerVoice,
-      ),
+      maximumPolyphony,
     );
+    this.scheduledOccurrenceIds.add(event.occurrenceId);
+    let activeVoice: ActiveInstrumentVoice;
 
-    const oscillator = context.createOscillator();
-    const filter = context.createBiquadFilter();
-    const envelopeGain = context.createGain();
-    const instrument = event.voice.instrument;
-    const releaseSeconds = Math.min(
-      instrument.envelope.releaseSeconds,
-      this.currentConfig.releaseTailSeconds,
-    );
-    const stopAudioTimeSeconds =
-      noteEndAudioTimeSeconds + releaseSeconds;
-    const activeVoice: ActiveVoice = {
-      occurrenceId: event.occurrenceId,
-      voiceId: event.voice.voiceId,
-      oscillator,
-      envelopeGain,
-      filter,
-      startAudioTimeSeconds,
-      stopAudioTimeSeconds,
-      ended: false,
-    };
-
-    oscillator.type = instrument.oscillatorWaveform;
-    oscillator.frequency.setValueAtTime(
-      midiPitchToFrequency(
-        event.pitch,
-        this.currentSnapshot.masterTuningFrequencyHz,
-      ),
-      startAudioTimeSeconds,
-    );
-    oscillator.detune.setValueAtTime(
-      instrument.oscillatorDetuneCents,
-      startAudioTimeSeconds,
-    );
-
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(
-      Math.min(
-        instrument.filterCutoffHz,
-        context.sampleRate * 0.49,
-      ),
-      startAudioTimeSeconds,
-    );
-    filter.Q.setValueAtTime(
-      instrument.filterResonance,
-      startAudioTimeSeconds,
-    );
-
-    scheduleEnvelope(
-      envelopeGain.gain,
-      resolveNoteEnvelopePeakLevel(event.velocity),
-      startAudioTimeSeconds,
-      noteEndAudioTimeSeconds,
-      instrument.envelope.attackSeconds,
-      instrument.envelope.decaySeconds,
-      instrument.envelope.sustainLevel,
-      releaseSeconds,
-    );
-
-    oscillator.connect(filter);
-    filter.connect(envelopeGain);
-    envelopeGain.connect(voiceBus.gainNode);
+    try {
+      activeVoice = renderer.schedule({
+        context,
+        destination: voiceBus.gainNode,
+        event,
+        startAudioTimeSeconds,
+        noteEndAudioTimeSeconds,
+        tuningFrequencyHz:
+          this.currentSnapshot.masterTuningFrequencyHz,
+        releaseTailSeconds: this.currentConfig.releaseTailSeconds,
+        onEnded: (occurrenceId) => {
+          this.scheduledOccurrenceIds.delete(occurrenceId);
+        },
+      });
+    } catch (error: unknown) {
+      this.scheduledOccurrenceIds.delete(event.occurrenceId);
+      throw error;
+    }
 
     const activeVoices =
       this.activeVoicesByVoiceId.get(event.voice.voiceId);
@@ -235,21 +227,6 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
     } else {
       activeVoices.push(activeVoice);
     }
-
-    this.scheduledOccurrenceIds.add(event.occurrenceId);
-    oscillator.onended = (): void => {
-      activeVoice.ended = true;
-      this.scheduledOccurrenceIds.delete(
-        activeVoice.occurrenceId,
-      );
-      oscillator.disconnect();
-      filter.disconnect();
-      envelopeGain.disconnect();
-    };
-    oscillator.start(startAudioTimeSeconds);
-    oscillator.stop(
-      stopAudioTimeSeconds + AUDIO_CONSTANTS.minimumNoteSeconds,
-    );
   }
 
   public previewVoiceGain(
@@ -334,7 +311,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
         if (
           activeVoice.startAudioTimeSeconds >= cancellationTime
         ) {
-          cancelFutureVoice(activeVoice, cancellationTime);
+          activeVoice.cancelBeforeStart(cancellationTime);
           this.scheduledOccurrenceIds.delete(
             activeVoice.occurrenceId,
           );
@@ -370,7 +347,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
         const activeVoice = activeVoices[voiceIndex];
 
         if (activeVoice !== undefined && !activeVoice.ended) {
-          stopActiveVoice(activeVoice, cancellationTime);
+          activeVoice.stop(cancellationTime);
         }
       }
 
@@ -520,10 +497,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
             const activeVoice = activeVoices[voiceIndex];
 
             if (activeVoice !== undefined) {
-              stopActiveVoice(
-                activeVoice,
-                context.currentTime,
-              );
+              activeVoice.stop(context.currentTime);
             }
           }
         }
@@ -593,7 +567,7 @@ export class SubtractiveAudioEngine implements AudioEnginePort {
         break;
       }
 
-      stopActiveVoice(voiceToSteal, startAudioTimeSeconds);
+      voiceToSteal.stop(startAudioTimeSeconds);
       activeVoices.splice(voiceIndex, 1);
     }
   }
@@ -615,177 +589,6 @@ function createBrowserAudioContext(
   return new AudioContext({
     latencyHint: config.latencyHint,
   });
-}
-
-function scheduleEnvelope(
-  parameter: AudioParam,
-  peakLevel: number,
-  startAudioTimeSeconds: number,
-  noteEndAudioTimeSeconds: number,
-  attackSeconds: number,
-  decaySeconds: number,
-  sustainLevel: number,
-  releaseSeconds: number,
-): void {
-  const attackEnd = startAudioTimeSeconds + attackSeconds;
-  const decayEnd = attackEnd + decaySeconds;
-  const sustainGain = peakLevel * sustainLevel;
-  let noteOffGain = sustainGain;
-
-  parameter.cancelScheduledValues(startAudioTimeSeconds);
-  parameter.setValueAtTime(0, startAudioTimeSeconds);
-
-  if (attackSeconds > 0) {
-    const attackTimeConstant =
-      attackSeconds
-      / AUDIO_CONSTANTS.envelopeTimeConstantDivisor;
-
-    parameter.setTargetAtTime(
-      peakLevel,
-      startAudioTimeSeconds,
-      attackTimeConstant,
-    );
-
-    if (noteEndAudioTimeSeconds < attackEnd) {
-      noteOffGain = calculateExponentialApproach(
-        0,
-        peakLevel,
-        noteEndAudioTimeSeconds - startAudioTimeSeconds,
-        attackTimeConstant,
-      );
-      parameter.setValueAtTime(
-        noteOffGain,
-        noteEndAudioTimeSeconds,
-      );
-    } else {
-      parameter.setValueAtTime(peakLevel, attackEnd);
-    }
-  } else {
-    parameter.setValueAtTime(peakLevel, startAudioTimeSeconds);
-  }
-
-  if (noteEndAudioTimeSeconds > attackEnd) {
-    if (
-      decaySeconds > 0
-      && noteEndAudioTimeSeconds < decayEnd
-    ) {
-      const decayTimeConstant =
-        decaySeconds
-        / AUDIO_CONSTANTS.envelopeTimeConstantDivisor;
-
-      parameter.setTargetAtTime(
-        sustainGain,
-        attackEnd,
-        decayTimeConstant,
-      );
-      noteOffGain = calculateExponentialApproach(
-        peakLevel,
-        sustainGain,
-        noteEndAudioTimeSeconds - attackEnd,
-        decayTimeConstant,
-      );
-      parameter.setValueAtTime(
-        noteOffGain,
-        noteEndAudioTimeSeconds,
-      );
-    } else {
-      if (decaySeconds > 0) {
-        parameter.setTargetAtTime(
-          sustainGain,
-          attackEnd,
-          decaySeconds
-            / AUDIO_CONSTANTS.envelopeTimeConstantDivisor,
-        );
-        parameter.setValueAtTime(sustainGain, decayEnd);
-      } else {
-        parameter.setValueAtTime(sustainGain, attackEnd);
-      }
-
-      parameter.setValueAtTime(
-        sustainGain,
-        noteEndAudioTimeSeconds,
-      );
-    }
-  }
-
-  parameter.setValueAtTime(
-    noteOffGain,
-    noteEndAudioTimeSeconds,
-  );
-
-  if (releaseSeconds > 0) {
-    parameter.setTargetAtTime(
-      0,
-      noteEndAudioTimeSeconds,
-      releaseSeconds
-        / AUDIO_CONSTANTS.envelopeTimeConstantDivisor,
-    );
-    parameter.setValueAtTime(
-      0,
-      noteEndAudioTimeSeconds + releaseSeconds,
-    );
-  } else {
-    parameter.setValueAtTime(0, noteEndAudioTimeSeconds);
-  }
-}
-
-function calculateExponentialApproach(
-  initialValue: number,
-  targetValue: number,
-  elapsedSeconds: number,
-  timeConstantSeconds: number,
-): number {
-  return (
-    targetValue
-    + (initialValue - targetValue)
-      * Math.exp(-elapsedSeconds / timeConstantSeconds)
-  );
-}
-
-function stopActiveVoice(
-  activeVoice: ActiveVoice,
-  atAudioTimeSeconds: number,
-): void {
-  if (activeVoice.ended) {
-    return;
-  }
-
-  const stopTime =
-    atAudioTimeSeconds + AUDIO_CONSTANTS.cancellationFadeSeconds;
-  const gain = activeVoice.envelopeGain.gain;
-
-  holdAudioParam(gain, atAudioTimeSeconds);
-  gain.linearRampToValueAtTime(0, stopTime);
-
-  try {
-    activeVoice.oscillator.stop(
-      stopTime + AUDIO_CONSTANTS.minimumNoteSeconds,
-    );
-  } catch {
-    activeVoice.ended = true;
-  }
-
-  activeVoice.stopAudioTimeSeconds = stopTime;
-}
-
-function cancelFutureVoice(
-  activeVoice: ActiveVoice,
-  atAudioTimeSeconds: number,
-): void {
-  const stopTime =
-    atAudioTimeSeconds + AUDIO_CONSTANTS.minimumNoteSeconds;
-  const gain = activeVoice.envelopeGain.gain;
-
-  gain.cancelScheduledValues(atAudioTimeSeconds);
-  gain.setValueAtTime(0, atAudioTimeSeconds);
-
-  try {
-    activeVoice.oscillator.stop(stopTime);
-  } catch {
-    activeVoice.ended = true;
-  }
-
-  activeVoice.stopAudioTimeSeconds = stopTime;
 }
 
 function setAudioParamSmoothly(
@@ -813,13 +616,6 @@ function holdAudioParam(
       atAudioTimeSeconds,
     );
   }
-}
-
-function midiPitchToFrequency(
-  pitch: number,
-  tuningFrequencyHz: number,
-): number {
-  return tuningFrequencyHz * 2 ** ((pitch - 69) / 12);
 }
 
 function assertValidAudioEngineConfig(
