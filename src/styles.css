@@ -62,7 +62,8 @@ input:focus-visible {
 }
 
 .app-shell {
-  --general-inspector-width: 286px;
+  --general-inspector-width: 306px;
+  --master-bus-width: 254px;
   display: flex;
   width: 100%;
   height: 100%;
@@ -364,7 +365,7 @@ input:focus-visible {
 
 .master-bus-control {
   display: grid;
-  width: calc(var(--general-inspector-width) - 32px);
+  width: var(--master-bus-width);
   min-width: 134px;
   height: 44px;
   padding: 4px 6px;
@@ -1664,7 +1665,7 @@ input[type="range"]::-webkit-slider-thumb {
   min-width: 0;
 }
 
-.instrument-copy span {
+.instrument-copy small {
   display: block;
 }
 
@@ -1692,7 +1693,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--color-surface-inset);
 }
 
-.instrument-copy span {
+.instrument-copy small {
   margin-top: 3px;
   overflow: hidden;
   color: var(--color-text-quiet);
@@ -1838,7 +1839,7 @@ input[type="range"]::-webkit-slider-thumb {
   z-index: 1;
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(58px, 72px) minmax(0, 96px);
+  grid-template-columns: minmax(58px, 72px);
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
@@ -1912,28 +1913,6 @@ input[type="range"]::-webkit-slider-thumb {
   width: 100%;
 }
 
-.instrument-preset-name {
-  display: block;
-  width: min(100%, 96px);
-  min-width: 0;
-  height: 28px;
-  padding: 8px 7px 0;
-  overflow: hidden;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--instrument-color) 35%,
-    var(--color-border-control)
-  );
-  border-radius: 7px;
-  outline: 0;
-  background: var(--color-surface-inset);
-  color: var(--color-text-control);
-  font-size: 9px;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .master-gain-input {
   display: block;
   accent-color: var(--instrument-color, var(--color-accent-primary));
@@ -1955,7 +1934,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 @media (min-width: 1121px) and (max-width: 1300px) {
   .app-shell {
-    --general-inspector-width: 250px;
+    --general-inspector-width: 276px;
+    --master-bus-width: 218px;
   }
 
   .topbar {
@@ -1975,6 +1955,7 @@ input[type="range"]::-webkit-slider-thumb {
 @media (max-width: 1120px) {
   .app-shell {
     --general-inspector-width: 250px;
+    --master-bus-width: 218px;
   }
 
   .topbar {
@@ -2325,8 +2306,8 @@ input[type="range"]::-webkit-slider-thumb {
 
   .instrument-management-panel .instrument-actions {
     width: auto;
-    grid-column: 2 / -1;
-    grid-row: 2;
+    grid-column: 4;
+    grid-row: 1;
     flex-wrap: nowrap;
     gap: 4px;
   }
@@ -2337,15 +2318,16 @@ input[type="range"]::-webkit-slider-thumb {
     grid-template-columns:
       28px
       minmax(60px, 1fr)
-      minmax(130px, 1.5fr);
-    grid-template-rows: auto auto;
+      minmax(52px, 64px)
+      auto;
+    grid-template-rows: auto;
     gap: 6px;
   }
 
   .instrument-management-panel .instrument-sound-controls {
     grid-column: 3;
     grid-row: 1;
-    grid-template-columns: minmax(52px, 64px) minmax(0, 88px);
+    grid-template-columns: minmax(52px, 64px);
   }
 
   .instrument-management-panel .project-instrument-card button {

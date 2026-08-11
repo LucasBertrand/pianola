@@ -9,17 +9,17 @@ import type {
 } from "./model";
 
 export const DEFAULT_INSTRUMENT_PRESET_ID =
-  "subtractive-init-saw";
+  "subtractive-sawtooth";
 
 const BUILT_IN_PRESETS = Object.freeze([
   createSubtractivePreset(
     DEFAULT_INSTRUMENT_PRESET_ID,
-    "Init Saw",
+    "Sawtooth",
     createSubtractiveConfig(),
   ),
   createSubtractivePreset(
-    "subtractive-soft-sine",
-    "Soft Sine",
+    "subtractive-sine",
+    "Sine",
     createSubtractiveConfig({
       oscillatorWaveform: "sine",
       filterCutoffHz: 12_000,
@@ -27,13 +27,22 @@ const BUILT_IN_PRESETS = Object.freeze([
     }),
   ),
   createSubtractivePreset(
+    "subtractive-triangle",
+    "Triangle",
+    createSubtractiveConfig({
+      oscillatorWaveform: "triangle",
+      filterCutoffHz: 10_000,
+      filterEnvelopeAmountOctaves: 0.25,
+    }),
+  ),
+  createSubtractivePreset(
     "subtractive-warm-pad",
-    "Warm Pad",
+    "Pad",
     createSubtractiveConfig({
       oscillatorWaveform: "triangle",
       polyphony: 8,
       envelope: {
-        attackSeconds: 0.35,
+        attackSeconds: 0.25,
         decaySeconds: 1.4,
         sustainLevel: 0.78,
         releaseSeconds: 2,

@@ -123,7 +123,7 @@ export function ClipInspector({
                   onSelect={onSelect}
                   onRename={(name) => onRename(clip.id, name)}
                 />
-                <span>{clip.measureCount} measures</span>
+                <small>{clip.measureCount} measures</small>
               </div>
               <button
                 className="instrument-duplicate-button"

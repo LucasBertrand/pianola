@@ -210,6 +210,10 @@ export function GeneralInspector({
                   );
                 }}
               />
+              <small title="Shared instrument preset">
+                {projectState.instrumentPresetsById[instrument.presetId]
+                  ?.name ?? "Unavailable preset"}
+              </small>
             </div>
             <div
               className="instrument-sound-controls"
@@ -231,13 +235,6 @@ export function GeneralInspector({
                   );
                 }}
               />
-              <span
-                className="instrument-preset-name"
-                title="Shared instrument preset"
-              >
-                {projectState.instrumentPresetsById[instrument.presetId]
-                  ?.name ?? "Unavailable preset"}
-              </span>
             </div>
             <div className="instrument-actions">
               <button
