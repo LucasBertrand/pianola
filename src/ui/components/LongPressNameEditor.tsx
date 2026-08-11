@@ -30,6 +30,8 @@ export function LongPressNameEditor({
   const pointerIdRef = useRef(-1);
   const originXRef = useRef(0);
   const originYRef = useRef(0);
+  const movedRef = useRef(false);
+  const longPressTriggeredRef = useRef(false);
   const [editing, setEditing] = useState(false);
 
   const cancelLongPress = (): void => {
@@ -76,20 +78,17 @@ export function LongPressNameEditor({
           return;
         }
 
-        event.preventDefault();
-        onSelect(entityId);
         cancelLongPress();
+        movedRef.current = false;
+        longPressTriggeredRef.current = false;
         pointerIdRef.current = event.pointerId;
         originXRef.current = event.clientX;
         originYRef.current = event.clientY;
 
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }
-
         timerRef.current = window.setTimeout(
           () => {
             cancelLongPress();
+            longPressTriggeredRef.current = true;
             setEditing(true);
           },
           INTERACTION_CONSTANTS.voiceNameLongPressDelayMs,
@@ -107,23 +106,36 @@ export function LongPressNameEditor({
               > INTERACTION_CONSTANTS.voiceNameLongPressMovementToleranceCssPixels
           )
         ) {
+          movedRef.current = true;
           cancelLongPress();
         }
       }}
       onPointerUp={(event) => {
         event.stopPropagation();
         cancelLongPress();
-
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }
       }}
       onPointerCancel={(event) => {
         event.stopPropagation();
+        movedRef.current = true;
         cancelLongPress();
       }}
-      onLostPointerCapture={cancelLongPress}
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+
+        if (editing) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (longPressTriggeredRef.current || movedRef.current) {
+          longPressTriggeredRef.current = false;
+          movedRef.current = false;
+          return;
+        }
+
+        onSelect(entityId);
+      }}
       onDoubleClick={(event) => {
         event.stopPropagation();
         event.preventDefault();
@@ -145,6 +157,7 @@ export function LongPressNameEditor({
           onRename(nextName);
         }
 
+        longPressTriggeredRef.current = false;
         setEditing(false);
       }}
       onKeyDown={(event) => {

@@ -14,5 +14,13 @@ export default defineConfig({
     allowedHosts: [
       "crept-oasis-promotion.ngrok-free.dev",
     ],
+    // A tunnel can keep browser module responses alive across development
+    // server restarts. Disable caching so remote devices always revalidate the
+    // current source tree instead of displaying a stale development session.
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+      Expires: "0",
+      Pragma: "no-cache",
+    },
   },
 });

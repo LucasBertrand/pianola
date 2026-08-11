@@ -2365,6 +2365,11 @@ input[type="range"]::-webkit-slider-thumb {
     display: none;
   }
 
+  .clip-inspector-section + .voice-inspector-section
+    > .general-inspector-heading {
+    padding-top: 0;
+  }
+
   .clip-inspector-section {
     padding-bottom: 0;
     border-bottom: 0;
