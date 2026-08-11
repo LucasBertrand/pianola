@@ -5,7 +5,7 @@ import type {
   Note,
   NoteId,
   ProjectState,
-  VoiceId,
+  InstrumentId,
 } from "./model";
 import {
   getActiveClip,
@@ -52,7 +52,7 @@ export function countNoteEditCollisions(
       continue;
     }
 
-    const track = activeClip.tracksByVoiceId[proposedNote.voiceId];
+    const track = activeClip.tracksByInstrumentId[proposedNote.instrumentId];
 
     if (track !== undefined) {
       for (const existingNoteId in track.notesById) {
@@ -107,7 +107,7 @@ export function createNoteCollisionResolutionPlan(
     intent.proposedNotes,
     originalNoteIds,
   );
-  const deletedNotesByVoice = new Map<VoiceId, Set<NoteId>>();
+  const deletedNotesByInstrument = new Map<InstrumentId, Set<NoteId>>();
   const addedNotes: Note[] = [];
   const resultingSelectionNoteIds: NoteId[] = [];
   const reservedNoteIds = collectProjectNoteIds(state);
@@ -116,13 +116,13 @@ export function createNoteCollisionResolutionPlan(
   for (const originalNote of intent.originalNotes) {
     const storedNote =
       activeClip
-        .tracksByVoiceId[originalNote.voiceId]
+        .tracksByInstrumentId[originalNote.instrumentId]
         ?.notesById[originalNote.id];
 
     if (storedNote !== undefined) {
       addDeletedNoteId(
-        deletedNotesByVoice,
-        storedNote.voiceId,
+        deletedNotesByInstrument,
+        storedNote.instrumentId,
         storedNote.id,
       );
     }
@@ -133,7 +133,7 @@ export function createNoteCollisionResolutionPlan(
       if (mode === "merge") {
         appendMergedGroup(
           group,
-          deletedNotesByVoice,
+          deletedNotesByInstrument,
           addedNotes,
           resultingSelectionNoteIds,
         );
@@ -165,8 +165,8 @@ export function createNoteCollisionResolutionPlan(
         }
 
         addDeletedNoteId(
-          deletedNotesByVoice,
-          existingNote.voiceId,
+          deletedNotesByInstrument,
+          existingNote.instrumentId,
           existingNote.id,
         );
 
@@ -207,7 +207,7 @@ export function createNoteCollisionResolutionPlan(
 
   return {
     commands: buildReplacementCommands(
-      deletedNotesByVoice,
+      deletedNotesByInstrument,
       addedNotes,
     ),
     resultingSelectionNoteIds,
@@ -218,22 +218,22 @@ function createAffectedNoteGroups(
   state: ProjectState,
   proposedNotes: readonly Note[],
   originalNoteIds: ReadonlySet<NoteId>,
-): Map<VoiceId, Map<number, NoteGroup>> {
-  const groups = new Map<VoiceId, Map<number, NoteGroup>>();
+): Map<InstrumentId, Map<number, NoteGroup>> {
+  const groups = new Map<InstrumentId, Map<number, NoteGroup>>();
   const activeClip = getActiveClip(state);
 
   for (const proposedNote of proposedNotes) {
     const group = getOrCreateNoteGroup(
       groups,
-      proposedNote.voiceId,
+      proposedNote.instrumentId,
       proposedNote.pitch,
     );
 
     group.proposedNotes.push(proposedNote);
   }
 
-  for (const [voiceId, pitchGroups] of groups) {
-    const track = activeClip.tracksByVoiceId[voiceId];
+  for (const [instrumentId, pitchGroups] of groups) {
+    const track = activeClip.tracksByInstrumentId[instrumentId];
 
     if (track === undefined) {
       continue;
@@ -261,15 +261,15 @@ function createAffectedNoteGroups(
 }
 
 function getOrCreateNoteGroup(
-  groups: Map<VoiceId, Map<number, NoteGroup>>,
-  voiceId: VoiceId,
+  groups: Map<InstrumentId, Map<number, NoteGroup>>,
+  instrumentId: InstrumentId,
   pitch: number,
 ): NoteGroup {
-  let pitchGroups = groups.get(voiceId);
+  let pitchGroups = groups.get(instrumentId);
 
   if (pitchGroups === undefined) {
     pitchGroups = new Map<number, NoteGroup>();
-    groups.set(voiceId, pitchGroups);
+    groups.set(instrumentId, pitchGroups);
   }
 
   let group = pitchGroups.get(pitch);
@@ -287,7 +287,7 @@ function getOrCreateNoteGroup(
 
 function appendMergedGroup(
   group: NoteGroup,
-  deletedNotesByVoice: Map<VoiceId, Set<NoteId>>,
+  deletedNotesByInstrument: Map<InstrumentId, Set<NoteId>>,
   addedNotes: Note[],
   resultingSelectionNoteIds: NoteId[],
 ): void {
@@ -379,8 +379,8 @@ function appendMergedGroup(
 
         if (!entry.proposed) {
           addDeletedNoteId(
-            deletedNotesByVoice,
-            entry.note.voiceId,
+            deletedNotesByInstrument,
+            entry.note.instrumentId,
             entry.note.id,
           );
         }
@@ -513,39 +513,39 @@ function subtractProposedIntervals(
 }
 
 function buildReplacementCommands(
-  deletedNotesByVoice: ReadonlyMap<VoiceId, ReadonlySet<NoteId>>,
+  deletedNotesByInstrument: ReadonlyMap<InstrumentId, ReadonlySet<NoteId>>,
   addedNotes: readonly Note[],
 ): readonly PianoRollCommand[] {
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, noteIds] of deletedNotesByVoice) {
+  for (const [instrumentId, noteIds] of deletedNotesByInstrument) {
     if (noteIds.size > 0) {
       commands.push({
         type: "DeleteNotes",
-        trackVoiceId: voiceId,
+        trackInstrumentId: instrumentId,
         noteIds: Array.from(noteIds),
       });
     }
   }
 
-  const addedNotesByVoice = new Map<VoiceId, Note[]>();
+  const addedNotesByInstrument = new Map<InstrumentId, Note[]>();
 
   for (const note of addedNotes) {
-    let voiceNotes = addedNotesByVoice.get(note.voiceId);
+    let instrumentNotes = addedNotesByInstrument.get(note.instrumentId);
 
-    if (voiceNotes === undefined) {
-      voiceNotes = [];
-      addedNotesByVoice.set(note.voiceId, voiceNotes);
+    if (instrumentNotes === undefined) {
+      instrumentNotes = [];
+      addedNotesByInstrument.set(note.instrumentId, instrumentNotes);
     }
 
-    voiceNotes.push(note);
+    instrumentNotes.push(note);
   }
 
-  for (const [voiceId, voiceNotes] of addedNotesByVoice) {
+  for (const [instrumentId, instrumentNotes] of addedNotesByInstrument) {
     commands.push({
       type: "AddNotes",
-      trackVoiceId: voiceId,
-      notes: voiceNotes,
+      trackInstrumentId: instrumentId,
+      notes: instrumentNotes,
     });
   }
 
@@ -553,15 +553,15 @@ function buildReplacementCommands(
 }
 
 function addDeletedNoteId(
-  deletedNotesByVoice: Map<VoiceId, Set<NoteId>>,
-  voiceId: VoiceId,
+  deletedNotesByInstrument: Map<InstrumentId, Set<NoteId>>,
+  instrumentId: InstrumentId,
   noteId: NoteId,
 ): void {
-  let noteIds = deletedNotesByVoice.get(voiceId);
+  let noteIds = deletedNotesByInstrument.get(instrumentId);
 
   if (noteIds === undefined) {
     noteIds = new Set<NoteId>();
-    deletedNotesByVoice.set(voiceId, noteIds);
+    deletedNotesByInstrument.set(instrumentId, noteIds);
   }
 
   noteIds.add(noteId);
@@ -581,8 +581,8 @@ function collectProjectNoteIds(state: ProjectState): Set<NoteId> {
   const noteIds = new Set<NoteId>();
   const activeClip = getActiveClip(state);
 
-  for (const voiceId of state.voiceOrder) {
-    const track = activeClip.tracksByVoiceId[voiceId];
+  for (const instrumentId of state.instrumentOrder) {
+    const track = activeClip.tracksByInstrumentId[instrumentId];
 
     if (track === undefined) {
       continue;
@@ -619,7 +619,7 @@ function createUniqueFragmentId(
 
 function notesOverlap(left: Note, right: Note): boolean {
   return (
-    left.voiceId === right.voiceId
+    left.instrumentId === right.instrumentId
     && left.pitch === right.pitch
     && left.startTick
       < right.startTick + right.durationTicks

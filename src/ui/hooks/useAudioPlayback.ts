@@ -9,7 +9,7 @@ import {
   type ProjectState,
   type SubtractiveSynthConfig,
   type Tick,
-  type VoiceId,
+  type InstrumentId,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
@@ -44,15 +44,15 @@ export interface AudioPlaybackActions {
   readonly returnToStart: () => void;
   readonly seek: (tick: Tick) => void;
   readonly auditionPitch: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     pitch: number,
   ) => void;
-  readonly previewVoiceGain: (
-    voiceId: VoiceId,
+  readonly previewInstrumentGain: (
+    instrumentId: InstrumentId,
     gain: number,
   ) => void;
-  readonly previewVoiceInstrument: (
-    voiceId: VoiceId,
+  readonly previewInstrumentPreset: (
+    instrumentId: InstrumentId,
     instrument: SubtractiveSynthConfig,
   ) => void;
   readonly previewMasterGain: (gain: number) => void;
@@ -72,7 +72,7 @@ export function useAudioPlayback(
   const schedulerRef = useRef<LookaheadScheduler | null>(null);
   const instrumentPreviewFrameRef = useRef(0);
   const pendingInstrumentPreviewRef = useRef<{
-    readonly voiceId: VoiceId;
+    readonly instrumentId: InstrumentId;
     readonly instrument: SubtractiveSynthConfig;
   } | null>(null);
 
@@ -119,10 +119,10 @@ export function useAudioPlayback(
 
         if (
           (
-            state.voicesById !== previousState.voicesById
+            state.projectInstrumentsById !== previousState.projectInstrumentsById
             || state.activeClipId !== previousState.activeClipId
-            || activeClip.voiceStatesById
-              !== previousActiveClip.voiceStatesById
+            || activeClip.instrumentStatesById
+              !== previousActiveClip.instrumentStatesById
           )
           && instrumentPreviewFrameRef.current !== 0
         ) {
@@ -239,7 +239,7 @@ export function useAudioPlayback(
   }, []);
 
   const auditionPitch = useCallback((
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     pitch: number,
   ): void => {
     const scheduler = schedulerRef.current;
@@ -248,28 +248,28 @@ export function useAudioPlayback(
       return;
     }
 
-    void scheduler.auditionPitch(voiceId, pitch).catch((error: unknown) => {
+    void scheduler.auditionPitch(instrumentId, pitch).catch((error: unknown) => {
       onErrorRef.current(error);
     });
   }, []);
 
-  const previewVoiceGain = useCallback((
-    voiceId: VoiceId,
+  const previewInstrumentGain = useCallback((
+    instrumentId: InstrumentId,
     gain: number,
   ): void => {
     try {
-      schedulerRef.current?.previewVoiceGain(voiceId, gain);
+      schedulerRef.current?.previewInstrumentGain(instrumentId, gain);
     } catch (error: unknown) {
       onErrorRef.current(error);
     }
   }, []);
 
-  const previewVoiceInstrument = useCallback((
-    voiceId: VoiceId,
+  const previewInstrumentPreset = useCallback((
+    instrumentId: InstrumentId,
     instrument: SubtractiveSynthConfig,
   ): void => {
     pendingInstrumentPreviewRef.current = {
-      voiceId,
+      instrumentId,
       instrument,
     };
 
@@ -288,14 +288,14 @@ export function useAudioPlayback(
       }
 
       const state = projectStore.getState();
-      const voice = state.voicesById[preview.voiceId];
+      const instrument = state.projectInstrumentsById[preview.instrumentId];
       const activeClip = getActiveClip(state);
-      const voiceState = activeClip.voiceStatesById[preview.voiceId];
+      const instrumentState = activeClip.instrumentStatesById[preview.instrumentId];
       const scheduler = schedulerRef.current;
 
       if (
-        voice === undefined
-        || voiceState === undefined
+        instrument === undefined
+        || instrumentState === undefined
         || scheduler === null
       ) {
         return;
@@ -309,10 +309,10 @@ export function useAudioPlayback(
               ...state.clipsById,
               [activeClip.id]: {
                 ...activeClip,
-                voiceStatesById: {
-                  ...activeClip.voiceStatesById,
-                  [preview.voiceId]: {
-                    ...voiceState,
+                instrumentStatesById: {
+                  ...activeClip.instrumentStatesById,
+                  [preview.instrumentId]: {
+                    ...instrumentState,
                     instrument: preview.instrument,
                   },
                 },
@@ -337,8 +337,8 @@ export function useAudioPlayback(
     returnToStart,
     seek,
     auditionPitch,
-    previewVoiceGain,
-    previewVoiceInstrument,
+    previewInstrumentGain,
+    previewInstrumentPreset,
     previewMasterGain,
   };
 }
@@ -353,7 +353,7 @@ function didPlaybackStateChange(
   if (
     state.activeClipId !== previousState.activeClipId
     || activeClip.measureCount !== previousActiveClip.measureCount
-    || activeClip.tracksByVoiceId !== previousActiveClip.tracksByVoiceId
+    || activeClip.tracksByInstrumentId !== previousActiveClip.tracksByInstrumentId
     || activeClip.transportSettings !== previousActiveClip.transportSettings
     || state.masterBus.muted !== previousState.masterBus.muted
     || state.masterBus.tuningFrequencyHz
@@ -362,37 +362,37 @@ function didPlaybackStateChange(
     return true;
   }
 
-  if (state.voiceOrder !== previousState.voiceOrder) {
+  if (state.instrumentOrder !== previousState.instrumentOrder) {
     return true;
   }
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < state.voiceOrder.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < state.instrumentOrder.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = state.voiceOrder[voiceIndex];
+    const instrumentId = state.instrumentOrder[instrumentIndex];
 
-    if (voiceId === undefined) {
+    if (instrumentId === undefined) {
       continue;
     }
 
-    const voice = state.voicesById[voiceId];
-    const previousVoice = previousState.voicesById[voiceId];
-    const voiceState = activeClip.voiceStatesById[voiceId];
-    const previousVoiceState =
-      previousActiveClip.voiceStatesById[voiceId];
+    const instrument = state.projectInstrumentsById[instrumentId];
+    const previousInstrument = previousState.projectInstrumentsById[instrumentId];
+    const instrumentState = activeClip.instrumentStatesById[instrumentId];
+    const previousInstrumentState =
+      previousActiveClip.instrumentStatesById[instrumentId];
 
     if (
-      voice === undefined
-      || previousVoice === undefined
-      || voiceState === undefined
-      || previousVoiceState === undefined
-      || voice.pan !== previousVoice.pan
-      || voiceState.gain !== previousVoiceState.gain
-      || voiceState.muted !== previousVoiceState.muted
-      || voiceState.solo !== previousVoiceState.solo
-      || voiceState.instrument !== previousVoiceState.instrument
+      instrument === undefined
+      || previousInstrument === undefined
+      || instrumentState === undefined
+      || previousInstrumentState === undefined
+      || instrument.pan !== previousInstrument.pan
+      || instrumentState.gain !== previousInstrumentState.gain
+      || instrumentState.muted !== previousInstrumentState.muted
+      || instrumentState.solo !== previousInstrumentState.solo
+      || instrumentState.instrument !== previousInstrumentState.instrument
     ) {
       return true;
     }

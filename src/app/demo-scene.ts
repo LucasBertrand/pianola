@@ -2,17 +2,17 @@ import type {
   Note,
   NoteId,
   Clip,
-  ClipVoiceState,
+  ClipInstrumentState,
   ProjectState,
   Track,
-  Voice,
-  VoiceId,
+  ProjectInstrument,
+  InstrumentId,
 } from "../domain/model";
 import {
   APPLICATION_CONSTANTS,
   EDITOR_CONSTANTS,
   PROJECT_CONSTANTS,
-  VOICE_CONSTANTS,
+  INSTRUMENT_CONSTANTS,
 } from "../config/program-constants";
 import {
   createDefaultMasterBusState,
@@ -21,23 +21,23 @@ import {
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
-  createDefaultClipVoiceState,
-  createDefaultVoice,
+  createDefaultClipInstrumentState,
+  createDefaultProjectInstrument,
   getDefaultOscillatorWaveform,
-} from "../domain/voice-factory";
+} from "../domain/project-instrument-factory";
 
 export const DEMO_NOTE_COUNT = EDITOR_CONSTANTS.demoNoteCount;
 const DEMO_INITIAL_NOTE_SPAN_TICKS =
   EDITOR_CONSTANTS.demoInitialNoteSpanTicks;
 
-export interface DemoVoice {
-  readonly id: VoiceId;
+export interface DemoInstrument {
+  readonly id: InstrumentId;
   readonly name: string;
   readonly color: string;
 }
 
-export const DEMO_VOICES: readonly DemoVoice[] =
-  VOICE_CONSTANTS.demoVoices;
+export const DEMO_INSTRUMENTS: readonly DemoInstrument[] =
+  INSTRUMENT_CONSTANTS.demoInstruments;
 
 export function createDemoProjectState(): ProjectState {
   return createProjectState(
@@ -67,13 +67,13 @@ function createDemoNotes(noteCount: number): readonly Note[] {
     randomState = nextRandomState(randomState);
     const durationSelector = (randomState >>> 16) % 8;
     randomState = nextRandomState(randomState);
-    const voiceIndex =
-      (randomState >>> 24) % DEMO_VOICES.length;
-    const voice = DEMO_VOICES[voiceIndex];
+    const instrumentIndex =
+      (randomState >>> 24) % DEMO_INSTRUMENTS.length;
+    const instrument = DEMO_INSTRUMENTS[instrumentIndex];
     const durationTicks = getDurationTicks(durationSelector);
 
-    if (voice === undefined) {
-      throw new Error("A demo voice is required.");
+    if (instrument === undefined) {
+      throw new Error("A demo instrument is required.");
     }
 
     const maximumStartStep =
@@ -100,7 +100,7 @@ function createDemoNotes(noteCount: number): readonly Note[] {
 
         if (
           candidate !== undefined
-          && candidate.voiceId === voice.id
+          && candidate.instrumentId === instrument.id
           && candidate.pitch === pitch
           && startTick
             < candidate.startTick + candidate.durationTicks
@@ -129,7 +129,7 @@ function createDemoNotes(noteCount: number): readonly Note[] {
       startTick,
       durationTicks,
       velocity: 52 + (randomState >>> 12) % 76,
-      voiceId: voice.id,
+      instrumentId: instrument.id,
       enabled: true,
     };
   }
@@ -165,40 +165,40 @@ function createProjectState(
   notes: readonly Note[],
   title: string,
 ): ProjectState {
-  const voicesById: Record<VoiceId, Voice> = {};
-  const tracksByVoiceId: Record<VoiceId, Track> = {};
-  const voiceStatesById: Record<VoiceId, ClipVoiceState> = {};
-  const mutableNotesByVoiceId: Record<
-    VoiceId,
+  const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
+  const tracksByInstrumentId: Record<InstrumentId, Track> = {};
+  const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
+  const mutableNotesByInstrumentId: Record<
+    InstrumentId,
     Record<NoteId, Note>
   > = {};
-  const voiceOrder: VoiceId[] = [];
+  const instrumentOrder: InstrumentId[] = [];
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < DEMO_VOICES.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < DEMO_INSTRUMENTS.length;
+    instrumentIndex += 1
   ) {
-    const demoVoice = DEMO_VOICES[voiceIndex];
+    const demoInstrument = DEMO_INSTRUMENTS[instrumentIndex];
 
-    if (demoVoice === undefined) {
+    if (demoInstrument === undefined) {
       continue;
     }
 
-    const voice = createDomainVoice(demoVoice);
-    voicesById[voice.id] = voice;
-    voiceStatesById[voice.id] = createDefaultClipVoiceState(
-      getDefaultOscillatorWaveform(voiceIndex),
+    const instrument = createDomainInstrument(demoInstrument);
+    projectInstrumentsById[instrument.id] = instrument;
+    instrumentStatesById[instrument.id] = createDefaultClipInstrumentState(
+      getDefaultOscillatorWaveform(instrumentIndex),
     );
-    mutableNotesByVoiceId[voice.id] = {};
-    voiceOrder.push(voice.id);
+    mutableNotesByInstrumentId[instrument.id] = {};
+    instrumentOrder.push(instrument.id);
   }
 
   for (let noteIndex = 0; noteIndex < notes.length; noteIndex += 1) {
     const note = notes[noteIndex];
 
     if (note !== undefined) {
-      const notesById = mutableNotesByVoiceId[note.voiceId];
+      const notesById = mutableNotesByInstrumentId[note.instrumentId];
 
       if (notesById !== undefined) {
         notesById[note.id] = note;
@@ -207,16 +207,16 @@ function createProjectState(
   }
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < voiceOrder.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < instrumentOrder.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = voiceOrder[voiceIndex];
+    const instrumentId = instrumentOrder[instrumentIndex];
 
-    if (voiceId !== undefined) {
-      tracksByVoiceId[voiceId] = {
-        voiceId,
-        notesById: mutableNotesByVoiceId[voiceId] ?? {},
+    if (instrumentId !== undefined) {
+      tracksByInstrumentId[instrumentId] = {
+        instrumentId,
+        notesById: mutableNotesByInstrumentId[instrumentId] ?? {},
       };
     }
   }
@@ -226,8 +226,8 @@ function createProjectState(
     id: clipId,
     name: "Main Clip",
     measureCount: DEFAULT_MEASURE_COUNT,
-    tracksByVoiceId,
-    voiceStatesById,
+    tracksByInstrumentId,
+    instrumentStatesById,
     transportSettings: {
       ...createDefaultTransportState(),
       bpm: PROJECT_CONSTANTS.demoTempoBpm,
@@ -238,8 +238,8 @@ function createProjectState(
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title,
-    voicesById,
-    voiceOrder,
+    projectInstrumentsById,
+    instrumentOrder,
     clipsById: {
       [clipId]: clip,
     },
@@ -249,12 +249,12 @@ function createProjectState(
   };
 }
 
-function createDomainVoice(
-  demoVoice: DemoVoice,
-): Voice {
-  return createDefaultVoice({
-    id: demoVoice.id,
-    name: demoVoice.name,
-    color: demoVoice.color,
+function createDomainInstrument(
+  demoInstrument: DemoInstrument,
+): ProjectInstrument {
+  return createDefaultProjectInstrument({
+    id: demoInstrument.id,
+    name: demoInstrument.name,
+    color: demoInstrument.color,
   });
 }

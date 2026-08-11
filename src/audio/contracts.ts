@@ -5,11 +5,11 @@ import type {
   Tick,
   TimeSignature,
   TransportState,
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 
-export interface PackedVoiceEvents {
-  readonly voiceId: VoiceId;
+export interface PackedInstrumentEvents {
+  readonly instrumentId: InstrumentId;
   readonly noteIds: readonly NoteId[];
   readonly pitches: Uint8Array;
   readonly velocities: Uint8Array;
@@ -31,7 +31,7 @@ export interface PlaybackEnvelope {
   readonly releaseSeconds: number;
 }
 
-export interface SubtractivePlaybackInstrumentSnapshot {
+export interface SubtractivePlaybackPresetSnapshot {
   readonly kind: "subtractive";
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
@@ -44,25 +44,25 @@ export interface SubtractivePlaybackInstrumentSnapshot {
   readonly filterEnvelope: PlaybackEnvelope;
 }
 
-export interface PlaybackVoiceSnapshotBase extends PackedVoiceEvents {
+export interface PlaybackInstrumentSnapshotBase extends PackedInstrumentEvents {
   readonly gain: number;
   readonly pan: number;
   readonly muted: boolean;
   readonly solo: boolean;
 }
 
-/** Immutable audio representation of one subtractive project voice. */
-export interface SubtractivePlaybackVoiceSnapshot
-  extends PlaybackVoiceSnapshotBase {
-  readonly instrument: SubtractivePlaybackInstrumentSnapshot;
+/** Immutable audio representation of one subtractive project instrument. */
+export interface SubtractivePlaybackInstrumentSnapshot
+  extends PlaybackInstrumentSnapshotBase {
+  readonly instrument: SubtractivePlaybackPresetSnapshot;
 }
 
 /**
- * Discriminated playback voice variants consumed by the scheduler.
+ * Discriminated playback instrument variants consumed by the scheduler.
  * Add a new member only when its instrument renderer is implemented.
  */
-export type PlaybackVoiceSnapshot =
-  SubtractivePlaybackVoiceSnapshot;
+export type PlaybackInstrumentSnapshot =
+  SubtractivePlaybackInstrumentSnapshot;
 
 export interface PlaybackSnapshot {
   readonly projectRevision: number;
@@ -72,17 +72,17 @@ export interface PlaybackSnapshot {
   readonly masterMuted: boolean;
   readonly masterTuningFrequencyHz: number;
   readonly tempoMap: TempoMapSnapshot;
-  readonly voices: readonly PlaybackVoiceSnapshot[];
+  readonly instruments: readonly PlaybackInstrumentSnapshot[];
 }
 
 export type PlaybackStatus = "stopped" | "playing" | "paused";
 
 export interface ScheduledNoteEvent<
-  TVoice extends PlaybackVoiceSnapshot = PlaybackVoiceSnapshot,
+  TInstrument extends PlaybackInstrumentSnapshot = PlaybackInstrumentSnapshot,
 > {
   readonly occurrenceId: string;
   readonly generation: number;
-  readonly voice: TVoice;
+  readonly instrument: TInstrument;
   readonly pitch: number;
   readonly velocity: number;
   readonly startAudioTimeSeconds: number;
@@ -96,7 +96,7 @@ export interface AudioEnginePort {
   replacePlaybackSnapshot(snapshot: PlaybackSnapshot): void;
   resume(): Promise<void>;
   scheduleNote(event: ScheduledNoteEvent): void;
-  previewVoiceGain(voiceId: VoiceId, gain: number): void;
+  previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
   cancelScheduledAfter(atAudioTimeSeconds: number): void;
   cancelAll(atAudioTimeSeconds: number): void;
   dispose(): Promise<void>;
@@ -114,8 +114,8 @@ export interface AudioTransportController {
   pause(): void;
   stop(): void;
   seek(tick: Tick): void;
-  auditionPitch(voiceId: VoiceId, pitch: number): Promise<void>;
-  previewVoiceGain(voiceId: VoiceId, gain: number): void;
+  auditionPitch(instrumentId: InstrumentId, pitch: number): Promise<void>;
+  previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
   previewMasterGain(gain: number): void;
   pulse(): void;
   dispose(): Promise<void>;

@@ -113,14 +113,14 @@ export function useMidiFileWorkflow({
       pendingAnalysisRef.current = analysis;
       const details = [
         `Format ${String(analysis.sourceFormat)} - ${String(analysis.sourceTicksPerQuarterNote)} PPQN`,
-        `${String(analysis.noteCount)} notes - ${String(analysis.voiceCandidates.length)} voices`,
+        `${String(analysis.noteCount)} notes - ${String(analysis.instrumentCandidates.length)} instruments`,
         `${formatTempo(analysis.tempoBpm)} BPM - ${String(analysis.timeSignature.numerator)}/${String(analysis.timeSignature.denominator)}`,
         ...analysis.warnings,
       ];
 
       if (analysis.collisionCount > 0) {
         details.unshift(
-          `${String(analysis.collisionCount)} same-voice, same-pitch overlaps require resolution.`,
+          `${String(analysis.collisionCount)} same-instrument, same-pitch overlaps require resolution.`,
         );
       }
 

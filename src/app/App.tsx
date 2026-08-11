@@ -20,7 +20,7 @@ import {
 import type {
   ClipId,
   ProjectState,
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 import {
   getActiveClip,
@@ -94,8 +94,8 @@ import {
   useClipWorkflow,
 } from "./workflows/useClipWorkflow";
 import {
-  useVoiceWorkflow,
-} from "./workflows/useVoiceWorkflow";
+  useProjectInstrumentWorkflow,
+} from "./workflows/useProjectInstrumentWorkflow";
 import {
   useSelectionWorkflow,
 } from "./workflows/useSelectionWorkflow";
@@ -134,14 +134,14 @@ export function App(): React.JSX.Element {
   const [projectState, setProjectState] = useState(
     () => scene.projectStore.getState(),
   );
-  const [selectedVoiceId, setSelectedVoiceId] =
-    useState<VoiceId | null>(
-      () => scene.projectStore.getState().voiceOrder[0] ?? null,
+  const [selectedInstrumentId, setSelectedInstrumentId] =
+    useState<InstrumentId | null>(
+      () => scene.projectStore.getState().instrumentOrder[0] ?? null,
     );
   const [generalInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
   const [generalInspectorSection, setGeneralInspectorSection] =
-    useState<"voices" | "clips">("voices");
+    useState<"instruments" | "clips">("instruments");
   const [
     generalInspectorToolbarHost,
     setGeneralInspectorToolbarHost,
@@ -164,14 +164,14 @@ export function App(): React.JSX.Element {
     );
   const [applicationDialog, setApplicationDialog] =
     useState<ApplicationDialogState | null>(null);
-  const selectedVoice =
-    selectedVoiceId === null
+  const selectedInstrument =
+    selectedInstrumentId === null
       ? undefined
-      : projectState.voicesById[selectedVoiceId];
-  const selectedVoiceIndex =
-    selectedVoiceId === null
+      : projectState.projectInstrumentsById[selectedInstrumentId];
+  const selectedInstrumentIndex =
+    selectedInstrumentId === null
       ? -1
-      : projectState.voiceOrder.indexOf(selectedVoiceId);
+      : projectState.instrumentOrder.indexOf(selectedInstrumentId);
   const activeClip = getActiveClip(projectState);
 
   const totalTicks = getActiveClipDurationTicks(projectState);
@@ -190,12 +190,12 @@ export function App(): React.JSX.Element {
   const handleSelectionChange = useCallback(
     (
       hasSelection: boolean,
-      soleVoiceId: VoiceId | null,
+      soleInstrumentId: InstrumentId | null,
     ): void => {
       setSelectionAvailable(hasSelection);
 
-      if (soleVoiceId !== null) {
-        setSelectedVoiceId(soleVoiceId);
+      if (soleInstrumentId !== null) {
+        setSelectedInstrumentId(soleInstrumentId);
       }
     },
     [],
@@ -264,8 +264,8 @@ export function App(): React.JSX.Element {
     returnToStart,
     seek: seekPlayback,
     auditionPitch,
-    previewVoiceGain,
-    previewVoiceInstrument,
+    previewInstrumentGain,
+    previewInstrumentPreset,
     previewMasterGain,
   } = useAudioPlayback({
     projectStore: scene.projectStore,
@@ -279,12 +279,12 @@ export function App(): React.JSX.Element {
     },
   });
   const handlePitchAudition = useCallback((pitch: number): void => {
-    if (selectedVoiceId !== null) {
-      auditionPitch(selectedVoiceId, pitch);
+    if (selectedInstrumentId !== null) {
+      auditionPitch(selectedInstrumentId, pitch);
     }
   }, [
     auditionPitch,
-    selectedVoiceId,
+    selectedInstrumentId,
   ]);
 
   useEffect(
@@ -299,15 +299,15 @@ export function App(): React.JSX.Element {
       }
 
       setProjectState(state);
-      setSelectedVoiceId((currentVoiceId) => {
+      setSelectedInstrumentId((currentInstrumentId) => {
         if (
-          currentVoiceId !== null
-          && state.voicesById[currentVoiceId] !== undefined
+          currentInstrumentId !== null
+          && state.projectInstrumentsById[currentInstrumentId] !== undefined
         ) {
-          return currentVoiceId;
+          return currentInstrumentId;
         }
 
-        return state.voiceOrder[0] ?? null;
+        return state.instrumentOrder[0] ?? null;
       });
     }),
     [scene],
@@ -434,33 +434,33 @@ export function App(): React.JSX.Element {
     ],
   );
   const {
-    select: handleVoiceSelect,
-    add: handleAddVoice,
-    moveSelected: handleMoveSelectedVoice,
-    remove: handleDeleteVoice,
-    update: handleUpdateVoice,
-    updateClipState: handleUpdateClipVoiceState,
+    select: handleInstrumentSelect,
+    add: handleAddProjectInstrument,
+    moveSelected: handleMoveSelectedInstrument,
+    remove: handleDeleteProjectInstrument,
+    update: handleUpdateProjectInstrument,
+    updateClipState: handleUpdateClipInstrumentState,
     commitEnvelopeParameter: handleEnvelopeParameterCommit,
     previewEnvelopeParameter: handleEnvelopeParameterPreview,
     commitWaveform: handleWaveformCommit,
     commitPolyphony: handleInstrumentPolyphonyCommit,
     commitInstrumentParameter: handleInstrumentParameterCommit,
     previewInstrumentParameter: handleInstrumentParameterPreview,
-    selectNotes: handleSelectVoiceNotes,
-    toggleLock: handleToggleVoiceLock,
-  } = useVoiceWorkflow({
+    selectNotes: handleSelectInstrumentNotes,
+    toggleLock: handleToggleInstrumentLock,
+  } = useProjectInstrumentWorkflow({
     commands: scene.editorCommands,
-    selectedVoiceId,
-    selectVoice: setSelectedVoiceId,
-    toggleVoiceSelection(voiceId) {
-      scene.selectionRequests.toggleVoice(voiceId);
+    selectedInstrumentId,
+    selectInstrument: setSelectedInstrumentId,
+    toggleInstrumentSelection(instrumentId) {
+      scene.selectionRequests.toggleInstrument(instrumentId);
     },
-    removeVoiceFromSelection(voiceId) {
+    removeInstrumentFromSelection(instrumentId) {
       pianoRollEventControllerRef.current
-        ?.removeVoiceFromSelection(voiceId);
+        ?.removeInstrumentFromSelection(instrumentId);
     },
     confirm: showApplicationConfirmation,
-    previewInstrument: previewVoiceInstrument,
+    previewInstrument: previewInstrumentPreset,
   });
   const getPianoRollEventController = useCallback(
     (): PianoRollEventController | null =>
@@ -518,7 +518,7 @@ export function App(): React.JSX.Element {
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
     paste: handlePaste,
-    transferToSelectedVoice: handleTransferSelectionToVoice,
+    transferToSelectedInstrument: handleTransferSelectionToInstrument,
   } = useSelectionWorkflow({
     commands: scene.editorCommands,
     projectStore: scene.projectStore,
@@ -530,14 +530,14 @@ export function App(): React.JSX.Element {
     getGridResolutionTicks() {
       return scene.gridResolutionTicks.get();
     },
-    selectedVoiceId,
+    selectedInstrumentId,
     resolveCollision: handleNoteCollision,
     alert: showApplicationAlert,
   });
   const handleNoteColorModeToggle = useCallback((): void => {
     setNoteColorMode((currentMode) => {
       const nextMode: NoteColorMode =
-        currentMode === "voice" ? "pitch" : "voice";
+        currentMode === "instrument" ? "pitch" : "instrument";
 
       scene.noteColorMode.set(nextMode);
       return nextMode;
@@ -576,7 +576,7 @@ export function App(): React.JSX.Element {
       }
 
       return {
-        selectedVoiceId,
+        selectedInstrumentId,
         selectionMode,
         noteColorMode,
         pitchPreviewEnabled,
@@ -602,7 +602,7 @@ export function App(): React.JSX.Element {
       setSelectionMode(editorState.selectionMode);
       setNoteColorMode(editorState.noteColorMode);
       setPitchPreviewEnabled(editorState.pitchPreviewEnabled);
-      setSelectedVoiceId(editorState.selectedVoiceId);
+      setSelectedInstrumentId(editorState.selectedInstrumentId);
       const activeEditorState =
         editorState.clipStatesById[nextProject.activeClipId];
 
@@ -686,13 +686,13 @@ export function App(): React.JSX.Element {
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
             noteColorMode={noteColorMode}
-            selectedVoice={
-              selectedVoice === undefined
+            selectedInstrument={
+              selectedInstrument === undefined
                 ? undefined
                 : {
-                    color: selectedVoice.color,
+                    color: selectedInstrument.color,
                     locked:
-                      activeClip.voiceStatesById[selectedVoice.id]
+                      activeClip.instrumentStatesById[selectedInstrument.id]
                         ?.locked ?? true,
                   }
             }
@@ -719,7 +719,7 @@ export function App(): React.JSX.Element {
             onPaste={handlePaste}
             onSelectionModeChange={setSelectionMode}
             onNoteColorModeToggle={handleNoteColorModeToggle}
-            onTransferSelectionToVoice={handleTransferSelectionToVoice}
+            onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
             onSliceSelectionAtPlayhead={handleSliceSelectionAtPlayhead}
             onTransformSelection={handleTransformSelection}
           />,
@@ -757,7 +757,7 @@ export function App(): React.JSX.Element {
                 <PianoRollLayers
                   runtime={scene}
                   selectionMode={selectionMode}
-                  activeVoiceId={selectedVoiceId ?? ""}
+                  activeInstrumentId={selectedInstrumentId ?? ""}
                   totalTicks={totalTicks}
                   setViewport={publishViewport}
                   onHorizontalViewportInteractionStart={
@@ -797,9 +797,9 @@ export function App(): React.JSX.Element {
           open={generalInspectorOpen}
           portraitSection={generalInspectorSection}
           projectState={projectState}
-          selectedVoiceId={selectedVoiceId}
-          selectedVoiceIndex={selectedVoiceIndex}
-          selectedVoice={selectedVoice}
+          selectedInstrumentId={selectedInstrumentId}
+          selectedInstrumentIndex={selectedInstrumentIndex}
+          selectedInstrument={selectedInstrument}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClose={() => {
             setGeneralInspectorOpen(false);
@@ -810,15 +810,15 @@ export function App(): React.JSX.Element {
           onMoveActiveClip={handleMoveActiveClip}
           onDeleteClip={handleDeleteClip}
           onRenameClip={handleRenameClip}
-          onMoveSelectedVoice={handleMoveSelectedVoice}
-          onAddVoice={handleAddVoice}
-          onVoiceSelect={handleVoiceSelect}
-          onUpdateVoice={handleUpdateVoice}
-          onUpdateClipVoiceState={handleUpdateClipVoiceState}
-          onVoiceGainPreview={previewVoiceGain}
-          onSelectVoiceNotes={handleSelectVoiceNotes}
-          onToggleVoiceLock={handleToggleVoiceLock}
-          onDeleteVoice={handleDeleteVoice}
+          onMoveSelectedInstrument={handleMoveSelectedInstrument}
+          onAddProjectInstrument={handleAddProjectInstrument}
+          onInstrumentSelect={handleInstrumentSelect}
+          onUpdateProjectInstrument={handleUpdateProjectInstrument}
+          onUpdateClipInstrumentState={handleUpdateClipInstrumentState}
+          onInstrumentGainPreview={previewInstrumentGain}
+          onSelectInstrumentNotes={handleSelectInstrumentNotes}
+          onToggleInstrumentLock={handleToggleInstrumentLock}
+          onDeleteProjectInstrument={handleDeleteProjectInstrument}
           onWaveformCommit={handleWaveformCommit}
           onPolyphonyCommit={handleInstrumentPolyphonyCommit}
           onEnvelopePreview={handleEnvelopeParameterPreview}

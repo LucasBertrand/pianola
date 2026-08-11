@@ -18,7 +18,7 @@ import {
   getActiveClip,
   type Note,
   type NoteId,
-  type VoiceId,
+  type InstrumentId,
 } from "../../domain/model";
 import type {
   NoteCollisionResolutionRequest,
@@ -36,8 +36,8 @@ import {
   createTouchEnvelope,
 } from "../../interaction/touch-envelope";
 import {
-  compareNotesByVoiceRenderOrder,
-  type VoiceRenderStyle,
+  compareNotesByInstrumentRenderOrder,
+  type InstrumentRenderStyle,
 } from "../rendering/note-style";
 import {
   type InteractionVisualController,
@@ -81,11 +81,11 @@ export interface UsePianoRollEventsOptions {
   >;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly spatialIndex: SpatialIndex;
-  readonly voiceStyles: ReadonlyRenderSignal<
-    Readonly<Record<VoiceId, VoiceRenderStyle>>
+  readonly instrumentStyles: ReadonlyRenderSignal<
+    Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly editorCommands: EditorCommandPort;
-  readonly activeVoiceId: VoiceId;
+  readonly activeInstrumentId: InstrumentId;
   readonly totalTicks: number;
   readonly selectionMode: SelectionMode;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
@@ -94,7 +94,7 @@ export interface UsePianoRollEventsOptions {
   readonly onGridSeek?: (tick: number) => void;
   readonly onSelectionChange?: (
     hasSelection: boolean,
-    soleVoiceId: VoiceId | null,
+    soleInstrumentId: InstrumentId | null,
   ) => void;
   readonly onNoteCollision?:
     | ((request: NoteCollisionResolutionRequest) => void)
@@ -129,9 +129,9 @@ export function usePianoRollEvents(
     totalTicks,
     viewport,
     spatialIndex,
-    voiceStyles,
+    instrumentStyles,
     editorCommands,
-    activeVoiceId,
+    activeInstrumentId,
     selectionMode,
     gridResolutionTicks,
     pitchSnapSettings,
@@ -142,9 +142,9 @@ export function usePianoRollEvents(
     onTransactionRejected,
   } = options;
   const sessionRef = useRef<PianoRollInteractionSession | null>(null);
-  const activeVoiceIdRef = useRef(activeVoiceId);
+  const activeInstrumentIdRef = useRef(activeInstrumentId);
 
-  activeVoiceIdRef.current = activeVoiceId;
+  activeInstrumentIdRef.current = activeInstrumentId;
 
   if (sessionRef.current === null) {
     sessionRef.current = new PianoRollInteractionSession(
@@ -183,7 +183,7 @@ export function usePianoRollEvents(
       );
       onSelectionChange?.(
         selection.size > 0,
-        selection.getSoleVoiceId(),
+        selection.getSoleInstrumentId(),
       );
     };
 
@@ -197,13 +197,13 @@ export function usePianoRollEvents(
       onSelectionChange?.(false, null);
     };
 
-    const isVoiceLocked = (voiceId: VoiceId): boolean => {
+    const isInstrumentLocked = (instrumentId: InstrumentId): boolean => {
       const state = editorCommands.getState();
 
-      return getActiveClip(state).voiceStatesById[voiceId]?.locked ?? true;
+      return getActiveClip(state).instrumentStatesById[instrumentId]?.locked ?? true;
     };
     const isNoteEditable = (note: Note): boolean =>
-      !isVoiceLocked(note.voiceId);
+      !isInstrumentLocked(note.instrumentId);
     const isSelectedNoteEditable = (note: Note): boolean =>
       selection.has(note.id) && isNoteEditable(note);
 
@@ -243,7 +243,7 @@ export function usePianoRollEvents(
     const restoreGestureSelection = (): void => {
       if (
         session.restoreGestureSelectionOnce(
-          (note) => !isVoiceLocked(note.voiceId),
+          (note) => !isInstrumentLocked(note.instrumentId),
         )
       ) {
         showSelection();
@@ -254,7 +254,7 @@ export function usePianoRollEvents(
       note: Note,
       additive: boolean,
     ): void => {
-      if (isVoiceLocked(note.voiceId)) {
+      if (isInstrumentLocked(note.instrumentId)) {
         return;
       }
 
@@ -282,7 +282,7 @@ export function usePianoRollEvents(
       note: Note,
       includeSelection = true,
     ): boolean => {
-      if (isVoiceLocked(note.voiceId)) {
+      if (isInstrumentLocked(note.instrumentId)) {
         return false;
       }
 
@@ -370,7 +370,7 @@ export function usePianoRollEvents(
         pointerPitch,
         bodyEnvelope,
         isNoteEditable,
-        compareNotesByVoiceRenderOrder,
+        compareNotesByInstrumentRenderOrder,
       );
       const hitNote = hitCandidate;
       const edgeEnvelope = createTouchEnvelope(
@@ -384,7 +384,7 @@ export function usePianoRollEvents(
         pointerPitch,
         edgeEnvelope,
         isSelectedNoteEditable,
-        compareNotesByVoiceRenderOrder,
+        compareNotesByInstrumentRenderOrder,
       );
       const edgeCandidate =
         selectedEdgeCandidate
@@ -393,7 +393,7 @@ export function usePianoRollEvents(
           pointerPitch,
           edgeEnvelope,
           isNoteEditable,
-          compareNotesByVoiceRenderOrder,
+          compareNotesByInstrumentRenderOrder,
         );
       const edgeHit =
         edgeCandidate !== undefined
@@ -442,7 +442,7 @@ export function usePianoRollEvents(
           visualsRef.current?.beginDrag(
             selection.notes,
             converter,
-            voiceStyles.get(),
+            instrumentStyles.get(),
           );
         } else {
           const originResizeTick =
@@ -464,7 +464,7 @@ export function usePianoRollEvents(
           visualsRef.current?.beginResize(
             selection.notes,
             converter,
-            voiceStyles.get(),
+            instrumentStyles.get(),
             resizeEdge,
           );
         }
@@ -599,15 +599,15 @@ export function usePianoRollEvents(
         visualsRef.current?.endResize();
         showSelection();
       } else if (completedMode === "DRAWING") {
-        const voiceId = completion.drawVoiceId;
-        if (voiceId !== null) {
+        const instrumentId = completion.drawInstrumentId;
+        if (instrumentId !== null) {
           const note: Note = {
             id: session.createNoteId(Date.now()),
             pitch: completion.drawPitch,
             startTick: completion.drawStartTick,
             durationTicks: completion.drawDurationTicks,
             velocity: EDITOR_CONSTANTS.defaultDrawVelocity,
-            voiceId,
+            instrumentId,
             enabled: true,
           };
 
@@ -678,7 +678,7 @@ export function usePianoRollEvents(
 
             if (
               note !== undefined
-              && !isVoiceLocked(note.voiceId)
+              && !isInstrumentLocked(note.instrumentId)
               && !selection.has(note.id)
             ) {
               selection.add(note);
@@ -739,7 +739,7 @@ export function usePianoRollEvents(
         converter.cssPixelXToTick(localX),
         converter.cssPixelYToPitch(localY),
         isNoteEditable,
-        compareNotesByVoiceRenderOrder,
+        compareNotesByInstrumentRenderOrder,
       );
 
       if (note !== undefined) {
@@ -767,7 +767,7 @@ export function usePianoRollEvents(
         pitch,
         envelope,
         isNoteEditable,
-        compareNotesByVoiceRenderOrder,
+        compareNotesByInstrumentRenderOrder,
       );
 
       if (note !== undefined) {
@@ -776,20 +776,20 @@ export function usePianoRollEvents(
         return;
       }
 
-      const currentActiveVoiceId = activeVoiceIdRef.current;
+      const currentActiveInstrumentId = activeInstrumentIdRef.current;
       const currentState = editorCommands.getState();
-      const activeVoice = currentState.voicesById[currentActiveVoiceId];
-      const activeVoiceState = getActiveClip(currentState)
-        .voiceStatesById[currentActiveVoiceId];
+      const activeInstrument = currentState.projectInstrumentsById[currentActiveInstrumentId];
+      const activeInstrumentState = getActiveClip(currentState)
+        .instrumentStatesById[currentActiveInstrumentId];
 
       if (
         pitch < 0
         || pitch > 127
-        || activeVoice === undefined
-        || activeVoiceState?.locked !== false
+        || activeInstrument === undefined
+        || activeInstrumentState?.locked !== false
         || getActiveClip(
           editorCommands.getState(),
-        ).tracksByVoiceId[currentActiveVoiceId] === undefined
+        ).tracksByInstrumentId[currentActiveInstrumentId] === undefined
       ) {
         return;
       }
@@ -832,16 +832,16 @@ export function usePianoRollEvents(
         startTick,
         drawPitch,
         resolutionTicks,
-        currentActiveVoiceId,
+        currentActiveInstrumentId,
       );
       clearSelection();
       visualsRef.current?.beginDraw(
         startTick,
         drawPitch,
         resolutionTicks,
-        currentActiveVoiceId,
+        currentActiveInstrumentId,
         converter,
-        voiceStyles.get()[currentActiveVoiceId],
+        instrumentStyles.get()[currentActiveInstrumentId],
       );
     };
 
@@ -871,31 +871,31 @@ export function usePianoRollEvents(
         return;
       }
 
-      const voiceId = request.voiceId;
+      const instrumentId = request.instrumentId;
 
       const projectState = editorCommands.getState();
       const activeClip = getActiveClip(projectState);
       selection.reconcile(
         projectState,
         (note) =>
-          activeClip.voiceStatesById[note.voiceId]?.locked === false,
+          activeClip.instrumentStatesById[note.instrumentId]?.locked === false,
       );
-      const requestedVoice = projectState.voicesById[voiceId];
-      const requestedVoiceState = activeClip.voiceStatesById[voiceId];
+      const requestedInstrument = projectState.projectInstrumentsById[instrumentId];
+      const requestedInstrumentState = activeClip.instrumentStatesById[instrumentId];
 
       if (
-        requestedVoice === undefined
-        || requestedVoiceState?.locked !== false
+        requestedInstrument === undefined
+        || requestedInstrumentState?.locked !== false
       ) {
         showSelection();
         return;
       }
 
-      selection.toggleVoice(
+      selection.toggleInstrument(
         projectState,
-        voiceId,
+        instrumentId,
         (note) =>
-          activeClip.voiceStatesById[note.voiceId]?.locked === false,
+          activeClip.instrumentStatesById[note.instrumentId]?.locked === false,
       );
 
       showSelection();
@@ -953,7 +953,7 @@ export function usePianoRollEvents(
     viewport,
     visualsRef,
     selectionRequests,
-    voiceStyles,
+    instrumentStyles,
   ]);
 
   return {
@@ -974,11 +974,11 @@ export function usePianoRollEvents(
 
       onSelectionChange?.(
         selection.size > 0,
-        selection.getSoleVoiceId(),
+        selection.getSoleInstrumentId(),
       );
     },
-    removeVoiceFromSelection(voiceId: VoiceId): void {
-      selection.retain((note) => note.voiceId !== voiceId);
+    removeInstrumentFromSelection(instrumentId: InstrumentId): void {
+      selection.retain((note) => note.instrumentId !== instrumentId);
       const converter = session.synchronizeConverter(
         viewport.get(),
         viewport.version,
@@ -991,7 +991,7 @@ export function usePianoRollEvents(
 
       onSelectionChange?.(
         selection.size > 0,
-        selection.getSoleVoiceId(),
+        selection.getSoleInstrumentId(),
       );
     },
     togglePitchSelection(pitch: number): void {
@@ -1005,7 +1005,7 @@ export function usePianoRollEvents(
         state,
         pitch,
         (note) =>
-          activeClip.voiceStatesById[note.voiceId]?.locked === false,
+          activeClip.instrumentStatesById[note.instrumentId]?.locked === false,
       );
 
       if (!changed) {
@@ -1024,7 +1024,7 @@ export function usePianoRollEvents(
 
       onSelectionChange?.(
         selection.size > 0,
-        selection.getSoleVoiceId(),
+        selection.getSoleInstrumentId(),
       );
     },
     cancel(): void {

@@ -1,12 +1,12 @@
 import type {
   Note,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import type {
   CoordinateConverter,
 } from "../../geometry/converter";
 import type {
-  VoiceRenderStyle,
+  InstrumentRenderStyle,
 } from "../rendering/note-style";
 import type {
   PitchSnapSettings,
@@ -19,7 +19,7 @@ export interface InteractionVisualController {
   beginDrag(
     notes: readonly Note[],
     converter: CoordinateConverter,
-    stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+    stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
   ): void;
   updateDrag(
     deltaXCssPixels: number,
@@ -31,7 +31,7 @@ export interface InteractionVisualController {
   beginResize(
     notes: readonly Note[],
     converter: CoordinateConverter,
-    stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+    stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     edge: ResizeEdge,
   ): void;
   updateResize(edge: ResizeEdge, deltaXCssPixels: number): void;
@@ -40,9 +40,9 @@ export interface InteractionVisualController {
     startTick: number,
     pitch: number,
     durationTicks: number,
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     converter: CoordinateConverter,
-    style: VoiceRenderStyle | undefined,
+    style: InstrumentRenderStyle | undefined,
   ): void;
   updateDraw(widthCssPixels: number): void;
   endDraw(): void;

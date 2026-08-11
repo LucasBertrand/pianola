@@ -16,20 +16,20 @@ const SUBTRACTIVE_POLYPHONY_OPTIONS = Array.from(
 
 export interface SubtractivePolyphonySelectProps {
   readonly value: number;
-  readonly voiceName: string;
+  readonly instrumentName: string;
   readonly onCommit: (value: number) => void;
 }
 
 /** Controls the active clip's subtractive synthesizer polyphony. */
 export function SubtractivePolyphonySelect({
   value,
-  voiceName,
+  instrumentName,
   onCommit,
 }: SubtractivePolyphonySelectProps): React.JSX.Element {
   return (
     <label
       className="subtractive-polyphony-control"
-      title={`Subtractive synth polyphony for ${voiceName}`}
+      title={`Subtractive synth polyphony for ${instrumentName}`}
       onClick={(event) => {
         event.stopPropagation();
       }}
@@ -43,7 +43,7 @@ export function SubtractivePolyphonySelect({
       <span aria-hidden="true">×</span>
       <select
         value={value}
-        aria-label={`Subtractive synth polyphony for ${voiceName}`}
+        aria-label={`Subtractive synth polyphony for ${instrumentName}`}
         onChange={(event) => {
           onCommit(Number(event.currentTarget.value));
         }}

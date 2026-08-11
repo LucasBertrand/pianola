@@ -42,7 +42,7 @@ export function ClipInspector({
         </div>
         <div className="general-inspector-heading-actions">
           <button
-            className="voice-order-button"
+            className="instrument-order-button"
             type="button"
             aria-label="Move selected clip up"
             title="Move selected clip up"
@@ -54,7 +54,7 @@ export function ClipInspector({
             </svg>
           </button>
           <button
-            className="voice-order-button"
+            className="instrument-order-button"
             type="button"
             aria-label="Move selected clip down"
             title="Move selected clip down"
@@ -91,7 +91,7 @@ export function ClipInspector({
         </div>
       </div>
 
-      <div className="voice-list clip-list">
+      <div className="instrument-list clip-list">
         {projectState.clipOrder.map((clipId, clipIndex) => {
           const clip = projectState.clipsById[clipId];
 
@@ -102,7 +102,7 @@ export function ClipInspector({
           return (
             <article
               className={
-                `voice-card clip-card${
+                `project-instrument-card clip-card${
                   clip.id === projectState.activeClipId
                     ? " is-selected"
                     : ""
@@ -114,19 +114,19 @@ export function ClipInspector({
               <span className="clip-order-index" aria-hidden="true">
                 {clipIndex + 1}
               </span>
-              <div className="voice-copy">
+              <div className="instrument-copy">
                 <LongPressNameEditor
                   entityId={clip.id}
                   name={clip.name}
                   maximumLength={MAXIMUM_CLIP_NAME_LENGTH}
-                  className="voice-name-input"
+                  className="instrument-name-input"
                   onSelect={onSelect}
                   onRename={(name) => onRename(clip.id, name)}
                 />
                 <span>{clip.measureCount} measures</span>
               </div>
               <button
-                className="voice-duplicate-button"
+                className="instrument-duplicate-button"
                 type="button"
                 aria-label={`Duplicate ${clip.name}`}
                 title="Duplicate clip"
@@ -145,7 +145,7 @@ export function ClipInspector({
                 </svg>
               </button>
               <button
-                className="voice-delete-button"
+                className="instrument-delete-button"
                 type="button"
                 aria-label={`Delete ${clip.name}`}
                 title="Delete clip"

@@ -1,17 +1,17 @@
 import React from "react";
 import type {
-  UpdateVoiceChanges,
+  UpdateProjectInstrumentChanges,
 } from "../../domain/commands";
 import {
   getActiveClip,
   type AdsrEnvelope,
   type ClipId,
-  type ClipVoiceState,
+  type ClipInstrumentState,
   type OscillatorWaveform,
   type ProjectState,
   type SubtractiveSynthContinuousParameter,
-  type Voice,
-  type VoiceId,
+  type ProjectInstrument,
+  type InstrumentId,
 } from "../../domain/model";
 import {
   ClipInspector,
@@ -20,17 +20,17 @@ import {
   InstrumentInspector,
 } from "./InstrumentInspector";
 import {
-  VoiceGainSlider,
-  VoiceNameEditor,
-} from "./VoiceControls";
+  InstrumentGainSlider,
+  InstrumentNameEditor,
+} from "./ProjectInstrumentControls";
 
 export interface GeneralInspectorProps {
   readonly open: boolean;
-  readonly portraitSection: "voices" | "clips";
+  readonly portraitSection: "instruments" | "clips";
   readonly projectState: ProjectState;
-  readonly selectedVoiceId: VoiceId | null;
-  readonly selectedVoiceIndex: number;
-  readonly selectedVoice: Voice | undefined;
+  readonly selectedInstrumentId: InstrumentId | null;
+  readonly selectedInstrumentIndex: number;
+  readonly selectedInstrument: ProjectInstrument | undefined;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClose: () => void;
   readonly onClipSelect: (clipId: ClipId) => void;
@@ -39,53 +39,53 @@ export interface GeneralInspectorProps {
   readonly onMoveActiveClip: (direction: -1 | 1) => void;
   readonly onDeleteClip: (clipId: ClipId) => void;
   readonly onRenameClip: (clipId: ClipId, name: string) => void;
-  readonly onMoveSelectedVoice: (direction: -1 | 1) => void;
-  readonly onAddVoice: () => void;
-  readonly onVoiceSelect: (voiceId: VoiceId) => void;
-  readonly onUpdateVoice: (
-    voiceId: VoiceId,
-    changes: UpdateVoiceChanges,
+  readonly onMoveSelectedInstrument: (direction: -1 | 1) => void;
+  readonly onAddProjectInstrument: () => void;
+  readonly onInstrumentSelect: (instrumentId: InstrumentId) => void;
+  readonly onUpdateProjectInstrument: (
+    instrumentId: InstrumentId,
+    changes: UpdateProjectInstrumentChanges,
     label: string,
   ) => void;
-  readonly onVoiceGainPreview: (
-    voiceId: VoiceId,
+  readonly onInstrumentGainPreview: (
+    instrumentId: InstrumentId,
     gain: number,
   ) => void;
-  readonly onUpdateClipVoiceState: (
-    voiceId: VoiceId,
-    changes: Partial<ClipVoiceState>,
+  readonly onUpdateClipInstrumentState: (
+    instrumentId: InstrumentId,
+    changes: Partial<ClipInstrumentState>,
     label: string,
   ) => void;
-  readonly onSelectVoiceNotes: (voiceId: VoiceId) => void;
-  readonly onToggleVoiceLock: (voice: Voice) => void;
-  readonly onDeleteVoice: (voiceId: VoiceId) => void;
+  readonly onSelectInstrumentNotes: (instrumentId: InstrumentId) => void;
+  readonly onToggleInstrumentLock: (instrument: ProjectInstrument) => void;
+  readonly onDeleteProjectInstrument: (instrumentId: InstrumentId) => void;
   readonly onWaveformCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     waveform: OscillatorWaveform,
   ) => void;
   readonly onPolyphonyCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     polyphony: number,
   ) => void;
   readonly onEnvelopeCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     envelopeKind: "amplitude" | "filter",
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
   readonly onEnvelopePreview: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     envelopeKind: "amplitude" | "filter",
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
   readonly onInstrumentParameterCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
   ) => void;
   readonly onInstrumentParameterPreview: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
   ) => void;
@@ -95,9 +95,9 @@ export function GeneralInspector({
   open,
   portraitSection,
   projectState,
-  selectedVoiceId,
-  selectedVoiceIndex,
-  selectedVoice,
+  selectedInstrumentId,
+  selectedInstrumentIndex,
+  selectedInstrument,
   setToolbarHost,
   onClose,
   onClipSelect,
@@ -106,15 +106,15 @@ export function GeneralInspector({
   onMoveActiveClip,
   onDeleteClip,
   onRenameClip,
-  onMoveSelectedVoice,
-  onAddVoice,
-  onVoiceSelect,
-  onUpdateVoice,
-  onVoiceGainPreview,
-  onUpdateClipVoiceState,
-  onSelectVoiceNotes,
-  onToggleVoiceLock,
-  onDeleteVoice,
+  onMoveSelectedInstrument,
+  onAddProjectInstrument,
+  onInstrumentSelect,
+  onUpdateProjectInstrument,
+  onInstrumentGainPreview,
+  onUpdateClipInstrumentState,
+  onSelectInstrumentNotes,
+  onToggleInstrumentLock,
+  onDeleteProjectInstrument,
   onWaveformCommit,
   onPolyphonyCommit,
   onEnvelopeCommit,
@@ -148,36 +148,36 @@ export function GeneralInspector({
       onDelete={onDeleteClip}
       onRename={onRenameClip}
     />
-    <section className="voice-inspector-section">
-    <div className="voice-management-panel">
+    <section className="instrument-inspector-section">
+    <div className="instrument-management-panel">
     <div className="general-inspector-heading">
       <div>
-        <h1>Voices</h1>
+        <h1>Instruments</h1>
       </div>
       <div className="general-inspector-heading-actions">
         <button
-          className="voice-order-button"
+          className="instrument-order-button"
           type="button"
-          aria-label="Move selected voice up"
-          title="Move selected voice up"
-          disabled={selectedVoiceIndex <= 0}
-          onClick={() => onMoveSelectedVoice(-1)}
+          aria-label="Move selected instrument up"
+          title="Move selected instrument up"
+          disabled={selectedInstrumentIndex <= 0}
+          onClick={() => onMoveSelectedInstrument(-1)}
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <path d="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
           </svg>
         </button>
         <button
-          className="voice-order-button"
+          className="instrument-order-button"
           type="button"
-          aria-label="Move selected voice down"
-          title="Move selected voice down"
+          aria-label="Move selected instrument down"
+          title="Move selected instrument down"
           disabled={
-            selectedVoiceIndex < 0
-            || selectedVoiceIndex
-              >= projectState.voiceOrder.length - 1
+            selectedInstrumentIndex < 0
+            || selectedInstrumentIndex
+              >= projectState.instrumentOrder.length - 1
           }
-          onClick={() => onMoveSelectedVoice(1)}
+          onClick={() => onMoveSelectedInstrument(1)}
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <path d="M10 5v10M5.5 10.5 10 15l4.5-4.5" />
@@ -186,105 +186,105 @@ export function GeneralInspector({
         <button
           className="add-button"
           type="button"
-          aria-label="Add voice"
-          onClick={onAddVoice}
+          aria-label="Add instrument"
+          onClick={onAddProjectInstrument}
         >
           +
         </button>
       </div>
     </div>
 
-    <div className="voice-list">
-      {projectState.voiceOrder.map((voiceId) => {
-        const voice = projectState.voicesById[voiceId];
-        const voiceState = activeClip.voiceStatesById[voiceId];
+    <div className="instrument-list">
+      {projectState.instrumentOrder.map((instrumentId) => {
+        const instrument = projectState.projectInstrumentsById[instrumentId];
+        const instrumentState = activeClip.instrumentStatesById[instrumentId];
 
-        if (voice === undefined || voiceState === undefined) {
+        if (instrument === undefined || instrumentState === undefined) {
           return null;
         }
 
         return (
           <article
             className={
-              `voice-card${
-                voice.id === selectedVoiceId
+              `project-instrument-card${
+                instrument.id === selectedInstrumentId
                   ? " is-selected"
                   : ""
-              }${voiceState.muted ? " is-muted" : ""}${
-                voiceState.locked ? " is-locked" : ""
+              }${instrumentState.muted ? " is-muted" : ""}${
+                instrumentState.locked ? " is-locked" : ""
               }`
             }
-            key={voice.id}
+            key={instrument.id}
             style={{
-              "--voice-color": voice.color,
+              "--instrument-color": instrument.color,
             } as React.CSSProperties}
-            onClick={() => onVoiceSelect(voice.id)}
+            onClick={() => onInstrumentSelect(instrument.id)}
           >
             <label
-              className="voice-color-control"
-              aria-label={`Color for ${voice.name}`}
-              title="Change voice color"
+              className="instrument-color-control"
+              aria-label={`Color for ${instrument.name}`}
+              title="Change instrument color"
             >
-              <span className="voice-color" />
+              <span className="instrument-color" />
               <input
                 type="color"
-                value={voice.color}
+                value={instrument.color}
                 onChange={(event) => {
-                  onUpdateVoice(
-                    voice.id,
+                  onUpdateProjectInstrument(
+                    instrument.id,
                     {
                       color: event.currentTarget.value,
                     },
-                    "Update voice color",
+                    "Update instrument color",
                   );
                 }}
               />
             </label>
-            <div className="voice-copy">
-              <VoiceNameEditor
-                voice={voice}
-                onSelect={onVoiceSelect}
+            <div className="instrument-copy">
+              <InstrumentNameEditor
+                instrument={instrument}
+                onSelect={onInstrumentSelect}
                 onRename={(name) => {
-                  onUpdateVoice(
-                    voice.id,
+                  onUpdateProjectInstrument(
+                    instrument.id,
                     {
                       name,
                     },
-                    "Rename voice",
+                    "Rename instrument",
                   );
                 }}
               />
             </div>
-            <VoiceGainSlider
-              gain={voiceState.gain}
-              voiceName={voice.name}
+            <InstrumentGainSlider
+              gain={instrumentState.gain}
+              instrumentName={instrument.name}
               onPreview={(gain) => {
-                onVoiceGainPreview(voice.id, gain);
+                onInstrumentGainPreview(instrument.id, gain);
               }}
               onCommit={(gain) => {
-                onUpdateClipVoiceState(
-                  voice.id,
+                onUpdateClipInstrumentState(
+                  instrument.id,
                   {
                     gain,
                   },
-                  "Update voice volume",
+                  "Update instrument volume",
                 );
               }}
             />
-            <div className="voice-actions">
+            <div className="instrument-actions">
               <button
-                className="voice-select-all-button"
+                className="instrument-select-all-button"
                 type="button"
-                aria-label={`Select all notes from ${voice.name}`}
+                aria-label={`Select all notes from ${instrument.name}`}
                 title="Select all notes"
-                disabled={voiceState.locked}
+                disabled={instrumentState.locked}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onSelectVoiceNotes(voice.id);
+                  onSelectInstrumentNotes(instrument.id);
                 }}
               >
                 <svg
-                  className="voice-select-all-icon"
+                  className="instrument-select-all-icon"
                   viewBox="0 0 20 20"
                   aria-hidden="true"
                 >
@@ -295,21 +295,21 @@ export function GeneralInspector({
               </button>
               <button
                 className={
-                  voiceState.locked
-                    ? "voice-lock-button is-active"
-                    : "voice-lock-button"
+                  instrumentState.locked
+                    ? "instrument-lock-button is-active"
+                    : "instrument-lock-button"
                 }
                 type="button"
-                aria-label={`${voiceState.locked ? "Unlock" : "Lock"} ${voice.name}`}
-                aria-pressed={voiceState.locked}
-                title={voiceState.locked ? "Unlock voice" : "Lock voice"}
+                aria-label={`${instrumentState.locked ? "Unlock" : "Lock"} ${instrument.name}`}
+                aria-pressed={instrumentState.locked}
+                title={instrumentState.locked ? "Unlock instrument" : "Lock instrument"}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onToggleVoiceLock(voice);
+                  onToggleInstrumentLock(instrument);
                 }}
               >
                 <svg
-                  className="voice-lock-icon"
+                  className="instrument-lock-icon"
                   viewBox="0 0 20 20"
                   aria-hidden="true"
                 >
@@ -325,21 +325,21 @@ export function GeneralInspector({
               </button>
               <button
                 className={
-                  voiceState.muted
-                    ? "voice-mute-button is-active"
-                    : "voice-mute-button"
+                  instrumentState.muted
+                    ? "instrument-mute-button is-active"
+                    : "instrument-mute-button"
                 }
                 type="button"
-                aria-label={`${voiceState.muted ? "Unmute" : "Mute"} ${voice.name}`}
-                aria-pressed={voiceState.muted}
+                aria-label={`${instrumentState.muted ? "Unmute" : "Mute"} ${instrument.name}`}
+                aria-pressed={instrumentState.muted}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onUpdateClipVoiceState(
-                    voice.id,
+                  onUpdateClipInstrumentState(
+                    instrument.id,
                     {
-                      muted: !voiceState.muted,
+                      muted: !instrumentState.muted,
                     },
-                    voiceState.muted ? "Unmute voice" : "Mute voice",
+                    instrumentState.muted ? "Unmute instrument" : "Mute instrument",
                   );
                 }}
               >
@@ -347,40 +347,40 @@ export function GeneralInspector({
               </button>
               <button
                 className={
-                  voiceState.solo
-                    ? "voice-solo-button is-active"
-                    : "voice-solo-button"
+                  instrumentState.solo
+                    ? "instrument-solo-button is-active"
+                    : "instrument-solo-button"
                 }
                 type="button"
-                aria-label={`${voiceState.solo ? "Disable solo for" : "Solo"} ${voice.name}`}
-                aria-pressed={voiceState.solo}
+                aria-label={`${instrumentState.solo ? "Disable solo for" : "Solo"} ${instrument.name}`}
+                aria-pressed={instrumentState.solo}
                 title={
-                  voiceState.solo
+                  instrumentState.solo
                     ? "Disable solo"
-                    : "Solo voice"
+                    : "Solo instrument"
                 }
                 onClick={(event) => {
                   event.stopPropagation();
-                  onUpdateClipVoiceState(
-                    voice.id,
+                  onUpdateClipInstrumentState(
+                    instrument.id,
                     {
-                      solo: !voiceState.solo,
+                      solo: !instrumentState.solo,
                     },
-                    voiceState.solo
-                      ? "Disable voice solo"
-                      : "Solo voice",
+                    instrumentState.solo
+                      ? "Disable instrument solo"
+                      : "Solo instrument",
                   );
                 }}
               >
                 S
               </button>
               <button
-                className="voice-delete-button"
+                className="instrument-delete-button"
                 type="button"
-                aria-label={`Delete ${voice.name}`}
+                aria-label={`Delete ${instrument.name}`}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onDeleteVoice(voice.id);
+                  onDeleteProjectInstrument(instrument.id);
                 }}
               >
                 ×
@@ -389,20 +389,20 @@ export function GeneralInspector({
           </article>
         );
       })}
-      {projectState.voiceOrder.length === 0 ? (
-        <p className="voice-empty-state">
-          Add a voice to start drawing notes.
+      {projectState.instrumentOrder.length === 0 ? (
+        <p className="instrument-empty-state">
+          Add a instrument to start drawing notes.
         </p>
       ) : null}
     </div>
     </div>
 
     <InstrumentInspector
-      voice={selectedVoice}
-      voiceState={
-        selectedVoice === undefined
+      instrument={selectedInstrument}
+      instrumentState={
+        selectedInstrument === undefined
           ? undefined
-          : activeClip.voiceStatesById[selectedVoice.id]
+          : activeClip.instrumentStatesById[selectedInstrument.id]
       }
       onWaveformCommit={onWaveformCommit}
       onPolyphonyCommit={onPolyphonyCommit}

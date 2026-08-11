@@ -11,7 +11,7 @@ import type {
   NoteCollisionResolutionRequest,
 } from "../../application/note-collision-resolution";
 import type {
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import type {
   ViewportState,
@@ -44,7 +44,7 @@ import {
 export interface InteractionOverlayProps {
   readonly runtime: PianoRollRuntimePort;
   readonly selectionMode: SelectionMode;
-  readonly activeVoiceId: VoiceId;
+  readonly activeInstrumentId: InstrumentId;
   readonly totalTicks: number;
   readonly setViewport: (viewport: ViewportState) => void;
   readonly onHorizontalViewportInteractionStart: () => void;
@@ -56,7 +56,7 @@ export interface InteractionOverlayProps {
   >;
   readonly onSelectionChange: (
     hasSelection: boolean,
-    soleVoiceId: VoiceId | null,
+    soleInstrumentId: InstrumentId | null,
   ) => void;
   readonly onGridSeek: (tick: number) => void;
   readonly onNoteCollision: (
@@ -105,7 +105,7 @@ export function InteractionOverlay(
   const {
     runtime,
     selectionMode,
-    activeVoiceId,
+    activeInstrumentId,
     totalTicks,
     setViewport,
     onHorizontalViewportInteractionStart,
@@ -120,7 +120,7 @@ export function InteractionOverlay(
   const {
     viewport,
     spatialIndex,
-    voiceStyles,
+    instrumentStyles,
     noteColorMode,
     editorCommands,
     gridResolutionTicks,
@@ -160,9 +160,9 @@ export function InteractionOverlay(
     strategyRef,
     viewport,
     spatialIndex,
-    voiceStyles,
+    instrumentStyles,
     editorCommands,
-    activeVoiceId,
+    activeInstrumentId,
     totalTicks,
     selectionMode,
     gridResolutionTicks,

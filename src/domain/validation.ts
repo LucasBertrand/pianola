@@ -7,20 +7,20 @@ import type {
   Tick,
   Track,
   TransportState,
-  Voice,
-  VoiceId,
+  ProjectInstrument,
+  InstrumentId,
 } from "./model";
 import {
   EDITOR_CONSTANTS,
-  VOICE_CONSTANTS,
+  INSTRUMENT_CONSTANTS,
 } from "../config/program-constants";
 import {
   getTicksPerMeasure,
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_ENTITY_ID_LENGTH,
-  MAXIMUM_VOICE_DESCRIPTOR_COUNT,
-  MAXIMUM_VOICE_NAME_LENGTH,
+  MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
+  MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
 } from "./model";
 
@@ -32,9 +32,9 @@ export type ValidationCode =
   | "INVALID_START_TICK"
   | "INVALID_DURATION"
   | "INVALID_NOTE_ENABLED"
-  | "VOICE_TRACK_MISMATCH"
+  | "INSTRUMENT_TRACK_MISMATCH"
   | "NOTE_KEY_MISMATCH"
-  | "INVALID_VOICE"
+  | "INVALID_INSTRUMENT"
   | "INVALID_BPM"
   | "INVALID_PPQN"
   | "INVALID_TIME_SIGNATURE"
@@ -98,17 +98,17 @@ export function validateNote(note: Note): ValidationResult {
   }
 
   if (
-    note.voiceId.trim().length === 0
-    || note.voiceId.length > MAXIMUM_ENTITY_ID_LENGTH
+    note.instrumentId.trim().length === 0
+    || note.instrumentId.length > MAXIMUM_ENTITY_ID_LENGTH
   ) {
     issues.push({
       code:
-        note.voiceId.trim().length === 0
+        note.instrumentId.trim().length === 0
           ? "EMPTY_ID"
           : "INVALID_ID",
-      path: "voiceId",
+      path: "instrumentId",
       message:
-        `Voice ID must contain between 1 and ${MAXIMUM_ENTITY_ID_LENGTH} characters.`,
+        `ProjectInstrument ID must contain between 1 and ${MAXIMUM_ENTITY_ID_LENGTH} characters.`,
     });
   }
 
@@ -160,15 +160,15 @@ export function validateNote(note: Note): ValidationResult {
 
 export function validateNoteForTrack(
   note: Note,
-  trackVoiceId: VoiceId,
+  trackInstrumentId: InstrumentId,
 ): ValidationResult {
   const issues = [...validateNote(note).issues];
 
-  if (note.voiceId !== trackVoiceId) {
+  if (note.instrumentId !== trackInstrumentId) {
     issues.push({
-      code: "VOICE_TRACK_MISMATCH",
-      path: "voiceId",
-      message: `Note voice ID "${note.voiceId}" must match track voice ID "${trackVoiceId}".`,
+      code: "INSTRUMENT_TRACK_MISMATCH",
+      path: "instrumentId",
+      message: `Note instrument ID "${note.instrumentId}" must match track instrument ID "${trackInstrumentId}".`,
     });
   }
 
@@ -182,22 +182,22 @@ export function validateTrack(track: Track): ValidationResult {
   const issues: ValidationIssue[] = [];
 
   if (
-    track.voiceId.trim().length === 0
-    || track.voiceId.length > MAXIMUM_ENTITY_ID_LENGTH
+    track.instrumentId.trim().length === 0
+    || track.instrumentId.length > MAXIMUM_ENTITY_ID_LENGTH
   ) {
     issues.push({
       code:
-        track.voiceId.trim().length === 0
+        track.instrumentId.trim().length === 0
           ? "EMPTY_ID"
           : "INVALID_ID",
-      path: "voiceId",
+      path: "instrumentId",
       message:
-        `Track voice ID must contain between 1 and ${MAXIMUM_ENTITY_ID_LENGTH} characters.`,
+        `Track instrument ID must contain between 1 and ${MAXIMUM_ENTITY_ID_LENGTH} characters.`,
     });
   }
 
   for (const [noteId, note] of Object.entries(track.notesById)) {
-    for (const issue of validateNoteForTrack(note, track.voiceId).issues) {
+    for (const issue of validateNoteForTrack(note, track.instrumentId).issues) {
       issues.push({
         ...issue,
         path: `notesById.${noteId}.${issue.path}`,
@@ -219,49 +219,49 @@ export function validateTrack(track: Track): ValidationResult {
   };
 }
 
-export function validateVoice(voice: Voice): ValidationResult {
+export function validateProjectInstrument(instrument: ProjectInstrument): ValidationResult {
   const issues: ValidationIssue[] = [];
 
-  validateBoundedIdentifier(voice.id, "id", "Voice ID", issues);
+  validateBoundedIdentifier(instrument.id, "id", "ProjectInstrument ID", issues);
 
   if (
-    voice.name.trim().length === 0
-    || voice.name.length > MAXIMUM_VOICE_NAME_LENGTH
+    instrument.name.trim().length === 0
+    || instrument.name.length > MAXIMUM_INSTRUMENT_NAME_LENGTH
   ) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       "name",
-      `Voice name must contain between 1 and ${MAXIMUM_VOICE_NAME_LENGTH} characters.`,
+      `ProjectInstrument name must contain between 1 and ${MAXIMUM_INSTRUMENT_NAME_LENGTH} characters.`,
     );
   }
 
-  if (!/^#[0-9a-f]{6}$/i.test(voice.color)) {
-    pushVoiceIssue(
+  if (!/^#[0-9a-f]{6}$/i.test(instrument.color)) {
+    pushProjectInstrumentIssue(
       issues,
       "color",
-      "Voice color must use the #RRGGBB format.",
+      "ProjectInstrument color must use the #RRGGBB format.",
     );
   }
 
   if (
-    !Number.isFinite(voice.pan)
-    || voice.pan < -1
-    || voice.pan > 1
+    !Number.isFinite(instrument.pan)
+    || instrument.pan < -1
+    || instrument.pan > 1
   ) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       "pan",
-      "Voice pan must be a finite number between -1 and 1.",
+      "ProjectInstrument pan must be a finite number between -1 and 1.",
     );
   }
 
-  validateDescriptors(voice.effects, "effects", issues);
+  validateDescriptors(instrument.effects, "effects", issues);
   validateDescriptors(
-    voice.generativeRules,
+    instrument.generativeRules,
     "generativeRules",
     issues,
   );
-  validateVoiceInterpretation(voice, issues);
+  validateProjectInstrumentInterpretation(instrument, issues);
 
   return {
     valid: issues.length === 0,
@@ -389,17 +389,17 @@ export function validateProjectDuration(
 
 export function assertValidNoteForTrack(
   note: Note,
-  trackVoiceId: VoiceId,
+  trackInstrumentId: InstrumentId,
 ): void {
-  assertValidationResult(validateNoteForTrack(note, trackVoiceId));
+  assertValidationResult(validateNoteForTrack(note, trackInstrumentId));
 }
 
 export function assertValidTrack(track: Track): void {
   assertValidationResult(validateTrack(track));
 }
 
-export function assertValidVoice(voice: Voice): void {
-  assertValidationResult(validateVoice(voice));
+export function assertValidProjectInstrument(instrument: ProjectInstrument): void {
+  assertValidationResult(validateProjectInstrument(instrument));
 }
 
 export function assertValidInstrumentConfig(
@@ -446,13 +446,13 @@ function validateBoundedIdentifier(
   }
 }
 
-function pushVoiceIssue(
+function pushProjectInstrumentIssue(
   issues: ValidationIssue[],
   path: string,
   message: string,
 ): void {
   issues.push({
-    code: "INVALID_VOICE",
+    code: "INVALID_INSTRUMENT",
     path,
     message,
   });
@@ -472,7 +472,7 @@ function validateInstrument(
     || instrument.polyphony < MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
     || instrument.polyphony > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
   ) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       "instrument.polyphony",
       `Subtractive synth polyphony must be an integer between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
@@ -486,30 +486,30 @@ function validateInstrument(
   validateNumberInRange(
     instrument.pulseWidth,
     "instrument.pulseWidth",
-    VOICE_CONSTANTS.minimumPulseWidth,
-    VOICE_CONSTANTS.maximumPulseWidth,
+    INSTRUMENT_CONSTANTS.minimumPulseWidth,
+    INSTRUMENT_CONSTANTS.maximumPulseWidth,
     issues,
   );
   validateEnvelope(instrument.envelope, "instrument.envelope", issues);
   validateNumberInRange(
     instrument.filterCutoffHz,
     "instrument.filterCutoffHz",
-    VOICE_CONSTANTS.minimumFilterCutoffHz,
-    VOICE_CONSTANTS.maximumFilterCutoffHz,
+    INSTRUMENT_CONSTANTS.minimumFilterCutoffHz,
+    INSTRUMENT_CONSTANTS.maximumFilterCutoffHz,
     issues,
   );
   validateNumberInRange(
     instrument.filterResonance,
     "instrument.filterResonance",
-    VOICE_CONSTANTS.minimumFilterResonance,
-    VOICE_CONSTANTS.maximumFilterResonance,
+    INSTRUMENT_CONSTANTS.minimumFilterResonance,
+    INSTRUMENT_CONSTANTS.maximumFilterResonance,
     issues,
   );
   validateNumberInRange(
     instrument.filterEnvelopeAmountOctaves,
     "instrument.filterEnvelopeAmountOctaves",
-    VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
-    VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
+    INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
+    INSTRUMENT_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
     issues,
   );
   validateEnvelope(
@@ -544,7 +544,7 @@ function validateEnvelope(
     || envelope.sustainLevel < 0
     || envelope.sustainLevel > 1
   ) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       `${path}.sustainLevel`,
       "Envelope sustain level must be between 0 and 1.",
@@ -571,20 +571,20 @@ function validateWaveform(
     && waveform !== "sawtooth"
     && waveform !== "triangle"
   ) {
-    pushVoiceIssue(issues, path, "Oscillator waveform is not supported.");
+    pushProjectInstrumentIssue(issues, path, "Oscillator waveform is not supported.");
   }
 }
 
 function validateDescriptors(
-  descriptors: Voice["effects"] | Voice["generativeRules"],
+  descriptors: ProjectInstrument["effects"] | ProjectInstrument["generativeRules"],
   path: string,
   issues: ValidationIssue[],
 ): void {
-  if (descriptors.length > MAXIMUM_VOICE_DESCRIPTOR_COUNT) {
-    pushVoiceIssue(
+  if (descriptors.length > MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT) {
+    pushProjectInstrumentIssue(
       issues,
       path,
-      `A voice cannot contain more than ${MAXIMUM_VOICE_DESCRIPTOR_COUNT} descriptors of one type.`,
+      `A instrument cannot contain more than ${MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT} descriptors of one type.`,
     );
   }
 
@@ -610,7 +610,7 @@ function validateDescriptors(
     );
 
     if (ids.has(descriptor.id)) {
-      pushVoiceIssue(
+      pushProjectInstrumentIssue(
         issues,
         `${descriptorPath}.id`,
         `Descriptor ID "${descriptor.id}" appears more than once.`,
@@ -621,9 +621,9 @@ function validateDescriptors(
 
     if (
       descriptor.kind.trim().length === 0
-      || descriptor.kind.length > MAXIMUM_VOICE_NAME_LENGTH
+      || descriptor.kind.length > MAXIMUM_INSTRUMENT_NAME_LENGTH
     ) {
-      pushVoiceIssue(
+      pushProjectInstrumentIssue(
         issues,
         `${descriptorPath}.kind`,
         "Descriptor kind must be non-empty and bounded.",
@@ -631,7 +631,7 @@ function validateDescriptors(
     }
 
     if (typeof descriptor.enabled !== "boolean") {
-      pushVoiceIssue(
+      pushProjectInstrumentIssue(
         issues,
         `${descriptorPath}.enabled`,
         "Descriptor enabled state must be a boolean.",
@@ -654,7 +654,7 @@ function validateDescriptorParameters(
   const entries = Object.entries(parameters);
 
   if (entries.length > MAXIMUM_DESCRIPTOR_PARAMETER_COUNT) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       path,
       `A descriptor cannot contain more than ${MAXIMUM_DESCRIPTOR_PARAMETER_COUNT} parameters.`,
@@ -664,9 +664,9 @@ function validateDescriptorParameters(
   for (const [key, value] of entries) {
     if (
       key.length === 0
-      || key.length > MAXIMUM_VOICE_NAME_LENGTH
+      || key.length > MAXIMUM_INSTRUMENT_NAME_LENGTH
     ) {
-      pushVoiceIssue(
+      pushProjectInstrumentIssue(
         issues,
         `${path}.${key}`,
         "Parameter names must be non-empty and bounded.",
@@ -678,13 +678,13 @@ function validateDescriptorParameters(
       && typeof value !== "number"
       && typeof value !== "boolean"
     ) {
-      pushVoiceIssue(
+      pushProjectInstrumentIssue(
         issues,
         `${path}.${key}`,
         "Parameters must be strings, finite numbers, or booleans.",
       );
     } else if (typeof value === "number" && !Number.isFinite(value)) {
-      pushVoiceIssue(
+      pushProjectInstrumentIssue(
         issues,
         `${path}.${key}`,
         "Numeric parameters must be finite.",
@@ -693,25 +693,25 @@ function validateDescriptorParameters(
   }
 }
 
-function validateVoiceInterpretation(
-  voice: Voice,
+function validateProjectInstrumentInterpretation(
+  instrument: ProjectInstrument,
   issues: ValidationIssue[],
 ): void {
-  const interpretation = voice.interpretation;
+  const interpretation = instrument.interpretation;
 
   if (!Number.isSafeInteger(interpretation.transposeSemitones)) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       "interpretation.transposeSemitones",
-      "Voice transposition must be a safe integer.",
+      "ProjectInstrument transposition must be a safe integer.",
     );
   }
 
   if (!Number.isSafeInteger(interpretation.timingOffsetTicks)) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       "interpretation.timingOffsetTicks",
-      "Voice timing offset must be a safe integer.",
+      "ProjectInstrument timing offset must be a safe integer.",
     );
   }
 
@@ -731,10 +731,10 @@ function validateVoiceInterpretation(
     || interpretation.probability < 0
     || interpretation.probability > 1
   ) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       "interpretation.probability",
-      "Voice probability must be between 0 and 1.",
+      "ProjectInstrument probability must be between 0 and 1.",
     );
   }
 }
@@ -745,7 +745,7 @@ function validateFiniteNumber(
   issues: ValidationIssue[],
 ): void {
   if (!Number.isFinite(value)) {
-    pushVoiceIssue(issues, path, "Value must be finite.");
+    pushProjectInstrumentIssue(issues, path, "Value must be finite.");
   }
 }
 
@@ -755,7 +755,7 @@ function validatePositiveNumber(
   issues: ValidationIssue[],
 ): void {
   if (!Number.isFinite(value) || value <= 0) {
-    pushVoiceIssue(issues, path, "Value must be positive and finite.");
+    pushProjectInstrumentIssue(issues, path, "Value must be positive and finite.");
   }
 }
 
@@ -765,7 +765,7 @@ function validateNonNegativeNumber(
   issues: ValidationIssue[],
 ): void {
   if (!Number.isFinite(value) || value < 0) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       path,
       "Value must be non-negative and finite.",
@@ -785,7 +785,7 @@ function validateNumberInRange(
     || value < minimum
     || value > maximum
   ) {
-    pushVoiceIssue(
+    pushProjectInstrumentIssue(
       issues,
       path,
       `Value must be a finite number between ${minimum} and ${maximum}.`,

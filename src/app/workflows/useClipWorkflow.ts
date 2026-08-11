@@ -13,13 +13,13 @@ import {
   type Clip,
   type ClipId,
   type Track,
-  type VoiceId,
-  type ClipVoiceState,
+  type InstrumentId,
+  type ClipInstrumentState,
 } from "../../domain/model";
 import {
   cloneInstrumentConfig,
-  createDefaultClipVoiceState,
-} from "../../domain/voice-factory";
+  createDefaultClipInstrumentState,
+} from "../../domain/project-instrument-factory";
 import type {
   ShowApplicationConfirmation,
 } from "./dialog-types";
@@ -78,7 +78,7 @@ export function useClipWorkflow({
 
     clipSequenceRef.current += 1;
     const clip = createEmptyClip(
-      state.voiceOrder,
+      state.instrumentOrder,
       state.clipOrder.length,
       clipSequenceRef.current,
     );
@@ -133,9 +133,9 @@ export function useClipWorkflow({
       ...sourceClip,
       id: duplicatedClipId,
       name: createCopyName(sourceClip.name, MAXIMUM_CLIP_NAME_LENGTH),
-      tracksByVoiceId: cloneClipTracks(sourceClip.tracksByVoiceId),
-      voiceStatesById: cloneClipVoiceStates(
-        sourceClip.voiceStatesById,
+      tracksByInstrumentId: cloneClipTracks(sourceClip.tracksByInstrumentId),
+      instrumentStatesById: cloneClipInstrumentStates(
+        sourceClip.instrumentStatesById,
       ),
       transportSettings: {
         ...sourceClip.transportSettings,
@@ -204,13 +204,13 @@ export function useClipWorkflow({
 }
 
 function cloneClipTracks(
-  sourceTracks: Readonly<Record<VoiceId, Track>>,
-): Record<VoiceId, Track> {
-  const tracks: Record<VoiceId, Track> = {};
+  sourceTracks: Readonly<Record<InstrumentId, Track>>,
+): Record<InstrumentId, Track> {
+  const tracks: Record<InstrumentId, Track> = {};
 
-  for (const [voiceId, track] of Object.entries(sourceTracks)) {
-    tracks[voiceId] = {
-      voiceId,
+  for (const [instrumentId, track] of Object.entries(sourceTracks)) {
+    tracks[instrumentId] = {
+      instrumentId,
       notesById: { ...track.notesById },
     };
   }
@@ -225,38 +225,38 @@ function createCopyName(name: string, maximumLength: number): string {
 }
 
 function createEmptyClip(
-  voiceOrder: readonly VoiceId[],
+  instrumentOrder: readonly InstrumentId[],
   clipIndex: number,
   sequence: number,
 ): Clip {
-  const tracksByVoiceId: Record<VoiceId, Track> = {};
-  const voiceStatesById: Record<VoiceId, ClipVoiceState> = {};
+  const tracksByInstrumentId: Record<InstrumentId, Track> = {};
+  const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
 
-  for (const voiceId of voiceOrder) {
-    tracksByVoiceId[voiceId] = {
-      voiceId,
+  for (const instrumentId of instrumentOrder) {
+    tracksByInstrumentId[instrumentId] = {
+      instrumentId,
       notesById: {},
     };
-    voiceStatesById[voiceId] = createDefaultClipVoiceState();
+    instrumentStatesById[instrumentId] = createDefaultClipInstrumentState();
   }
 
   return {
     id: createClipId(sequence),
     name: `Clip ${clipIndex + 1}`,
     measureCount: DEFAULT_MEASURE_COUNT,
-    tracksByVoiceId,
-    voiceStatesById,
+    tracksByInstrumentId,
+    instrumentStatesById,
     transportSettings: createDefaultTransportState(),
   };
 }
 
-function cloneClipVoiceStates(
-  sourceStates: Readonly<Record<VoiceId, ClipVoiceState>>,
-): Record<VoiceId, ClipVoiceState> {
-  const states: Record<VoiceId, ClipVoiceState> = {};
+function cloneClipInstrumentStates(
+  sourceStates: Readonly<Record<InstrumentId, ClipInstrumentState>>,
+): Record<InstrumentId, ClipInstrumentState> {
+  const states: Record<InstrumentId, ClipInstrumentState> = {};
 
-  for (const [voiceId, state] of Object.entries(sourceStates)) {
-    states[voiceId] = {
+  for (const [instrumentId, state] of Object.entries(sourceStates)) {
+    states[instrumentId] = {
       ...state,
       instrument: cloneInstrumentConfig(state.instrument),
     };

@@ -8,7 +8,7 @@ import {
   type Note,
   type NoteId,
   type ProjectState,
-  type VoiceId,
+  type InstrumentId,
 } from "../domain/model";
 
 export interface PianoRollClipboard {
@@ -21,7 +21,7 @@ export interface SliceCommandPlan {
   readonly resultingNoteIds: readonly NoteId[];
 }
 
-export type VoiceTransferPlan =
+export type InstrumentTransferPlan =
   | {
       readonly valid: true;
       readonly commands: readonly PianoRollCommand[];
@@ -36,7 +36,7 @@ export type VoiceTransferPlan =
 export function buildTransformCommandsForNotes(
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
-  const notesByVoice = new Map<VoiceId, Note[]>();
+  const notesByInstrument = new Map<InstrumentId, Note[]>();
 
   for (
     let noteIndex = 0;
@@ -49,23 +49,23 @@ export function buildTransformCommandsForNotes(
       continue;
     }
 
-    let voiceNotes = notesByVoice.get(note.voiceId);
+    let instrumentNotes = notesByInstrument.get(note.instrumentId);
 
-    if (voiceNotes === undefined) {
-      voiceNotes = [];
-      notesByVoice.set(note.voiceId, voiceNotes);
+    if (instrumentNotes === undefined) {
+      instrumentNotes = [];
+      notesByInstrument.set(note.instrumentId, instrumentNotes);
     }
 
-    voiceNotes.push(note);
+    instrumentNotes.push(note);
   }
 
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, voiceNotes] of notesByVoice) {
+  for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     commands.push({
       type: "TransformNotes",
-      trackVoiceId: voiceId,
-      changes: voiceNotes.map((note) => ({
+      trackInstrumentId: instrumentId,
+      changes: instrumentNotes.map((note) => ({
         noteId: note.id,
         startTick: note.startTick,
         durationTicks: note.durationTicks,
@@ -83,8 +83,8 @@ export function buildSliceCommandsForNotes(
   timestamp: number,
   transactionSequence: number,
 ): SliceCommandPlan {
-  const slicesByVoice = new Map<
-    VoiceId,
+  const slicesByInstrument = new Map<
+    InstrumentId,
     Array<{ readonly noteId: NoteId; readonly rightNoteId: NoteId }>
   >();
   const resultingNoteIds: NoteId[] = [];
@@ -99,11 +99,11 @@ export function buildSliceCommandsForNotes(
       continue;
     }
 
-    let slices = slicesByVoice.get(note.voiceId);
+    let slices = slicesByInstrument.get(note.instrumentId);
 
     if (slices === undefined) {
       slices = [];
-      slicesByVoice.set(note.voiceId, slices);
+      slicesByInstrument.set(note.instrumentId, slices);
     }
 
     const rightNoteId =
@@ -119,10 +119,10 @@ export function buildSliceCommandsForNotes(
 
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, slices] of slicesByVoice) {
+  for (const [instrumentId, slices] of slicesByInstrument) {
     commands.push({
       type: "SliceNotes",
-      trackVoiceId: voiceId,
+      trackInstrumentId: instrumentId,
       sliceTick,
       slices,
     });
@@ -184,12 +184,12 @@ export function canPlacePastedNotes(
       continue;
     }
 
-    const voice = state.voicesById[note.voiceId];
-    const track = clip.tracksByVoiceId[note.voiceId];
+    const instrument = state.projectInstrumentsById[note.instrumentId];
+    const track = clip.tracksByInstrumentId[note.instrumentId];
 
     if (
-      voice === undefined
-      || clip.voiceStatesById[note.voiceId]?.locked !== false
+      instrument === undefined
+      || clip.instrumentStatesById[note.instrumentId]?.locked !== false
       || track === undefined
       || note.startTick < 0
     ) {
@@ -231,32 +231,32 @@ export function getRequiredMeasureCountForNotes(
   );
 }
 
-export function createVoiceTransferPlan(
+export function createInstrumentTransferPlan(
   state: ProjectState,
   selectedNotes: readonly Note[],
-  targetVoiceId: VoiceId,
-): VoiceTransferPlan {
+  targetInstrumentId: InstrumentId,
+): InstrumentTransferPlan {
   const clip = getActiveClip(state);
-  const targetVoice = state.voicesById[targetVoiceId];
-  const targetTrack = clip.tracksByVoiceId[targetVoiceId];
+  const targetInstrument = state.projectInstrumentsById[targetInstrumentId];
+  const targetTrack = clip.tracksByInstrumentId[targetInstrumentId];
 
-  if (targetVoice === undefined || targetTrack === undefined) {
+  if (targetInstrument === undefined || targetTrack === undefined) {
     return {
       valid: false,
-      message: "The selected target voice is unavailable.",
+      message: "The selected target instrument is unavailable.",
     };
   }
 
-  if (clip.voiceStatesById[targetVoiceId]?.locked !== false) {
+  if (clip.instrumentStatesById[targetInstrumentId]?.locked !== false) {
     return {
       valid: false,
-      message: "Unlock the selected target voice before transferring notes.",
+      message: "Unlock the selected target instrument before transferring notes.",
     };
   }
 
   const transferredNotes: Note[] = [];
   const originalNotes: Note[] = [];
-  const noteIdsBySourceVoice = new Map<VoiceId, NoteId[]>();
+  const noteIdsBySourceInstrument = new Map<InstrumentId, NoteId[]>();
 
   for (
     let noteIndex = 0;
@@ -269,11 +269,11 @@ export function createVoiceTransferPlan(
       continue;
     }
 
-    const sourceVoice = state.voicesById[selectedNote.voiceId];
-    const sourceTrack = clip.tracksByVoiceId[selectedNote.voiceId];
+    const sourceInstrument = state.projectInstrumentsById[selectedNote.instrumentId];
+    const sourceTrack = clip.tracksByInstrumentId[selectedNote.instrumentId];
 
     if (
-      sourceVoice === undefined
+      sourceInstrument === undefined
       || sourceTrack?.notesById[selectedNote.id] === undefined
     ) {
       return {
@@ -282,37 +282,37 @@ export function createVoiceTransferPlan(
       };
     }
 
-    if (clip.voiceStatesById[selectedNote.voiceId]?.locked !== false) {
+    if (clip.instrumentStatesById[selectedNote.instrumentId]?.locked !== false) {
       return {
         valid: false,
-        message: `Unlock voice "${sourceVoice.name}" before transferring its notes.`,
+        message: `Unlock instrument "${sourceInstrument.name}" before transferring its notes.`,
       };
     }
 
-    if (selectedNote.voiceId === targetVoiceId) {
+    if (selectedNote.instrumentId === targetInstrumentId) {
       continue;
     }
 
     if (targetTrack.notesById[selectedNote.id] !== undefined) {
       return {
         valid: false,
-        message: `Transfer cancelled because note ID "${selectedNote.id}" already exists in the target voice.`,
+        message: `Transfer cancelled because note ID "${selectedNote.id}" already exists in the target instrument.`,
       };
     }
 
     originalNotes.push(selectedNote);
     transferredNotes.push({
       ...selectedNote,
-      voiceId: targetVoiceId,
+      instrumentId: targetInstrumentId,
     });
-    let sourceNoteIds = noteIdsBySourceVoice.get(
-      selectedNote.voiceId,
+    let sourceNoteIds = noteIdsBySourceInstrument.get(
+      selectedNote.instrumentId,
     );
 
     if (sourceNoteIds === undefined) {
       sourceNoteIds = [];
-      noteIdsBySourceVoice.set(
-        selectedNote.voiceId,
+      noteIdsBySourceInstrument.set(
+        selectedNote.instrumentId,
         sourceNoteIds,
       );
     }
@@ -322,11 +322,11 @@ export function createVoiceTransferPlan(
 
   const commands: PianoRollCommand[] = [];
 
-  for (const [sourceVoiceId, noteIds] of noteIdsBySourceVoice) {
+  for (const [sourceInstrumentId, noteIds] of noteIdsBySourceInstrument) {
     commands.push({
       type: "MoveNotes",
-      sourceVoiceId,
-      targetVoiceId,
+      sourceInstrumentId,
+      targetInstrumentId,
       noteIds,
       deltaTicks: 0,
       deltaPitch: 0,
@@ -354,8 +354,8 @@ export function findNotesByIds(
       continue;
     }
 
-    for (const voiceId of state.voiceOrder) {
-      const note = clip.tracksByVoiceId[voiceId]?.notesById[noteId];
+    for (const instrumentId of state.instrumentOrder) {
+      const note = clip.tracksByInstrumentId[instrumentId]?.notesById[noteId];
 
       if (note !== undefined) {
         acceptedNoteIds.add(note.id);

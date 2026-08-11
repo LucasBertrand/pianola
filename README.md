@@ -48,17 +48,17 @@ Firefox Android et un navigateur desktop.
 
 ## Fonctionnalités principales
 
-- modèle de projet immuable organisé en clips partageant les mêmes voix ;
+- modèle de projet immuable organisé en clips partageant les mêmes instruments ;
 - commandes atomiques avec Undo/Redo ;
 - édition tactile des notes : sélection, lasso, déplacement, resize, dessin
   par appui long et suppression ;
 - panoramique et zoom à deux doigts ;
 - magnétisme temporel et magnétisme tonal par gamme ou accord ;
 - résolution des collisions par annulation, fusion ou découpe aux ancres ;
-- voix configurables : nom, couleur et ordre, avec preset d’instrument, volume,
+- instruments configurables : nom, couleur et ordre, avec preset de synthèse, volume,
   mute, solo et verrouillage propres à chaque clip ;
 - clips configurables : sélection, nom, ordre, ajout et suppression ;
-- synthétiseur soustractif par voix avec pulse width, filtre modulé et deux
+- synthétiseur soustractif par instrument avec pulse width, filtre modulé et deux
   enveloppes ADSR ;
 - polyphonie soustractive de 1 à 16 oscillateurs et vol de l’occurrence la plus
   ancienne lorsque cette limite est saturée ;
@@ -137,14 +137,14 @@ fluidité ; une seule transaction est envoyée lorsque le geste est validé.
 ### Domaine et historique
 
 `src/domain/model.ts` sépare les données globales de `ProjectState` des données
-locales de chaque `Clip`. La définition des voix et le master bus sont globaux.
+locales de chaque `Clip`. La définition des instruments et le master bus sont globaux.
 Chaque clip, identifié par un ID stable, possède ses pistes de notes, sa
 longueur, son transport et ses réglages volume/mute/solo/lock ainsi que le
-preset d’instrument complet de chaque voix. Les propriétés persistantes sont en
+preset de synthèse complet de chaque instrument. Les propriétés persistantes sont en
 lecture seule.
 `src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
 Le reducer applique les commandes musicales au seul clip actif, tandis que la
-création ou la suppression d’une voix met à jour les pistes de tous les clips.
+création ou la suppression d’un instrument met à jour les pistes de tous les clips.
 
 `src/domain/project-store.ts` conserve un historique global de snapshots
 bornés pour Undo/Redo. Il peut donc annuler une action réalisée dans n’importe
@@ -192,7 +192,7 @@ pour poursuivre la modularisation sont décrits dans
 façon paresseuse après une action utilisateur. `playback-snapshot.ts` compile
 un état immuable et `lookahead-scheduler.ts` programme les événements à
 l’avance. `web-audio-engine.ts` possède le contexte, le master et les bus de
-voix. Les renderers de `src/audio/instruments/` construisent les graphes propres
+instruments. Les renderers de `src/audio/instruments/` construisent les graphes propres
 à chaque type d’instrument ; le renderer soustractif est le seul disponible.
 Les contrats audio représentent chaque famille d’instrument par un snapshot
 discriminé et immuable. Chaque renderer expose sa propre politique de
@@ -447,7 +447,7 @@ stockage dans le navigateur.
 ### Clips
 
 La grille principale affiche uniquement le clip sélectionné dans l’inspecteur.
-La section **Clips** reprend les interactions de la liste des voix :
+La section **Clips** reprend les interactions de la liste des instruments :
 
 - `+` crée un clip vide et le sélectionne ;
 - les flèches changent sa position dans la liste ;
@@ -455,9 +455,9 @@ La section **Clips** reprend les interactions de la liste des voix :
 - la croix supprime le clip après confirmation ; le dernier clip ne peut pas
   être supprimé.
 
-L’identité des voix, le master bus et le presse-papier sont partagés par tout
+L’identité des instruments, le master bus et le presse-papier sont partagés par tout
 le projet. Le preset d’instrument complet et les réglages volume/mute/solo/lock
-de chaque voix, les notes, la longueur, le tempo, la métrique, la grille, la
+de chaque instrument, les notes, la longueur, le tempo, la métrique, la grille, la
 tonalité, la boucle, la tête de lecture, le scroll et le zoom sont propres à
 chaque clip. Changer de clip vide la sélection de notes, mais conserve le
 presse-papier afin de permettre un copier-coller entre clips.
@@ -478,10 +478,10 @@ presse-papier afin de permettre un copier-coller entre clips.
   nécessaires dans la même opération Undo/Redo.
 
 Une note désactivée reste visible, sélectionnable et transformable tant que sa
-voix n'est pas verrouillée, mais elle n'est ni jouée ni exportée en MIDI. Son
+instrument n'est pas verrouillé, mais elle n'est ni jouée ni exportée en MIDI. Son
 état est conservé dans le fichier natif `.pianola`.
 
-Une collision entre notes de même pitch et même voix ouvre une modale offrant
+Une collision entre notes de même pitch et même instrument ouvre une modale offrant
 l’annulation, la fusion ou la découpe. Deux notes de pitchs différents peuvent
 se superposer dans le temps.
 
@@ -498,16 +498,16 @@ se superposer dans le temps.
 
 ### Voix et instrument
 
-L’inspecteur permet d’ajouter, supprimer et réordonner les voix. Les notes
-créées utilisent la voix sélectionnée.
+L’inspecteur permet d’ajouter, supprimer et réordonner les instruments. Les notes
+créées utilisent l’instrument sélectionné.
 
-- **Mute** coupe la voix et atténue ses notes visuellement.
-- **Solo** ne lit que les voix solo.
+- **Mute** coupe l’instrument et atténue ses notes visuellement.
+- **Solo** ne lit que les instruments solo.
 - **Lock** rend les notes non éditables et les affiche hachurées.
-- La cible sélectionne les notes de la voix sans supprimer la sélection des
-  autres voix.
+- La cible sélectionne les notes de l’instrument sans supprimer la sélection des
+  autres instruments.
 
-Chaque voix possède une identité et une couleur globales. Dans chaque clip,
+Chaque instrument possède une identité et une couleur globales. Dans chaque clip,
 elle possède son propre volume et son propre preset de synthétiseur soustractif
 : limite de polyphonie, quatre formes d’onde, largeur d’impulsion pour l’onde
 carrée, filtre passe-bas avec cutoff et résonance, ainsi que deux enveloppes
@@ -530,11 +530,11 @@ la nouvelle durée du clip.
 ### Format natif `.pianola`
 
 Le format natif conserve la liste ordonnée des clips, le clip actif, l’identité
-des voix, les notes, le master bus et les métadonnées de document. Pour chaque
+des instruments, les notes, le master bus et les métadonnées de document. Pour chaque
 clip, il enregistre aussi le preset d’instrument et volume/mute/solo/lock par
-voix, le transport, la boucle, la tête de lecture, la grille, le snap tonal, le
+instrument, le transport, la boucle, la tête de lecture, la grille, le snap tonal, le
 guide visuel, le zoom et la position de la vue.
-Les préférences réellement globales — voix active, preview clavier, mode de
+Les préférences réellement globales — instrument actif, preview clavier, mode de
 sélection et coloration — sont enregistrées une seule fois. Les états
 temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
 
@@ -572,7 +572,7 @@ l’import demande de fusionner ou découper les collisions.
 
 L’import crée un projet contenant un clip. L’export utilise uniquement le clip
 actif et produit un fichier format 1 avec une piste conductrice et une piste
-par voix. MIDI ne conserve pas les couleurs, mute/solo/lock, paramètres du
+par instrument. MIDI ne conserve pas les couleurs, mute/solo/lock, paramètres du
 synthétiseur, master bus, boucle ou réglages spécifiques à Pianola.
 
 Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
@@ -592,7 +592,7 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 | Valeurs par défaut et limites | `src/config/program-constants.ts` |
 | Structure principale de l’UI | `src/app/App.tsx` |
 | État initial et projet vierge | `src/app/demo-scene.ts` |
-| Clips, notes, voix, transport | `src/domain/model.ts` |
+| Clips, notes, instruments, transport | `src/domain/model.ts` |
 | Cycle de vie des clips | `src/app/workflows/useClipWorkflow.ts` |
 | Liste des clips | `src/ui/components/ClipInspector.tsx` |
 | Actions mutantes | `src/domain/commands.ts` |
@@ -622,7 +622,7 @@ Les réglages produit sont centralisés dans
 
 - `APPLICATION_CONSTANTS` : identité produit ;
 - `PROJECT_CONSTANTS` : limites et valeurs persistantes ;
-- `VOICE_CONSTANTS` : instrument et voix par défaut ;
+- `INSTRUMENT_CONSTANTS` : instrument et configuration par défaut ;
 - `AUDIO_CONSTANTS` : scheduler et enveloppes ;
 - `VIEWPORT_CONSTANTS` : zoom, dimensions et HiDPI ;
 - `INTERACTION_CONSTANTS` : délais et zones tactiles ;
@@ -673,8 +673,8 @@ Quelques points de repère utiles :
   partagent volontairement la même famille, par exemple `bIII` et `III` ;
 - `APPLICATION_COLORS.pianoRoll.tonalSnapPitchRow` modifie les autres hauteurs
   autorisées par le mode ou le degré ;
-- `APPLICATION_COLORS.notes.voicePalette` définit les couleurs proposées aux
-  nouvelles voix ;
+- `APPLICATION_COLORS.notes.instrumentPalette` définit les couleurs proposées aux
+  nouveaux instruments ;
 - `APPLICATION_COLORS.notes.pitchClassPalette` définit les douze couleurs du
   mode d'affichage par pitch ;
 - `APPLICATION_CSS_COLOR_VARIABLES` relie la palette TypeScript aux variables
@@ -712,13 +712,13 @@ Préserver les responsabilités :
 - `playback-snapshot.ts` transforme le projet en données de lecture ;
 - `time-math.ts` convertit ticks, secondes et boucles ;
 - `lookahead-scheduler.ts` décide quand programmer ;
-- `web-audio-engine.ts` possède le contexte, le master et les bus de voix ;
+- `web-audio-engine.ts` possède le contexte, le master et les bus d’instruments ;
 - `audio/instruments/` crée et contrôle les sources propres aux instruments ;
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
 La polyphonie est une propriété du `SubtractiveSynthConfig` conservé dans le
-`ClipVoiceState` du clip actif. Elle est copiée dans
-`SubtractivePlaybackVoiceSnapshot`, puis interprétée par le renderer
+`ClipInstrumentState` du clip actif. Elle est copiée dans
+`SubtractivePlaybackInstrumentSnapshot`, puis interprétée par le renderer
 soustractif. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.
 
@@ -847,8 +847,8 @@ fichiers de `dist` restent servis avant ce fallback.
 1. Déclencher Play ou une touche après une interaction utilisateur ; le
    navigateur bloque l’audio automatique.
 2. Vérifier le mute master.
-3. Vérifier mute et solo de chaque voix.
-4. Vérifier le volume master et celui de la voix.
+3. Vérifier mute et solo de chaque instrument.
+4. Vérifier le volume master et celui de l’instrument.
 5. Regarder la Console pour une erreur d’`AudioContext`.
 6. Tester l’URL HTTPS Vercel ou `localhost`.
 7. Tester sans casque Bluetooth pour isoler la latence du périphérique.
@@ -964,7 +964,7 @@ Avant chaque mise en production :
 - pas de backend, compte utilisateur ou collaboration ;
 - pas encore de système d’onglets multi-projets ;
 - un seul type d’instrument, le synthétiseur soustractif ;
-- les descripteurs d’effets, règles génératives et interprétations de voix ne
+- les descripteurs d’effets, règles génératives et interprétations d’instrument ne
   sont pas encore exécutés par le moteur audio ;
 - la vélocité est stockée et exportée, mais pas appliquée au volume de lecture ;
 - MIDI ne représente pas toutes les données du format natif ;

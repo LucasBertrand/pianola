@@ -10,9 +10,9 @@ import type {
   ProjectState,
   Track,
   TimeSignature,
-  Voice,
-  VoiceId,
-  ClipVoiceState,
+  ProjectInstrument,
+  InstrumentId,
+  ClipInstrumentState,
   SubtractiveSynthConfig,
 } from "../domain/model";
 import {
@@ -23,17 +23,17 @@ import {
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
-  createDefaultClipVoiceState,
+  createDefaultClipInstrumentState,
   createDefaultSubtractiveSynthConfig,
-  createDefaultVoice,
+  createDefaultProjectInstrument,
   getDefaultOscillatorWaveform,
-} from "../domain/voice-factory";
+} from "../domain/project-instrument-factory";
 import {
   assertValidInstrumentConfig,
   assertValidProjectDuration,
   assertValidTrack,
   assertValidTransportState,
-  assertValidVoice,
+  assertValidProjectInstrument,
 } from "../domain/validation";
 import { MidiCodecError } from "./errors";
 import type {
@@ -43,9 +43,9 @@ import type {
 
 export type MidiImportCollisionStrategy = "merge" | "slice";
 
-export interface MidiImportVoiceCandidate {
-  readonly voice: Voice;
-  readonly instrument: SubtractiveSynthConfig;
+export interface MidiImportInstrumentCandidate {
+  readonly projectInstrument: ProjectInstrument;
+  readonly instrumentConfig: SubtractiveSynthConfig;
   readonly notes: readonly Note[];
 }
 
@@ -56,7 +56,7 @@ export interface MidiImportAnalysis {
   readonly tempoBpm: number;
   readonly timeSignature: TimeSignature;
   readonly timelineEndTick: number;
-  readonly voiceCandidates: readonly MidiImportVoiceCandidate[];
+  readonly instrumentCandidates: readonly MidiImportInstrumentCandidate[];
   readonly noteCount: number;
   readonly collisionCount: number;
   readonly ignoredControlChangeCount: number;
@@ -83,7 +83,7 @@ interface ImportedSourceNote {
   readonly sourceOrder: number;
 }
 
-interface MutableVoiceGroup {
+interface MutableInstrumentGroup {
   readonly trackIndex: number;
   readonly channel: number;
   readonly activeNotesByPitch: Map<number, ActiveMidiNoteQueue>;
@@ -129,7 +129,7 @@ export function analyzeMidiImport(
   file: ParsedMidiFile,
   sourceFileName: string,
 ): MidiImportAnalysis {
-  const voiceGroups = new Map<string, MutableVoiceGroup>();
+  const instrumentGroups = new Map<string, MutableInstrumentGroup>();
   const tempoCandidates: TempoCandidate[] = [];
   const timeSignatureCandidates: TimeSignatureCandidate[] = [];
   let sourceOrder = 0;
@@ -205,7 +205,7 @@ export function analyzeMidiImport(
         case "note-on":
           if (event.velocity === 0) {
             const matched = closeActiveNote(
-              voiceGroups,
+              instrumentGroups,
               file.format,
               trackIndex,
               trackName,
@@ -228,8 +228,8 @@ export function analyzeMidiImport(
               );
             }
 
-            const group = getOrCreateVoiceGroup(
-              voiceGroups,
+            const group = getOrCreateInstrumentGroup(
+              instrumentGroups,
               file.format,
               trackIndex,
               trackName,
@@ -258,7 +258,7 @@ export function analyzeMidiImport(
           break;
         case "note-off": {
           const matched = closeActiveNote(
-            voiceGroups,
+            instrumentGroups,
             file.format,
             trackIndex,
             trackName,
@@ -278,7 +278,7 @@ export function analyzeMidiImport(
       }
     }
 
-    for (const group of voiceGroups.values()) {
+    for (const group of instrumentGroups.values()) {
       if (
         file.format === 1
         && group.trackIndex !== trackIndex
@@ -293,7 +293,7 @@ export function analyzeMidiImport(
     }
   }
 
-  for (const group of voiceGroups.values()) {
+  for (const group of instrumentGroups.values()) {
     for (
       const [pitch, activeNoteQueue]
       of group.activeNotesByPitch
@@ -327,20 +327,20 @@ export function analyzeMidiImport(
     group.activeNotesByPitch.clear();
   }
 
-  const sortedGroups = Array.from(voiceGroups.values())
+  const sortedGroups = Array.from(instrumentGroups.values())
     .filter((group) => group.sourceNotes.length > 0)
     .sort((left, right) =>
       left.trackIndex - right.trackIndex
       || left.channel - right.channel);
 
-  if (sortedGroups.length > PROJECT_CONSTANTS.maximumVoiceCount) {
+  if (sortedGroups.length > PROJECT_CONSTANTS.maximumInstrumentCount) {
     throw new MidiImportError(
-      `The MIDI file requires ${String(sortedGroups.length)} voices, exceeding the ${String(PROJECT_CONSTANTS.maximumVoiceCount)} voice limit.`,
+      `The MIDI file requires ${String(sortedGroups.length)} instruments, exceeding the ${String(PROJECT_CONSTANTS.maximumInstrumentCount)} instrument limit.`,
     );
   }
 
   const channelsPerTrack = countChannelsPerTrack(sortedGroups);
-  const voiceCandidates: MidiImportVoiceCandidate[] = [];
+  const instrumentCandidates: MidiImportInstrumentCandidate[] = [];
   let noteCount = 0;
 
   for (
@@ -354,34 +354,34 @@ export function analyzeMidiImport(
       continue;
     }
 
-    const voiceId = createImportedVoiceId(
+    const instrumentId = createImportedInstrumentId(
       group.trackIndex,
       group.channel,
     );
-    const voiceName = createImportedVoiceName(
+    const instrumentName = createImportedInstrumentName(
       file.format,
       group,
       channelsPerTrack.get(group.trackIndex) ?? 1,
     );
     const color =
-      RENDERING_CONSTANTS.userVoiceColors[
-        groupIndex % RENDERING_CONSTANTS.userVoiceColors.length
+      RENDERING_CONSTANTS.userInstrumentColors[
+        groupIndex % RENDERING_CONSTANTS.userInstrumentColors.length
       ] ?? RENDERING_CONSTANTS.defaultNoteColor;
     const notes = convertSourceNotes(
       group.sourceNotes,
-      voiceId,
+      instrumentId,
       file.ticksPerQuarterNote,
       groupIndex,
     );
 
     noteCount += notes.length;
-    voiceCandidates.push({
-      voice: createDefaultVoice({
-        id: voiceId,
-        name: voiceName,
+    instrumentCandidates.push({
+      projectInstrument: createDefaultProjectInstrument({
+        id: instrumentId,
+        name: instrumentName,
         color,
       }),
-      instrument: createDefaultSubtractiveSynthConfig(
+      instrumentConfig: createDefaultSubtractiveSynthConfig(
         getDefaultOscillatorWaveform(groupIndex),
       ),
       notes,
@@ -422,7 +422,7 @@ export function analyzeMidiImport(
   }
 
   const collisionCount =
-    countImportedNoteCollisions(voiceCandidates);
+    countImportedNoteCollisions(instrumentCandidates);
   const warnings = [...createImportWarnings({
     tempoChangeCount: Math.max(0, tempoCandidates.length - 1),
     timeSignatureChangeCount: Math.max(
@@ -465,7 +465,7 @@ export function analyzeMidiImport(
     tempoBpm,
     timeSignature: meterSelection.timeSignature,
     timelineEndTick,
-    voiceCandidates,
+    instrumentCandidates,
     noteCount,
     collisionCount,
     ignoredControlChangeCount,
@@ -486,20 +486,20 @@ export function createProjectFromMidiImport(
   }
 
   const candidates =
-    analysis.voiceCandidates.length > 0
-      ? analysis.voiceCandidates
-      : [createEmptyVoiceCandidate()];
-  const voicesById: Record<VoiceId, Voice> = {};
-  const tracksByVoiceId: Record<VoiceId, Track> = {};
-  const voiceStatesById: Record<VoiceId, ClipVoiceState> = {};
+    analysis.instrumentCandidates.length > 0
+      ? analysis.instrumentCandidates
+      : [createEmptyInstrumentCandidate()];
+  const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
+  const tracksByInstrumentId: Record<InstrumentId, Track> = {};
+  const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
   const mutableTracks: Record<
-    VoiceId,
+    InstrumentId,
     {
-      readonly voiceId: VoiceId;
+      readonly instrumentId: InstrumentId;
       readonly notesById: Record<string, Note>;
     }
   > = {};
-  const voiceOrder: VoiceId[] = [];
+  const instrumentOrder: InstrumentId[] = [];
   let maximumNoteEndTick = 0;
   let resolvedNoteCount = 0;
 
@@ -528,14 +528,15 @@ export function createProjectFromMidiImport(
     }
 
     resolvedNoteCount += resolvedNotes.length;
-    voicesById[candidate.voice.id] = candidate.voice;
-    voiceStatesById[candidate.voice.id] = {
-      ...createDefaultClipVoiceState(),
-      instrument: candidate.instrument,
+    projectInstrumentsById[candidate.projectInstrument.id] =
+      candidate.projectInstrument;
+    instrumentStatesById[candidate.projectInstrument.id] = {
+      ...createDefaultClipInstrumentState(),
+      instrument: candidate.instrumentConfig,
     };
-    voiceOrder.push(candidate.voice.id);
-    mutableTracks[candidate.voice.id] = {
-      voiceId: candidate.voice.id,
+    instrumentOrder.push(candidate.projectInstrument.id);
+    mutableTracks[candidate.projectInstrument.id] = {
+      instrumentId: candidate.projectInstrument.id,
       notesById,
     };
   }
@@ -546,7 +547,7 @@ export function createProjectFromMidiImport(
     );
   }
 
-  Object.assign(tracksByVoiceId, mutableTracks);
+  Object.assign(tracksByInstrumentId, mutableTracks);
   const transport = {
     ...createDefaultTransportState(),
     bpm: analysis.tempoBpm,
@@ -582,8 +583,8 @@ export function createProjectFromMidiImport(
     id: clipId,
     name: "Imported Clip",
     measureCount,
-    tracksByVoiceId,
-    voiceStatesById,
+    tracksByInstrumentId,
+    instrumentStatesById,
     transportSettings: {
       ...transport,
       loop: {
@@ -602,8 +603,8 @@ export function createProjectFromMidiImport(
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title: analysis.title,
-    voicesById,
-    voiceOrder,
+    projectInstrumentsById,
+    instrumentOrder,
     clipsById: {
       [clipId]: clip,
     },
@@ -616,13 +617,13 @@ export function createProjectFromMidiImport(
   return projectState;
 }
 
-function getOrCreateVoiceGroup(
-  groups: Map<string, MutableVoiceGroup>,
+function getOrCreateInstrumentGroup(
+  groups: Map<string, MutableInstrumentGroup>,
   format: 0 | 1,
   trackIndex: number,
   trackName: string,
   channel: number,
-): MutableVoiceGroup {
+): MutableInstrumentGroup {
   const effectiveTrackIndex = format === 0 ? 0 : trackIndex;
   const key = `${String(effectiveTrackIndex)}:${String(channel)}`;
   let group = groups.get(key);
@@ -645,7 +646,7 @@ function getOrCreateVoiceGroup(
 }
 
 function closeActiveNote(
-  groups: Map<string, MutableVoiceGroup>,
+  groups: Map<string, MutableInstrumentGroup>,
   format: 0 | 1,
   trackIndex: number,
   trackName: string,
@@ -653,7 +654,7 @@ function closeActiveNote(
   pitch: number,
   endTick: number,
 ): boolean {
-  const group = getOrCreateVoiceGroup(
+  const group = getOrCreateInstrumentGroup(
     groups,
     format,
     trackIndex,
@@ -695,7 +696,7 @@ function closeActiveNote(
 function findTrackName(events: readonly MidiEvent[]): string {
   for (const event of events) {
     if (event.kind === "track-name") {
-      return sanitizeVoiceName(event.text);
+      return sanitizeInstrumentName(event.text);
     }
   }
 
@@ -703,7 +704,7 @@ function findTrackName(events: readonly MidiEvent[]): string {
 }
 
 function countChannelsPerTrack(
-  groups: readonly MutableVoiceGroup[],
+  groups: readonly MutableInstrumentGroup[],
 ): Map<number, number> {
   const channelsByTrack = new Map<number, Set<number>>();
 
@@ -727,9 +728,9 @@ function countChannelsPerTrack(
   return counts;
 }
 
-function createImportedVoiceName(
+function createImportedInstrumentName(
   format: 0 | 1,
-  group: MutableVoiceGroup,
+  group: MutableInstrumentGroup,
   channelCount: number,
 ): string {
   if (format === 0) {
@@ -741,25 +742,25 @@ function createImportedVoiceName(
       ? group.trackName
       : `Track ${String(group.trackIndex + 1)}`;
 
-  return sanitizeVoiceName(
+  return sanitizeInstrumentName(
     channelCount > 1
       ? `${baseName} · Ch ${String(group.channel + 1)}`
       : baseName,
   );
 }
 
-function createImportedVoiceId(
+function createImportedInstrumentId(
   trackIndex: number,
   channel: number,
-): VoiceId {
-  return `midi-voice-${String(trackIndex)}-${String(channel)}`;
+): InstrumentId {
+  return `midi-instrument-${String(trackIndex)}-${String(channel)}`;
 }
 
 function convertSourceNotes(
   sourceNotes: readonly ImportedSourceNote[],
-  voiceId: VoiceId,
+  instrumentId: InstrumentId,
   sourcePpqn: number,
-  voiceIndex: number,
+  instrumentIndex: number,
 ): readonly Note[] {
   const sortedNotes = [...sourceNotes].sort((left, right) =>
     left.startTick - right.startTick
@@ -800,12 +801,12 @@ function convertSourceNotes(
 
     notes.push({
       id:
-        `midi-note-${String(voiceIndex)}-${String(noteIndex).padStart(8, "0")}`,
+        `midi-note-${String(instrumentIndex)}-${String(noteIndex).padStart(8, "0")}`,
       pitch: sourceNote.pitch,
       startTick,
       durationTicks: endTick - startTick,
       velocity: sourceNote.velocity,
-      voiceId,
+      instrumentId,
       enabled: true,
     });
   }
@@ -947,7 +948,7 @@ function isSupportedTimeSignatureDenominator(
 }
 
 function countImportedNoteCollisions(
-  candidates: readonly MidiImportVoiceCandidate[],
+  candidates: readonly MidiImportInstrumentCandidate[],
 ): number {
   let collisionCount = 0;
 
@@ -1268,18 +1269,18 @@ function compareNotesByTime(left: Note, right: Note): number {
   );
 }
 
-function createEmptyVoiceCandidate(): MidiImportVoiceCandidate {
-  const id = "midi-voice-0-0";
+function createEmptyInstrumentCandidate(): MidiImportInstrumentCandidate {
+  const id = "midi-instrument-0-0";
 
   return {
-    voice: createDefaultVoice({
+    projectInstrument: createDefaultProjectInstrument({
       id,
-      name: "MIDI Voice",
+      name: "MIDI Instrument",
       color:
-        RENDERING_CONSTANTS.userVoiceColors[0]
+        RENDERING_CONSTANTS.userInstrumentColors[0]
         ?? RENDERING_CONSTANTS.defaultNoteColor,
     }),
-    instrument: createDefaultSubtractiveSynthConfig(),
+    instrumentConfig: createDefaultSubtractiveSynthConfig(),
     notes: [],
   };
 }
@@ -1304,7 +1305,7 @@ function createImportedProjectTitle(
   );
 }
 
-function sanitizeVoiceName(name: string): string {
+function sanitizeInstrumentName(name: string): string {
   const sanitized = name
     .replace(/[\u0000-\u001f\u007f]/gu, "")
     .trim();
@@ -1312,8 +1313,8 @@ function sanitizeVoiceName(name: string): string {
   return (
     sanitized.length > 0
       ? sanitized
-      : "MIDI Voice"
-  ).slice(0, PROJECT_CONSTANTS.maximumVoiceNameLength);
+      : "MIDI Instrument"
+  ).slice(0, PROJECT_CONSTANTS.maximumInstrumentNameLength);
 }
 
 function countTracksWithoutEndOfTrack(
@@ -1431,7 +1432,7 @@ function appendCountWarning(
 function assertImportedProjectState(state: ProjectState): void {
   const activeClip = getActiveClip(state);
   const globalNoteIds = new Set<string>();
-  const orderedVoiceIds = new Set<VoiceId>();
+  const orderedInstrumentIds = new Set<InstrumentId>();
   let noteCount = 0;
   const projectDurationTicks =
     activeClip.measureCount
@@ -1444,41 +1445,41 @@ function assertImportedProjectState(state: ProjectState): void {
   );
 
   if (
-    state.voiceOrder.length < 1
-    || state.voiceOrder.length
-      > PROJECT_CONSTANTS.maximumVoiceCount
+    state.instrumentOrder.length < 1
+    || state.instrumentOrder.length
+      > PROJECT_CONSTANTS.maximumInstrumentCount
   ) {
     throw new MidiImportError(
-      "The imported voice count is invalid.",
+      "The imported instrument count is invalid.",
     );
   }
 
-  for (const voiceId of state.voiceOrder) {
-    if (orderedVoiceIds.has(voiceId)) {
+  for (const instrumentId of state.instrumentOrder) {
+    if (orderedInstrumentIds.has(instrumentId)) {
       throw new MidiImportError(
-        "The imported voice order contains a duplicate voice.",
+        "The imported instrument order contains a duplicate instrument.",
       );
     }
 
-    orderedVoiceIds.add(voiceId);
-    const voice = state.voicesById[voiceId];
-    const track = activeClip.tracksByVoiceId[voiceId];
-    const voiceState = activeClip.voiceStatesById[voiceId];
+    orderedInstrumentIds.add(instrumentId);
+    const instrument = state.projectInstrumentsById[instrumentId];
+    const track = activeClip.tracksByInstrumentId[instrumentId];
+    const instrumentState = activeClip.instrumentStatesById[instrumentId];
 
     if (
-      voice === undefined
+      instrument === undefined
       || track === undefined
-      || voiceState === undefined
-      || voice.id !== voiceId
-      || track.voiceId !== voiceId
+      || instrumentState === undefined
+      || instrument.id !== instrumentId
+      || track.instrumentId !== instrumentId
     ) {
       throw new MidiImportError(
-        "The imported voice and track maps are inconsistent.",
+        "The imported instrument and track maps are inconsistent.",
       );
     }
 
-    assertValidVoice(voice);
-    assertValidInstrumentConfig(voiceState.instrument);
+    assertValidProjectInstrument(instrument);
+    assertValidInstrumentConfig(instrumentState.instrument);
     assertValidTrack(track);
 
     const notesByPitch = new Map<number, Note[]>();
@@ -1489,7 +1490,7 @@ function assertImportedProjectState(state: ProjectState): void {
       if (
         note === undefined
         || note.id !== noteId
-        || note.voiceId !== voiceId
+        || note.instrumentId !== instrumentId
         || globalNoteIds.has(note.id)
         || !Number.isInteger(note.pitch)
         || note.pitch < PROJECT_CONSTANTS.minimumMidiPitch

@@ -91,7 +91,7 @@ export function LongPressNameEditor({
             longPressTriggeredRef.current = true;
             setEditing(true);
           },
-          INTERACTION_CONSTANTS.voiceNameLongPressDelayMs,
+          INTERACTION_CONSTANTS.instrumentNameLongPressDelayMs,
         );
       }}
       onPointerMove={(event) => {
@@ -101,9 +101,9 @@ export function LongPressNameEditor({
           event.pointerId === pointerIdRef.current
           && (
             Math.abs(event.clientX - originXRef.current)
-              > INTERACTION_CONSTANTS.voiceNameLongPressMovementToleranceCssPixels
+              > INTERACTION_CONSTANTS.instrumentNameLongPressMovementToleranceCssPixels
             || Math.abs(event.clientY - originYRef.current)
-              > INTERACTION_CONSTANTS.voiceNameLongPressMovementToleranceCssPixels
+              > INTERACTION_CONSTANTS.instrumentNameLongPressMovementToleranceCssPixels
           )
         ) {
           movedRef.current = true;

@@ -1,15 +1,15 @@
 import React from "react";
 import {
   EDITOR_CONSTANTS,
-  VOICE_CONSTANTS,
+  INSTRUMENT_CONSTANTS,
 } from "../../config/program-constants";
 import type {
   AdsrEnvelope,
-  ClipVoiceState,
+  ClipInstrumentState,
   OscillatorWaveform,
   SubtractiveSynthContinuousParameter,
-  Voice,
-  VoiceId,
+  ProjectInstrument,
+  InstrumentId,
 } from "../../domain/model";
 import {
   ParameterSlider,
@@ -19,43 +19,43 @@ import {
 } from "./InstrumentControls";
 
 export interface InstrumentInspectorProps {
-  readonly voice: Voice | undefined;
-  readonly voiceState: ClipVoiceState | undefined;
+  readonly instrument: ProjectInstrument | undefined;
+  readonly instrumentState: ClipInstrumentState | undefined;
   readonly onWaveformCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     waveform: OscillatorWaveform,
   ) => void;
   readonly onPolyphonyCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     polyphony: number,
   ) => void;
   readonly onEnvelopeCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     envelopeKind: "amplitude" | "filter",
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
   readonly onEnvelopePreview: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     envelopeKind: "amplitude" | "filter",
     parameter: keyof AdsrEnvelope,
     value: number,
   ) => void;
   readonly onInstrumentParameterCommit: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
   ) => void;
   readonly onInstrumentParameterPreview: (
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     parameter: SubtractiveSynthContinuousParameter,
     value: number,
   ) => void;
 }
 
 export function InstrumentInspector({
-  voice,
-  voiceState,
+  instrument: projectInstrument,
+  instrumentState,
   onWaveformCommit,
   onPolyphonyCommit,
   onEnvelopeCommit,
@@ -63,31 +63,31 @@ export function InstrumentInspector({
   onInstrumentParameterCommit,
   onInstrumentParameterPreview,
 }: InstrumentInspectorProps): React.JSX.Element {
-  if (voice === undefined || voiceState === undefined) {
+  if (projectInstrument === undefined || instrumentState === undefined) {
     return (
       <section className="instrument-card is-empty">
         <div className="section-title">
           <div>
             <small>Instrument</small>
-            <strong>No voice selected</strong>
+            <strong>No instrument selected</strong>
           </div>
         </div>
       </section>
     );
   }
 
-  const instrument = voiceState.instrument;
+  const instrument = instrumentState.instrument;
 
   return (
     <section
       className="instrument-card"
       style={{
-        "--voice-color": voice.color,
+        "--instrument-color": projectInstrument.color,
       } as React.CSSProperties}
     >
       <div className="section-title instrument-card-title">
         <div>
-          <small>Instrument · {voice.name}</small>
+          <small>Instrument · {projectInstrument.name}</small>
           <strong>Subtractive Synth</strong>
         </div>
       </div>
@@ -102,12 +102,12 @@ export function InstrumentInspector({
               aria-label="Oscillator waveform"
               onChange={(event) => {
                 onWaveformCommit(
-                  voice.id,
+                  projectInstrument.id,
                   event.currentTarget.value as OscillatorWaveform,
                 );
               }}
             >
-              {VOICE_CONSTANTS.oscillatorWaveformOptions.map(
+              {INSTRUMENT_CONSTANTS.oscillatorWaveformOptions.map(
                 (option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -117,9 +117,9 @@ export function InstrumentInspector({
             </select>
             <SubtractivePolyphonySelect
               value={instrument.polyphony}
-              voiceName={voice.name}
+              instrumentName={projectInstrument.name}
               onCommit={(polyphony) => {
-                onPolyphonyCommit(voice.id, polyphony);
+                onPolyphonyCommit(projectInstrument.id, polyphony);
               }}
             />
           </div>
@@ -139,25 +139,25 @@ export function InstrumentInspector({
         {instrument.oscillatorWaveform === "square" ? (
           <div className="parameter-grid is-single-parameter">
             <ParameterSlider
-              key={`${voice.id}-pulse-width`}
+              key={`${projectInstrument.id}-pulse-width`}
               label="Pulse"
               value={instrument.pulseWidth}
-              minimum={VOICE_CONSTANTS.minimumPulseWidth}
-              maximum={VOICE_CONSTANTS.maximumPulseWidth}
+              minimum={INSTRUMENT_CONSTANTS.minimumPulseWidth}
+              maximum={INSTRUMENT_CONSTANTS.maximumPulseWidth}
               step={EDITOR_CONSTANTS.pulseWidthStep}
               scale="linear"
               orientation="horizontal"
               formatValue={formatPercentage}
               onPreview={(value) => {
                 onInstrumentParameterPreview(
-                  voice.id,
+                  projectInstrument.id,
                   "pulseWidth",
                   value,
                 );
               }}
               onCommit={(value) => {
                 onInstrumentParameterCommit(
-                  voice.id,
+                  projectInstrument.id,
                   "pulseWidth",
                   value,
                 );
@@ -175,72 +175,72 @@ export function InstrumentInspector({
           </div>
           <div className="parameter-grid is-filter-grid">
             <ParameterSlider
-              key={`${voice.id}-filter-cutoff`}
+              key={`${projectInstrument.id}-filter-cutoff`}
               label="Cutoff"
               value={instrument.filterCutoffHz}
-              minimum={VOICE_CONSTANTS.minimumFilterCutoffHz}
-              maximum={VOICE_CONSTANTS.maximumFilterCutoffHz}
+              minimum={INSTRUMENT_CONSTANTS.minimumFilterCutoffHz}
+              maximum={INSTRUMENT_CONSTANTS.maximumFilterCutoffHz}
               step={EDITOR_CONSTANTS.filterCutoffStepHz}
               scale="logarithmic"
               formatValue={formatFrequency}
               onPreview={(value) => {
                 onInstrumentParameterPreview(
-                  voice.id,
+                  projectInstrument.id,
                   "filterCutoffHz",
                   value,
                 );
               }}
               onCommit={(value) => {
                 onInstrumentParameterCommit(
-                  voice.id,
+                  projectInstrument.id,
                   "filterCutoffHz",
                   value,
                 );
               }}
             />
             <ParameterSlider
-              key={`${voice.id}-filter-resonance`}
+              key={`${projectInstrument.id}-filter-resonance`}
               label="Reso"
               value={instrument.filterResonance}
-              minimum={VOICE_CONSTANTS.minimumFilterResonance}
-              maximum={VOICE_CONSTANTS.maximumFilterResonance}
+              minimum={INSTRUMENT_CONSTANTS.minimumFilterResonance}
+              maximum={INSTRUMENT_CONSTANTS.maximumFilterResonance}
               step={EDITOR_CONSTANTS.filterResonanceStep}
               scale="linear"
               formatValue={formatDecimal}
               onPreview={(value) => {
                 onInstrumentParameterPreview(
-                  voice.id,
+                  projectInstrument.id,
                   "filterResonance",
                   value,
                 );
               }}
               onCommit={(value) => {
                 onInstrumentParameterCommit(
-                  voice.id,
+                  projectInstrument.id,
                   "filterResonance",
                   value,
                 );
               }}
             />
             <ParameterSlider
-              key={`${voice.id}-filter-envelope-amount`}
+              key={`${projectInstrument.id}-filter-envelope-amount`}
               label="Env"
               value={instrument.filterEnvelopeAmountOctaves}
-              minimum={VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
-              maximum={VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
+              minimum={INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
+              maximum={INSTRUMENT_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
               step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
               scale="linear"
               formatValue={formatOctaves}
               onPreview={(value) => {
                 onInstrumentParameterPreview(
-                  voice.id,
+                  projectInstrument.id,
                   "filterEnvelopeAmountOctaves",
                   value,
                 );
               }}
               onCommit={(value) => {
                 onInstrumentParameterCommit(
-                  voice.id,
+                  projectInstrument.id,
                   "filterEnvelopeAmountOctaves",
                   value,
                 );
@@ -249,7 +249,7 @@ export function InstrumentInspector({
           </div>
         </section>
         <EnvelopeModule
-          voiceId={voice.id}
+          instrumentId={projectInstrument.id}
           title="Filter Envelope"
           envelopeKind="filter"
           envelope={instrument.filterEnvelope}
@@ -257,7 +257,7 @@ export function InstrumentInspector({
           onCommit={onEnvelopeCommit}
         />
         <EnvelopeModule
-          voiceId={voice.id}
+          instrumentId={projectInstrument.id}
           title="Amplitude Envelope"
           envelopeKind="amplitude"
           envelope={instrument.envelope}
@@ -270,7 +270,7 @@ export function InstrumentInspector({
 }
 
 interface EnvelopeModuleProps {
-  readonly voiceId: VoiceId;
+  readonly instrumentId: InstrumentId;
   readonly title: string;
   readonly envelopeKind: "amplitude" | "filter";
   readonly envelope: AdsrEnvelope;
@@ -279,7 +279,7 @@ interface EnvelopeModuleProps {
 }
 
 function EnvelopeModule({
-  voiceId,
+  instrumentId,
   title,
   envelopeKind,
   envelope,
@@ -294,7 +294,7 @@ function EnvelopeModule({
       </div>
       <div className="parameter-grid">
         <ParameterSlider
-          key={`${voiceId}-${envelopeKind}-attack`}
+          key={`${instrumentId}-${envelopeKind}-attack`}
           label="A"
           value={envelope.attackSeconds}
           minimum={0}
@@ -302,14 +302,14 @@ function EnvelopeModule({
           step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
           formatValue={formatEnvelopeTime}
           onPreview={(value) => {
-            onPreview(voiceId, envelopeKind, "attackSeconds", value);
+            onPreview(instrumentId, envelopeKind, "attackSeconds", value);
           }}
           onCommit={(value) => {
-            onCommit(voiceId, envelopeKind, "attackSeconds", value);
+            onCommit(instrumentId, envelopeKind, "attackSeconds", value);
           }}
         />
         <ParameterSlider
-          key={`${voiceId}-${envelopeKind}-decay`}
+          key={`${instrumentId}-${envelopeKind}-decay`}
           label="D"
           value={envelope.decaySeconds}
           minimum={0}
@@ -317,14 +317,14 @@ function EnvelopeModule({
           step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
           formatValue={formatEnvelopeTime}
           onPreview={(value) => {
-            onPreview(voiceId, envelopeKind, "decaySeconds", value);
+            onPreview(instrumentId, envelopeKind, "decaySeconds", value);
           }}
           onCommit={(value) => {
-            onCommit(voiceId, envelopeKind, "decaySeconds", value);
+            onCommit(instrumentId, envelopeKind, "decaySeconds", value);
           }}
         />
         <ParameterSlider
-          key={`${voiceId}-${envelopeKind}-sustain`}
+          key={`${instrumentId}-${envelopeKind}-sustain`}
           label="S"
           value={envelope.sustainLevel}
           minimum={0}
@@ -332,14 +332,14 @@ function EnvelopeModule({
           step={EDITOR_CONSTANTS.sustainStep}
           formatValue={formatPercentage}
           onPreview={(value) => {
-            onPreview(voiceId, envelopeKind, "sustainLevel", value);
+            onPreview(instrumentId, envelopeKind, "sustainLevel", value);
           }}
           onCommit={(value) => {
-            onCommit(voiceId, envelopeKind, "sustainLevel", value);
+            onCommit(instrumentId, envelopeKind, "sustainLevel", value);
           }}
         />
         <ParameterSlider
-          key={`${voiceId}-${envelopeKind}-release`}
+          key={`${instrumentId}-${envelopeKind}-release`}
           label="R"
           value={envelope.releaseSeconds}
           minimum={0}
@@ -347,10 +347,10 @@ function EnvelopeModule({
           step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
           formatValue={formatEnvelopeTime}
           onPreview={(value) => {
-            onPreview(voiceId, envelopeKind, "releaseSeconds", value);
+            onPreview(instrumentId, envelopeKind, "releaseSeconds", value);
           }}
           onCommit={(value) => {
-            onCommit(voiceId, envelopeKind, "releaseSeconds", value);
+            onCommit(instrumentId, envelopeKind, "releaseSeconds", value);
           }}
         />
       </div>

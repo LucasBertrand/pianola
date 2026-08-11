@@ -1,10 +1,10 @@
 import type {
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 
 export type EditorSelectionRequest =
   | { readonly type: "clear" }
-  | { readonly type: "toggleVoice"; readonly voiceId: VoiceId };
+  | { readonly type: "toggleInstrument"; readonly instrumentId: InstrumentId };
 
 export type EditorSelectionRequestListener = (
   request: EditorSelectionRequest,
@@ -23,8 +23,8 @@ export class EditorSelectionRequests {
     this.publish({ type: "clear" });
   }
 
-  public toggleVoice(voiceId: VoiceId): void {
-    this.publish({ type: "toggleVoice", voiceId });
+  public toggleInstrument(instrumentId: InstrumentId): void {
+    this.publish({ type: "toggleInstrument", instrumentId });
   }
 
   public subscribe(

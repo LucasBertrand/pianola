@@ -1,11 +1,11 @@
 import type {
-  ClipVoiceState,
+  ClipInstrumentState,
   InstrumentConfig,
   Note,
   ProjectState,
   TimeSignature,
-  Voice,
-  VoiceId,
+  ProjectInstrument,
+  InstrumentId,
 } from "../domain/model";
 import {
   getActiveClip,
@@ -18,13 +18,13 @@ import {
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
 } from "../domain/model";
 import {
-  validateVoice,
+  validateProjectInstrument,
 } from "../domain/validation";
 import type {
-  PackedVoiceEvents,
+  PackedInstrumentEvents,
   PlaybackSnapshot,
-  PlaybackVoiceSnapshot,
-  SubtractivePlaybackInstrumentSnapshot,
+  PlaybackInstrumentSnapshot,
+  SubtractivePlaybackPresetSnapshot,
   TempoMapSnapshot,
 } from "./contracts";
 
@@ -80,53 +80,53 @@ export function compilePlaybackSnapshot(
     );
   }
 
-  const voices: PlaybackVoiceSnapshot[] = [];
-  const compiledVoiceIds = new Set<VoiceId>();
+  const instruments: PlaybackInstrumentSnapshot[] = [];
+  const compiledInstrumentIds = new Set<InstrumentId>();
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < projectState.voiceOrder.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < projectState.instrumentOrder.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = projectState.voiceOrder[voiceIndex];
+    const instrumentId = projectState.instrumentOrder[instrumentIndex];
 
-    if (voiceId === undefined) {
+    if (instrumentId === undefined) {
       continue;
     }
 
-    if (compiledVoiceIds.has(voiceId)) {
+    if (compiledInstrumentIds.has(instrumentId)) {
       throw new PlaybackSnapshotCompilationError(
-        `Voice "${voiceId}" appears more than once in voiceOrder.`,
+        `Project instrument "${instrumentId}" appears more than once in instrumentOrder.`,
       );
     }
 
-    const voice = projectState.voicesById[voiceId];
-    const track = activeClip.tracksByVoiceId[voiceId];
-    const voiceState = activeClip.voiceStatesById[voiceId];
+    const projectInstrument = projectState.projectInstrumentsById[instrumentId];
+    const track = activeClip.tracksByInstrumentId[instrumentId];
+    const instrumentState = activeClip.instrumentStatesById[instrumentId];
 
-    if (voice === undefined) {
+    if (projectInstrument === undefined) {
       throw new PlaybackSnapshotCompilationError(
-        `Voice "${voiceId}" is missing from voicesById.`,
+        `Project instrument "${instrumentId}" is missing from projectInstrumentsById.`,
       );
     }
 
-    if (track === undefined || track.voiceId !== voiceId) {
+    if (track === undefined || track.instrumentId !== instrumentId) {
       throw new PlaybackSnapshotCompilationError(
-        `Track "${voiceId}" is missing or belongs to another voice.`,
+        `Track "${instrumentId}" is missing or belongs to another instrument.`,
       );
     }
 
-    if (voiceState === undefined) {
+    if (instrumentState === undefined) {
       throw new PlaybackSnapshotCompilationError(
-        `Voice state "${voiceId}" is missing from the active clip.`,
+        `Project instrument state "${instrumentId}" is missing from the active clip.`,
       );
     }
 
-    compiledVoiceIds.add(voiceId);
-    voices.push(
-      compileVoiceSnapshot(
-        voice,
-        voiceState,
+    compiledInstrumentIds.add(instrumentId);
+    instruments.push(
+      compileInstrumentSnapshot(
+        projectInstrument,
+        instrumentState,
         track.notesById,
         durationTicks,
       ),
@@ -145,36 +145,36 @@ export function compilePlaybackSnapshot(
       transport.bpm,
       transport.timeSignature,
     ),
-    voices: Object.freeze(voices),
+    instruments: Object.freeze(instruments),
   };
 
   return Object.freeze(snapshot);
 }
 
-function compileVoiceSnapshot(
-  voice: Voice,
-  voiceState: ClipVoiceState,
+function compileInstrumentSnapshot(
+  projectInstrument: ProjectInstrument,
+  instrumentState: ClipInstrumentState,
   notesById: Readonly<Record<string, Note>>,
   projectDurationTicks: number,
-): PlaybackVoiceSnapshot {
-  const instrument = voiceState.instrument;
+): PlaybackInstrumentSnapshot {
+  const instrument = instrumentState.instrument;
 
   if (instrument.kind !== "subtractive") {
     throw new PlaybackSnapshotCompilationError(
-      `Voice "${voice.id}" uses unsupported instrument kind`
+      `Project instrument "${projectInstrument.id}" uses unsupported instrument kind`
         + ` "${instrument.kind}".`,
     );
   }
 
-  const voiceValidation = validateVoice(voice);
+  const instrumentValidation = validateProjectInstrument(projectInstrument);
 
-  if (!voiceValidation.valid) {
-    const firstIssue = voiceValidation.issues[0];
+  if (!instrumentValidation.valid) {
+    const firstIssue = instrumentValidation.issues[0];
 
     throw new PlaybackSnapshotCompilationError(
       firstIssue === undefined
-        ? `Voice "${voice.id}" is invalid.`
-        : `Voice "${voice.id}" is invalid at ${firstIssue.path}: ${firstIssue.message}`,
+        ? `Project instrument "${projectInstrument.id}" is invalid.`
+        : `Project instrument "${projectInstrument.id}" is invalid at ${firstIssue.path}: ${firstIssue.message}`,
     );
   }
 
@@ -186,18 +186,18 @@ function compileVoiceSnapshot(
       > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
   ) {
     throw new PlaybackSnapshotCompilationError(
-      `Voice "${voice.id}" subtractive synth polyphony must be between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
+      `Project instrument "${projectInstrument.id}" subtractive synth polyphony must be between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
     );
   }
 
   assertFiniteNumber(
-    voiceState.gain,
-    `Voice "${voice.id}" gain in active clip`,
+    instrumentState.gain,
+    `Project instrument "${projectInstrument.id}" gain in active clip`,
   );
 
-  if (!Number.isFinite(voice.pan) || voice.pan < -1 || voice.pan > 1) {
+  if (!Number.isFinite(projectInstrument.pan) || projectInstrument.pan < -1 || projectInstrument.pan > 1) {
     throw new PlaybackSnapshotCompilationError(
-      `Voice "${voice.id}" pan must be between -1 and 1.`,
+      `Project instrument "${projectInstrument.id}" pan must be between -1 and 1.`,
     );
   }
 
@@ -213,7 +213,7 @@ function compileVoiceSnapshot(
     assertCompilableNote(
       note,
       noteId,
-      voice.id,
+      projectInstrument.id,
       projectDurationTicks,
     );
 
@@ -226,23 +226,23 @@ function compileVoiceSnapshot(
 
   notes.sort(compareNotesForPlayback);
 
-  const events = packVoiceEvents(voice.id, notes);
-  const snapshot: PlaybackVoiceSnapshot = {
+  const events = packInstrumentEvents(projectInstrument.id, notes);
+  const snapshot: PlaybackInstrumentSnapshot = {
     ...events,
-    gain: voiceState.gain,
-    pan: voice.pan,
-    muted: voiceState.muted,
-    solo: voiceState.solo,
-    instrument: cloneInstrument(voice.id, instrument),
+    gain: instrumentState.gain,
+    pan: projectInstrument.pan,
+    muted: instrumentState.muted,
+    solo: instrumentState.solo,
+    instrument: cloneInstrument(projectInstrument.id, instrument),
   };
 
   return Object.freeze(snapshot);
 }
 
-function packVoiceEvents(
-  voiceId: VoiceId,
+function packInstrumentEvents(
+  instrumentId: InstrumentId,
   notes: readonly Note[],
-): PackedVoiceEvents {
+): PackedInstrumentEvents {
   const noteCount = notes.length;
   const noteIds = new Array<string>(noteCount);
   const pitches = new Uint8Array(noteCount);
@@ -269,7 +269,7 @@ function packVoiceEvents(
   }
 
   return Object.freeze({
-    voiceId,
+    instrumentId,
     noteIds: Object.freeze(noteIds),
     pitches,
     velocities,
@@ -279,12 +279,12 @@ function packVoiceEvents(
 }
 
 function cloneInstrument(
-  voiceId: VoiceId,
+  instrumentId: InstrumentId,
   instrument: InstrumentConfig,
-): SubtractivePlaybackInstrumentSnapshot {
+): SubtractivePlaybackPresetSnapshot {
   if (instrument.kind !== "subtractive") {
     throw new PlaybackSnapshotCompilationError(
-      `Voice "${voiceId}" does not contain a subtractive instrument.`,
+      `Project instrument "${instrumentId}" does not contain a subtractive instrument.`,
     );
   }
 
@@ -335,7 +335,7 @@ function createSingleTempoMapSnapshot(
 function assertCompilableNote(
   note: Note,
   recordKey: string,
-  voiceId: VoiceId,
+  instrumentId: InstrumentId,
   projectDurationTicks: number,
 ): void {
   const endTick = note.startTick + note.durationTicks;
@@ -346,9 +346,9 @@ function assertCompilableNote(
     );
   }
 
-  if (note.voiceId !== voiceId) {
+  if (note.instrumentId !== instrumentId) {
     throw new PlaybackSnapshotCompilationError(
-      `Note "${note.id}" belongs to voice "${note.voiceId}" instead of "${voiceId}".`,
+      `Note "${note.id}" belongs to instrument "${note.instrumentId}" instead of "${instrumentId}".`,
     );
   }
 

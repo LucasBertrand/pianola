@@ -1,6 +1,6 @@
 import type {
   Note,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import {
   APPLICATION_COLORS,
@@ -10,26 +10,26 @@ import {
   type PitchSnapSettings,
 } from "../../music/pitch-snap";
 
-export interface VoiceRenderStyle {
+export interface InstrumentRenderStyle {
   readonly fillStyle: string;
   readonly opacity: number;
   readonly locked: boolean;
 }
 
-export type NoteColorMode = "voice" | "pitch";
+export type NoteColorMode = "instrument" | "pitch";
 
 const DEFAULT_NOTE_COLOR =
   APPLICATION_COLORS.notes.default;
 
-export function compareNotesByVoiceRenderOrder(
+export function compareNotesByInstrumentRenderOrder(
   left: Note,
   right: Note,
 ): number {
-  if (left.voiceId < right.voiceId) {
+  if (left.instrumentId < right.instrumentId) {
     return -1;
   }
 
-  if (left.voiceId > right.voiceId) {
+  if (left.instrumentId > right.instrumentId) {
     return 1;
   }
 
@@ -58,18 +58,18 @@ export function compareNotesByPitchRenderOrder(
     return left.pitch - right.pitch;
   }
 
-  return compareNotesByVoiceRenderOrder(left, right);
+  return compareNotesByInstrumentRenderOrder(left, right);
 }
 
 export function getNoteFillStyle(
   note: Note,
-  stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+  stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
   colorMode: NoteColorMode,
   pitchSnapSettings: PitchSnapSettings,
 ): string {
   return colorMode === "pitch"
     ? getPitchNoteColor(note.pitch, pitchSnapSettings)
-    : stylesByVoiceId[note.voiceId]?.fillStyle
+    : stylesByInstrumentId[note.instrumentId]?.fillStyle
       ?? DEFAULT_NOTE_COLOR;
 }
 

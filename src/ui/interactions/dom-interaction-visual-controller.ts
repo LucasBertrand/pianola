@@ -3,7 +3,7 @@ import {
 } from "../../config/application-colors";
 import type {
   Note,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import type {
   CoordinateConverter,
@@ -19,7 +19,7 @@ import {
   getNoteFillStyle,
   getPitchNoteColor,
   type NoteColorMode,
-  type VoiceRenderStyle,
+  type InstrumentRenderStyle,
 } from "../rendering/note-style";
 import {
   getMidiNoteLabel,
@@ -75,7 +75,7 @@ export class DomInteractionVisualController
   public beginDrag(
     notes: readonly Note[],
     converter: CoordinateConverter,
-    stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+    stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
   ): void {
     this.editingNoteMask.replace(notes);
     resetLayerTransform(this.selectionLayer);
@@ -83,7 +83,7 @@ export class DomInteractionVisualController
       this.ghostLayer,
       notes,
       converter,
-      stylesByVoiceId,
+      stylesByInstrumentId,
       this.noteColorMode.get(),
       this.pitchSnapSettings.get(),
       null,
@@ -154,7 +154,7 @@ export class DomInteractionVisualController
   public beginResize(
     notes: readonly Note[],
     converter: CoordinateConverter,
-    stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+    stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     edge: ResizeEdge,
   ): void {
     this.editingNoteMask.replace(notes);
@@ -163,7 +163,7 @@ export class DomInteractionVisualController
       this.ghostLayer,
       notes,
       converter,
-      stylesByVoiceId,
+      stylesByInstrumentId,
       this.noteColorMode.get(),
       this.pitchSnapSettings.get(),
       edge,
@@ -200,9 +200,9 @@ export class DomInteractionVisualController
     startTick: number,
     pitch: number,
     durationTicks: number,
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     converter: CoordinateConverter,
-    style: VoiceRenderStyle | undefined,
+    style: InstrumentRenderStyle | undefined,
   ): void {
     if (this.ghostLayer === null) {
       return;
@@ -222,7 +222,7 @@ export class DomInteractionVisualController
     const nextY = converter.pitchToCssPixelY(pitch - 1);
 
     element.className = "interaction-note-ghost is-drawing";
-    element.dataset["voiceId"] = voiceId;
+    element.dataset["instrumentId"] = instrumentId;
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
     element.style.width = `${Math.max(1, endX - x)}px`;
@@ -317,7 +317,7 @@ function populateGhostLayer(
   ghostLayer: HTMLDivElement | null,
   notes: readonly Note[],
   converter: CoordinateConverter,
-  stylesByVoiceId: Readonly<Record<VoiceId, VoiceRenderStyle>>,
+  stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
   colorMode: NoteColorMode,
   pitchSnapSettings: PitchSnapSettings,
   resizeEdge: ResizeEdge | null,
@@ -375,12 +375,12 @@ function populateGhostLayer(
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
     element.style.background = getNoteFillStyle(
       note,
-      stylesByVoiceId,
+      stylesByInstrumentId,
       colorMode,
       pitchSnapSettings,
     );
     element.style.opacity = String(
-      (stylesByVoiceId[note.voiceId]?.opacity ?? 1)
+      (stylesByInstrumentId[note.instrumentId]?.opacity ?? 1)
       * (note.enabled ? 1 : 0.36),
     );
     element.textContent = getMidiNoteLabel(

@@ -2,7 +2,7 @@ import type {
   Note,
   NoteId,
   ProjectState,
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 import {
   getActiveClip,
@@ -92,11 +92,11 @@ export class EditorSelection {
     predicate?: NoteSelectionPredicate,
   ): void {
     this.notesById.clear();
-    const tracksByVoiceId = getActiveClip(state).tracksByVoiceId;
+    const tracksByInstrumentId = getActiveClip(state).tracksByInstrumentId;
 
     for (const noteId of noteIds) {
-      for (const voiceId of state.voiceOrder) {
-        const note = tracksByVoiceId[voiceId]?.notesById[noteId];
+      for (const instrumentId of state.instrumentOrder) {
+        const note = tracksByInstrumentId[instrumentId]?.notesById[noteId];
 
         if (
           note !== undefined
@@ -132,11 +132,11 @@ export class EditorSelection {
     predicate?: NoteSelectionPredicate,
   ): void {
     let changed = false;
-    const tracksByVoiceId = getActiveClip(state).tracksByVoiceId;
+    const tracksByInstrumentId = getActiveClip(state).tracksByInstrumentId;
 
     for (const [noteId, previousNote] of this.notesById) {
       const currentNote =
-        tracksByVoiceId[previousNote.voiceId]
+        tracksByInstrumentId[previousNote.instrumentId]
           ?.notesById[noteId];
 
       if (
@@ -156,13 +156,13 @@ export class EditorSelection {
     }
   }
 
-  /** Toggles every selectable note from one voice as a single intention. */
-  public toggleVoice(
+  /** Toggles every selectable note from one instrument as a single intention. */
+  public toggleInstrument(
     state: ProjectState,
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     predicate?: NoteSelectionPredicate,
   ): boolean {
-    const track = getActiveClip(state).tracksByVoiceId[voiceId];
+    const track = getActiveClip(state).tracksByInstrumentId[instrumentId];
 
     if (track === undefined) {
       return false;
@@ -193,7 +193,7 @@ export class EditorSelection {
     }
 
     if (selectedNoteCount === selectableNoteCount) {
-      this.retain((note) => note.voiceId !== voiceId);
+      this.retain((note) => note.instrumentId !== instrumentId);
       return true;
     }
 
@@ -211,7 +211,7 @@ export class EditorSelection {
     return true;
   }
 
-  /** Toggles a pitch lane across all selectable voices. */
+  /** Toggles a pitch lane across all selectable instruments. */
   public togglePitch(
     state: ProjectState,
     pitch: number,
@@ -220,8 +220,8 @@ export class EditorSelection {
     let selectableNoteCount = 0;
     let selectedNoteCount = 0;
 
-    for (const voiceId of state.voiceOrder) {
-      const track = getActiveClip(state).tracksByVoiceId[voiceId];
+    for (const instrumentId of state.instrumentOrder) {
+      const track = getActiveClip(state).tracksByInstrumentId[instrumentId];
 
       if (track === undefined) {
         continue;
@@ -255,8 +255,8 @@ export class EditorSelection {
       return true;
     }
 
-    for (const voiceId of state.voiceOrder) {
-      const track = getActiveClip(state).tracksByVoiceId[voiceId];
+    for (const instrumentId of state.instrumentOrder) {
+      const track = getActiveClip(state).tracksByInstrumentId[instrumentId];
 
       if (track === undefined) {
         continue;
@@ -282,17 +282,17 @@ export class EditorSelection {
     return this.notes.slice();
   }
 
-  public getSoleVoiceId(): VoiceId | null {
-    let soleVoiceId: VoiceId | null = null;
+  public getSoleInstrumentId(): InstrumentId | null {
+    let soleInstrumentId: InstrumentId | null = null;
 
     for (const note of this.notesById.values()) {
-      if (soleVoiceId === null) {
-        soleVoiceId = note.voiceId;
-      } else if (note.voiceId !== soleVoiceId) {
+      if (soleInstrumentId === null) {
+        soleInstrumentId = note.instrumentId;
+      } else if (note.instrumentId !== soleInstrumentId) {
         return null;
       }
     }
 
-    return soleVoiceId;
+    return soleInstrumentId;
   }
 }

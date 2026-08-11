@@ -46,26 +46,26 @@ export const PROJECT_CONSTANTS = Object.freeze({
   // Clip limits protect native-file parsing and inspector usability.
   maximumClipNameLength: 128,
   maximumClipCount: 256,
-  maximumVoiceNameLength: 128,
-  maximumVoiceCount: 256,
+  maximumInstrumentNameLength: 128,
+  maximumInstrumentCount: 256,
   // This rendering and validation budget is applied independently per clip.
   maximumNoteCount: 250_000,
-  maximumVoiceDescriptorCount: 128,
+  maximumInstrumentDescriptorCount: 128,
   maximumDescriptorParameterCount: 256,
   maximumHistoryEntries: 200,
   defaultLoopEnabled: false,
-  defaultClipVoiceMuted: false,
-  defaultClipVoiceLocked: false,
-  defaultClipVoiceSolo: false,
-  defaultClipVoiceGain: 0.82,
+  defaultClipInstrumentMuted: false,
+  defaultClipInstrumentLocked: false,
+  defaultClipInstrumentSolo: false,
+  defaultClipInstrumentGain: 0.82,
   minimumMidiPitch: 0,
   maximumMidiPitch: 127,
   minimumMidiVelocity: 0,
   maximumMidiVelocity: 127,
 } as const);
 
-/** Default settings applied whenever the application creates a voice. */
-export const VOICE_CONSTANTS = Object.freeze({
+/** Default settings applied whenever the application creates an instrument. */
+export const INSTRUMENT_CONSTANTS = Object.freeze({
   minimumGain: 0,
   maximumGain: 1,
   pan: 0,
@@ -94,16 +94,16 @@ export const VOICE_CONSTANTS = Object.freeze({
       label: "Square",
     }),
   ] as const),
-  demoVoices: Object.freeze([
+  demoInstruments: Object.freeze([
     Object.freeze({
-      id: "voice-atlas",
+      id: "instrument-atlas",
       name: "Atlas",
-      color: APPLICATION_COLORS.notes.voicePalette[0],
+      color: APPLICATION_COLORS.notes.instrumentPalette[0],
     }),
     Object.freeze({
-      id: "voice-bloom",
+      id: "instrument-bloom",
       name: "Bloom",
-      color: APPLICATION_COLORS.notes.voicePalette[1],
+      color: APPLICATION_COLORS.notes.instrumentPalette[1],
     }),
   ] as const),
   oscillatorDetuneCents: 0,
@@ -181,8 +181,8 @@ export const INTERACTION_CONSTANTS = Object.freeze({
   pianoKeyLongPressDelayMs: 520,
   pianoKeyPenLongPressDelayMs: 280,
   pianoKeyLongPressMovementToleranceCssPixels: 10,
-  voiceNameLongPressDelayMs: 520,
-  voiceNameLongPressMovementToleranceCssPixels: 10,
+  instrumentNameLongPressDelayMs: 520,
+  instrumentNameLongPressMovementToleranceCssPixels: 10,
   touchDoubleTapDelayMs: 360,
   touchDoubleTapDistanceCssPixels: 24,
   tapMovementToleranceCssPixels: 10,
@@ -422,7 +422,7 @@ export const EDITOR_CONSTANTS = Object.freeze({
   parameterSliderPositionStep: 0.001,
   zoomStep: 0.05,
   defaultDrawVelocity: 100,
-  defaultNoteColorMode: "voice",
+  defaultNoteColorMode: "instrument",
   defaultGridBaseResolutionTicks: PROJECT_CONSTANTS.ppqn / 4,
   defaultGridSubdivision: "straight",
   transportMeterOptions: Object.freeze([
@@ -505,7 +505,7 @@ export const RENDERING_CONSTANTS = Object.freeze({
   gridBarLineColor: APPLICATION_COLORS.pianoRoll.barLine,
   minimumGridLineSpacingCssPixels: 4,
   maximumGridLinesPerPass: 4_096,
-  userVoiceColors: APPLICATION_COLORS.notes.voicePalette,
+  userInstrumentColors: APPLICATION_COLORS.notes.instrumentPalette,
 } as const);
 
 /** Native document limits and browser download behavior. */

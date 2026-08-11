@@ -96,9 +96,9 @@ interface AccentThemeColors {
   readonly success: string;
   /** Scale and tonal-information accent. */
   readonly tonal: string;
-  /** Secondary decorative accent used by voices and gradients. */
+  /** Secondary decorative accent used by instruments and gradients. */
   readonly purple: string;
-  /** Secondary decorative accent used by voices and gradients. */
+  /** Secondary decorative accent used by instruments and gradients. */
   readonly orange: string;
 }
 
@@ -131,7 +131,7 @@ interface PianoRollThemeColors {
   readonly tonalSnapRootRow: string;
   /** Temporary full-width lane highlight after piano-key interaction. */
   readonly activePitchLane: string;
-  /** Hatch stroke rendered over notes belonging to a locked voice. */
+  /** Hatch stroke rendered over notes belonging to a locked instrument. */
   readonly lockedNoteHatch: string;
 }
 
@@ -140,7 +140,7 @@ interface NoteThemeColors {
   /** Neutral note fill used when a pitch is outside the selected mode. */
   readonly outOfScale: string;
   readonly label: string;
-  readonly voicePalette: readonly string[];
+  readonly instrumentPalette: readonly string[];
   /** One stable color per chromatic pitch class, starting at C. */
   readonly pitchClassPalette: readonly string[];
 }
@@ -303,7 +303,7 @@ const DARK_APPLICATION_THEME = Object.freeze({
     default: "#6ea8fe",
     outOfScale: "#596271",
     label: "rgba(18, 22, 29, 0.78)",
-    voicePalette: Object.freeze([
+    instrumentPalette: Object.freeze([
       "#79a7ff",
       "#a77bf3",
       "#ff9b71",
@@ -472,7 +472,7 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
     default: "#587f91",
     outOfScale: "#998a72",
     label: "rgba(255, 250, 240, 0.9)",
-    voicePalette: Object.freeze([
+    instrumentPalette: Object.freeze([
       "#557d78",
       "#7c6687",
       "#bd7042",

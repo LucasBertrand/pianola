@@ -2,7 +2,7 @@ import type {
   AdsrEnvelope,
   Clip,
   ClipId,
-  ClipVoiceState,
+  ClipInstrumentState,
   EffectDescriptor,
   EffectParameterValue,
   GenerativeRuleDescriptor,
@@ -16,9 +16,9 @@ import type {
   SubtractiveSynthConfig,
   Track,
   TransportState,
-  Voice,
-  VoiceId,
-  VoiceInterpretation,
+  ProjectInstrument,
+  InstrumentId,
+  ProjectInstrumentInterpretation,
 } from "../domain/model";
 import {
   APPLICATION_CONSTANTS,
@@ -27,7 +27,7 @@ import {
   PROJECT_CONSTANTS,
   TONAL_SNAP_CONSTANTS,
   VIEWPORT_CONSTANTS,
-  VOICE_CONSTANTS,
+  INSTRUMENT_CONSTANTS,
 } from "../config/program-constants";
 import type {
   ViewportState,
@@ -55,9 +55,9 @@ import {
   MAXIMUM_MEASURE_COUNT,
   MAXIMUM_CLIP_NOTE_COUNT,
   MAXIMUM_PROJECT_TITLE_LENGTH,
-  MAXIMUM_PROJECT_VOICE_COUNT,
-  MAXIMUM_VOICE_DESCRIPTOR_COUNT,
-  MAXIMUM_VOICE_NAME_LENGTH,
+  MAXIMUM_PROJECT_INSTRUMENT_COUNT,
+  MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
+  MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MINIMUM_MEASURE_COUNT,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
@@ -68,7 +68,7 @@ import {
   validateNoteForTrack,
   validateProjectDuration,
   validateTransportState,
-  validateVoice,
+  validateProjectInstrument,
 } from "../domain/validation";
 
 export const NATIVE_PROJECT_FILE_FORMAT =
@@ -82,11 +82,11 @@ export const MAXIMUM_NATIVE_PROJECT_FILE_BYTES =
 export const MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH =
   MAXIMUM_PROJECT_TITLE_LENGTH;
 
-const MAXIMUM_VOICE_COUNT = MAXIMUM_PROJECT_VOICE_COUNT;
+const MAXIMUM_INSTRUMENT_COUNT = MAXIMUM_PROJECT_INSTRUMENT_COUNT;
 const MAXIMUM_NOTE_COUNT = MAXIMUM_CLIP_NOTE_COUNT;
-const MAXIMUM_NAME_LENGTH = MAXIMUM_VOICE_NAME_LENGTH;
+const MAXIMUM_NAME_LENGTH = MAXIMUM_INSTRUMENT_NAME_LENGTH;
 const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
-const MAXIMUM_DESCRIPTOR_COUNT = MAXIMUM_VOICE_DESCRIPTOR_COUNT;
+const MAXIMUM_DESCRIPTOR_COUNT = MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT;
 const MAXIMUM_PARAMETER_COUNT = MAXIMUM_DESCRIPTOR_PARAMETER_COUNT;
 
 type JsonPrimitive = string | number | boolean;
@@ -101,8 +101,8 @@ export interface NativeProjectFileMetadata {
 export interface NativeProjectSnapshot {
   readonly schemaVersion: number;
   readonly title: string;
-  readonly voicesById: Readonly<Record<VoiceId, Voice>>;
-  readonly voiceOrder: readonly VoiceId[];
+  readonly projectInstrumentsById: Readonly<Record<InstrumentId, ProjectInstrument>>;
+  readonly instrumentOrder: readonly InstrumentId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipOrder: readonly ClipId[];
   readonly activeClipId: ClipId;
@@ -133,7 +133,7 @@ export interface NativeClipEditorState {
 
 /** Durable editor preferences that define the user's project workspace. */
 export interface NativeEditorState {
-  readonly selectedVoiceId: VoiceId | null;
+  readonly selectedInstrumentId: InstrumentId | null;
   readonly selectionMode: NativeSelectionMode;
   readonly noteColorMode: NoteColorMode;
   readonly pitchPreviewEnabled: boolean;
@@ -198,8 +198,8 @@ export function serializeNativeProjectFile(
     project: {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       title: state.title,
-      voicesById: state.voicesById,
-      voiceOrder: state.voiceOrder,
+      projectInstrumentsById: state.projectInstrumentsById,
+      instrumentOrder: state.instrumentOrder,
       clipsById,
       clipOrder: state.clipOrder,
       activeClipId: state.activeClipId,
@@ -336,23 +336,23 @@ function parseEditorState(
   path: string,
 ): NativeEditorState {
   const editor = readRecord(source, path);
-  const selectedVoiceSource = editor["selectedVoiceId"];
-  const selectedVoiceId = selectedVoiceSource === null
+  const selectedInstrumentSource = editor["selectedInstrumentId"];
+  const selectedInstrumentId = selectedInstrumentSource === null
     ? null
     : readNonEmptyString(
-        selectedVoiceSource,
-        `${path}.selectedVoiceId`,
+        selectedInstrumentSource,
+        `${path}.selectedInstrumentId`,
         MAXIMUM_ID_LENGTH,
       );
 
   if (
-    selectedVoiceId !== null
-    && projectState.voicesById[selectedVoiceId] === undefined
+    selectedInstrumentId !== null
+    && projectState.projectInstrumentsById[selectedInstrumentId] === undefined
   ) {
     fail(
       "INVALID_DATA",
-      `${path}.selectedVoiceId`,
-      "The selected voice does not exist in the project.",
+      `${path}.selectedInstrumentId`,
+      "The selected instrument does not exist in the project.",
     );
   }
 
@@ -380,7 +380,7 @@ function parseEditorState(
     16,
   );
 
-  if (noteColorMode !== "voice" && noteColorMode !== "pitch") {
+  if (noteColorMode !== "instrument" && noteColorMode !== "pitch") {
     fail(
       "INVALID_DATA",
       `${path}.noteColorMode`,
@@ -434,7 +434,7 @@ function parseEditorState(
   }
 
   return {
-    selectedVoiceId,
+    selectedInstrumentId,
     selectionMode,
     noteColorMode,
     pitchPreviewEnabled: readBoolean(
@@ -609,14 +609,14 @@ function parseProjectSnapshot(
     `${path}.title`,
     MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
   );
-  const voiceOrder = parseVoiceOrder(
-    project["voiceOrder"],
-    `${path}.voiceOrder`,
+  const instrumentOrder = parseInstrumentOrder(
+    project["instrumentOrder"],
+    `${path}.instrumentOrder`,
   );
-  const voicesById = parseVoices(
-    project["voicesById"],
-    voiceOrder,
-    `${path}.voicesById`,
+  const projectInstrumentsById = parseProjectInstruments(
+    project["projectInstrumentsById"],
+    instrumentOrder,
+    `${path}.projectInstrumentsById`,
   );
   const masterBus = parseMasterBus(
     project["masterBus"],
@@ -637,7 +637,7 @@ function parseProjectSnapshot(
     clipsById[clipId] = parseClip(
       sourceClips[clipId],
       clipId,
-      voiceOrder,
+      instrumentOrder,
       `${path}.clipsById.${clipId}`,
     );
   }
@@ -660,8 +660,8 @@ function parseProjectSnapshot(
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title,
-    voicesById,
-    voiceOrder,
+    projectInstrumentsById,
+    instrumentOrder,
     clipsById,
     clipOrder,
     activeClipId,
@@ -715,7 +715,7 @@ function parseClipOrder(
 function parseClip(
   source: unknown,
   clipId: ClipId,
-  voiceOrder: readonly VoiceId[],
+  instrumentOrder: readonly InstrumentId[],
   path: string,
 ): Clip {
   const clip = readRecord(source, path);
@@ -758,23 +758,23 @@ function parseClip(
   }
 
   const durationTicks = measureCount * getTicksPerMeasure(transportSettings);
-  const tracksByVoiceId = parseTracks(
-    clip["tracksByVoiceId"],
-    voiceOrder,
+  const tracksByInstrumentId = parseTracks(
+    clip["tracksByInstrumentId"],
+    instrumentOrder,
     durationTicks,
-    `${path}.tracksByVoiceId`,
+    `${path}.tracksByInstrumentId`,
   );
-  const voiceStatesById = parseClipVoiceStates(
-    clip["voiceStatesById"],
-    voiceOrder,
-    `${path}.voiceStatesById`,
+  const instrumentStatesById = parseClipInstrumentStates(
+    clip["instrumentStatesById"],
+    instrumentOrder,
+    `${path}.instrumentStatesById`,
   );
   const parsedClip: Clip = {
     id: clipId,
     name,
     measureCount,
-    tracksByVoiceId,
-    voiceStatesById,
+    tracksByInstrumentId,
+    instrumentStatesById,
     transportSettings,
   };
 
@@ -782,69 +782,69 @@ function parseClip(
   return parsedClip;
 }
 
-function parseVoiceOrder(
+function parseInstrumentOrder(
   source: unknown,
   path: string,
-): readonly VoiceId[] {
+): readonly InstrumentId[] {
   const values = readArray(source, path);
 
-  if (values.length > MAXIMUM_VOICE_COUNT) {
+  if (values.length > MAXIMUM_INSTRUMENT_COUNT) {
     fail(
       "INVALID_DATA",
       path,
-      `A project cannot contain more than ${MAXIMUM_VOICE_COUNT} voices.`,
+      `A project cannot contain more than ${MAXIMUM_INSTRUMENT_COUNT} instruments.`,
     );
   }
 
-  const voiceOrder: VoiceId[] = [];
-  const uniqueVoiceIds = new Set<VoiceId>();
+  const instrumentOrder: InstrumentId[] = [];
+  const uniqueInstrumentIds = new Set<InstrumentId>();
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < values.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < values.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = readNonEmptyString(
-      values[voiceIndex],
-      `${path}[${voiceIndex}]`,
+    const instrumentId = readNonEmptyString(
+      values[instrumentIndex],
+      `${path}[${instrumentIndex}]`,
       MAXIMUM_ID_LENGTH,
     );
 
-    if (uniqueVoiceIds.has(voiceId)) {
+    if (uniqueInstrumentIds.has(instrumentId)) {
       fail(
         "INVALID_DATA",
-        `${path}[${voiceIndex}]`,
-        `Voice ID "${voiceId}" appears more than once.`,
+        `${path}[${instrumentIndex}]`,
+        `ProjectInstrument ID "${instrumentId}" appears more than once.`,
       );
     }
 
-    uniqueVoiceIds.add(voiceId);
-    voiceOrder.push(voiceId);
+    uniqueInstrumentIds.add(instrumentId);
+    instrumentOrder.push(instrumentId);
   }
 
-  return voiceOrder;
+  return instrumentOrder;
 }
 
-function parseClipVoiceStates(
+function parseClipInstrumentStates(
   source: unknown,
-  voiceOrder: readonly VoiceId[],
+  instrumentOrder: readonly InstrumentId[],
   path: string,
-): Readonly<Record<VoiceId, ClipVoiceState>> {
+): Readonly<Record<InstrumentId, ClipInstrumentState>> {
   const sourceStates = readRecord(source, path);
 
-  assertExactRecordKeys(sourceStates, voiceOrder, path);
-  const states = Object.create(null) as Record<VoiceId, ClipVoiceState>;
+  assertExactRecordKeys(sourceStates, instrumentOrder, path);
+  const states = Object.create(null) as Record<InstrumentId, ClipInstrumentState>;
 
-  for (const voiceId of voiceOrder) {
-    const statePath = `${path}.${voiceId}`;
-    const state = readRecord(sourceStates[voiceId], statePath);
+  for (const instrumentId of instrumentOrder) {
+    const statePath = `${path}.${instrumentId}`;
+    const state = readRecord(sourceStates[instrumentId], statePath);
 
-    states[voiceId] = {
+    states[instrumentId] = {
       gain: readNumberInRange(
         state["gain"],
         `${statePath}.gain`,
-        VOICE_CONSTANTS.minimumGain,
-        VOICE_CONSTANTS.maximumGain,
+        INSTRUMENT_CONSTANTS.minimumGain,
+        INSTRUMENT_CONSTANTS.maximumGain,
       ),
       muted: readBoolean(state["muted"], `${statePath}.muted`),
       locked: readBoolean(state["locked"], `${statePath}.locked`),
@@ -859,57 +859,57 @@ function parseClipVoiceStates(
   return states;
 }
 
-function parseVoices(
+function parseProjectInstruments(
   source: unknown,
-  voiceOrder: readonly VoiceId[],
+  instrumentOrder: readonly InstrumentId[],
   path: string,
-): Readonly<Record<VoiceId, Voice>> {
-  const sourceVoices = readRecord(source, path);
-  assertExactRecordKeys(sourceVoices, voiceOrder, path);
-  const voicesById =
-    Object.create(null) as Record<VoiceId, Voice>;
+): Readonly<Record<InstrumentId, ProjectInstrument>> {
+  const sourceInstruments = readRecord(source, path);
+  assertExactRecordKeys(sourceInstruments, instrumentOrder, path);
+  const projectInstrumentsById =
+    Object.create(null) as Record<InstrumentId, ProjectInstrument>;
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < voiceOrder.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < instrumentOrder.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = voiceOrder[voiceIndex];
+    const instrumentId = instrumentOrder[instrumentIndex];
 
-    if (voiceId !== undefined) {
-      voicesById[voiceId] = parseVoice(
-        sourceVoices[voiceId],
-        voiceId,
-        `${path}.${voiceId}`,
+    if (instrumentId !== undefined) {
+      projectInstrumentsById[instrumentId] = parseProjectInstrument(
+        sourceInstruments[instrumentId],
+        instrumentId,
+        `${path}.${instrumentId}`,
       );
     }
   }
 
-  return voicesById;
+  return projectInstrumentsById;
 }
 
-function parseVoice(
+function parseProjectInstrument(
   source: unknown,
-  expectedVoiceId: VoiceId,
+  expectedInstrumentId: InstrumentId,
   path: string,
-): Voice {
-  const voice = readRecord(source, path);
+): ProjectInstrument {
+  const instrument = readRecord(source, path);
   const id = readNonEmptyString(
-    voice["id"],
+    instrument["id"],
     `${path}.id`,
     MAXIMUM_ID_LENGTH,
   );
 
-  if (id !== expectedVoiceId) {
+  if (id !== expectedInstrumentId) {
     fail(
       "INVALID_DATA",
       `${path}.id`,
-      `Voice ID "${id}" must match its record key "${expectedVoiceId}".`,
+      `ProjectInstrument ID "${id}" must match its record key "${expectedInstrumentId}".`,
     );
   }
 
   const color = readString(
-    voice["color"],
+    instrument["color"],
     `${path}.color`,
     32,
   );
@@ -918,35 +918,35 @@ function parseVoice(
     fail(
       "INVALID_DATA",
       `${path}.color`,
-      "Voice color must use the #RRGGBB format.",
+      "ProjectInstrument color must use the #RRGGBB format.",
     );
   }
 
-  const parsedVoice: Voice = {
+  const parsedInstrument: ProjectInstrument = {
     id,
     name: readNonEmptyString(
-      voice["name"],
+      instrument["name"],
       `${path}.name`,
       MAXIMUM_NAME_LENGTH,
     ),
     color,
     pan: readNumberInRange(
-      voice["pan"],
+      instrument["pan"],
       `${path}.pan`,
       -1,
       1,
     ),
-    effects: parseEffects(voice["effects"], `${path}.effects`),
+    effects: parseEffects(instrument["effects"], `${path}.effects`),
     generativeRules: parseGenerativeRules(
-      voice["generativeRules"],
+      instrument["generativeRules"],
       `${path}.generativeRules`,
     ),
-    interpretation: parseVoiceInterpretation(
-      voice["interpretation"],
+    interpretation: parseProjectInstrumentInterpretation(
+      instrument["interpretation"],
       `${path}.interpretation`,
     ),
   };
-  const validation = validateVoice(parsedVoice);
+  const validation = validateProjectInstrument(parsedInstrument);
 
   if (!validation.valid) {
     const issue = validation.issues[0];
@@ -954,11 +954,11 @@ function parseVoice(
     fail(
       "INVALID_DATA",
       issue === undefined ? path : `${path}.${issue.path}`,
-      issue?.message ?? "Voice configuration is invalid.",
+      issue?.message ?? "ProjectInstrument configuration is invalid.",
     );
   }
 
-  return parsedVoice;
+  return parsedInstrument;
 }
 
 function parseInstrument(
@@ -1007,8 +1007,8 @@ function parseSubtractiveSynth(
     pulseWidth: readNumberInRange(
       instrument["pulseWidth"],
       `${path}.pulseWidth`,
-      VOICE_CONSTANTS.minimumPulseWidth,
-      VOICE_CONSTANTS.maximumPulseWidth,
+      INSTRUMENT_CONSTANTS.minimumPulseWidth,
+      INSTRUMENT_CONSTANTS.maximumPulseWidth,
     ),
     envelope: parseEnvelope(
       instrument["envelope"],
@@ -1017,20 +1017,20 @@ function parseSubtractiveSynth(
     filterCutoffHz: readNumberInRange(
       instrument["filterCutoffHz"],
       `${path}.filterCutoffHz`,
-      VOICE_CONSTANTS.minimumFilterCutoffHz,
-      VOICE_CONSTANTS.maximumFilterCutoffHz,
+      INSTRUMENT_CONSTANTS.minimumFilterCutoffHz,
+      INSTRUMENT_CONSTANTS.maximumFilterCutoffHz,
     ),
     filterResonance: readNumberInRange(
       instrument["filterResonance"],
       `${path}.filterResonance`,
-      VOICE_CONSTANTS.minimumFilterResonance,
-      VOICE_CONSTANTS.maximumFilterResonance,
+      INSTRUMENT_CONSTANTS.minimumFilterResonance,
+      INSTRUMENT_CONSTANTS.maximumFilterResonance,
     ),
     filterEnvelopeAmountOctaves: readNumberInRange(
       instrument["filterEnvelopeAmountOctaves"],
       `${path}.filterEnvelopeAmountOctaves`,
-      VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
-      VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
+      INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
+      INSTRUMENT_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
     ),
     filterEnvelope: parseEnvelope(
       instrument["filterEnvelope"],
@@ -1248,10 +1248,10 @@ function parseParameters(
   return parameters;
 }
 
-function parseVoiceInterpretation(
+function parseProjectInstrumentInterpretation(
   source: unknown,
   path: string,
-): VoiceInterpretation {
+): ProjectInstrumentInterpretation {
   const interpretation = readRecord(source, path);
 
   return {
@@ -1405,48 +1405,48 @@ function parseLoop(
 
 function parseTracks(
   source: unknown,
-  voiceOrder: readonly VoiceId[],
+  instrumentOrder: readonly InstrumentId[],
   projectDurationTicks: number,
   path: string,
-): Readonly<Record<VoiceId, Track>> {
+): Readonly<Record<InstrumentId, Track>> {
   const sourceTracks = readRecord(source, path);
 
-  assertExactRecordKeys(sourceTracks, voiceOrder, path);
-  const tracksByVoiceId =
-    Object.create(null) as Record<VoiceId, Track>;
+  assertExactRecordKeys(sourceTracks, instrumentOrder, path);
+  const tracksByInstrumentId =
+    Object.create(null) as Record<InstrumentId, Track>;
   const globalNoteIds = new Set<NoteId>();
   let totalNoteCount = 0;
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < voiceOrder.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < instrumentOrder.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = voiceOrder[voiceIndex];
+    const instrumentId = instrumentOrder[instrumentIndex];
 
-    if (voiceId === undefined) {
+    if (instrumentId === undefined) {
       continue;
     }
 
-    const trackPath = `${path}.${voiceId}`;
-    const track = readRecord(sourceTracks[voiceId], trackPath);
-    const trackVoiceId = readNonEmptyString(
-      track["voiceId"],
-      `${trackPath}.voiceId`,
+    const trackPath = `${path}.${instrumentId}`;
+    const track = readRecord(sourceTracks[instrumentId], trackPath);
+    const trackInstrumentId = readNonEmptyString(
+      track["instrumentId"],
+      `${trackPath}.instrumentId`,
       MAXIMUM_ID_LENGTH,
     );
 
-    if (trackVoiceId !== voiceId) {
+    if (trackInstrumentId !== instrumentId) {
       fail(
         "INVALID_DATA",
-        `${trackPath}.voiceId`,
-        `Track voice ID "${trackVoiceId}" must match "${voiceId}".`,
+        `${trackPath}.instrumentId`,
+        `Track instrument ID "${trackInstrumentId}" must match "${instrumentId}".`,
       );
     }
 
     const notesById = parseNotes(
       track["notesById"],
-      voiceId,
+      instrumentId,
       projectDurationTicks,
       globalNoteIds,
       trackPath,
@@ -1462,18 +1462,18 @@ function parseTracks(
       );
     }
 
-    tracksByVoiceId[voiceId] = {
-      voiceId,
+    tracksByInstrumentId[instrumentId] = {
+      instrumentId,
       notesById,
     };
   }
 
-  return tracksByVoiceId;
+  return tracksByInstrumentId;
 }
 
 function parseNotes(
   source: unknown,
-  voiceId: VoiceId,
+  instrumentId: InstrumentId,
   projectDurationTicks: number,
   globalNoteIds: Set<NoteId>,
   trackPath: string,
@@ -1513,9 +1513,9 @@ function parseNotes(
         noteRecord["enabled"],
         `${notePath}.enabled`,
       ),
-      voiceId: readNonEmptyString(
-        noteRecord["voiceId"],
-        `${notePath}.voiceId`,
+      instrumentId: readNonEmptyString(
+        noteRecord["instrumentId"],
+        `${notePath}.instrumentId`,
         MAXIMUM_ID_LENGTH,
       ),
     };
@@ -1536,7 +1536,7 @@ function parseNotes(
       );
     }
 
-    const validation = validateNoteForTrack(note, voiceId);
+    const validation = validateNoteForTrack(note, instrumentId);
 
     if (!validation.valid) {
       fail(
@@ -1608,7 +1608,7 @@ function assertExactRecordKeys(
     fail(
       "INVALID_DATA",
       path,
-      "Record keys must exactly match the voice order.",
+      "Record keys must exactly match the instrument order.",
     );
   }
 }

@@ -1,6 +1,6 @@
 import type {
   NoteId,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import type {
   PitchSnapSettings,
@@ -49,7 +49,7 @@ export interface GestureCompletion {
   readonly drawStartTick: number;
   readonly drawPitch: number;
   readonly drawDurationTicks: number;
-  readonly drawVoiceId: VoiceId | null;
+  readonly drawInstrumentId: InstrumentId | null;
   readonly originLocalX: number;
   readonly originLocalY: number;
   readonly currentLocalX: number;
@@ -133,13 +133,13 @@ export class PianoRollGestureStateMachine {
     startTick: number,
     pitch: number,
     durationTicks: number,
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
   ): void {
     this.assertPointerPrepared();
     this.draft.drawStartTick = startTick;
     this.draft.drawPitch = pitch;
     this.draft.drawDurationTicks = durationTicks;
-    this.draft.drawVoiceId = voiceId;
+    this.draft.drawInstrumentId = instrumentId;
     this.draft.mode = "DRAWING";
   }
 
@@ -229,7 +229,7 @@ export class PianoRollGestureStateMachine {
       drawStartTick: this.draft.drawStartTick,
       drawPitch: this.draft.drawPitch,
       drawDurationTicks: this.draft.drawDurationTicks,
-      drawVoiceId: this.draft.drawVoiceId,
+      drawInstrumentId: this.draft.drawInstrumentId,
       originLocalX: this.draft.originLocalX,
       originLocalY: this.draft.originLocalY,
       currentLocalX: this.draft.currentLocalX,
@@ -256,7 +256,7 @@ export class PianoRollGestureStateMachine {
     this.draft.drawStartTick = 0;
     this.draft.drawPitch = 0;
     this.draft.drawDurationTicks = 0;
-    this.draft.drawVoiceId = null;
+    this.draft.drawInstrumentId = null;
     this.draft.selectionMode = "replace";
   }
 

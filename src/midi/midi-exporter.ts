@@ -89,32 +89,32 @@ export function createMidiExport(
   ];
 
   for (
-    let voiceIndex = 0;
-    voiceIndex < state.voiceOrder.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < state.instrumentOrder.length;
+    instrumentIndex += 1
   ) {
-    const voiceId = state.voiceOrder[voiceIndex];
+    const instrumentId = state.instrumentOrder[instrumentIndex];
 
-    if (voiceId === undefined) {
+    if (instrumentId === undefined) {
       continue;
     }
 
-    const voice = state.voicesById[voiceId];
-    const track = activeClip.tracksByVoiceId[voiceId];
+    const instrument = state.projectInstrumentsById[instrumentId];
+    const track = activeClip.tracksByInstrumentId[instrumentId];
 
-    if (voice === undefined || track === undefined) {
+    if (instrument === undefined || track === undefined) {
       continue;
     }
 
     const channel =
-      voiceIndex % MIDI_CONSTANTS.exportChannelCount;
+      instrumentIndex % MIDI_CONSTANTS.exportChannelCount;
     const notes = Object.values(track.notesById)
       .sort(compareNotesForMidiExport);
     const events: MidiEvent[] = [
       {
         kind: "track-name",
         absoluteTick: 0,
-        text: voice.name,
+        text: instrument.name,
       },
     ];
     let trackEndTick = projectEndTick;

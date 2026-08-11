@@ -3,7 +3,7 @@ import {
 } from "../config/program-constants";
 
 export type NoteId = string;
-export type VoiceId = string;
+export type InstrumentId = string;
 export type ClipId = string;
 export type EffectId = string;
 export type RuleId = string;
@@ -46,14 +46,14 @@ export const MAXIMUM_CLIP_NAME_LENGTH =
   PROJECT_CONSTANTS.maximumClipNameLength;
 export const MAXIMUM_PROJECT_CLIP_COUNT =
   PROJECT_CONSTANTS.maximumClipCount;
-export const MAXIMUM_VOICE_NAME_LENGTH =
-  PROJECT_CONSTANTS.maximumVoiceNameLength;
-export const MAXIMUM_PROJECT_VOICE_COUNT =
-  PROJECT_CONSTANTS.maximumVoiceCount;
+export const MAXIMUM_INSTRUMENT_NAME_LENGTH =
+  PROJECT_CONSTANTS.maximumInstrumentNameLength;
+export const MAXIMUM_PROJECT_INSTRUMENT_COUNT =
+  PROJECT_CONSTANTS.maximumInstrumentCount;
 export const MAXIMUM_CLIP_NOTE_COUNT =
   PROJECT_CONSTANTS.maximumNoteCount;
-export const MAXIMUM_VOICE_DESCRIPTOR_COUNT =
-  PROJECT_CONSTANTS.maximumVoiceDescriptorCount;
+export const MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT =
+  PROJECT_CONSTANTS.maximumInstrumentDescriptorCount;
 export const MAXIMUM_DESCRIPTOR_PARAMETER_COUNT =
   PROJECT_CONSTANTS.maximumDescriptorParameterCount;
 
@@ -63,7 +63,7 @@ export interface Note {
   readonly startTick: Tick;
   readonly durationTicks: Tick;
   readonly velocity: MidiVelocity;
-  readonly voiceId: VoiceId;
+  readonly instrumentId: InstrumentId;
   readonly enabled: boolean;
 }
 
@@ -117,7 +117,7 @@ export interface GenerativeRuleDescriptor {
   readonly parameters: Readonly<Record<string, number | boolean | string>>;
 }
 
-export interface VoiceInterpretation {
+export interface ProjectInstrumentInterpretation {
   readonly transposeSemitones: number;
   readonly timingOffsetTicks: Tick;
   readonly gateRatio: number;
@@ -125,18 +125,18 @@ export interface VoiceInterpretation {
   readonly probability: number;
 }
 
-export interface Voice {
-  readonly id: VoiceId;
+export interface ProjectInstrument {
+  readonly id: InstrumentId;
   readonly name: string;
   readonly color: string;
   readonly pan: number;
   readonly effects: readonly EffectDescriptor[];
   readonly generativeRules: readonly GenerativeRuleDescriptor[];
-  readonly interpretation: VoiceInterpretation;
+  readonly interpretation: ProjectInstrumentInterpretation;
 }
 
-/** Per-clip mixer, editing, and instrument preset for one global voice. */
-export interface ClipVoiceState {
+/** Per-clip mixer, editing, and instrument preset for one global instrument. */
+export interface ClipInstrumentState {
   readonly gain: number;
   readonly muted: boolean;
   readonly locked: boolean;
@@ -145,7 +145,7 @@ export interface ClipVoiceState {
 }
 
 export interface Track {
-  readonly voiceId: VoiceId;
+  readonly instrumentId: InstrumentId;
   readonly notesById: Readonly<Record<NoteId, Note>>;
 }
 
@@ -180,24 +180,24 @@ export interface Clip {
   readonly id: ClipId;
   readonly name: string;
   readonly measureCount: number;
-  readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
-  readonly voiceStatesById: Readonly<Record<VoiceId, ClipVoiceState>>;
+  readonly tracksByInstrumentId: Readonly<Record<InstrumentId, Track>>;
+  readonly instrumentStatesById: Readonly<Record<InstrumentId, ClipInstrumentState>>;
   readonly transportSettings: TransportState;
 }
 
-export function getActiveClipVoiceState(
+export function getActiveClipInstrumentState(
   state: ProjectState,
-  voiceId: VoiceId,
-): ClipVoiceState | undefined {
-  return getActiveClip(state).voiceStatesById[voiceId];
+  instrumentId: InstrumentId,
+): ClipInstrumentState | undefined {
+  return getActiveClip(state).instrumentStatesById[instrumentId];
 }
 
 export interface ProjectState {
   readonly schemaVersion: number;
   readonly revision: number;
   readonly title: string;
-  readonly voicesById: Readonly<Record<VoiceId, Voice>>;
-  readonly voiceOrder: readonly VoiceId[];
+  readonly projectInstrumentsById: Readonly<Record<InstrumentId, ProjectInstrument>>;
+  readonly instrumentOrder: readonly InstrumentId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipOrder: readonly ClipId[];
   readonly activeClipId: ClipId;

@@ -43,13 +43,13 @@ Contient les données durables et les règles métier : modèle immuable,
 commandes, reducer, validation, collisions et historique. Une modification de
 `ProjectState` doit normalement passer par une commande du domaine.
 
-`ProjectState` possède les entités globales (`voicesById`, ordre des voix,
+`ProjectState` possède les entités globales (`projectInstrumentsById`, ordre des instruments,
 master bus) et la collection ordonnée de clips. `Clip` ne référence pas le
 projet : il porte son ID, son nom, ses pistes, sa longueur, son transport, les
-réglages volume/mute/solo/lock et le preset d’instrument indexés par `VoiceId`.
+réglages volume/mute/solo/lock et le preset de synthèse indexés par `InstrumentId`.
 Cette direction unique évite une dépendance circulaire. Les commandes de notes,
-de transport et d’état local des voix ciblent implicitement `activeClipId` ;
-les commandes globales de voix propagent l’ajout ou la suppression de piste et
+de transport et d’état local des instruments ciblent implicitement `activeClipId` ;
+les commandes globales d’instruments propagent l’ajout ou la suppression de piste et
 d’état à chaque clip.
 
 Cette couche ne connaît ni React, ni le DOM, ni Canvas, ni Web Audio.
@@ -92,7 +92,7 @@ Le pipeline audio comporte trois niveaux aux responsabilités distinctes :
 
 - `LookaheadScheduler` convertit le transport et les snapshots en événements
   horodatés, sans connaître Web Audio ni la construction d'un instrument ;
-- `WebAudioEngine` possède l'`AudioContext`, le master, les bus de voix,
+- `WebAudioEngine` possède l'`AudioContext`, le master, les bus d’instruments,
   l'annulation et l'application des limites fournies par les renderers ;
 - les renderers de `audio/instruments` construisent et arrêtent les sources
   propres à un type d'instrument. Le renderer soustractif possède donc les
@@ -102,11 +102,11 @@ Un nouvel instrument doit implémenter `InstrumentRenderer` et ne doit pas
 ajouter de branche spécialisée dans le scheduler. Le moteur commun sélectionne
 le renderer à partir du discriminant `instrument.kind`.
 
-`PlaybackVoiceSnapshot` est le point d'extension typé du pipeline. Sa variante
-actuelle, `SubtractivePlaybackVoiceSnapshot`, contient uniquement les données
+`PlaybackInstrumentSnapshot` est le point d'extension typé du pipeline. Sa variante
+actuelle, `SubtractivePlaybackInstrumentSnapshot`, contient uniquement les données
 nécessaires au renderer soustractif. Les propriétés communes de mixage,
-d'événements compactés restent dans `PlaybackVoiceSnapshotBase`. La polyphonie
-du synthétiseur reste dans la variante instrument du `ClipVoiceState` actif.
+d'événements compactés restent dans `PlaybackInstrumentSnapshotBase`. La polyphonie
+du synthétiseur reste dans la configuration du `ClipInstrumentState` actif.
 Une future variante doit étendre cette base sans ajouter de champs optionnels à
 la variante soustractive.
 
@@ -164,8 +164,8 @@ fixtures de projet initial et vierge. Le dossier `app/workflows` contient les
 adaptateurs React de cas d'usage qui ont besoin à la fois du runtime, de boîtes
 de dialogue et de contrôles de fichiers du navigateur :
 
-- `useVoiceWorkflow.ts` orchestre ajout, suppression, ordre et édition des
-  voix ;
+- `useProjectInstrumentWorkflow.ts` orchestre ajout, suppression, ordre et édition des
+  instruments du projet ;
 - `useClipWorkflow.ts` orchestre navigation, ajout, suppression, ordre et
   renommage des clips ;
 - `useSelectionWorkflow.ts` orchestre Undo/Redo, presse-papiers, transfert,
@@ -210,7 +210,7 @@ L'activation d'une note est une donnée métier persistante (`Note.enabled`).
 Une note désactivée reste dans la piste et dans l'index spatial : elle conserve
 les mêmes règles d'édition et de collision, mais le compilateur de playback et
 l'export MIDI l'ignorent. Un appui long produit une seule transaction
-`SetNotesEnabled`, regroupée par voix pour une sélection multiple.
+`SetNotesEnabled`, regroupée par instrument pour une sélection multiple.
 
 Lorsqu'un collage dépasse la durée courante, le workflow précède les commandes
 `AddNotes` par `AppendMeasures` dans la même transaction. Cette composition est
@@ -221,9 +221,9 @@ antérieure du projet, y compris après résolution d'une collision.
 
 - `ProjectState` est la source de vérité persistante.
 - `Clip` est la frontière persistante des données musicales et temporelles
-  locales. Il ne doit jamais contenir une `Voice` complète, seulement des
+  locales. Il ne doit jamais contenir un `ProjectInstrument` complet, seulement des
   pistes, des réglages volume/mute/solo/lock et un preset d’instrument indexés
-  par `VoiceId`.
+  par `InstrumentId`.
 - `EditorRuntime` conserve un petit état d’édition par `ClipId` pour la tête de
   lecture, le viewport, la grille et le snap tonal. Le fichier natif persiste
   ces valeurs dans `editor.clipStatesById`.
@@ -246,7 +246,7 @@ antérieure du projet, y compris après résolution d'une collision.
    `DomInteractionVisualController`.
 5. Envoyer une seule transaction lors de la validation du geste.
 6. Vérifier souris, tactile à un doigt, passage à deux doigts, annulation et
-   voix verrouillée.
+   instrument verrouillé.
 
 ## Ajouter une commande
 

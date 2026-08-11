@@ -7,7 +7,7 @@ import type {
   ProjectState,
 } from "../domain/model";
 import {
-  getActiveClipVoiceState,
+  getActiveClipInstrumentState,
 } from "../domain/model";
 import {
   countNoteEditCollisions,
@@ -215,7 +215,7 @@ export class NoteGestureWorkflow {
 }
 
 function isNoteEditable(state: ProjectState, note: Note): boolean {
-  return getActiveClipVoiceState(state, note.voiceId)?.locked === false;
+  return getActiveClipInstrumentState(state, note.instrumentId)?.locked === false;
 }
 
 function collectNoteIds(notes: readonly Note[]): readonly NoteId[] {

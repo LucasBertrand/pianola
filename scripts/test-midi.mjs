@@ -36,8 +36,9 @@ try {
     createDefaultTransportState,
   } = await vite.ssrLoadModule("/src/domain/model.ts");
   const {
-    createDefaultVoice,
-  } = await vite.ssrLoadModule("/src/domain/voice-factory.ts");
+    createDefaultSubtractiveSynthConfig,
+    createDefaultProjectInstrument,
+  } = await vite.ssrLoadModule("/src/domain/project-instrument-factory.ts");
 
   const tests = [];
 
@@ -88,7 +89,7 @@ try {
   }
 
   function createImportAnalysis(
-    voice,
+    projectInstrument,
     notes,
     collisionCount,
   ) {
@@ -108,9 +109,10 @@ try {
         ),
         0,
       ),
-      voiceCandidates: [
+      instrumentCandidates: [
         {
-          voice,
+          projectInstrument,
+          instrumentConfig: createDefaultSubtractiveSynthConfig(),
           notes,
         },
       ],
@@ -122,9 +124,9 @@ try {
     };
   }
 
-  function getProjectNotes(state, voiceId) {
+  function getProjectNotes(state, instrumentId) {
     return Object.values(
-      getActiveTestClip(state).tracksByVoiceId[voiceId].notesById,
+      getActiveTestClip(state).tracksByInstrumentId[instrumentId].notesById,
     ).sort((left, right) =>
       left.startTick - right.startTick
       || left.pitch - right.pitch
@@ -135,13 +137,13 @@ try {
     return state.clipsById[state.activeClipId];
   }
 
-  function normalizeProjectVoices(state) {
-    return state.voiceOrder.map((voiceId) => {
-      const voice = state.voicesById[voiceId];
-      const notes = getProjectNotes(state, voiceId);
+  function normalizeProjectInstruments(state) {
+    return state.instrumentOrder.map((instrumentId) => {
+      const instrument = state.projectInstrumentsById[instrumentId];
+      const notes = getProjectNotes(state, instrumentId);
 
       return {
-        name: voice.name,
+        name: instrument.name,
         notes: notes.map((note) => [
           note.pitch,
           note.startTick,
@@ -401,7 +403,7 @@ try {
     );
   });
 
-  test("maps format-zero channels to voices and ignores CC64 semantics", () => {
+  test("maps format-zero channels to instruments and ignores CC64 semantics", () => {
     const parsed = parseWrittenFile({
       format: 0,
       ticksPerQuarterNote: 480,
@@ -476,19 +478,19 @@ try {
     assert.equal(parsed.summary.sustainControlChangeCount, 2);
     assert.equal(analysis.ignoredControlChangeCount, 2);
     assert.equal(analysis.ignoredSustainControlChangeCount, 2);
-    assert.equal(analysis.voiceCandidates.length, 2);
+    assert.equal(analysis.instrumentCandidates.length, 2);
     assert.deepEqual(
-      analysis.voiceCandidates.map(
-        (candidate) => candidate.voice.id,
+      analysis.instrumentCandidates.map(
+        (candidate) => candidate.projectInstrument.id,
       ),
       [
-        "midi-voice-0-0",
-        "midi-voice-0-1",
+        "midi-instrument-0-0",
+        "midi-instrument-0-1",
       ],
     );
     assert.deepEqual(
-      analysis.voiceCandidates.map(
-        (candidate) => candidate.voice.name,
+      analysis.instrumentCandidates.map(
+        (candidate) => candidate.projectInstrument.name,
       ),
       [
         "Channel 1",
@@ -508,22 +510,22 @@ try {
       "CC64 must not also produce a generic Control Change warning.",
     );
     assert.equal(
-      getProjectNotes(project, "midi-voice-0-0")[0]
+      getProjectNotes(project, "midi-instrument-0-0")[0]
         .durationTicks,
       480,
       "Sustain must not extend the channel-zero note.",
     );
     assert.equal(
-      getProjectNotes(project, "midi-voice-0-1")[0]
+      getProjectNotes(project, "midi-instrument-0-1")[0]
         .durationTicks,
       960,
     );
   });
 
   test("resolves imported collisions by merge or latest-note slicing", () => {
-    const voice = createDefaultVoice({
-      id: "collision-voice",
-      name: "Collision Voice",
+    const instrument = createDefaultProjectInstrument({
+      id: "collision-instrument",
+      name: "Collision Instrument",
       color: "#79a7ff",
     });
     const notes = [
@@ -533,7 +535,7 @@ try {
         startTick: 0,
         durationTicks: 960,
         velocity: 70,
-        voiceId: voice.id,
+        instrumentId: instrument.id,
         enabled: true,
       },
       {
@@ -542,12 +544,12 @@ try {
         startTick: 240,
         durationTicks: 480,
         velocity: 110,
-        voiceId: voice.id,
+        instrumentId: instrument.id,
         enabled: true,
       },
     ];
     const analysis = createImportAnalysis(
-      voice,
+      instrument,
       notes,
       1,
     );
@@ -561,11 +563,11 @@ try {
     );
     const mergedNotes = getProjectNotes(
       merged,
-      voice.id,
+      instrument.id,
     );
     const slicedNotes = getProjectNotes(
       sliced,
-      voice.id,
+      instrument.id,
     );
 
     assert.deepEqual(
@@ -597,7 +599,7 @@ try {
 
     const invalidTimingAnalysis = {
       ...createImportAnalysis(
-        voice,
+        instrument,
         [
           {
             ...notes[0],
@@ -659,7 +661,7 @@ try {
       }),
       "Dense repeated notes.mid",
     );
-    const notes = analysis.voiceCandidates[0].notes;
+    const notes = analysis.instrumentCandidates[0].notes;
 
     assert.equal(notes.length, repeatedNoteCount);
     assert.equal(notes[0].startTick, 0);
@@ -759,7 +761,7 @@ try {
     );
     const importedNote = getProjectNotes(
       importedProject,
-      importedProject.voiceOrder[0],
+      importedProject.instrumentOrder[0],
     )[0];
 
     assert.equal(getActiveTestClip(importedProject).measureCount, 1);
@@ -774,9 +776,9 @@ try {
       ],
     );
 
-    const voice = createDefaultVoice({
-      id: "boundary-voice",
-      name: "Boundary Voice",
+    const instrument = createDefaultProjectInstrument({
+      id: "boundary-instrument",
+      name: "Boundary Instrument",
       color: "#79a7ff",
     });
     const sourceTransport = createDefaultTransportState();
@@ -785,20 +787,20 @@ try {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision: 0,
       title: "Boundary export",
-      voicesById: {
-        [voice.id]: voice,
+      projectInstrumentsById: {
+        [instrument.id]: instrument,
       },
-      voiceOrder: [
-        voice.id,
+      instrumentOrder: [
+        instrument.id,
       ],
       clipsById: {
         [sourceClipId]: {
           id: sourceClipId,
           name: "Boundary Clip",
           measureCount: 1,
-          tracksByVoiceId: {
-            [voice.id]: {
-              voiceId: voice.id,
+          tracksByInstrumentId: {
+            [instrument.id]: {
+              instrumentId: instrument.id,
               notesById: {
                 boundary: {
                   id: "boundary",
@@ -806,7 +808,7 @@ try {
                   startTick: 191_999,
                   durationTicks: 1,
                   velocity: 100,
-                  voiceId: voice.id,
+                  instrumentId: instrument.id,
                   enabled: true,
                 },
               },
@@ -842,13 +844,13 @@ try {
     );
   });
 
-  test("round-trips project notes, voices, tempo, and meter through MIDI", () => {
-    const lead = createDefaultVoice({
+  test("round-trips project notes, instruments, tempo, and meter through MIDI", () => {
+    const lead = createDefaultProjectInstrument({
       id: "lead",
       name: "Lead",
       color: "#79a7ff",
     });
-    const bass = createDefaultVoice({
+    const bass = createDefaultProjectInstrument({
       id: "bass",
       name: "Bass",
       color: "#a77bf3",
@@ -859,11 +861,11 @@ try {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision: 7,
       title: "MIDI round trip",
-      voicesById: {
+      projectInstrumentsById: {
         [lead.id]: lead,
         [bass.id]: bass,
       },
-      voiceOrder: [
+      instrumentOrder: [
         lead.id,
         bass.id,
       ],
@@ -872,9 +874,9 @@ try {
           id: sourceClipId,
           name: "Round Trip Clip",
           measureCount: 4,
-          tracksByVoiceId: {
+          tracksByInstrumentId: {
         [lead.id]: {
-          voiceId: lead.id,
+          instrumentId: lead.id,
           notesById: {
             "lead-c": {
               id: "lead-c",
@@ -882,7 +884,7 @@ try {
               startTick: 0,
               durationTicks: 480,
               velocity: 100,
-              voiceId: lead.id,
+              instrumentId: lead.id,
               enabled: true,
             },
             "lead-e": {
@@ -891,7 +893,7 @@ try {
               startTick: 240,
               durationTicks: 720,
               velocity: 88,
-              voiceId: lead.id,
+              instrumentId: lead.id,
               enabled: true,
             },
             "lead-c-next": {
@@ -900,13 +902,13 @@ try {
               startTick: 480,
               durationTicks: 240,
               velocity: 105,
-              voiceId: lead.id,
+              instrumentId: lead.id,
               enabled: true,
             },
           },
         },
         [bass.id]: {
-          voiceId: bass.id,
+          instrumentId: bass.id,
           notesById: {
             "bass-c": {
               id: "bass-c",
@@ -914,7 +916,7 @@ try {
               startTick: 120,
               durationTicks: 960,
               velocity: 92,
-              voiceId: bass.id,
+              instrumentId: bass.id,
               enabled: true,
             },
           },
@@ -968,8 +970,8 @@ try {
       },
     );
     assert.deepEqual(
-      normalizeProjectVoices(imported),
-      normalizeProjectVoices(sourceProject),
+      normalizeProjectInstruments(imported),
+      normalizeProjectInstruments(sourceProject),
     );
 
     const disabledNoteProject = {
@@ -978,19 +980,19 @@ try {
         ...sourceProject.clipsById,
         [sourceClipId]: {
           ...getActiveTestClip(sourceProject),
-          tracksByVoiceId: {
-            ...getActiveTestClip(sourceProject).tracksByVoiceId,
+          tracksByInstrumentId: {
+            ...getActiveTestClip(sourceProject).tracksByInstrumentId,
             [bass.id]: {
-              ...getActiveTestClip(sourceProject).tracksByVoiceId[bass.id],
+              ...getActiveTestClip(sourceProject).tracksByInstrumentId[bass.id],
               notesById: {
-                ...getActiveTestClip(sourceProject).tracksByVoiceId[bass.id].notesById,
+                ...getActiveTestClip(sourceProject).tracksByInstrumentId[bass.id].notesById,
                 disabled: {
                   id: "disabled",
                   pitch: 71,
                   startTick: 0,
                   durationTicks: 240,
                   velocity: 100,
-                  voiceId: bass.id,
+                  instrumentId: bass.id,
                   enabled: false,
                 },
               },

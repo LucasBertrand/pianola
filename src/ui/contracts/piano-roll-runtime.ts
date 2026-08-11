@@ -5,7 +5,7 @@ import type {
   EditorSelectionRequests,
 } from "../../application/editor-selection-requests";
 import type {
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import type {
   ProjectStorePort,
@@ -24,7 +24,7 @@ import type {
 } from "../../music/pitch-snap";
 import type {
   NoteColorMode,
-  VoiceRenderStyle,
+  InstrumentRenderStyle,
 } from "../rendering/note-style";
 import type {
   ReadonlyRenderSignal,
@@ -42,8 +42,8 @@ export interface PianoRollRuntimePort {
   readonly spatialIndex: SpatialIndex;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly visibleRegion: ReadonlyRenderSignal<Rect>;
-  readonly voiceStyles: ReadonlyRenderSignal<
-    Readonly<Record<VoiceId, VoiceRenderStyle>>
+  readonly instrumentStyles: ReadonlyRenderSignal<
+    Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly highlightedPitch: ReadonlyRenderSignal<number | null>;

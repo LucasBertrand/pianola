@@ -19,7 +19,7 @@ The grid is painted directly into its visible canvas after an explicit invalidat
 
 ## Notes culling and batching
 
-`NotesCanvas` supplies one persistent result buffer to `SpatialIndex.queryRect`. Only intersecting notes enter the drawing loop. The buffer is sorted in place by voice so that `fillStyle` changes once per contiguous voice group. Locked notes receive a second, allocation-free pass using a cached diagonal `CanvasPattern`.
+`NotesCanvas` supplies one persistent result buffer to `SpatialIndex.queryRect`. Only intersecting notes enter the drawing loop. The buffer is sorted in place by instrument so that `fillStyle` changes once per contiguous instrument group. Locked notes receive a second, allocation-free pass using a cached diagonal `CanvasPattern`.
 
 No `map`, `filter`, spread, array construction, or per-note object construction occurs inside the animation-frame drawing loop.
 

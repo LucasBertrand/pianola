@@ -1,6 +1,6 @@
 import type {
   NoteId,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
@@ -46,7 +46,7 @@ export interface InteractionDraft {
   drawStartTick: number;
   drawPitch: number;
   drawDurationTicks: number;
-  drawVoiceId: VoiceId | null;
+  drawInstrumentId: InstrumentId | null;
   snapResolutionTicks: number;
   pitchSnapSettings: PitchSnapSettings;
   selectionMode: SelectionMode;
@@ -77,7 +77,7 @@ export function createInteractionDraft(): InteractionDraft {
     drawStartTick: 0,
     drawPitch: 0,
     drawDurationTicks: 0,
-    drawVoiceId: null,
+    drawInstrumentId: null,
     snapResolutionTicks: 240,
     pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
     selectionMode: "replace",

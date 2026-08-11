@@ -19,7 +19,7 @@ import {
   buildTransformCommandsForNotes,
   canPlacePastedNotes,
   createPastedNotes,
-  createVoiceTransferPlan,
+  createInstrumentTransferPlan,
   findNotesByIds,
   getRequiredMeasureCountForNotes,
   type PianoRollClipboard,
@@ -32,7 +32,7 @@ import {
   getActiveClipDurationTicks,
   type Note,
   type NoteId,
-  type VoiceId,
+  type InstrumentId,
 } from "../../domain/model";
 import {
   countNoteEditCollisions,
@@ -60,7 +60,7 @@ export interface SelectionWorkflowOptions {
   readonly getPlayheadTick: () => number;
   readonly setPlayheadTick: (tick: number) => void;
   readonly getGridResolutionTicks: () => number;
-  readonly selectedVoiceId: VoiceId | null;
+  readonly selectedInstrumentId: InstrumentId | null;
   readonly resolveCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -82,7 +82,7 @@ export interface SelectionWorkflow {
   ) => void;
   readonly sliceAtPlayhead: () => void;
   readonly paste: () => void;
-  readonly transferToSelectedVoice: () => void;
+  readonly transferToSelectedInstrument: () => void;
 }
 
 export function useSelectionWorkflow({
@@ -92,7 +92,7 @@ export function useSelectionWorkflow({
   getPlayheadTick,
   setPlayheadTick,
   getGridResolutionTicks,
-  selectedVoiceId,
+  selectedInstrumentId,
   resolveCollision,
   alert,
 }: SelectionWorkflowOptions): SelectionWorkflow {
@@ -251,17 +251,17 @@ export function useSelectionWorkflow({
       const activeClip = getActiveClip(state);
 
       for (const note of originalNotes) {
-        const voice = state.voicesById[note.voiceId];
+        const instrument = state.projectInstrumentsById[note.instrumentId];
 
         if (
-          voice === undefined
-          || activeClip.voiceStatesById[note.voiceId]?.locked !== false
+          instrument === undefined
+          || activeClip.instrumentStatesById[note.instrumentId]?.locked !== false
         ) {
           alert(
             "Transformation unavailable",
-            voice === undefined
-              ? "The selection contains a note whose voice is unavailable."
-              : `Unlock voice "${voice.name}" before transforming its notes.`,
+            instrument === undefined
+              ? "The selection contains a note whose instrument is unavailable."
+              : `Unlock instrument "${instrument.name}" before transforming its notes.`,
           );
           return;
         }
@@ -396,7 +396,7 @@ export function useSelectionWorkflow({
     if (!canPlacePastedNotes(state, pastedNotes)) {
       alert(
         "Paste unavailable",
-        "Paste is unavailable because it exceeds the clip limit or targets an unavailable or locked voice.",
+        "Paste is unavailable because it exceeds the clip limit or targets an unavailable or locked instrument.",
       );
       return;
     }
@@ -442,7 +442,7 @@ export function useSelectionWorkflow({
 
     for (const pastedNote of pastedNotes) {
       const storedNote =
-        nextClip.tracksByVoiceId[pastedNote.voiceId]
+        nextClip.tracksByInstrumentId[pastedNote.instrumentId]
           ?.notesById[pastedNote.id];
 
       if (storedNote !== undefined) {
@@ -463,19 +463,19 @@ export function useSelectionWorkflow({
     setPlayheadTick,
   ]);
 
-  const transferToSelectedVoice = useCallback((): void => {
+  const transferToSelectedInstrument = useCallback((): void => {
     const controller = getController();
-    const targetVoiceId = selectedVoiceId;
+    const targetInstrumentId = selectedInstrumentId;
 
-    if (controller === null || targetVoiceId === null) {
+    if (controller === null || targetInstrumentId === null) {
       return;
     }
 
     const selectedNotes = controller.getSelectedNotes();
-    const transferPlan = createVoiceTransferPlan(
+    const transferPlan = createInstrumentTransferPlan(
       commands.getState(),
       selectedNotes,
-      targetVoiceId,
+      targetInstrumentId,
     );
 
     if (!transferPlan.valid) {
@@ -497,13 +497,13 @@ export function useSelectionWorkflow({
       const retainedTargetNoteIds: NoteId[] = [];
 
       for (const note of selectedNotes) {
-        if (note.voiceId === targetVoiceId) {
+        if (note.instrumentId === targetInstrumentId) {
           retainedTargetNoteIds.push(note.id);
         }
       }
 
       resolveCollision({
-        label: "Transfer notes to voice",
+        label: "Transfer notes to instrument",
         collisionCount: countNoteEditCollisions(state, intent),
         ...intent,
         onResolved(nextState, selectedNoteIds): void {
@@ -521,7 +521,7 @@ export function useSelectionWorkflow({
     try {
       const nextState = commands.dispatch(
         transferPlan.commands,
-        "Transfer notes to voice",
+        "Transfer notes to instrument",
       );
 
       if (nextState === null) {
@@ -529,7 +529,7 @@ export function useSelectionWorkflow({
       }
 
       const targetTrack = getActiveClip(nextState)
-        .tracksByVoiceId[targetVoiceId];
+        .tracksByInstrumentId[targetInstrumentId];
       const nextSelection: Note[] = [];
 
       if (targetTrack !== undefined) {
@@ -557,7 +557,7 @@ export function useSelectionWorkflow({
     commands,
     getController,
     resolveCollision,
-    selectedVoiceId,
+    selectedInstrumentId,
   ]);
 
   return {
@@ -572,7 +572,7 @@ export function useSelectionWorkflow({
     transform,
     sliceAtPlayhead,
     paste,
-    transferToSelectedVoice,
+    transferToSelectedInstrument,
   };
 }
 

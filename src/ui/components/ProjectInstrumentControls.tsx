@@ -4,38 +4,38 @@ import React, {
 } from "react";
 import {
   EDITOR_CONSTANTS,
-  VOICE_CONSTANTS,
+  INSTRUMENT_CONSTANTS,
 } from "../../config/program-constants";
 import {
-  MAXIMUM_VOICE_NAME_LENGTH,
-  type Voice,
-  type VoiceId,
+  MAXIMUM_INSTRUMENT_NAME_LENGTH,
+  type ProjectInstrument,
+  type InstrumentId,
 } from "../../domain/model";
 import {
   LongPressNameEditor,
 } from "./LongPressNameEditor";
 
-export interface VoiceNameEditorProps {
-  readonly voice: Voice;
-  readonly onSelect: (voiceId: VoiceId) => void;
+export interface InstrumentNameEditorProps {
+  readonly instrument: ProjectInstrument;
+  readonly onSelect: (instrumentId: InstrumentId) => void;
   readonly onRename: (name: string) => void;
 }
 
-export function VoiceNameEditor(
-  props: VoiceNameEditorProps,
+export function InstrumentNameEditor(
+  props: InstrumentNameEditorProps,
 ): React.JSX.Element {
   const {
-    voice,
+    instrument,
     onSelect,
     onRename,
   } = props;
   return (
     <LongPressNameEditor
-      entityId={voice.id}
-      name={voice.name}
-      maximumLength={MAXIMUM_VOICE_NAME_LENGTH}
-      className="voice-name-input"
-      onSelect={(voiceId) => onSelect(voiceId)}
+      entityId={instrument.id}
+      name={instrument.name}
+      maximumLength={MAXIMUM_INSTRUMENT_NAME_LENGTH}
+      className="instrument-name-input"
+      onSelect={(instrumentId) => onSelect(instrumentId)}
       onRename={(name) => {
         onRename(name);
       }}
@@ -43,19 +43,19 @@ export function VoiceNameEditor(
   );
 }
 
-export interface VoiceGainSliderProps {
+export interface InstrumentGainSliderProps {
   readonly gain: number;
-  readonly voiceName: string;
+  readonly instrumentName: string;
   readonly onPreview: (gain: number) => void;
   readonly onCommit: (gain: number) => void;
 }
 
-export function VoiceGainSlider(
-  props: VoiceGainSliderProps,
+export function InstrumentGainSlider(
+  props: InstrumentGainSliderProps,
 ): React.JSX.Element {
   const {
     gain,
-    voiceName,
+    instrumentName,
     onPreview,
     onCommit,
   } = props;
@@ -86,8 +86,8 @@ export function VoiceGainSlider(
 
   return (
     <label
-      className="voice-gain-control"
-      title={`Volume for ${voiceName}`}
+      className="instrument-gain-control"
+      title={`Volume for ${instrumentName}`}
       onClick={(event) => {
         event.stopPropagation();
       }}
@@ -101,11 +101,11 @@ export function VoiceGainSlider(
       <input
         ref={inputRef}
         type="range"
-        min={VOICE_CONSTANTS.minimumGain}
-        max={VOICE_CONSTANTS.maximumGain}
+        min={INSTRUMENT_CONSTANTS.minimumGain}
+        max={INSTRUMENT_CONSTANTS.maximumGain}
         step={EDITOR_CONSTANTS.gainStep}
         defaultValue={gain}
-        aria-label={`Volume for ${voiceName}`}
+        aria-label={`Volume for ${instrumentName}`}
         onInput={(event) => {
           onPreview(Number(event.currentTarget.value));
         }}

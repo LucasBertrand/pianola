@@ -71,7 +71,7 @@ try {
     buildSliceCommandsForNotes,
     canPlacePastedNotes,
     createPastedNotes,
-    createVoiceTransferPlan,
+    createInstrumentTransferPlan,
     findNotesByIds,
     getRequiredMeasureCountForNotes,
   } = await vite.ssrLoadModule(
@@ -191,11 +191,11 @@ try {
 
   let transactionSequence = 0;
 
-  function createVoice(voiceId, voiceIndex = 0) {
+  function createProjectInstrument(instrumentId, instrumentIndex = 0) {
     return {
-      id: voiceId,
-      name: `Voice ${voiceIndex + 1}`,
-      color: voiceIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
+      id: instrumentId,
+      name: `Instrument ${instrumentIndex + 1}`,
+      color: instrumentIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
       pan: 0,
       effects: [],
       generativeRules: [],
@@ -209,10 +209,10 @@ try {
     };
   }
 
-  function createInstrument(voiceIndex = 0) {
+  function createInstrument(instrumentIndex = 0) {
     return {
       kind: "subtractive",
-      oscillatorWaveform: voiceIndex % 2 === 0 ? "sawtooth" : "sine",
+      oscillatorWaveform: instrumentIndex % 2 === 0 ? "sawtooth" : "sine",
       polyphony: DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
       oscillatorDetuneCents: 0,
       pulseWidth: 0.5,
@@ -236,7 +236,7 @@ try {
 
   function createNote(
     id,
-    voiceId,
+    instrumentId,
     pitch,
     startTick,
     durationTicks = 120,
@@ -248,7 +248,7 @@ try {
       startTick,
       durationTicks,
       velocity,
-      voiceId,
+      instrumentId,
       enabled: true,
     };
   }
@@ -256,15 +256,15 @@ try {
   function createProject(options = {}) {
     const {
       measureCount = 4,
-      notesByVoiceId = {},
+      notesByInstrumentId = {},
       revision = 0,
       masterGain = createDefaultMasterBusState().gain,
       masterMuted = createDefaultMasterBusState().muted,
       masterTuningFrequencyHz =
         createDefaultMasterBusState().tuningFrequencyHz,
       transport: transportChanges = {},
-      voiceOrder = ["voice-a"],
-      voiceStateChangesById = {},
+      instrumentOrder = ["voice-a"],
+      instrumentStateChangesById = {},
     } = options;
     const defaultTransport = createDefaultTransportState();
     const transportSettings = {
@@ -279,40 +279,40 @@ try {
         ...transportChanges.timeSignature,
       },
     };
-    const voicesById = {};
-    const tracksByVoiceId = {};
-    const voiceStatesById = {};
+    const projectInstrumentsById = {};
+    const tracksByInstrumentId = {};
+    const instrumentStatesById = {};
 
     for (
-      let voiceIndex = 0;
-      voiceIndex < voiceOrder.length;
-      voiceIndex += 1
+      let instrumentIndex = 0;
+      instrumentIndex < instrumentOrder.length;
+      instrumentIndex += 1
     ) {
-      const voiceId = voiceOrder[voiceIndex];
+      const instrumentId = instrumentOrder[instrumentIndex];
 
-      if (voiceId === undefined) {
+      if (instrumentId === undefined) {
         continue;
       }
 
-      const notes = notesByVoiceId[voiceId] ?? [];
+      const notes = notesByInstrumentId[instrumentId] ?? [];
       const notesById = {};
 
       for (const note of notes) {
         notesById[note.id] = note;
       }
 
-      voicesById[voiceId] = createVoice(voiceId, voiceIndex);
-      tracksByVoiceId[voiceId] = {
-        voiceId,
+      projectInstrumentsById[instrumentId] = createProjectInstrument(instrumentId, instrumentIndex);
+      tracksByInstrumentId[instrumentId] = {
+        instrumentId,
         notesById,
       };
-      voiceStatesById[voiceId] = {
+      instrumentStatesById[instrumentId] = {
         gain: 0.8,
         muted: false,
         locked: false,
         solo: false,
-        instrument: createInstrument(voiceIndex),
-        ...voiceStateChangesById[voiceId],
+        instrument: createInstrument(instrumentIndex),
+        ...instrumentStateChangesById[instrumentId],
       };
     }
 
@@ -322,15 +322,15 @@ try {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision,
       title: "Audio test project",
-      voicesById,
-      voiceOrder: [...voiceOrder],
+      projectInstrumentsById,
+      instrumentOrder: [...instrumentOrder],
       clipsById: {
         [clipId]: {
           id: clipId,
           name: "Test Clip",
           measureCount,
-          tracksByVoiceId,
-          voiceStatesById,
+          tracksByInstrumentId,
+          instrumentStatesById,
           transportSettings,
         },
       },
@@ -361,7 +361,7 @@ try {
 
   function createEditorState(overrides = {}) {
     return {
-      selectedVoiceId: "voice-a",
+      selectedInstrumentId: "voice-a",
       selectionMode: "add",
       noteColorMode: "pitch",
       pitchPreviewEnabled: false,
@@ -438,7 +438,7 @@ try {
       this.resumeCount = 0;
       this.scheduleFailureAfterEventCount = null;
       this.snapshots = [];
-      this.voiceGainPreviews = [];
+      this.instrumentGainPreviews = [];
     }
 
     configure(config) {
@@ -470,9 +470,9 @@ try {
       this.events.push(event);
     }
 
-    previewVoiceGain(voiceId, gain) {
-      this.voiceGainPreviews.push({
-        voiceId,
+    previewInstrumentGain(instrumentId, gain) {
+      this.instrumentGainPreviews.push({
+        instrumentId,
         gain,
       });
     }
@@ -554,11 +554,11 @@ try {
     assert.equal(selection.add(first), false);
     selection.add(second);
     assert.equal(selection.size, 2);
-    assert.equal(selection.getSoleVoiceId(), "voice-a");
+    assert.equal(selection.getSoleInstrumentId(), "voice-a");
 
     const movedFirst = { ...first, startTick: 480 };
     const nextState = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [movedFirst],
       },
     });
@@ -567,8 +567,8 @@ try {
     assert.deepEqual(selection.copyNotes(), [movedFirst]);
 
     const toggleState = createProject({
-      voiceOrder: ["voice-a", "voice-b"],
-      notesByVoiceId: {
+      instrumentOrder: ["voice-a", "voice-b"],
+      notesByInstrumentId: {
         "voice-a": [movedFirst, second],
         "voice-b": [
           createNote("third", "voice-b", 60, 720, 120),
@@ -576,9 +576,9 @@ try {
       },
     });
 
-    selection.toggleVoice(toggleState, "voice-a");
+    selection.toggleInstrument(toggleState, "voice-a");
     assert.equal(selection.size, 2);
-    selection.toggleVoice(toggleState, "voice-a");
+    selection.toggleInstrument(toggleState, "voice-a");
     assert.equal(selection.size, 0);
     selection.togglePitch(toggleState, 60);
     assert.equal(selection.size, 2);
@@ -593,15 +593,15 @@ try {
       received.push(request);
     });
 
-    requests.toggleVoice("voice-a");
-    requests.toggleVoice("voice-a");
+    requests.toggleInstrument("voice-a");
+    requests.toggleInstrument("voice-a");
     requests.clear();
     unsubscribe();
     requests.clear();
 
     assert.deepEqual(received, [
-      { type: "toggleVoice", voiceId: "voice-a" },
-      { type: "toggleVoice", voiceId: "voice-a" },
+      { type: "toggleInstrument", instrumentId: "voice-a" },
+      { type: "toggleInstrument", instrumentId: "voice-a" },
       { type: "clear" },
     ]);
   });
@@ -615,7 +615,7 @@ try {
       120,
     );
     const store = new ProjectStore(createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [selected],
       },
     }));
@@ -639,12 +639,12 @@ try {
 
     assert.equal(workflow.commitMove([moved]), "committed");
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["selected"].startTick,
       480,
     );
     assert.deepEqual(selection.copyNotes(), [
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["selected"],
     ]);
 
@@ -675,7 +675,7 @@ try {
     );
     assert.equal(selection.size, 0);
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["drawn"],
       undefined,
     );
@@ -697,7 +697,7 @@ try {
       240,
     );
     const store = new ProjectStore(createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [existing, selected],
       },
     }));
@@ -728,13 +728,13 @@ try {
     );
     assert.equal(collisionRequest.collisionCount, 1);
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["selected"].startTick,
       600,
     );
 
     const resolvedState = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [{
           ...selected,
           startTick: 360,
@@ -746,7 +746,7 @@ try {
     assert.equal(selectionChangeCount, 1);
   });
 
-  test("publishes editing-mask changes and builds voice-grouped commands", () => {
+  test("publishes editing-mask changes and builds instrument-grouped commands", () => {
     const first = createNote("first", "voice-a", 60, 0, 120);
     const second = createNote("second", "voice-b", 64, 240, 120);
     const mask = new EditingNoteMask();
@@ -1173,8 +1173,8 @@ try {
     const source = createNote("source", "voice-a", 60, 120, 240);
     const target = createNote("target", "voice-b", 64, 480, 120);
     const state = createProject({
-      voiceOrder: ["voice-a", "voice-b"],
-      notesByVoiceId: {
+      instrumentOrder: ["voice-a", "voice-b"],
+      notesByInstrumentId: {
         "voice-a": [source],
         "voice-b": [target],
       },
@@ -1207,7 +1207,7 @@ try {
       "target",
     ]);
 
-    const transferPlan = createVoiceTransferPlan(
+    const transferPlan = createInstrumentTransferPlan(
       state,
       [source],
       "voice-b",
@@ -1215,7 +1215,7 @@ try {
 
     assert.equal(transferPlan.valid, true);
     assert.equal(transferPlan.commands[0].type, "MoveNotes");
-    assert.equal(transferPlan.proposedNotes[0].voiceId, "voice-b");
+    assert.equal(transferPlan.proposedNotes[0].instrumentId, "voice-b");
   });
 
   test("extends the timeline and pastes notes as one undoable transaction", () => {
@@ -1244,7 +1244,7 @@ try {
         },
         {
           type: "AddNotes",
-          trackVoiceId: "voice-a",
+          trackInstrumentId: "voice-a",
           notes: [pastedNote],
         },
       ],
@@ -1253,7 +1253,7 @@ try {
 
     assert.equal(getActiveTestClip(store.getState()).measureCount, 2);
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["pasted"],
       pastedNote,
     );
@@ -1262,7 +1262,7 @@ try {
 
     assert.equal(getActiveTestClip(store.getState()).measureCount, 1);
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["pasted"],
       undefined,
     );
@@ -1271,7 +1271,7 @@ try {
   test("keeps disabled notes editable while excluding them from playback", () => {
     const note = createNote("toggle", "voice-a", 60, 0, 240);
     const store = new ProjectStore(createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [note],
       },
     }));
@@ -1283,11 +1283,11 @@ try {
     );
 
     const disabledNote = getActiveTestClip(store.getState())
-      .tracksByVoiceId["voice-a"].notesById["toggle"];
+      .tracksByInstrumentId["voice-a"].notesById["toggle"];
 
     assert.equal(disabledNote.enabled, false);
     assert.deepEqual(
-      compilePlaybackSnapshot(store.getState()).voices[0].noteIds,
+      compilePlaybackSnapshot(store.getState()).instruments[0].noteIds,
       [],
     );
 
@@ -1300,22 +1300,22 @@ try {
     );
 
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["toggle"].startTick,
       480,
     );
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"]
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["toggle"].enabled,
       false,
     );
   });
 
-  test("compiles deterministic, voice-ordered playback snapshots", () => {
+  test("compiles deterministic, instrument-ordered playback snapshots", () => {
     const state = createProject({
       revision: 7,
-      voiceOrder: ["voice-b", "voice-a"],
-      notesByVoiceId: {
+      instrumentOrder: ["voice-b", "voice-a"],
+      notesByInstrumentId: {
         "voice-a": [
           createNote("late", "voice-a", 50, 960, 240, 80),
           createNote("high", "voice-a", 72, 240, 120, 90),
@@ -1334,35 +1334,35 @@ try {
     assert.equal(snapshot.masterGain, 0.72);
     assert.equal(snapshot.masterMuted, false);
     assert.deepEqual(
-      snapshot.voices.map((voice) => voice.voiceId),
+      snapshot.instruments.map((instrument) => instrument.instrumentId),
       ["voice-b", "voice-a"],
     );
 
-    const voiceA = snapshot.voices[1];
-    assert.ok(voiceA !== undefined);
-    assert.deepEqual(voiceA.noteIds, ["low", "high", "late"]);
-    assert.deepEqual([...voiceA.startTicks], [240, 240, 960]);
-    assert.deepEqual([...voiceA.pitches], [60, 72, 50]);
-    assert.deepEqual([...voiceA.durationTicks], [480, 120, 240]);
-    assert.equal(voiceA.instrument.kind, "subtractive");
+    const instrumentA = snapshot.instruments[1];
+    assert.ok(instrumentA !== undefined);
+    assert.deepEqual(instrumentA.noteIds, ["low", "high", "late"]);
+    assert.deepEqual([...instrumentA.startTicks], [240, 240, 960]);
+    assert.deepEqual([...instrumentA.pitches], [60, 72, 50]);
+    assert.deepEqual([...instrumentA.durationTicks], [480, 120, 240]);
+    assert.equal(instrumentA.instrument.kind, "subtractive");
     assert.equal(
-      voiceA.instrument.polyphony,
+      instrumentA.instrument.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
     assert.notEqual(
-      voiceA.instrument,
-      getActiveTestClip(state).voiceStatesById["voice-a"].instrument,
+      instrumentA.instrument,
+      getActiveTestClip(state).instrumentStatesById["voice-a"].instrument,
     );
-    assert.equal(voiceA.instrument.pulseWidth, 0.5);
-    assert.equal(voiceA.instrument.filterEnvelopeAmountOctaves, 1);
-    assert.equal(Object.isFrozen(voiceA.instrument), true);
-    assert.equal(Object.isFrozen(voiceA.instrument.envelope), true);
-    assert.equal(Object.isFrozen(voiceA.instrument.filterEnvelope), true);
+    assert.equal(instrumentA.instrument.pulseWidth, 0.5);
+    assert.equal(instrumentA.instrument.filterEnvelopeAmountOctaves, 1);
+    assert.equal(Object.isFrozen(instrumentA.instrument), true);
+    assert.equal(Object.isFrozen(instrumentA.instrument.envelope), true);
+    assert.equal(Object.isFrozen(instrumentA.instrument.filterEnvelope), true);
   });
 
   test("renders pulse width and filter modulation from the subtractive snapshot", () => {
     const baseSnapshot = compilePlaybackSnapshot(createProject());
-    const baseVoice = baseSnapshot.voices[0];
+    const baseInstrument = baseSnapshot.instruments[0];
     const parameterEvents = [];
     const oscillators = [];
     const filters = [];
@@ -1427,10 +1427,10 @@ try {
         return { id: periodicWaveCount };
       },
     };
-    const voice = {
-      ...baseVoice,
+    const playbackInstrument = {
+      ...baseInstrument,
       instrument: {
-        ...baseVoice.instrument,
+        ...baseInstrument.instrument,
         oscillatorWaveform: "square",
         pulseWidth: 0.25,
         filterCutoffHz: 1_000,
@@ -1444,7 +1444,7 @@ try {
       event: {
         occurrenceId,
         generation: 1,
-        voice,
+        instrument: playbackInstrument,
         pitch: 60,
         velocity: 100,
         startAudioTimeSeconds: 1,
@@ -1470,7 +1470,7 @@ try {
 
   test("keeps a zero-sustain envelope silent until note-off", () => {
     const baseSnapshot = compilePlaybackSnapshot(createProject());
-    const baseVoice = baseSnapshot.voices[0];
+    const baseInstrument = baseSnapshot.instruments[0];
     const amplitudeEvents = [];
     const createAudioParam = (value, events = undefined) => ({
       value,
@@ -1518,10 +1518,10 @@ try {
         };
       },
     };
-    const voice = {
-      ...baseVoice,
+    const playbackInstrument = {
+      ...baseInstrument,
       instrument: {
-        ...baseVoice.instrument,
+        ...baseInstrument.instrument,
         envelope: {
           attackSeconds: 0,
           decaySeconds: 0,
@@ -1544,7 +1544,7 @@ try {
       event: {
         occurrenceId: "zero-sustain",
         generation: 1,
-        voice,
+        instrument: playbackInstrument,
         pitch: 60,
         velocity: 100,
         startAudioTimeSeconds: 1,
@@ -1615,9 +1615,9 @@ try {
     const cancelledAt = [];
     const renderer = {
       kind: "subtractive",
-      getMaximumPolyphony(voice, config) {
+      getMaximumPolyphony(instrument, config) {
         return Math.min(
-          voice.instrument.polyphony,
+          instrument.instrument.polyphony,
           config.maximumRendererPolyphony,
         );
       },
@@ -1625,7 +1625,7 @@ try {
         scheduledRequests.push(request);
         return {
           occurrenceId: request.event.occurrenceId,
-          voiceId: request.event.voice.voiceId,
+          instrumentId: request.event.instrument.instrumentId,
           startAudioTimeSeconds: request.startAudioTimeSeconds,
           stopAudioTimeSeconds: request.noteEndAudioTimeSeconds,
           ended: false,
@@ -1642,14 +1642,14 @@ try {
       () => context,
       [renderer],
     );
-    const voice = snapshot.voices[0];
+    const playbackInstrument = snapshot.instruments[0];
 
-    assert.ok(voice !== undefined);
+    assert.ok(playbackInstrument !== undefined);
     await engine.resume();
     engine.scheduleNote({
       occurrenceId: "delegated-note",
       generation: 1,
-      voice,
+      instrument: playbackInstrument,
       pitch: 64,
       velocity: 100,
       startAudioTimeSeconds: 4,
@@ -1727,20 +1727,20 @@ try {
 
   test("updates subtractive parameters and voice allocation immutably", () => {
     const state = createProject();
-    const voice = state.voicesById["voice-a"];
-    const voiceState = getActiveTestClip(state)
-      .voiceStatesById[voice.id];
+    const projectInstrument = state.projectInstrumentsById["voice-a"];
+    const instrumentState = getActiveTestClip(state)
+      .instrumentStatesById[projectInstrument.id];
     const updatedState = dispatch(state, {
-      type: "UpdateClipVoiceState",
-      voiceId: voice.id,
+      type: "UpdateClipInstrumentState",
+      instrumentId: projectInstrument.id,
       changes: {
         instrument: {
-          ...voiceState.instrument,
+          ...instrumentState.instrument,
           oscillatorWaveform: "square",
           polyphony: 4,
           pulseWidth: 0.3,
           envelope: {
-            ...voiceState.instrument.envelope,
+            ...instrumentState.instrument.envelope,
             attackSeconds: 0.42,
             sustainLevel: 0.55,
           },
@@ -1749,42 +1749,42 @@ try {
     });
 
     assert.equal(
-      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
         .instrument.oscillatorWaveform,
       "square",
     );
     assert.equal(
-      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
         .instrument.envelope.attackSeconds,
       0.42,
     );
     assert.equal(
-      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
         .instrument.envelope.sustainLevel,
       0.55,
     );
     assert.equal(
-      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
         .instrument.polyphony,
       4,
     );
     assert.equal(
-      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
         .instrument.pulseWidth,
       0.3,
     );
     assert.equal(
-      getActiveTestClip(state).voiceStatesById["voice-a"]
+      getActiveTestClip(state).instrumentStatesById["voice-a"]
         .instrument.oscillatorWaveform,
       "sawtooth",
     );
     assert.throws(
       () => dispatch(state, {
-        type: "UpdateClipVoiceState",
-        voiceId: voice.id,
+        type: "UpdateClipInstrumentState",
+        instrumentId: projectInstrument.id,
         changes: {
           instrument: {
-            ...voiceState.instrument,
+            ...instrumentState.instrument,
             polyphony: 17,
           },
         },
@@ -1792,7 +1792,7 @@ try {
       (error) => (
         error instanceof CommandRejectedError
         && error.code === "INVALID_COMMAND"
-        && error.commandType === "UpdateClipVoiceState"
+        && error.commandType === "UpdateClipInstrumentState"
       ),
     );
   });
@@ -1801,7 +1801,7 @@ try {
     const state = createProject({
       masterGain: 0.41,
       masterTuningFrequencyHz: 442,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [{
           ...createNote("disabled", "voice-a", 60, 0, 240),
           enabled: false,
@@ -1826,7 +1826,7 @@ try {
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
     assert.equal(
-      getActiveTestClip(loaded.projectState).tracksByVoiceId["voice-a"]
+      getActiveTestClip(loaded.projectState).tracksByInstrumentId["voice-a"]
         .notesById["disabled"].enabled,
       false,
     );
@@ -1836,14 +1836,14 @@ try {
       PROJECT_SCHEMA_VERSION,
     );
     assert.equal(
-      getActiveTestClip(loaded.projectState).voiceStatesById["voice-a"]
+      getActiveTestClip(loaded.projectState).instrumentStatesById["voice-a"]
         .instrument.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);
     delete invalidCurrentDocument.project.clipsById["clip-test"]
-      .voiceStatesById["voice-a"].instrument.polyphony;
+      .instrumentStatesById["voice-a"].instrument.polyphony;
     assert.throws(
       () => parseNativeProjectFile(
         JSON.stringify(invalidCurrentDocument),
@@ -1862,15 +1862,15 @@ try {
         id: "clip-native-second",
         name: "Native Second",
         measureCount: 2,
-        tracksByVoiceId: {
+        tracksByInstrumentId: {
           "voice-a": {
-            voiceId: "voice-a",
+            instrumentId: "voice-a",
             notesById: {
               second: createNote("second", "voice-a", 65, 240),
             },
           },
         },
-        voiceStatesById: {
+        instrumentStatesById: {
           "voice-a": {
             gain: 0.64,
             muted: true,
@@ -1932,7 +1932,7 @@ try {
     );
     assert.deepEqual(
       loaded.projectState.clipsById["clip-native-second"]
-        .voiceStatesById["voice-a"],
+        .instrumentStatesById["voice-a"],
       {
         gain: 0.64,
         muted: true,
@@ -2023,7 +2023,7 @@ try {
 
   test("rejects AddNotes overlaps against existing and batched notes", () => {
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("existing", "voice-a", 60, 240, 480),
         ],
@@ -2032,28 +2032,28 @@ try {
 
     assertOverlapRejected(state, {
       type: "AddNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       notes: [
         createNote("overlap", "voice-a", 60, 0, 480),
       ],
     });
     assertOverlapRejected(createProject(), {
       type: "AddNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       notes: [
         createNote("batch-a", "voice-a", 65, 0, 480),
         createNote("batch-b", "voice-a", 65, 240, 480),
       ],
     });
     assert.equal(
-      Object.keys(getActiveTestClip(state).tracksByVoiceId["voice-a"].notesById).length,
+      Object.keys(getActiveTestClip(state).tracksByInstrumentId["voice-a"].notesById).length,
       1,
     );
   });
 
   test("rejects ResizeNotes overlaps", () => {
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("left", "voice-a", 60, 0, 480),
           createNote("right", "voice-a", 60, 480, 240),
@@ -2063,7 +2063,7 @@ try {
 
     assertOverlapRejected(state, {
       type: "ResizeNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       changes: [
         {
           noteId: "right",
@@ -2076,7 +2076,7 @@ try {
 
   test("accepts temporal polyphony on different pitches", () => {
     const initialState = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("root", "voice-a", 60, 0, 480),
         ],
@@ -2084,14 +2084,14 @@ try {
     });
     const addedState = dispatch(initialState, {
       type: "AddNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       notes: [
         createNote("third", "voice-a", 64, 0, 480),
       ],
     });
     const resizedState = dispatch(addedState, {
       type: "ResizeNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       changes: [
         {
           noteId: "third",
@@ -2103,12 +2103,12 @@ try {
 
     assert.equal(
       Object.keys(
-        getActiveTestClip(resizedState).tracksByVoiceId["voice-a"].notesById,
+        getActiveTestClip(resizedState).tracksByInstrumentId["voice-a"].notesById,
       ).length,
       2,
     );
     assert.equal(
-      getActiveTestClip(resizedState).tracksByVoiceId["voice-a"]
+      getActiveTestClip(resizedState).tracksByInstrumentId["voice-a"]
         .notesById["third"].durationTicks,
       600,
     );
@@ -2258,7 +2258,7 @@ try {
 
   test("repositions a note group atomically", () => {
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("first", "voice-a", 60, 0, 240),
           createNote("second", "voice-a", 62, 0, 240),
@@ -2267,7 +2267,7 @@ try {
     });
     const repositionedState = dispatch(state, {
       type: "RepositionNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       changes: [
         {
           noteId: "first",
@@ -2283,18 +2283,18 @@ try {
     });
 
     assert.equal(
-      getActiveTestClip(repositionedState).tracksByVoiceId["voice-a"]
+      getActiveTestClip(repositionedState).tracksByInstrumentId["voice-a"]
         .notesById["first"].pitch,
       64,
     );
     assert.equal(
-      getActiveTestClip(repositionedState).tracksByVoiceId["voice-a"]
+      getActiveTestClip(repositionedState).tracksByInstrumentId["voice-a"]
         .notesById["second"].startTick,
       240,
     );
     assertOverlapRejected(repositionedState, {
       type: "RepositionNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       changes: [
         {
           noteId: "first",
@@ -2327,7 +2327,7 @@ try {
       startTick: 360,
     };
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           existing,
           selected,
@@ -2353,7 +2353,7 @@ try {
       "Merge collisions",
     );
     const notes = Object.values(
-      getActiveTestClip(nextState).tracksByVoiceId["voice-a"].notesById,
+      getActiveTestClip(nextState).tracksByInstrumentId["voice-a"].notesById,
     );
 
     assert.equal(notes.length, 1);
@@ -2390,7 +2390,7 @@ try {
       startTick: 360,
     };
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           existing,
           selected,
@@ -2412,7 +2412,7 @@ try {
       "Slice collisions",
     );
     const notes = Object.values(
-      getActiveTestClip(nextState).tracksByVoiceId["voice-a"].notesById,
+      getActiveTestClip(nextState).tracksByInstrumentId["voice-a"].notesById,
     ).sort((left, right) => left.startTick - right.startTick);
 
     assert.equal(notes.length, 3);
@@ -2459,7 +2459,7 @@ try {
       120,
     );
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           existing,
           selectedA,
@@ -2497,7 +2497,7 @@ try {
       "Consolidate and slice",
     );
     const notes = Object.values(
-      getActiveTestClip(nextState).tracksByVoiceId["voice-a"].notesById,
+      getActiveTestClip(nextState).tracksByInstrumentId["voice-a"].notesById,
     ).sort((left, right) => left.startTick - right.startTick);
 
     assert.deepEqual(
@@ -2533,7 +2533,7 @@ try {
       240,
     );
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           existing,
           selected,
@@ -2541,7 +2541,7 @@ try {
       },
     });
     const originalTracks = structuredClone(
-      getActiveTestClip(state).tracksByVoiceId,
+      getActiveTestClip(state).tracksByInstrumentId,
     );
     const plan = createNoteCollisionResolutionPlan(
       state,
@@ -2558,7 +2558,7 @@ try {
       "undo-test",
     );
 
-    assert.deepEqual(getActiveTestClip(state).tracksByVoiceId, originalTracks);
+    assert.deepEqual(getActiveTestClip(state).tracksByInstrumentId, originalTracks);
 
     const store = new ProjectStore(state);
     store.dispatch({
@@ -2571,7 +2571,7 @@ try {
     assert.equal(store.canUndo(), true);
     store.undo();
     assert.deepEqual(
-      getActiveTestClip(store.getState()).tracksByVoiceId,
+      getActiveTestClip(store.getState()).tracksByInstrumentId,
       originalTracks,
     );
     assert.equal(store.canUndo(), false);
@@ -2661,11 +2661,11 @@ try {
     const noteA = createNote("a", "voice-a", 60, 0, 300);
     const noteB = createNote("b", "voice-a", 60, 400, 120);
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [noteA, noteB],
       },
     });
-    const originalTracks = structuredClone(getActiveTestClip(state).tracksByVoiceId);
+    const originalTracks = structuredClone(getActiveTestClip(state).tracksByInstrumentId);
     const store = new ProjectStore(state);
 
     store.dispatch({
@@ -2675,7 +2675,7 @@ try {
       commands: [
         {
           type: "TransformNotes",
-          trackVoiceId: "voice-a",
+          trackInstrumentId: "voice-a",
           changes: [
             {
               noteId: "a",
@@ -2695,23 +2695,23 @@ try {
     });
 
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"].notesById.a.startTick,
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"].notesById.a.startTick,
       200,
     );
     assert.equal(
-      getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"].notesById.a.durationTicks,
+      getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"].notesById.a.durationTicks,
       100,
     );
     assert.equal(store.canUndo(), true);
     store.undo();
-    assert.deepEqual(getActiveTestClip(store.getState()).tracksByVoiceId, originalTracks);
+    assert.deepEqual(getActiveTestClip(store.getState()).tracksByInstrumentId, originalTracks);
     assert.equal(store.canUndo(), false);
   });
 
   test("slices selected notes atomically and restores them on undo", () => {
     const note = createNote("whole", "voice-a", 60, 120, 480);
     const state = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [note],
       },
     });
@@ -2724,7 +2724,7 @@ try {
       commands: [
         {
           type: "SliceNotes",
-          trackVoiceId: "voice-a",
+          trackInstrumentId: "voice-a",
           sliceTick: 360,
           slices: [
             {
@@ -2736,7 +2736,7 @@ try {
       ],
     });
 
-    const slicedTrack = getActiveTestClip(store.getState()).tracksByVoiceId["voice-a"];
+    const slicedTrack = getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"];
 
     assert.deepEqual(
       [
@@ -2754,8 +2754,8 @@ try {
     );
     store.undo();
     assert.deepEqual(
-      getActiveTestClip(store.getState()).tracksByVoiceId,
-      getActiveTestClip(state).tracksByVoiceId,
+      getActiveTestClip(store.getState()).tracksByInstrumentId,
+      getActiveTestClip(state).tracksByInstrumentId,
     );
   });
 
@@ -2796,7 +2796,7 @@ try {
   test("schedules same-time polyphony with a fake engine", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("root", "voice-a", 60, 0, 240),
           createNote("third", "voice-a", 64, 0, 240),
@@ -2834,9 +2834,9 @@ try {
     await scheduler.dispose();
   });
 
-  test("auditions a pitch with the selected voice instrument", async () => {
+  test("auditions a pitch with the selected project instrument", async () => {
     const state = createProject({
-      voiceOrder: ["voice-a", "voice-b"],
+      instrumentOrder: ["voice-a", "voice-b"],
     });
     const snapshot = compilePlaybackSnapshot(state);
     const engine = new FakeAudioEngine();
@@ -2852,17 +2852,17 @@ try {
     assert.equal(engine.resumeCount, 1);
     assert.equal(engine.events.length, 1);
     assert.equal(engine.events[0].pitch, 73);
-    assert.equal(engine.events[0].voice.voiceId, "voice-b");
+    assert.equal(engine.events[0].instrument.instrumentId, "voice-b");
     assert.equal(
-      engine.events[0].voice.instrument.oscillatorWaveform,
+      engine.events[0].instrument.instrument.oscillatorWaveform,
       "sine",
     );
     assertClose(engine.events[0].startAudioTimeSeconds, 1.25);
     assertClose(engine.events[0].endAudioTimeSeconds, 1.65);
-    scheduler.previewVoiceGain("voice-b", 0.46);
-    assert.deepEqual(engine.voiceGainPreviews, [
+    scheduler.previewInstrumentGain("voice-b", 0.46);
+    assert.deepEqual(engine.instrumentGainPreviews, [
       {
-        voiceId: "voice-b",
+        instrumentId: "voice-b",
         gain: 0.46,
       },
     ]);
@@ -2877,7 +2877,7 @@ try {
   test("keeps active notes sounding while refreshing future events", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("held", "voice-a", 60, 0, 960),
           createNote("future", "voice-a", 67, 480, 120),
@@ -2935,7 +2935,7 @@ try {
     assert.deepEqual(engine.cancelledAt, []);
 
     const previewClip = getActiveTestClip(refreshedState);
-    const previewVoiceState = previewClip.voiceStatesById["voice-a"];
+    const previewVoiceState = previewClip.instrumentStatesById["voice-a"];
     assert.ok(previewVoiceState !== undefined);
     const previewState = {
       ...refreshedState,
@@ -2943,8 +2943,8 @@ try {
         ...refreshedState.clipsById,
         [previewClip.id]: {
           ...previewClip,
-          voiceStatesById: {
-            ...previewClip.voiceStatesById,
+          instrumentStatesById: {
+            ...previewClip.instrumentStatesById,
             "voice-a": {
               ...previewVoiceState,
               instrument: {
@@ -2967,17 +2967,17 @@ try {
     assert.deepEqual(engine.cancelledAt, []);
     assert.ok(previewSnapshot !== undefined);
     assert.equal(
-      previewSnapshot.voices[0].instrument.filterCutoffHz,
+      previewSnapshot.instruments[0].instrument.filterCutoffHz,
       777,
     );
 
     await scheduler.dispose();
   });
 
-  test("schedules only soloed voices when solo is active", async () => {
+  test("schedules only soloed instruments when solo is active", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("solo-note", "voice-a", 60, 0, 120),
         ],
@@ -2985,8 +2985,8 @@ try {
           createNote("other-note", "voice-b", 67, 0, 120),
         ],
       },
-      voiceOrder: ["voice-a", "voice-b"],
-      voiceStateChangesById: {
+      instrumentOrder: ["voice-a", "voice-b"],
+      instrumentStateChangesById: {
         "voice-a": { solo: true },
       },
     });
@@ -3012,7 +3012,7 @@ try {
   test("deduplicates concurrent starts and honors stop during resume", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("root", "voice-a", 60, 0, 240),
         ],
@@ -3053,7 +3053,7 @@ try {
   test("cancels partial scheduling after an engine failure", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("root", "voice-a", 60, 0, 240),
           createNote("third", "voice-a", 64, 0, 240),
@@ -3094,7 +3094,7 @@ try {
   test("schedules recurring loop occurrences", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("loop-note", "voice-a", 60, 0, 120),
         ],
@@ -3153,7 +3153,7 @@ try {
   test("wraps playback started exactly on the loop end", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("loop-start", "voice-a", 60, 0, 120),
         ],
@@ -3193,7 +3193,7 @@ try {
   test("cancels scheduled audio and restarts after seek", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("before-seek", "voice-a", 60, 0, 120),
           createNote("after-seek", "voice-a", 67, 960, 120),
@@ -3236,7 +3236,7 @@ try {
   test("stops cleanly at the end of a non-looping project", async () => {
     const state = createProject({
       measureCount: 1,
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [
           createNote("ending", "voice-a", 60, 3_600, 240),
         ],
@@ -3273,7 +3273,7 @@ try {
 
   test("isolates notes and transport data between clips", () => {
     const initialState = createProject({
-      notesByVoiceId: {
+      notesByInstrumentId: {
         "voice-a": [createNote("clip-a-note", "voice-a", 60, 0)],
       },
     });
@@ -3281,13 +3281,13 @@ try {
       id: "clip-second",
       name: "Second Clip",
       measureCount: 2,
-      tracksByVoiceId: {
+      tracksByInstrumentId: {
         "voice-a": {
-          voiceId: "voice-a",
+          instrumentId: "voice-a",
           notesById: {},
         },
       },
-      voiceStatesById: {
+      instrumentStatesById: {
         "voice-a": {
           gain: 0.8,
           muted: false,
@@ -3307,21 +3307,21 @@ try {
     });
     const editedSecondClip = dispatch(withSecondClip, {
       type: "AddNotes",
-      trackVoiceId: "voice-a",
+      trackInstrumentId: "voice-a",
       notes: [createNote("clip-b-note", "voice-a", 67, 480)],
     });
 
     assert.deepEqual(
       Object.keys(
         editedSecondClip.clipsById["clip-test"]
-          .tracksByVoiceId["voice-a"].notesById,
+          .tracksByInstrumentId["voice-a"].notesById,
       ),
       ["clip-a-note"],
     );
     assert.deepEqual(
       Object.keys(
         editedSecondClip.clipsById["clip-second"]
-          .tracksByVoiceId["voice-a"].notesById,
+          .tracksByInstrumentId["voice-a"].notesById,
       ),
       ["clip-b-note"],
     );
@@ -3335,21 +3335,21 @@ try {
     );
   });
 
-  test("isolates voice playback and editing state between clips", () => {
+  test("isolates instrument playback and editing state between clips", () => {
     const initialState = createProject();
     const withSecondClip = dispatch(initialState, {
       type: "AddClip",
       clip: {
         id: "clip-voice-state-second",
-        name: "Voice State Second",
+        name: "ProjectInstrument State Second",
         measureCount: 2,
-        tracksByVoiceId: {
+        tracksByInstrumentId: {
           "voice-a": {
-            voiceId: "voice-a",
+            instrumentId: "voice-a",
             notesById: {},
           },
         },
-        voiceStatesById: {
+        instrumentStatesById: {
           "voice-a": {
             gain: 0.8,
             muted: false,
@@ -3367,8 +3367,8 @@ try {
       transactionId: "update-second-clip-voice-state",
       createdAt: 1,
       commands: [{
-        type: "UpdateClipVoiceState",
-        voiceId: "voice-a",
+        type: "UpdateClipInstrumentState",
+        instrumentId: "voice-a",
         changes: {
           gain: 0.35,
           muted: true,
@@ -3376,7 +3376,7 @@ try {
           solo: true,
           instrument: {
             ...getActiveTestClip(withSecondClip)
-              .voiceStatesById["voice-a"].instrument,
+              .instrumentStatesById["voice-a"].instrument,
             oscillatorWaveform: "triangle",
             filterCutoffHz: 1_234,
           },
@@ -3386,7 +3386,7 @@ try {
 
     assert.deepEqual(
       store.getState().clipsById["clip-test"]
-        .voiceStatesById["voice-a"],
+        .instrumentStatesById["voice-a"],
       {
         gain: 0.8,
         muted: false,
@@ -3397,7 +3397,7 @@ try {
     );
     assert.deepEqual(
       store.getState().clipsById["clip-voice-state-second"]
-        .voiceStatesById["voice-a"],
+        .instrumentStatesById["voice-a"],
       {
         gain: 0.35,
         muted: true,
@@ -3412,14 +3412,14 @@ try {
     );
     assert.equal(
       compilePlaybackSnapshot(store.getState())
-        .voices[0].instrument.oscillatorWaveform,
+        .instruments[0].instrument.oscillatorWaveform,
       "triangle",
     );
 
     store.undo();
     assert.deepEqual(
       store.getState().clipsById["clip-voice-state-second"]
-        .voiceStatesById["voice-a"],
+        .instrumentStatesById["voice-a"],
       {
         gain: 0.8,
         muted: false,
@@ -3432,7 +3432,7 @@ try {
     store.redo();
     assert.deepEqual(
       store.getState().clipsById["clip-voice-state-second"]
-        .voiceStatesById["voice-a"],
+        .instrumentStatesById["voice-a"],
       {
         gain: 0.35,
         muted: true,
@@ -3447,10 +3447,10 @@ try {
     );
   });
 
-  test("refreshes rendered voice styles after clip-local state changes", () => {
+  test("refreshes rendered instrument styles after clip-local state changes", () => {
     const runtime = createEditorRuntime(createProject());
 
-    assert.deepEqual(runtime.voiceStyles.get()["voice-a"], {
+    assert.deepEqual(runtime.instrumentStyles.get()["voice-a"], {
       fillStyle: "#79a7ff",
       opacity: 1,
       locked: false,
@@ -3458,21 +3458,21 @@ try {
 
     runtime.editorCommands.dispatch(
       [{
-        type: "UpdateClipVoiceState",
-        voiceId: "voice-a",
+        type: "UpdateClipInstrumentState",
+        instrumentId: "voice-a",
         changes: { muted: true, locked: true },
       }],
-      "Update rendered voice state",
+      "Update rendered instrument state",
     );
 
-    assert.deepEqual(runtime.voiceStyles.get()["voice-a"], {
+    assert.deepEqual(runtime.instrumentStyles.get()["voice-a"], {
       fillStyle: "#79a7ff",
       opacity: 0.16,
       locked: true,
     });
   });
 
-  test("propagates voice lifecycle changes to every clip", () => {
+  test("propagates instrument lifecycle changes to every clip", () => {
     const initialState = createProject();
     const withSecondClip = dispatch(initialState, {
       type: "AddClip",
@@ -3480,13 +3480,13 @@ try {
         id: "clip-second",
         name: "Second Clip",
         measureCount: 4,
-        tracksByVoiceId: {
+        tracksByInstrumentId: {
           "voice-a": {
-            voiceId: "voice-a",
+            instrumentId: "voice-a",
             notesById: {},
           },
         },
-        voiceStatesById: {
+        instrumentStatesById: {
           "voice-a": {
             gain: 0.8,
             muted: false,
@@ -3498,10 +3498,10 @@ try {
         transportSettings: createDefaultTransportState(),
       },
     });
-    const withVoice = dispatch(withSecondClip, {
-      type: "AddVoice",
-      voice: createVoice("voice-b", 1),
-      clipVoiceStatesById: {
+    const withInstrument = dispatch(withSecondClip, {
+      type: "AddProjectInstrument",
+      instrument: createProjectInstrument("voice-b", 1),
+      clipInstrumentStatesById: {
         "clip-test": {
           gain: 0.82,
           muted: false,
@@ -3519,34 +3519,34 @@ try {
       },
     });
 
-    for (const clipId of withVoice.clipOrder) {
+    for (const clipId of withInstrument.clipOrder) {
       assert.ok(
-        withVoice.clipsById[clipId].tracksByVoiceId["voice-b"],
+        withInstrument.clipsById[clipId].tracksByInstrumentId["voice-b"],
       );
       assert.equal(
-        withVoice.clipsById[clipId]
-          .voiceStatesById["voice-b"].gain,
+        withInstrument.clipsById[clipId]
+          .instrumentStatesById["voice-b"].gain,
         0.82,
       );
       assert.equal(
-        withVoice.clipsById[clipId]
-          .voiceStatesById["voice-b"].instrument.oscillatorWaveform,
+        withInstrument.clipsById[clipId]
+          .instrumentStatesById["voice-b"].instrument.oscillatorWaveform,
         "sine",
       );
     }
 
-    const withoutVoice = dispatch(withVoice, {
-      type: "DeleteVoice",
-      voiceId: "voice-b",
+    const withoutInstrument = dispatch(withInstrument, {
+      type: "DeleteProjectInstrument",
+      instrumentId: "voice-b",
     });
 
-    for (const clipId of withoutVoice.clipOrder) {
+    for (const clipId of withoutInstrument.clipOrder) {
       assert.equal(
-        withoutVoice.clipsById[clipId].tracksByVoiceId["voice-b"],
+        withoutInstrument.clipsById[clipId].tracksByInstrumentId["voice-b"],
         undefined,
       );
       assert.equal(
-        withoutVoice.clipsById[clipId].voiceStatesById["voice-b"],
+        withoutInstrument.clipsById[clipId].instrumentStatesById["voice-b"],
         undefined,
       );
     }
@@ -3564,13 +3564,13 @@ try {
           id: "clip-second",
           name: "Second Clip",
           measureCount: 4,
-          tracksByVoiceId: {
+          tracksByInstrumentId: {
             "voice-a": {
-              voiceId: "voice-a",
+              instrumentId: "voice-a",
               notesById: {},
             },
           },
-          voiceStatesById: {
+          instrumentStatesById: {
           "voice-a": {
             gain: 0.8,
             muted: false,
@@ -3593,7 +3593,7 @@ try {
       createdAt: 3,
       commands: [{
         type: "AddNotes",
-        trackVoiceId: "voice-a",
+        trackInstrumentId: "voice-a",
         notes: [createNote("history-note", "voice-a", 60, 0)],
       }],
     });
@@ -3607,7 +3607,7 @@ try {
     assert.equal(store.getState().activeClipId, "clip-second");
     assert.equal(
       store.getState().clipsById["clip-test"]
-        .tracksByVoiceId["voice-a"].notesById["history-note"],
+        .tracksByInstrumentId["voice-a"].notesById["history-note"],
       undefined,
     );
 
@@ -3615,7 +3615,7 @@ try {
     assert.equal(store.getState().activeClipId, "clip-second");
     assert.ok(
       store.getState().clipsById["clip-test"]
-        .tracksByVoiceId["voice-a"].notesById["history-note"],
+        .tracksByInstrumentId["voice-a"].notesById["history-note"],
     );
   });
 
@@ -3625,13 +3625,13 @@ try {
       id: "clip-playhead-second",
       name: "Playhead Second",
       measureCount: 4,
-      tracksByVoiceId: {
+      tracksByInstrumentId: {
         "voice-a": {
-          voiceId: "voice-a",
+          instrumentId: "voice-a",
           notesById: {},
         },
       },
-      voiceStatesById: {
+      instrumentStatesById: {
         "voice-a": {
           gain: 0.8,
           muted: false,

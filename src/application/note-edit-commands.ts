@@ -6,41 +6,41 @@ import type {
 import type {
   Note,
   NoteId,
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 
 export type NoteResizeEdge = "start" | "end";
 
-/** Creates one add command per affected voice. */
+/** Creates one add command per affected instrument. */
 export function buildAddNoteCommands(
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
-  const notesByVoice = groupNotesByVoice(notes);
+  const notesByInstrument = groupNotesByInstrument(notes);
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, voiceNotes] of notesByVoice) {
+  for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     commands.push({
       type: "AddNotes",
-      trackVoiceId: voiceId,
-      notes: voiceNotes,
+      trackInstrumentId: instrumentId,
+      notes: instrumentNotes,
     });
   }
 
   return commands;
 }
 
-/** Creates one delete command per affected voice. */
+/** Creates one delete command per affected instrument. */
 export function buildDeleteNoteCommands(
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
-  const noteIdsByVoice = new Map<VoiceId, NoteId[]>();
+  const noteIdsByInstrument = new Map<InstrumentId, NoteId[]>();
 
   for (const note of notes) {
-    let noteIds = noteIdsByVoice.get(note.voiceId);
+    let noteIds = noteIdsByInstrument.get(note.instrumentId);
 
     if (noteIds === undefined) {
       noteIds = [];
-      noteIdsByVoice.set(note.voiceId, noteIds);
+      noteIdsByInstrument.set(note.instrumentId, noteIds);
     }
 
     noteIds.push(note.id);
@@ -48,10 +48,10 @@ export function buildDeleteNoteCommands(
 
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, noteIds] of noteIdsByVoice) {
+  for (const [instrumentId, noteIds] of noteIdsByInstrument) {
     commands.push({
       type: "DeleteNotes",
-      trackVoiceId: voiceId,
+      trackInstrumentId: instrumentId,
       noteIds,
     });
   }
@@ -59,24 +59,24 @@ export function buildDeleteNoteCommands(
   return commands;
 }
 
-/** Creates explicit enabled-state updates grouped by voice. */
+/** Creates explicit enabled-state updates grouped by instrument. */
 export function buildSetNotesEnabledCommands(
   notes: readonly Note[],
   enabled: boolean,
 ): readonly PianoRollCommand[] {
-  const notesByVoice = groupNotesByVoice(notes);
+  const notesByInstrument = groupNotesByInstrument(notes);
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, voiceNotes] of notesByVoice) {
+  for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     const noteIds: NoteId[] = [];
 
-    for (const note of voiceNotes) {
+    for (const note of instrumentNotes) {
       noteIds.push(note.id);
     }
 
     commands.push({
       type: "SetNotesEnabled",
-      trackVoiceId: voiceId,
+      trackInstrumentId: instrumentId,
       noteIds,
       enabled,
     });
@@ -85,17 +85,17 @@ export function buildSetNotesEnabledCommands(
   return commands;
 }
 
-/** Creates atomic absolute-position updates grouped by voice. */
+/** Creates atomic absolute-position updates grouped by instrument. */
 export function buildRepositionNoteCommands(
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
-  const notesByVoice = groupNotesByVoice(notes);
+  const notesByInstrument = groupNotesByInstrument(notes);
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, voiceNotes] of notesByVoice) {
+  for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     const changes: NotePositionChange[] = [];
 
-    for (const note of voiceNotes) {
+    for (const note of instrumentNotes) {
       changes.push({
         noteId: note.id,
         startTick: note.startTick,
@@ -105,7 +105,7 @@ export function buildRepositionNoteCommands(
 
     commands.push({
       type: "RepositionNotes",
-      trackVoiceId: voiceId,
+      trackInstrumentId: instrumentId,
       changes,
     });
   }
@@ -119,13 +119,13 @@ export function buildResizeNoteCommands(
   deltaTicks: number,
   edge: NoteResizeEdge,
 ): readonly PianoRollCommand[] {
-  const notesByVoice = groupNotesByVoice(notes);
+  const notesByInstrument = groupNotesByInstrument(notes);
   const commands: PianoRollCommand[] = [];
 
-  for (const [voiceId, voiceNotes] of notesByVoice) {
+  for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     const changes: NoteDurationChange[] = [];
 
-    for (const note of voiceNotes) {
+    for (const note of instrumentNotes) {
       changes.push({
         noteId: note.id,
         startTick:
@@ -141,7 +141,7 @@ export function buildResizeNoteCommands(
 
     commands.push({
       type: "ResizeNotes",
-      trackVoiceId: voiceId,
+      trackInstrumentId: instrumentId,
       changes,
     });
   }
@@ -174,21 +174,21 @@ export function resizeNotes(
   return resizedNotes;
 }
 
-function groupNotesByVoice(
+function groupNotesByInstrument(
   notes: readonly Note[],
-): ReadonlyMap<VoiceId, readonly Note[]> {
-  const notesByVoice = new Map<VoiceId, Note[]>();
+): ReadonlyMap<InstrumentId, readonly Note[]> {
+  const notesByInstrument = new Map<InstrumentId, Note[]>();
 
   for (const note of notes) {
-    let voiceNotes = notesByVoice.get(note.voiceId);
+    let instrumentNotes = notesByInstrument.get(note.instrumentId);
 
-    if (voiceNotes === undefined) {
-      voiceNotes = [];
-      notesByVoice.set(note.voiceId, voiceNotes);
+    if (instrumentNotes === undefined) {
+      instrumentNotes = [];
+      notesByInstrument.set(note.instrumentId, instrumentNotes);
     }
 
-    voiceNotes.push(note);
+    instrumentNotes.push(note);
   }
 
-  return notesByVoice;
+  return notesByInstrument;
 }

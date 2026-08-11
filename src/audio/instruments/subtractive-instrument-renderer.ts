@@ -2,11 +2,11 @@ import {
   AUDIO_CONSTANTS,
 } from "../../config/program-constants";
 import type {
-  SubtractivePlaybackVoiceSnapshot,
+  SubtractivePlaybackInstrumentSnapshot,
 } from "../contracts";
 import type {
   AudioEngineConfig,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import {
   resolveNoteEnvelopePeakLevel,
@@ -19,23 +19,23 @@ import type {
 
 /** Builds and owns oscillator-based voices for subtractive instruments. */
 export class SubtractiveInstrumentRenderer
-  implements InstrumentRenderer<SubtractivePlaybackVoiceSnapshot> {
+  implements InstrumentRenderer<SubtractivePlaybackInstrumentSnapshot> {
   public readonly kind = "subtractive" as const;
   private readonly pulseWavesByContext =
     new WeakMap<AudioContext, Map<number, PeriodicWave>>();
 
   public getMaximumPolyphony(
-    voice: SubtractivePlaybackVoiceSnapshot,
+    instrument: SubtractivePlaybackInstrumentSnapshot,
     engineConfig: AudioEngineConfig,
   ): number {
     return Math.min(
-      voice.instrument.polyphony,
+      instrument.instrument.polyphony,
       engineConfig.maximumRendererPolyphony,
     );
   }
 
   public schedule(
-    request: InstrumentScheduleRequest<SubtractivePlaybackVoiceSnapshot>,
+    request: InstrumentScheduleRequest<SubtractivePlaybackInstrumentSnapshot>,
   ): ActiveInstrumentVoice {
     const {
       context,
@@ -47,7 +47,7 @@ export class SubtractiveInstrumentRenderer
       releaseTailSeconds,
       onEnded,
     } = request;
-    const instrument = event.voice.instrument;
+    const instrument = event.instrument.instrument;
     const oscillator = context.createOscillator();
     const filter = context.createBiquadFilter();
     const envelopeGain = context.createGain();
@@ -59,7 +59,7 @@ export class SubtractiveInstrumentRenderer
       noteEndAudioTimeSeconds + releaseSeconds;
     const activeVoice = new SubtractiveActiveVoice(
       event.occurrenceId,
-      event.voice.voiceId,
+      event.instrument.instrumentId,
       oscillator,
       filter,
       envelopeGain,
@@ -185,7 +185,7 @@ class SubtractiveActiveVoice implements ActiveInstrumentVoice {
 
   public constructor(
     public readonly occurrenceId: string,
-    public readonly voiceId: VoiceId,
+    public readonly instrumentId: InstrumentId,
     private readonly oscillator: OscillatorNode,
     private readonly filter: BiquadFilterNode,
     private readonly envelopeGain: GainNode,

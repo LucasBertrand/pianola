@@ -1,9 +1,9 @@
 import type {
   AudioEngineConfig,
-  VoiceId,
+  InstrumentId,
 } from "../../domain/model";
 import type {
-  PlaybackVoiceSnapshot,
+  PlaybackInstrumentSnapshot,
   ScheduledNoteEvent,
 } from "../contracts";
 import type {
@@ -13,18 +13,18 @@ import type {
 /** A scheduled source whose lifecycle is owned by one instrument renderer. */
 export interface ActiveInstrumentVoice extends VoiceAllocationWindow {
   readonly occurrenceId: string;
-  readonly voiceId: VoiceId;
+  readonly instrumentId: InstrumentId;
   readonly ended: boolean;
   stop(atAudioTimeSeconds: number): void;
   cancelBeforeStart(atAudioTimeSeconds: number): void;
 }
 
 export interface InstrumentScheduleRequest<
-  TVoice extends PlaybackVoiceSnapshot = PlaybackVoiceSnapshot,
+  TInstrument extends PlaybackInstrumentSnapshot = PlaybackInstrumentSnapshot,
 > {
   readonly context: AudioContext;
   readonly destination: AudioNode;
-  readonly event: ScheduledNoteEvent<TVoice>;
+  readonly event: ScheduledNoteEvent<TInstrument>;
   readonly startAudioTimeSeconds: number;
   readonly noteEndAudioTimeSeconds: number;
   readonly tuningFrequencyHz: number;
@@ -34,17 +34,17 @@ export interface InstrumentScheduleRequest<
 
 /**
  * Converts an instrument-neutral scheduled event into a Web Audio source.
- * Renderers never own the AudioContext, master graph, or voice buses.
+ * Renderers never own the AudioContext, master graph, or instrument buses.
  */
 export interface InstrumentRenderer<
-  TVoice extends PlaybackVoiceSnapshot = PlaybackVoiceSnapshot,
+  TInstrument extends PlaybackInstrumentSnapshot = PlaybackInstrumentSnapshot,
 > {
-  readonly kind: TVoice["instrument"]["kind"];
+  readonly kind: TInstrument["instrument"]["kind"];
   getMaximumPolyphony(
-    voice: TVoice,
+    instrument: TInstrument,
     engineConfig: AudioEngineConfig,
   ): number;
   schedule(
-    request: InstrumentScheduleRequest<TVoice>,
+    request: InstrumentScheduleRequest<TInstrument>,
   ): ActiveInstrumentVoice;
 }

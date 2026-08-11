@@ -2,7 +2,7 @@ import type {
   AudioEngineConfig,
   Tick,
   TransportState,
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 import {
   AUDIO_CONSTANTS,
@@ -16,7 +16,7 @@ import type {
   AudioTransportController,
   PlaybackSnapshot,
   PlaybackStatus,
-  PlaybackVoiceSnapshot,
+  PlaybackInstrumentSnapshot,
 } from "./contracts";
 import {
   projectTickIntoLoop,
@@ -274,16 +274,16 @@ export class LookaheadScheduler implements AudioTransportController {
     });
   }
 
-  public previewVoiceGain(
-    voiceId: VoiceId,
+  public previewInstrumentGain(
+    instrumentId: InstrumentId,
     gain: number,
   ): void {
     this.assertUsable();
-    this.engine.previewVoiceGain(voiceId, gain);
+    this.engine.previewInstrumentGain(instrumentId, gain);
   }
 
   public async auditionPitch(
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     pitch: number,
   ): Promise<void> {
     this.assertUsable();
@@ -292,10 +292,10 @@ export class LookaheadScheduler implements AudioTransportController {
       throw new RangeError("Audition pitch must be between 0 and 127.");
     }
 
-    const voice = findPlaybackVoice(this.snapshot, voiceId);
+    const instrument = findPlaybackInstrument(this.snapshot, instrumentId);
 
-    if (voice === undefined) {
-      throw new Error(`Voice "${voiceId}" is unavailable for audition.`);
+    if (instrument === undefined) {
+      throw new Error(`Project instrument "${instrumentId}" is unavailable for audition.`);
     }
 
     await this.engine.resume();
@@ -305,9 +305,9 @@ export class LookaheadScheduler implements AudioTransportController {
 
     this.engine.scheduleNote({
       occurrenceId:
-        `audition:${this.auditionSequence}:${voiceId}:${pitch}`,
+        `audition:${this.auditionSequence}:${instrumentId}:${pitch}`,
       generation: this.generation,
-      voice,
+      instrument,
       pitch,
       velocity: AUDIO_CONSTANTS.auditionNoteVelocity,
       startAudioTimeSeconds,
@@ -528,29 +528,29 @@ export class LookaheadScheduler implements AudioTransportController {
       return;
     }
 
-    const hasSoloVoice = snapshotHasSoloVoice(this.snapshot);
+    const hasSoloInstrument = snapshotHasSoloInstrument(this.snapshot);
 
     for (
-      let voiceIndex = 0;
-      voiceIndex < this.snapshot.voices.length;
-      voiceIndex += 1
+      let instrumentIndex = 0;
+      instrumentIndex < this.snapshot.instruments.length;
+      instrumentIndex += 1
     ) {
-      const voice = this.snapshot.voices[voiceIndex];
+      const instrument = this.snapshot.instruments[instrumentIndex];
 
       if (
-        voice === undefined
-        || !isVoiceAudible(voice, hasSoloVoice)
+        instrument === undefined
+        || !isInstrumentAudible(instrument, hasSoloInstrument)
       ) {
         continue;
       }
 
       let noteIndex = lowerBound(
-        voice.startTicks,
+        instrument.startTicks,
         projectStartTick,
       );
 
-      while (noteIndex < voice.startTicks.length) {
-        const noteStartTick = voice.startTicks[noteIndex];
+      while (noteIndex < instrument.startTicks.length) {
+        const noteStartTick = instrument.startTicks[noteIndex];
 
         if (
           noteStartTick === undefined
@@ -559,10 +559,10 @@ export class LookaheadScheduler implements AudioTransportController {
           break;
         }
 
-        const durationTicks = voice.durationTicks[noteIndex];
-        const pitch = voice.pitches[noteIndex];
-        const velocity = voice.velocities[noteIndex];
-        const noteId = voice.noteIds[noteIndex];
+        const durationTicks = instrument.durationTicks[noteIndex];
+        const pitch = instrument.pitches[noteIndex];
+        const velocity = instrument.velocities[noteIndex];
+        const noteId = instrument.noteIds[noteIndex];
 
         if (
           durationTicks !== undefined
@@ -580,9 +580,9 @@ export class LookaheadScheduler implements AudioTransportController {
           if (endUnwrappedTick > startUnwrappedTick) {
             this.engine.scheduleNote({
               occurrenceId:
-                `${this.generation}:${loopIteration}:${voice.voiceId}:${noteId}`,
+                `${this.generation}:${loopIteration}:${instrument.instrumentId}:${noteId}`,
               generation: this.generation,
-              voice,
+              instrument,
               pitch,
               velocity,
               startAudioTimeSeconds:
@@ -612,7 +612,7 @@ export class LookaheadScheduler implements AudioTransportController {
       return;
     }
 
-    const hasSoloVoice = snapshotHasSoloVoice(this.snapshot);
+    const hasSoloInstrument = snapshotHasSoloInstrument(this.snapshot);
     const boundaryTick = this.loopingForAnchor
       ? this.transport.loop.endTick
       : this.snapshot.durationTicks;
@@ -623,21 +623,21 @@ export class LookaheadScheduler implements AudioTransportController {
         : 0;
 
     for (
-      let voiceIndex = 0;
-      voiceIndex < this.snapshot.voices.length;
-      voiceIndex += 1
+      let instrumentIndex = 0;
+      instrumentIndex < this.snapshot.instruments.length;
+      instrumentIndex += 1
     ) {
-      const voice = this.snapshot.voices[voiceIndex];
+      const instrument = this.snapshot.instruments[instrumentIndex];
 
       if (
-        voice === undefined
-        || !isVoiceAudible(voice, hasSoloVoice)
+        instrument === undefined
+        || !isInstrumentAudible(instrument, hasSoloInstrument)
       ) {
         continue;
       }
 
       const endIndex = lowerBound(
-        voice.startTicks,
+        instrument.startTicks,
         anchorTick,
       );
 
@@ -646,11 +646,11 @@ export class LookaheadScheduler implements AudioTransportController {
         noteIndex < endIndex;
         noteIndex += 1
       ) {
-        const noteStartTick = voice.startTicks[noteIndex];
-        const durationTicks = voice.durationTicks[noteIndex];
-        const pitch = voice.pitches[noteIndex];
-        const velocity = voice.velocities[noteIndex];
-        const noteId = voice.noteIds[noteIndex];
+        const noteStartTick = instrument.startTicks[noteIndex];
+        const durationTicks = instrument.durationTicks[noteIndex];
+        const pitch = instrument.pitches[noteIndex];
+        const velocity = instrument.velocities[noteIndex];
+        const noteId = instrument.noteIds[noteIndex];
 
         if (
           noteStartTick === undefined
@@ -675,9 +675,9 @@ export class LookaheadScheduler implements AudioTransportController {
 
         this.engine.scheduleNote({
           occurrenceId:
-            `${this.generation}:held:${voice.voiceId}:${noteId}`,
+            `${this.generation}:held:${instrument.instrumentId}:${noteId}`,
           generation: this.generation,
-          voice,
+          instrument,
           pitch,
           velocity,
           startAudioTimeSeconds: this.anchorAudioTimeSeconds,
@@ -832,13 +832,13 @@ function lowerBound(values: Float64Array, target: number): number {
   return low;
 }
 
-function snapshotHasSoloVoice(snapshot: PlaybackSnapshot): boolean {
+function snapshotHasSoloInstrument(snapshot: PlaybackSnapshot): boolean {
   for (
-    let voiceIndex = 0;
-    voiceIndex < snapshot.voices.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < snapshot.instruments.length;
+    instrumentIndex += 1
   ) {
-    if (snapshot.voices[voiceIndex]?.solo === true) {
+    if (snapshot.instruments[instrumentIndex]?.solo === true) {
       return true;
     }
   }
@@ -846,30 +846,30 @@ function snapshotHasSoloVoice(snapshot: PlaybackSnapshot): boolean {
   return false;
 }
 
-function findPlaybackVoice(
+function findPlaybackInstrument(
   snapshot: PlaybackSnapshot,
-  voiceId: VoiceId,
-): PlaybackVoiceSnapshot | undefined {
+  instrumentId: InstrumentId,
+): PlaybackInstrumentSnapshot | undefined {
   for (
-    let voiceIndex = 0;
-    voiceIndex < snapshot.voices.length;
-    voiceIndex += 1
+    let instrumentIndex = 0;
+    instrumentIndex < snapshot.instruments.length;
+    instrumentIndex += 1
   ) {
-    const voice = snapshot.voices[voiceIndex];
+    const instrument = snapshot.instruments[instrumentIndex];
 
-    if (voice?.voiceId === voiceId) {
-      return voice;
+    if (instrument?.instrumentId === instrumentId) {
+      return instrument;
     }
   }
 
   return undefined;
 }
 
-function isVoiceAudible(
-  voice: PlaybackVoiceSnapshot,
-  hasSoloVoice: boolean,
+function isInstrumentAudible(
+  instrument: PlaybackInstrumentSnapshot,
+  hasSoloInstrument: boolean,
 ): boolean {
-  return !voice.muted && (!hasSoloVoice || voice.solo);
+  return !instrument.muted && (!hasSoloInstrument || instrument.solo);
 }
 
 function getPlaybackBpm(snapshot: PlaybackSnapshot): number {

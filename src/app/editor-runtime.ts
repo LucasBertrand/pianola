@@ -14,7 +14,7 @@ import {
   type ClipId,
   type Note,
   type ProjectState,
-  type VoiceId,
+  type InstrumentId,
 } from "../domain/model";
 import {
   ProjectStore,
@@ -41,7 +41,7 @@ import {
 } from "../ui/rendering/grid-settings";
 import type {
   NoteColorMode,
-  VoiceRenderStyle,
+  InstrumentRenderStyle,
 } from "../ui/rendering/note-style";
 import {
   MappedRenderSignal,
@@ -62,8 +62,8 @@ export interface EditorRuntime {
   readonly spatialIndex: SpatialIndex;
   readonly viewport: MutableRenderSignal<ViewportState>;
   readonly visibleRegion: MutableRenderSignal<Rect>;
-  readonly voiceStyles: MutableRenderSignal<
-    Readonly<Record<VoiceId, VoiceRenderStyle>>
+  readonly instrumentStyles: MutableRenderSignal<
+    Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
   readonly playheadTick: MutableRenderSignal<number>;
@@ -107,8 +107,8 @@ export function createEditorRuntime(
     indexedNotesBuffer,
   );
 
-  const voiceStyles = new MutableRenderSignal(
-    createVoiceRenderStyles(initialProjectState),
+  const instrumentStyles = new MutableRenderSignal(
+    createInstrumentRenderStyles(initialProjectState),
   );
 
   const viewport = new MutableRenderSignal(viewportState);
@@ -144,18 +144,18 @@ export function createEditorRuntime(
     }
 
     if (
-      nextClip.tracksByVoiceId !== previousClip.tracksByVoiceId
+      nextClip.tracksByInstrumentId !== previousClip.tracksByInstrumentId
       || state.activeClipId !== previousState.activeClipId
     ) {
       rebuildSpatialIndex(state, spatialIndex, indexedNotesBuffer);
     }
 
     if (
-      state.voicesById !== previousState.voicesById
-      || nextClip.voiceStatesById !== previousClip.voiceStatesById
+      state.projectInstrumentsById !== previousState.projectInstrumentsById
+      || nextClip.instrumentStatesById !== previousClip.instrumentStatesById
       || state.activeClipId !== previousState.activeClipId
     ) {
-      voiceStyles.set(createVoiceRenderStyles(state));
+      instrumentStyles.set(createInstrumentRenderStyles(state));
     }
   });
 
@@ -173,7 +173,7 @@ export function createEditorRuntime(
         getActiveClipDurationTicks(initialProjectState),
       ),
     ),
-    voiceStyles,
+    instrumentStyles,
     noteColorMode: new MutableRenderSignal<NoteColorMode>(
       EDITOR_CONSTANTS.defaultNoteColorMode,
     ),
@@ -289,21 +289,21 @@ function createInitialViewportState(): ViewportState {
   };
 }
 
-function createVoiceRenderStyles(
+function createInstrumentRenderStyles(
   state: ProjectState,
-): Readonly<Record<VoiceId, VoiceRenderStyle>> {
-  const styles: Record<VoiceId, VoiceRenderStyle> = {};
+): Readonly<Record<InstrumentId, InstrumentRenderStyle>> {
+  const styles: Record<InstrumentId, InstrumentRenderStyle> = {};
   const activeClip = getActiveClip(state);
 
-  for (const voiceId of state.voiceOrder) {
-    const voice = state.voicesById[voiceId];
-    const voiceState = activeClip.voiceStatesById[voiceId];
+  for (const instrumentId of state.instrumentOrder) {
+    const instrument = state.projectInstrumentsById[instrumentId];
+    const instrumentState = activeClip.instrumentStatesById[instrumentId];
 
-    if (voice !== undefined && voiceState !== undefined) {
-      styles[voiceId] = {
-        fillStyle: voice.color,
-        opacity: voiceState.muted ? 0.16 : 1,
-        locked: voiceState.locked,
+    if (instrument !== undefined && instrumentState !== undefined) {
+      styles[instrumentId] = {
+        fillStyle: instrument.color,
+        opacity: instrumentState.muted ? 0.16 : 1,
+        locked: instrumentState.locked,
       };
     }
   }
@@ -319,8 +319,8 @@ function rebuildSpatialIndex(
   target.length = 0;
   const activeClip = getActiveClip(state);
 
-  for (const voiceId of state.voiceOrder) {
-    const track = activeClip.tracksByVoiceId[voiceId];
+  for (const instrumentId of state.instrumentOrder) {
+    const track = activeClip.tracksByInstrumentId[instrumentId];
 
     if (track === undefined) {
       continue;

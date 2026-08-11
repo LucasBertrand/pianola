@@ -5,7 +5,7 @@ import {
 import {
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
-  type Voice,
+  type ProjectInstrument,
 } from "../../domain/model";
 import type {
   SelectionTransformationKind,
@@ -19,7 +19,7 @@ import type {
 
 export interface EditorToolbarProps {
   readonly inspectorOpen: boolean;
-  readonly inspectorSection: "voices" | "clips";
+  readonly inspectorSection: "instruments" | "clips";
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly measureCount: number;
@@ -27,11 +27,11 @@ export interface EditorToolbarProps {
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
-  readonly selectedVoice: {
-    readonly color: Voice["color"];
+  readonly selectedInstrument: {
+    readonly color: ProjectInstrument["color"];
     readonly locked: boolean;
   } | undefined;
-  readonly onToggleInspector: (section: "voices" | "clips") => void;
+  readonly onToggleInspector: (section: "instruments" | "clips") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onInsertMeasure: () => void;
@@ -43,7 +43,7 @@ export interface EditorToolbarProps {
   readonly onPaste: () => void;
   readonly onSelectionModeChange: (mode: SelectionMode) => void;
   readonly onNoteColorModeToggle: () => void;
-  readonly onTransferSelectionToVoice: () => void;
+  readonly onTransferSelectionToInstrument: () => void;
   readonly onSliceSelectionAtPlayhead: () => void;
   readonly onTransformSelection: (
     kind: SelectionTransformationKind,
@@ -61,7 +61,7 @@ export function EditorToolbar({
   clipboardAvailable,
   selectionMode,
   noteColorMode,
-  selectedVoice,
+  selectedInstrument,
   onToggleInspector,
   onUndo,
   onRedo,
@@ -74,7 +74,7 @@ export function EditorToolbar({
   onPaste,
   onSelectionModeChange,
   onNoteColorModeToggle,
-  onTransferSelectionToVoice,
+  onTransferSelectionToInstrument,
   onSliceSelectionAtPlayhead,
   onTransformSelection,
 }: EditorToolbarProps): React.JSX.Element {
@@ -86,16 +86,16 @@ export function EditorToolbar({
           className="general-inspector-toggle-button"
           type="button"
           aria-expanded={
-            generalInspectorOpen && inspectorSection === "voices"
+            generalInspectorOpen && inspectorSection === "instruments"
           }
           aria-controls="general-inspector"
-          onClick={() => onToggleInspector("voices")}
+          onClick={() => onToggleInspector("instruments")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 8.5h3l2-2.5v12l-2-2.5H5Z" />
             <path d="M14 8.5c1.5 1 1.5 6 0 7M17 6c3 2.5 3 9.5 0 12" />
           </svg>
-          Voices
+          Instruments
         </button>
         <button
           className="general-inspector-toggle-button"
@@ -302,21 +302,21 @@ export function EditorToolbar({
           </svg>
         </button>
         <button
-          className="voice-transfer-button"
+          className="instrument-transfer-button"
           type="button"
-          title="Move selected notes to the selected voice"
-          aria-label="Move selected notes to the selected voice"
+          title="Move selected notes to the selected instrument"
+          aria-label="Move selected notes to the selected instrument"
           disabled={
             !selectionAvailable
-            || selectedVoice === undefined
-            || selectedVoice.locked
+            || selectedInstrument === undefined
+            || selectedInstrument.locked
           }
           style={{
             color:
-              selectedVoice?.color
+              selectedInstrument?.color
               ?? APPLICATION_COLORS.neutral.textDisabled,
           }}
-          onClick={onTransferSelectionToVoice}
+          onClick={onTransferSelectionToInstrument}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h7M4 12h7M4 18h7" />
@@ -420,17 +420,17 @@ export function EditorToolbar({
         <button
           className={
             `note-color-toggle${
-              noteColorMode === "voice" ? " is-voice-mode" : ""
+              noteColorMode === "instrument" ? " is-instrument-mode" : ""
             }`
           }
           type="button"
           title={
-            noteColorMode === "voice"
+            noteColorMode === "instrument"
               ? "Use pitch colors"
-              : "Use voice colors"
+              : "Use instrument colors"
           }
-          aria-label="Color notes by voice"
-          aria-pressed={noteColorMode === "voice"}
+          aria-label="Color notes by instrument"
+          aria-pressed={noteColorMode === "instrument"}
           onClick={onNoteColorModeToggle}
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">

@@ -1,6 +1,6 @@
 import type {
   AudioEngineConfig,
-  VoiceId,
+  InstrumentId,
 } from "../domain/model";
 import {
   AUDIO_CONSTANTS,
@@ -8,7 +8,7 @@ import {
 import type {
   AudioEnginePort,
   PlaybackSnapshot,
-  PlaybackVoiceSnapshot,
+  PlaybackInstrumentSnapshot,
   ScheduledNoteEvent,
 } from "./contracts";
 import {
@@ -27,7 +27,7 @@ export type AudioContextFactory = (
   config: AudioEngineConfig,
 ) => AudioContext;
 
-interface VoiceBus {
+interface InstrumentBus {
   readonly gainNode: GainNode;
   readonly panNode: StereoPannerNode;
 }
@@ -44,9 +44,9 @@ export class WebAudioEngine implements AudioEnginePort {
   private readonly contextFactory: AudioContextFactory;
   private audioContext: AudioContext | null = null;
   private masterGainNode: GainNode | null = null;
-  private readonly voiceBuses = new Map<VoiceId, VoiceBus>();
-  private readonly activeVoicesByVoiceId =
-    new Map<VoiceId, ActiveInstrumentVoice[]>();
+  private readonly instrumentBuses = new Map<InstrumentId, InstrumentBus>();
+  private readonly activeVoicesByInstrumentId =
+    new Map<InstrumentId, ActiveInstrumentVoice[]>();
   private readonly instrumentRenderers =
     new Map<string, InstrumentRenderer>();
   private readonly scheduledOccurrenceIds = new Set<string>();
@@ -111,7 +111,7 @@ export class WebAudioEngine implements AudioEnginePort {
     };
 
     if (this.audioContext !== null) {
-      this.synchronizeVoiceBuses();
+      this.synchronizeInstrumentBuses();
     }
   }
 
@@ -148,11 +148,11 @@ export class WebAudioEngine implements AudioEnginePort {
       return;
     }
 
-    const voiceBus = this.voiceBuses.get(event.voice.voiceId);
+    const instrumentBus = this.instrumentBuses.get(event.instrument.instrumentId);
 
-    if (voiceBus === undefined) {
+    if (instrumentBus === undefined) {
       throw new Error(
-        `Audio bus for voice "${event.voice.voiceId}" is unavailable.`,
+        `Audio bus for instrument "${event.instrument.instrumentId}" is unavailable.`,
       );
     }
 
@@ -165,17 +165,17 @@ export class WebAudioEngine implements AudioEnginePort {
       event.endAudioTimeSeconds,
     );
     const renderer = this.instrumentRenderers.get(
-      event.voice.instrument.kind,
+      event.instrument.instrument.kind,
     );
 
     if (renderer === undefined) {
       throw new Error(
-        `No renderer is registered for instrument kind "${event.voice.instrument.kind}".`,
+        `No renderer is registered for instrument kind "${event.instrument.instrument.kind}".`,
       );
     }
 
     const maximumPolyphony = renderer.getMaximumPolyphony(
-      event.voice,
+      event.instrument,
       this.currentConfig,
     );
 
@@ -184,12 +184,12 @@ export class WebAudioEngine implements AudioEnginePort {
       || maximumPolyphony <= 0
     ) {
       throw new RangeError(
-        `Voice "${event.voice.voiceId}" has an invalid simultaneous-note limit.`,
+        `Project instrument "${event.instrument.instrumentId}" has an invalid simultaneous-note limit.`,
       );
     }
 
     this.reservePolyphonySlot(
-      event.voice.voiceId,
+      event.instrument.instrumentId,
       startAudioTimeSeconds,
       noteEndAudioTimeSeconds,
       maximumPolyphony,
@@ -200,7 +200,7 @@ export class WebAudioEngine implements AudioEnginePort {
     try {
       activeVoice = renderer.schedule({
         context,
-        destination: voiceBus.gainNode,
+        destination: instrumentBus.gainNode,
         event,
         startAudioTimeSeconds,
         noteEndAudioTimeSeconds,
@@ -217,11 +217,11 @@ export class WebAudioEngine implements AudioEnginePort {
     }
 
     const activeVoices =
-      this.activeVoicesByVoiceId.get(event.voice.voiceId);
+      this.activeVoicesByInstrumentId.get(event.instrument.instrumentId);
 
     if (activeVoices === undefined) {
-      this.activeVoicesByVoiceId.set(
-        event.voice.voiceId,
+      this.activeVoicesByInstrumentId.set(
+        event.instrument.instrumentId,
         [activeVoice],
       );
     } else {
@@ -229,52 +229,52 @@ export class WebAudioEngine implements AudioEnginePort {
     }
   }
 
-  public previewVoiceGain(
-    voiceId: VoiceId,
+  public previewInstrumentGain(
+    instrumentId: InstrumentId,
     gain: number,
   ): void {
     this.assertUsable();
 
     if (!Number.isFinite(gain) || gain < 0 || gain > 1) {
-      throw new RangeError("Voice gain must be between 0 and 1.");
+      throw new RangeError("Project instrument gain must be between 0 and 1.");
     }
 
     const context = this.audioContext;
-    const voiceBus = this.voiceBuses.get(voiceId);
+    const instrumentBus = this.instrumentBuses.get(instrumentId);
 
-    if (context === null || voiceBus === undefined) {
+    if (context === null || instrumentBus === undefined) {
       return;
     }
 
-    let selectedVoice: PlaybackVoiceSnapshot | undefined;
-    let hasSoloVoice = false;
+    let selectedInstrument: PlaybackInstrumentSnapshot | undefined;
+    let hasSoloInstrument = false;
 
     for (
-      let voiceIndex = 0;
-      voiceIndex < this.currentSnapshot.voices.length;
-      voiceIndex += 1
+      let instrumentIndex = 0;
+      instrumentIndex < this.currentSnapshot.instruments.length;
+      instrumentIndex += 1
     ) {
-      const voice = this.currentSnapshot.voices[voiceIndex];
+      const instrument = this.currentSnapshot.instruments[instrumentIndex];
 
-      if (voice?.voiceId === voiceId) {
-        selectedVoice = voice;
+      if (instrument?.instrumentId === instrumentId) {
+        selectedInstrument = instrument;
       }
 
-      if (voice?.solo === true) {
-        hasSoloVoice = true;
+      if (instrument?.solo === true) {
+        hasSoloInstrument = true;
       }
     }
 
-    if (selectedVoice === undefined) {
+    if (selectedInstrument === undefined) {
       return;
     }
 
     const audible =
-      !selectedVoice.muted
-      && (!hasSoloVoice || selectedVoice.solo);
+      !selectedInstrument.muted
+      && (!hasSoloInstrument || selectedInstrument.solo);
 
     setAudioParamSmoothly(
-      voiceBus.gainNode.gain,
+      instrumentBus.gainNode.gain,
       audible ? gain : 0,
       context.currentTime,
     );
@@ -294,7 +294,7 @@ export class WebAudioEngine implements AudioEnginePort {
       atAudioTimeSeconds,
     );
 
-    for (const activeVoices of this.activeVoicesByVoiceId.values()) {
+    for (const activeVoices of this.activeVoicesByInstrumentId.values()) {
       let writeIndex = 0;
 
       for (
@@ -338,13 +338,13 @@ export class WebAudioEngine implements AudioEnginePort {
       atAudioTimeSeconds,
     );
 
-    for (const activeVoices of this.activeVoicesByVoiceId.values()) {
+    for (const activeVoices of this.activeVoicesByInstrumentId.values()) {
       for (
-        let voiceIndex = 0;
-        voiceIndex < activeVoices.length;
-        voiceIndex += 1
+        let instrumentIndex = 0;
+        instrumentIndex < activeVoices.length;
+        instrumentIndex += 1
       ) {
-        const activeVoice = activeVoices[voiceIndex];
+        const activeVoice = activeVoices[instrumentIndex];
 
         if (activeVoice !== undefined && !activeVoice.ended) {
           activeVoice.stop(cancellationTime);
@@ -372,13 +372,13 @@ export class WebAudioEngine implements AudioEnginePort {
 
     this.cancelAll(context.currentTime);
 
-    for (const voiceBus of this.voiceBuses.values()) {
-      voiceBus.gainNode.disconnect();
-      voiceBus.panNode.disconnect();
+    for (const instrumentBus of this.instrumentBuses.values()) {
+      instrumentBus.gainNode.disconnect();
+      instrumentBus.panNode.disconnect();
     }
 
-    this.voiceBuses.clear();
-    this.activeVoicesByVoiceId.clear();
+    this.instrumentBuses.clear();
+    this.activeVoicesByInstrumentId.clear();
     this.scheduledOccurrenceIds.clear();
     this.masterGainNode?.disconnect();
     this.masterGainNode = null;
@@ -405,12 +405,12 @@ export class WebAudioEngine implements AudioEnginePort {
     masterGain.connect(context.destination);
     this.audioContext = context;
     this.masterGainNode = masterGain;
-    this.synchronizeVoiceBuses();
+    this.synchronizeInstrumentBuses();
 
     return context;
   }
 
-  private synchronizeVoiceBuses(): void {
+  private synchronizeInstrumentBuses(): void {
     const context = this.audioContext;
     const masterGain = this.masterGainNode;
 
@@ -426,75 +426,75 @@ export class WebAudioEngine implements AudioEnginePort {
       context.currentTime,
     );
 
-    const retainedVoiceIds = new Set<VoiceId>();
-    let hasSoloVoice = false;
+    const retainedInstrumentIds = new Set<InstrumentId>();
+    let hasSoloInstrument = false;
 
     for (
-      let voiceIndex = 0;
-      voiceIndex < this.currentSnapshot.voices.length;
-      voiceIndex += 1
+      let instrumentIndex = 0;
+      instrumentIndex < this.currentSnapshot.instruments.length;
+      instrumentIndex += 1
     ) {
-      const voice = this.currentSnapshot.voices[voiceIndex];
+      const instrument = this.currentSnapshot.instruments[instrumentIndex];
 
-      if (voice !== undefined && voice.solo) {
-        hasSoloVoice = true;
+      if (instrument !== undefined && instrument.solo) {
+        hasSoloInstrument = true;
         break;
       }
     }
 
     for (
-      let voiceIndex = 0;
-      voiceIndex < this.currentSnapshot.voices.length;
-      voiceIndex += 1
+      let instrumentIndex = 0;
+      instrumentIndex < this.currentSnapshot.instruments.length;
+      instrumentIndex += 1
     ) {
-      const voice = this.currentSnapshot.voices[voiceIndex];
+      const instrument = this.currentSnapshot.instruments[instrumentIndex];
 
-      if (voice === undefined) {
+      if (instrument === undefined) {
         continue;
       }
 
-      retainedVoiceIds.add(voice.voiceId);
-      let voiceBus = this.voiceBuses.get(voice.voiceId);
+      retainedInstrumentIds.add(instrument.instrumentId);
+      let instrumentBus = this.instrumentBuses.get(instrument.instrumentId);
 
-      if (voiceBus === undefined) {
+      if (instrumentBus === undefined) {
         const gainNode = context.createGain();
         const panNode = context.createStereoPanner();
 
         gainNode.connect(panNode);
         panNode.connect(masterGain);
-        voiceBus = {
+        instrumentBus = {
           gainNode,
           panNode,
         };
-        this.voiceBuses.set(voice.voiceId, voiceBus);
+        this.instrumentBuses.set(instrument.instrumentId, instrumentBus);
       }
 
       const audible =
-        !voice.muted && (!hasSoloVoice || voice.solo);
+        !instrument.muted && (!hasSoloInstrument || instrument.solo);
       setAudioParamSmoothly(
-        voiceBus.gainNode.gain,
-        audible ? voice.gain : 0,
+        instrumentBus.gainNode.gain,
+        audible ? instrument.gain : 0,
         context.currentTime,
       );
       setAudioParamSmoothly(
-        voiceBus.panNode.pan,
-        voice.pan,
+        instrumentBus.panNode.pan,
+        instrument.pan,
         context.currentTime,
       );
     }
 
-    for (const [voiceId, voiceBus] of this.voiceBuses) {
-      if (!retainedVoiceIds.has(voiceId)) {
+    for (const [instrumentId, instrumentBus] of this.instrumentBuses) {
+      if (!retainedInstrumentIds.has(instrumentId)) {
         const activeVoices =
-          this.activeVoicesByVoiceId.get(voiceId);
+          this.activeVoicesByInstrumentId.get(instrumentId);
 
         if (activeVoices !== undefined) {
           for (
-            let voiceIndex = 0;
-            voiceIndex < activeVoices.length;
-            voiceIndex += 1
+            let instrumentIndex = 0;
+            instrumentIndex < activeVoices.length;
+            instrumentIndex += 1
           ) {
-            const activeVoice = activeVoices[voiceIndex];
+            const activeVoice = activeVoices[instrumentIndex];
 
             if (activeVoice !== undefined) {
               activeVoice.stop(context.currentTime);
@@ -502,21 +502,21 @@ export class WebAudioEngine implements AudioEnginePort {
           }
         }
 
-        voiceBus.gainNode.disconnect();
-        voiceBus.panNode.disconnect();
-        this.voiceBuses.delete(voiceId);
-        this.activeVoicesByVoiceId.delete(voiceId);
+        instrumentBus.gainNode.disconnect();
+        instrumentBus.panNode.disconnect();
+        this.instrumentBuses.delete(instrumentId);
+        this.activeVoicesByInstrumentId.delete(instrumentId);
       }
     }
   }
 
   private reservePolyphonySlot(
-    voiceId: VoiceId,
+    instrumentId: InstrumentId,
     startAudioTimeSeconds: number,
     endAudioTimeSeconds: number,
     maximumPolyphony: number,
   ): void {
-    const activeVoices = this.activeVoicesByVoiceId.get(voiceId);
+    const activeVoices = this.activeVoicesByInstrumentId.get(instrumentId);
 
     if (activeVoices === undefined) {
       return;
@@ -551,24 +551,24 @@ export class WebAudioEngine implements AudioEnginePort {
         endAudioTimeSeconds,
       ) >= maximumPolyphony
     ) {
-      const voiceIndex = findOldestOverlappingVoiceIndex(
+      const instrumentIndex = findOldestOverlappingVoiceIndex(
         activeVoices,
         startAudioTimeSeconds,
         endAudioTimeSeconds,
       );
 
-      if (voiceIndex < 0) {
+      if (instrumentIndex < 0) {
         break;
       }
 
-      const voiceToSteal = activeVoices[voiceIndex];
+      const voiceToSteal = activeVoices[instrumentIndex];
 
       if (voiceToSteal === undefined) {
         break;
       }
 
       voiceToSteal.stop(startAudioTimeSeconds);
-      activeVoices.splice(voiceIndex, 1);
+      activeVoices.splice(instrumentIndex, 1);
     }
   }
 

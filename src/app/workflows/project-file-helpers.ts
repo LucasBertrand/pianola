@@ -67,7 +67,7 @@ export function createDefaultNativeEditorState(
   }
 
   return {
-    selectedVoiceId: projectState.voiceOrder[0] ?? null,
+    selectedInstrumentId: projectState.instrumentOrder[0] ?? null,
     selectionMode: "replace",
     noteColorMode: EDITOR_CONSTANTS.defaultNoteColorMode,
     pitchPreviewEnabled:
