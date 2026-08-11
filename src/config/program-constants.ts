@@ -21,7 +21,7 @@ export const APPLICATION_CONSTANTS = Object.freeze({
 /** Persistent project defaults and hard domain limits. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 8,
+  schemaVersion: 9,
   defaultMeasureCount: 16,
   demoProjectTitle: APPLICATION_CONSTANTS.demoProjectTitle,
   defaultTempoBpm: 120,
@@ -54,6 +54,10 @@ export const PROJECT_CONSTANTS = Object.freeze({
   maximumDescriptorParameterCount: 256,
   maximumHistoryEntries: 200,
   defaultLoopEnabled: false,
+  defaultClipVoiceMuted: false,
+  defaultClipVoiceLocked: false,
+  defaultClipVoiceSolo: false,
+  defaultClipVoiceGain: 0.82,
   minimumMidiPitch: 0,
   maximumMidiPitch: 127,
   minimumMidiVelocity: 0,
@@ -62,13 +66,9 @@ export const PROJECT_CONSTANTS = Object.freeze({
 
 /** Default settings applied whenever the application creates a voice. */
 export const VOICE_CONSTANTS = Object.freeze({
-  gain: 0.82,
   minimumGain: 0,
   maximumGain: 1,
   pan: 0,
-  muted: false,
-  locked: false,
-  solo: false,
   defaultOscillatorWaveform: "sawtooth",
   oscillatorWaveformCycle: Object.freeze([
     "sawtooth",

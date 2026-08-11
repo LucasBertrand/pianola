@@ -2,8 +2,8 @@ import type {
   EffectDescriptor,
   Clip,
   ClipId,
+  ClipVoiceState,
   GenerativeRuleDescriptor,
-  InstrumentConfig,
   LoopRegion,
   Note,
   NoteId,
@@ -32,6 +32,7 @@ import {
   MAXIMUM_PROJECT_VOICE_COUNT,
 } from "./model";
 import {
+  assertValidInstrumentConfig,
   assertValidNoteForTrack,
   assertValidProjectDuration,
   assertValidTransportState,
@@ -42,17 +43,13 @@ import {
 export interface AddVoiceCommand {
   readonly type: "AddVoice";
   readonly voice: Voice;
+  readonly clipVoiceStatesById: Readonly<Record<ClipId, ClipVoiceState>>;
 }
 
 export interface UpdateVoiceChanges {
   readonly name?: string;
   readonly color?: string;
-  readonly muted?: boolean;
-  readonly locked?: boolean;
-  readonly solo?: boolean;
-  readonly gain?: number;
   readonly pan?: number;
-  readonly instrument?: InstrumentConfig;
   readonly effects?: readonly EffectDescriptor[];
   readonly generativeRules?: readonly GenerativeRuleDescriptor[];
   readonly interpretation?: VoiceInterpretation;
@@ -102,6 +99,12 @@ export interface InsertMeasureCommand {
 export interface RemoveMeasureCommand {
   readonly type: "RemoveMeasure";
   readonly measureIndex: number;
+}
+
+export interface UpdateClipVoiceStateCommand {
+  readonly type: "UpdateClipVoiceState";
+  readonly voiceId: VoiceId;
+  readonly changes: Partial<ClipVoiceState>;
 }
 
 export interface AddClipCommand {
@@ -240,6 +243,7 @@ export type PianoRollCommand =
   | ActivateClipCommand
   | AddVoiceCommand
   | UpdateVoiceCommand
+  | UpdateClipVoiceStateCommand
   | DeleteVoiceCommand
   | ReorderVoicesCommand
   | UpdateProjectTitleCommand
@@ -391,7 +395,10 @@ type ActiveClipProjectState = Pick<
   "voicesById" | "voiceOrder"
 > & Pick<
   Clip,
-  "measureCount" | "tracksByVoiceId" | "transportSettings"
+  | "measureCount"
+  | "tracksByVoiceId"
+  | "voiceStatesById"
+  | "transportSettings"
 >;
 
 function applyActiveClipCommand(
@@ -404,11 +411,15 @@ function applyActiveClipCommand(
     voiceOrder: state.voiceOrder,
     measureCount: clip.measureCount,
     tracksByVoiceId: clip.tracksByVoiceId,
+    voiceStatesById: clip.voiceStatesById,
     transportSettings: clip.transportSettings,
   };
   let nextContext: ActiveClipProjectState;
 
   switch (command.type) {
+    case "UpdateClipVoiceState":
+      nextContext = applyUpdateClipVoiceState(context, command);
+      break;
     case "InsertMeasure":
       nextContext = applyInsertMeasure(context, command);
       break;
@@ -466,6 +477,7 @@ function applyActiveClipCommand(
     ...clip,
     measureCount: nextContext.measureCount,
     tracksByVoiceId: nextContext.tracksByVoiceId,
+    voiceStatesById: nextContext.voiceStatesById,
     transportSettings: nextContext.transportSettings,
   };
 
@@ -655,11 +667,27 @@ function assertValidClip(
   assertValidTransportState(clip.transportSettings);
   const durationTicks =
     clip.measureCount * getTicksPerMeasure(clip.transportSettings);
+  if (
+    clip.voiceStatesById === null
+    || typeof clip.voiceStatesById !== "object"
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${clip.id}" must contain voice state data.`,
+      commandType,
+    );
+  }
+
   const trackIds = Object.keys(clip.tracksByVoiceId);
+  const voiceStateIds = Object.keys(clip.voiceStatesById);
 
   if (
     trackIds.length !== state.voiceOrder.length
+    || voiceStateIds.length !== state.voiceOrder.length
     || trackIds.some(
+      (voiceId) => state.voicesById[voiceId] === undefined,
+    )
+    || voiceStateIds.some(
       (voiceId) => state.voicesById[voiceId] === undefined,
     )
   ) {
@@ -686,14 +714,25 @@ function assertValidClip(
 
   for (const voiceId of state.voiceOrder) {
     const track = clip.tracksByVoiceId[voiceId];
+    const voiceState = clip.voiceStatesById[voiceId];
 
-    if (track === undefined || track.voiceId !== voiceId) {
+    if (
+      track === undefined
+      || track.voiceId !== voiceId
+      || voiceState === undefined
+    ) {
       reject(
         "INVALID_COMMAND",
-        `Clip "${clip.id}" must contain a track for voice "${voiceId}".`,
+        `Clip "${clip.id}" must contain a track and state for voice "${voiceId}".`,
         commandType,
       );
     }
+
+    assertValidClipVoiceState(
+      voiceState,
+      commandType,
+      `Clip "${clip.id}" voice "${voiceId}"`,
+    );
 
     const notes = Object.values(track.notesById);
     noteCount += notes.length;
@@ -777,6 +816,21 @@ function applyAddVoice(
     );
   }
 
+  const requestedClipIds = Object.keys(command.clipVoiceStatesById);
+
+  if (
+    requestedClipIds.length !== state.clipOrder.length
+    || requestedClipIds.some(
+      (clipId) => state.clipsById[clipId] === undefined,
+    )
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      "Adding a voice requires exactly one initial state per clip.",
+      command.type,
+    );
+  }
+
   const track: Track = {
     voiceId: command.voice.id,
     notesById: {},
@@ -798,11 +852,31 @@ function applyAddVoice(
       );
     }
 
+    const clipVoiceState = command.clipVoiceStatesById[clipId];
+
+    if (clipVoiceState === undefined) {
+      reject(
+        "INVALID_COMMAND",
+        `Initial voice state is missing for clip "${clipId}".`,
+        command.type,
+      );
+    }
+
+    assertValidClipVoiceState(
+      clipVoiceState,
+      command.type,
+      `Clip "${clipId}" voice "${command.voice.id}"`,
+    );
+
     clipsById[clipId] = {
       ...clip,
       tracksByVoiceId: {
         ...clip.tracksByVoiceId,
         [command.voice.id]: track,
+      },
+      voiceStatesById: {
+        ...clip.voiceStatesById,
+        [command.voice.id]: clipVoiceState,
       },
     };
   }
@@ -856,6 +930,10 @@ function applyDeleteVoice(
         ...clip,
         tracksByVoiceId: omitRecordKey(
           clip.tracksByVoiceId,
+          command.voiceId,
+        ),
+        voiceStatesById: omitRecordKey(
+          clip.voiceStatesById,
           command.voiceId,
         ),
       };
@@ -1018,6 +1096,74 @@ function applyUpdateMasterTuning(
       tuningFrequencyHz: command.tuningFrequencyHz,
     },
   };
+}
+
+function applyUpdateClipVoiceState(
+  state: ActiveClipProjectState,
+  command: UpdateClipVoiceStateCommand,
+): ActiveClipProjectState {
+  requireVoice(state, command.voiceId, command.type);
+  const current = state.voiceStatesById[command.voiceId];
+
+  if (current === undefined) {
+    reject(
+      "VOICE_NOT_FOUND",
+      `Voice state "${command.voiceId}" does not exist in the active clip.`,
+      command.type,
+    );
+  }
+
+  const updated: ClipVoiceState = {
+    ...current,
+    ...command.changes,
+  };
+
+  assertValidClipVoiceState(
+    updated,
+    command.type,
+    `Active clip voice "${command.voiceId}"`,
+  );
+
+  if (
+    updated.gain === current.gain
+    && updated.muted === current.muted
+    && updated.locked === current.locked
+    && updated.solo === current.solo
+    && updated.instrument === current.instrument
+  ) {
+    return state;
+  }
+
+  return {
+    ...state,
+    voiceStatesById: {
+      ...state.voiceStatesById,
+      [command.voiceId]: updated,
+    },
+  };
+}
+
+function assertValidClipVoiceState(
+  state: ClipVoiceState,
+  commandType: PianoRollCommand["type"],
+  context: string,
+): void {
+  if (
+    !Number.isFinite(state.gain)
+    || state.gain < MINIMUM_MASTER_GAIN
+    || state.gain > MAXIMUM_MASTER_GAIN
+    || typeof state.muted !== "boolean"
+    || typeof state.locked !== "boolean"
+    || typeof state.solo !== "boolean"
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `${context} has invalid volume, mute, lock, or solo state.`,
+      commandType,
+    );
+  }
+
+  assertValidInstrumentConfig(state.instrument);
 }
 
 function applyInsertMeasure(
@@ -2528,13 +2674,13 @@ function requireTrack(
 }
 
 function assertVoiceEditable(
-  state: Pick<ProjectState, "voicesById">,
+  state: Pick<ProjectState, "voicesById"> & Pick<Clip, "voiceStatesById">,
   voiceId: VoiceId,
   commandType: PianoRollCommand["type"],
 ): void {
-  const voice = requireVoice(state, voiceId, commandType);
+  requireVoice(state, voiceId, commandType);
 
-  if (voice.locked) {
+  if (state.voiceStatesById[voiceId]?.locked !== false) {
     reject(
       "VOICE_LOCKED",
       `Voice "${voiceId}" is locked.`,

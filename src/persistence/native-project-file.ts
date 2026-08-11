@@ -2,6 +2,7 @@ import type {
   AdsrEnvelope,
   Clip,
   ClipId,
+  ClipVoiceState,
   EffectDescriptor,
   EffectParameterValue,
   GenerativeRuleDescriptor,
@@ -763,11 +764,17 @@ function parseClip(
     durationTicks,
     `${path}.tracksByVoiceId`,
   );
+  const voiceStatesById = parseClipVoiceStates(
+    clip["voiceStatesById"],
+    voiceOrder,
+    `${path}.voiceStatesById`,
+  );
   const parsedClip: Clip = {
     id: clipId,
     name,
     measureCount,
     tracksByVoiceId,
+    voiceStatesById,
     transportSettings,
   };
 
@@ -816,6 +823,40 @@ function parseVoiceOrder(
   }
 
   return voiceOrder;
+}
+
+function parseClipVoiceStates(
+  source: unknown,
+  voiceOrder: readonly VoiceId[],
+  path: string,
+): Readonly<Record<VoiceId, ClipVoiceState>> {
+  const sourceStates = readRecord(source, path);
+
+  assertExactRecordKeys(sourceStates, voiceOrder, path);
+  const states = Object.create(null) as Record<VoiceId, ClipVoiceState>;
+
+  for (const voiceId of voiceOrder) {
+    const statePath = `${path}.${voiceId}`;
+    const state = readRecord(sourceStates[voiceId], statePath);
+
+    states[voiceId] = {
+      gain: readNumberInRange(
+        state["gain"],
+        `${statePath}.gain`,
+        VOICE_CONSTANTS.minimumGain,
+        VOICE_CONSTANTS.maximumGain,
+      ),
+      muted: readBoolean(state["muted"], `${statePath}.muted`),
+      locked: readBoolean(state["locked"], `${statePath}.locked`),
+      solo: readBoolean(state["solo"], `${statePath}.solo`),
+      instrument: parseInstrument(
+        state["instrument"],
+        `${statePath}.instrument`,
+      ),
+    };
+  }
+
+  return states;
 }
 
 function parseVoices(
@@ -889,19 +930,11 @@ function parseVoice(
       MAXIMUM_NAME_LENGTH,
     ),
     color,
-    muted: readBoolean(voice["muted"], `${path}.muted`),
-    locked: readBoolean(voice["locked"], `${path}.locked`),
-    solo: readBoolean(voice["solo"], `${path}.solo`),
-    gain: readFiniteNumber(voice["gain"], `${path}.gain`),
     pan: readNumberInRange(
       voice["pan"],
       `${path}.pan`,
       -1,
       1,
-    ),
-    instrument: parseInstrument(
-      voice["instrument"],
-      `${path}.instrument`,
     ),
     effects: parseEffects(voice["effects"], `${path}.effects`),
     generativeRules: parseGenerativeRules(

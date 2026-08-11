@@ -197,8 +197,11 @@ export function usePianoRollEvents(
       onSelectionChange?.(false, null);
     };
 
-    const isVoiceLocked = (voiceId: VoiceId): boolean =>
-      editorCommands.getState().voicesById[voiceId]?.locked ?? true;
+    const isVoiceLocked = (voiceId: VoiceId): boolean => {
+      const state = editorCommands.getState();
+
+      return getActiveClip(state).voiceStatesById[voiceId]?.locked ?? true;
+    };
     const isNoteEditable = (note: Note): boolean =>
       !isVoiceLocked(note.voiceId);
     const isSelectedNoteEditable = (note: Note): boolean =>
@@ -774,14 +777,16 @@ export function usePianoRollEvents(
       }
 
       const currentActiveVoiceId = activeVoiceIdRef.current;
-      const activeVoice =
-        editorCommands.getState().voicesById[currentActiveVoiceId];
+      const currentState = editorCommands.getState();
+      const activeVoice = currentState.voicesById[currentActiveVoiceId];
+      const activeVoiceState = getActiveClip(currentState)
+        .voiceStatesById[currentActiveVoiceId];
 
       if (
         pitch < 0
         || pitch > 127
         || activeVoice === undefined
-        || activeVoice.locked
+        || activeVoiceState?.locked !== false
         || getActiveClip(
           editorCommands.getState(),
         ).tracksByVoiceId[currentActiveVoiceId] === undefined
@@ -869,14 +874,19 @@ export function usePianoRollEvents(
       const voiceId = request.voiceId;
 
       const projectState = editorCommands.getState();
+      const activeClip = getActiveClip(projectState);
       selection.reconcile(
         projectState,
         (note) =>
-          projectState.voicesById[note.voiceId]?.locked === false,
+          activeClip.voiceStatesById[note.voiceId]?.locked === false,
       );
       const requestedVoice = projectState.voicesById[voiceId];
+      const requestedVoiceState = activeClip.voiceStatesById[voiceId];
 
-      if (requestedVoice?.locked !== false) {
+      if (
+        requestedVoice === undefined
+        || requestedVoiceState?.locked !== false
+      ) {
         showSelection();
         return;
       }
@@ -885,7 +895,7 @@ export function usePianoRollEvents(
         projectState,
         voiceId,
         (note) =>
-          projectState.voicesById[note.voiceId]?.locked === false,
+          activeClip.voiceStatesById[note.voiceId]?.locked === false,
       );
 
       showSelection();
@@ -990,11 +1000,12 @@ export function usePianoRollEvents(
       }
 
       const state = editorCommands.getState();
+      const activeClip = getActiveClip(state);
       const changed = selection.togglePitch(
         state,
         pitch,
         (note) =>
-          state.voicesById[note.voiceId]?.locked === false,
+          activeClip.voiceStatesById[note.voiceId]?.locked === false,
       );
 
       if (!changed) {

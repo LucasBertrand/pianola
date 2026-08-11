@@ -15,16 +15,18 @@ import type {
   UpdateVoiceChanges,
 } from "../../domain/commands";
 import {
-  MAXIMUM_PROJECT_VOICE_COUNT,
-  MAXIMUM_VOICE_NAME_LENGTH,
+  getActiveClip,
   type AdsrEnvelope,
+  type ClipId,
   type OscillatorWaveform,
   type SubtractiveSynthContinuousParameter,
   type SubtractiveSynthConfig,
   type Voice,
   type VoiceId,
+  type ClipVoiceState,
 } from "../../domain/model";
 import {
+  createDefaultClipVoiceState,
   createDefaultVoice,
   getDefaultOscillatorWaveform,
 } from "../../domain/voice-factory";
@@ -48,12 +50,16 @@ export interface VoiceWorkflowOptions {
 export interface VoiceWorkflow {
   readonly select: (voiceId: VoiceId) => void;
   readonly add: () => void;
-  readonly duplicate: (voiceId: VoiceId) => void;
   readonly moveSelected: (direction: -1 | 1) => void;
   readonly remove: (voiceId: VoiceId) => void;
   readonly update: (
     voiceId: VoiceId,
     changes: UpdateVoiceChanges,
+    label: string,
+  ) => void;
+  readonly updateClipState: (
+    voiceId: VoiceId,
+    changes: Partial<ClipVoiceState>,
     label: string,
   ) => void;
   readonly commitEnvelopeParameter: (
@@ -126,6 +132,17 @@ export function useVoiceWorkflow({
     [selectVoice],
   );
 
+  const updateClipState = useCallback((
+    voiceId: VoiceId,
+    changes: Partial<ClipVoiceState>,
+    label: string,
+  ): void => {
+    commands.dispatch(
+      [{ type: "UpdateClipVoiceState", voiceId, changes }],
+      label,
+    );
+  }, [commands]);
+
   const add = useCallback((): void => {
     const state = commands.getState();
     voiceSequenceRef.current += 1;
@@ -133,11 +150,16 @@ export function useVoiceWorkflow({
       state.voiceOrder.length,
       voiceSequenceRef.current,
     );
+    const clipVoiceStatesById = createInitialClipVoiceStates(
+      state.clipOrder,
+      getDefaultOscillatorWaveform(state.voiceOrder.length),
+    );
 
     commands.dispatch(
       [{
         type: "AddVoice",
         voice,
+        clipVoiceStatesById,
       }],
       "Add voice",
     );
@@ -182,56 +204,6 @@ export function useVoiceWorkflow({
     },
     [commands, selectedVoiceId],
   );
-
-  const duplicate = useCallback((voiceId: VoiceId): void => {
-    const state = commands.getState();
-    const sourceVoice = state.voicesById[voiceId];
-
-    if (
-      sourceVoice === undefined
-      || state.voiceOrder.length >= MAXIMUM_PROJECT_VOICE_COUNT
-    ) {
-      return;
-    }
-
-    voiceSequenceRef.current += 1;
-    const duplicatedVoice: Voice = {
-      ...sourceVoice,
-      id: createVoiceId(voiceSequenceRef.current),
-      name: createCopyName(
-        sourceVoice.name,
-        MAXIMUM_VOICE_NAME_LENGTH,
-      ),
-      instrument: {
-        ...sourceVoice.instrument,
-        envelope: { ...sourceVoice.instrument.envelope },
-        filterEnvelope: {
-          ...sourceVoice.instrument.filterEnvelope,
-        },
-      },
-      effects: sourceVoice.effects.map((effect) => ({
-        ...effect,
-        parameters: { ...effect.parameters },
-      })),
-      generativeRules: sourceVoice.generativeRules.map((rule) => ({
-        ...rule,
-        parameters: { ...rule.parameters },
-      })),
-      interpretation: { ...sourceVoice.interpretation },
-    };
-    const sourceIndex = state.voiceOrder.indexOf(voiceId);
-    const voiceOrder = [...state.voiceOrder];
-
-    voiceOrder.splice(sourceIndex + 1, 0, duplicatedVoice.id);
-    commands.dispatch(
-      [
-        { type: "AddVoice", voice: duplicatedVoice },
-        { type: "ReorderVoices", voiceOrder },
-      ],
-      "Duplicate voice",
-    );
-    selectVoice(duplicatedVoice.id);
-  }, [commands, selectVoice]);
 
   const remove = useCallback(
     (voiceId: VoiceId): void => {
@@ -285,23 +257,25 @@ export function useVoiceWorkflow({
       parameter: keyof AdsrEnvelope,
       value: number,
     ): void => {
-      const voice = commands.getState().voicesById[voiceId];
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voiceId];
 
-      if (voice === undefined) {
+      if (voiceState === undefined) {
         return;
       }
 
-      update(
+      updateClipState(
         voiceId,
         {
           instrument: {
-            ...voice.instrument,
+            ...voiceState.instrument,
             [envelopeKind === "amplitude"
               ? "envelope"
               : "filterEnvelope"]: {
               ...(envelopeKind === "amplitude"
-                ? voice.instrument.envelope
-                : voice.instrument.filterEnvelope),
+                ? voiceState.instrument.envelope
+                : voiceState.instrument.filterEnvelope),
               [parameter]: value,
             },
           },
@@ -309,7 +283,7 @@ export function useVoiceWorkflow({
         `Update ${envelopeKind} ${parameter}`,
       );
     },
-    [commands, update],
+    [commands, updateClipState],
   );
 
   const previewEnvelopeParameter = useCallback(
@@ -319,20 +293,22 @@ export function useVoiceWorkflow({
       parameter: keyof AdsrEnvelope,
       value: number,
     ): void => {
-      const voice = commands.getState().voicesById[voiceId];
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voiceId];
 
-      if (voice === undefined) {
+      if (voiceState === undefined) {
         return;
       }
 
       previewInstrument(voiceId, {
-        ...voice.instrument,
+        ...voiceState.instrument,
         [envelopeKind === "amplitude"
           ? "envelope"
           : "filterEnvelope"]: {
           ...(envelopeKind === "amplitude"
-            ? voice.instrument.envelope
-            : voice.instrument.filterEnvelope),
+            ? voiceState.instrument.envelope
+            : voiceState.instrument.filterEnvelope),
           [parameter]: value,
         },
       });
@@ -342,46 +318,50 @@ export function useVoiceWorkflow({
 
   const commitWaveform = useCallback(
     (voiceId: VoiceId, waveform: OscillatorWaveform): void => {
-      const voice = commands.getState().voicesById[voiceId];
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voiceId];
 
-      if (voice === undefined) {
+      if (voiceState === undefined) {
         return;
       }
 
-      update(
+      updateClipState(
         voiceId,
         {
           instrument: {
-            ...voice.instrument,
+            ...voiceState.instrument,
             oscillatorWaveform: waveform,
           },
         },
         "Update oscillator waveform",
       );
     },
-    [commands, update],
+    [commands, updateClipState],
   );
 
   const commitPolyphony = useCallback(
     (voiceId: VoiceId, polyphony: number): void => {
-      const voice = commands.getState().voicesById[voiceId];
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voiceId];
 
-      if (voice === undefined) {
+      if (voiceState === undefined) {
         return;
       }
 
-      update(
+      updateClipState(
         voiceId,
         {
           instrument: {
-            ...voice.instrument,
+            ...voiceState.instrument,
             polyphony,
           },
         },
         "Update subtractive synth polyphony",
       );
     },
-    [commands, update],
+    [commands, updateClipState],
   );
 
   const commitInstrumentParameter = useCallback(
@@ -390,24 +370,26 @@ export function useVoiceWorkflow({
       parameter: SubtractiveSynthContinuousParameter,
       value: number,
     ): void => {
-      const voice = commands.getState().voicesById[voiceId];
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voiceId];
 
-      if (voice === undefined) {
+      if (voiceState === undefined) {
         return;
       }
 
-      update(
+      updateClipState(
         voiceId,
         {
           instrument: {
-            ...voice.instrument,
+            ...voiceState.instrument,
             [parameter]: value,
           },
         },
         `Update ${parameter}`,
       );
     },
-    [commands, update],
+    [commands, updateClipState],
   );
 
   const previewInstrumentParameter = useCallback(
@@ -416,14 +398,16 @@ export function useVoiceWorkflow({
       parameter: SubtractiveSynthContinuousParameter,
       value: number,
     ): void => {
-      const voice = commands.getState().voicesById[voiceId];
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voiceId];
 
-      if (voice === undefined) {
+      if (voiceState === undefined) {
         return;
       }
 
       previewInstrument(voiceId, {
-        ...voice.instrument,
+        ...voiceState.instrument,
         [parameter]: value,
       });
     },
@@ -432,7 +416,12 @@ export function useVoiceWorkflow({
 
   const selectNotes = useCallback(
     (voiceId: VoiceId): void => {
-      if (commands.getState().voicesById[voiceId]?.locked !== false) {
+      const state = commands.getState();
+
+      if (
+        state.voicesById[voiceId] === undefined
+        || getActiveClip(state).voiceStatesById[voiceId]?.locked !== false
+      ) {
         return;
       }
 
@@ -444,28 +433,36 @@ export function useVoiceWorkflow({
 
   const toggleLock = useCallback(
     (voice: Voice): void => {
-      update(
+      const voiceState = getActiveClip(
+        commands.getState(),
+      ).voiceStatesById[voice.id];
+
+      if (voiceState === undefined) {
+        return;
+      }
+
+      updateClipState(
         voice.id,
         {
-          locked: !voice.locked,
+          locked: !voiceState.locked,
         },
-        voice.locked ? "Unlock voice" : "Lock voice",
+        voiceState.locked ? "Unlock voice" : "Lock voice",
       );
 
-      if (!voice.locked) {
+      if (!voiceState.locked) {
         removeVoiceFromSelection(voice.id);
       }
     },
-    [removeVoiceFromSelection, update],
+    [commands, removeVoiceFromSelection, updateClipState],
   );
 
   return {
     select,
     add,
-    duplicate,
     moveSelected,
     remove,
     update,
+    updateClipState,
     commitEnvelopeParameter,
     previewEnvelopeParameter,
     commitWaveform,
@@ -491,20 +488,18 @@ function createUserVoice(
     id: `voice-${Date.now()}-${sequence}`,
     name: `Voice ${voiceIndex + 1}`,
     color,
-    oscillatorWaveform: getDefaultOscillatorWaveform(voiceIndex),
   });
 }
 
-function createVoiceId(sequence: number): VoiceId {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return `voice-${globalThis.crypto.randomUUID()}`;
+function createInitialClipVoiceStates(
+  clipIds: readonly ClipId[],
+  waveform: OscillatorWaveform,
+): Record<ClipId, ClipVoiceState> {
+  const states: Record<ClipId, ClipVoiceState> = {};
+
+  for (const clipId of clipIds) {
+    states[clipId] = createDefaultClipVoiceState(waveform);
   }
 
-  return `voice-${Date.now()}-${sequence}`;
-}
-
-function createCopyName(name: string, maximumLength: number): string {
-  const suffix = " Copy";
-
-  return `${name.slice(0, maximumLength - suffix.length)}${suffix}`;
+  return states;
 }

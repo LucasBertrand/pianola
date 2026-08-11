@@ -196,33 +196,7 @@ try {
       id: voiceId,
       name: `Voice ${voiceIndex + 1}`,
       color: voiceIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
-      muted: false,
-      locked: false,
-      solo: false,
-      gain: 0.8,
       pan: 0,
-      instrument: {
-        kind: "subtractive",
-        oscillatorWaveform: voiceIndex % 2 === 0 ? "sawtooth" : "sine",
-        polyphony: DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
-        oscillatorDetuneCents: 0,
-        pulseWidth: 0.5,
-        envelope: {
-          attackSeconds: 0.01,
-          decaySeconds: 0.15,
-          sustainLevel: 0.7,
-          releaseSeconds: 0.3,
-        },
-        filterCutoffHz: 8_000,
-        filterResonance: 0.2,
-        filterEnvelopeAmountOctaves: 1,
-        filterEnvelope: {
-          attackSeconds: 0.008,
-          decaySeconds: 0.32,
-          sustainLevel: 0.28,
-          releaseSeconds: 0.36,
-        },
-      },
       effects: [],
       generativeRules: [],
       interpretation: {
@@ -231,6 +205,31 @@ try {
         gateRatio: 1,
         velocityScale: 1,
         probability: 1,
+      },
+    };
+  }
+
+  function createInstrument(voiceIndex = 0) {
+    return {
+      kind: "subtractive",
+      oscillatorWaveform: voiceIndex % 2 === 0 ? "sawtooth" : "sine",
+      polyphony: DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
+      oscillatorDetuneCents: 0,
+      pulseWidth: 0.5,
+      envelope: {
+        attackSeconds: 0.01,
+        decaySeconds: 0.15,
+        sustainLevel: 0.7,
+        releaseSeconds: 0.3,
+      },
+      filterCutoffHz: 8_000,
+      filterResonance: 0.2,
+      filterEnvelopeAmountOctaves: 1,
+      filterEnvelope: {
+        attackSeconds: 0.008,
+        decaySeconds: 0.32,
+        sustainLevel: 0.28,
+        releaseSeconds: 0.36,
       },
     };
   }
@@ -265,6 +264,7 @@ try {
         createDefaultMasterBusState().tuningFrequencyHz,
       transport: transportChanges = {},
       voiceOrder = ["voice-a"],
+      voiceStateChangesById = {},
     } = options;
     const defaultTransport = createDefaultTransportState();
     const transportSettings = {
@@ -281,6 +281,7 @@ try {
     };
     const voicesById = {};
     const tracksByVoiceId = {};
+    const voiceStatesById = {};
 
     for (
       let voiceIndex = 0;
@@ -305,6 +306,14 @@ try {
         voiceId,
         notesById,
       };
+      voiceStatesById[voiceId] = {
+        gain: 0.8,
+        muted: false,
+        locked: false,
+        solo: false,
+        instrument: createInstrument(voiceIndex),
+        ...voiceStateChangesById[voiceId],
+      };
     }
 
     const clipId = "clip-test";
@@ -321,6 +330,7 @@ try {
           name: "Test Clip",
           measureCount,
           tracksByVoiceId,
+          voiceStatesById,
           transportSettings,
         },
       },
@@ -1341,7 +1351,7 @@ try {
     );
     assert.notEqual(
       voiceA.instrument,
-      state.voicesById["voice-a"].instrument,
+      getActiveTestClip(state).voiceStatesById["voice-a"].instrument,
     );
     assert.equal(voiceA.instrument.pulseWidth, 0.5);
     assert.equal(voiceA.instrument.filterEnvelopeAmountOctaves, 1);
@@ -1718,17 +1728,19 @@ try {
   test("updates subtractive parameters and voice allocation immutably", () => {
     const state = createProject();
     const voice = state.voicesById["voice-a"];
+    const voiceState = getActiveTestClip(state)
+      .voiceStatesById[voice.id];
     const updatedState = dispatch(state, {
-      type: "UpdateVoice",
+      type: "UpdateClipVoiceState",
       voiceId: voice.id,
       changes: {
         instrument: {
-          ...voice.instrument,
+          ...voiceState.instrument,
           oscillatorWaveform: "square",
           polyphony: 4,
           pulseWidth: 0.3,
           envelope: {
-            ...voice.instrument.envelope,
+            ...voiceState.instrument.envelope,
             attackSeconds: 0.42,
             sustainLevel: 0.55,
           },
@@ -1737,40 +1749,42 @@ try {
     });
 
     assert.equal(
-      updatedState.voicesById["voice-a"]
+      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
         .instrument.oscillatorWaveform,
       "square",
     );
     assert.equal(
-      updatedState.voicesById["voice-a"]
+      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
         .instrument.envelope.attackSeconds,
       0.42,
     );
     assert.equal(
-      updatedState.voicesById["voice-a"]
+      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
         .instrument.envelope.sustainLevel,
       0.55,
     );
     assert.equal(
-      updatedState.voicesById["voice-a"].instrument.polyphony,
+      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+        .instrument.polyphony,
       4,
     );
     assert.equal(
-      updatedState.voicesById["voice-a"].instrument.pulseWidth,
+      getActiveTestClip(updatedState).voiceStatesById["voice-a"]
+        .instrument.pulseWidth,
       0.3,
     );
     assert.equal(
-      state.voicesById["voice-a"]
+      getActiveTestClip(state).voiceStatesById["voice-a"]
         .instrument.oscillatorWaveform,
       "sawtooth",
     );
     assert.throws(
       () => dispatch(state, {
-        type: "UpdateVoice",
+        type: "UpdateClipVoiceState",
         voiceId: voice.id,
         changes: {
           instrument: {
-            ...voice.instrument,
+            ...voiceState.instrument,
             polyphony: 17,
           },
         },
@@ -1778,7 +1792,7 @@ try {
       (error) => (
         error instanceof CommandRejectedError
         && error.code === "INVALID_COMMAND"
-        && error.commandType === "UpdateVoice"
+        && error.commandType === "UpdateClipVoiceState"
       ),
     );
   });
@@ -1822,14 +1836,14 @@ try {
       PROJECT_SCHEMA_VERSION,
     );
     assert.equal(
-      loaded.projectState.voicesById["voice-a"]
+      getActiveTestClip(loaded.projectState).voiceStatesById["voice-a"]
         .instrument.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);
-    delete invalidCurrentDocument.project.voicesById["voice-a"]
-      .instrument.polyphony;
+    delete invalidCurrentDocument.project.clipsById["clip-test"]
+      .voiceStatesById["voice-a"].instrument.polyphony;
     assert.throws(
       () => parseNativeProjectFile(
         JSON.stringify(invalidCurrentDocument),
@@ -1853,6 +1867,19 @@ try {
             voiceId: "voice-a",
             notesById: {
               second: createNote("second", "voice-a", 65, 240),
+            },
+          },
+        },
+        voiceStatesById: {
+          "voice-a": {
+            gain: 0.64,
+            muted: true,
+            locked: true,
+            solo: true,
+            instrument: {
+              ...createInstrument(),
+              oscillatorWaveform: "triangle",
+              filterCutoffHz: 1_234,
             },
           },
         },
@@ -1902,6 +1929,21 @@ try {
       loaded.projectState.clipsById["clip-native-second"]
         .transportSettings.bpm,
       84,
+    );
+    assert.deepEqual(
+      loaded.projectState.clipsById["clip-native-second"]
+        .voiceStatesById["voice-a"],
+      {
+        gain: 0.64,
+        muted: true,
+        locked: true,
+        solo: true,
+        instrument: {
+          ...createInstrument(),
+          oscillatorWaveform: "triangle",
+          filterCutoffHz: 1_234,
+        },
+      },
     );
     assert.deepEqual(loaded.editorState, editorState);
   });
@@ -2892,17 +2934,24 @@ try {
     assert.equal(engine.configurations.length, 1);
     assert.deepEqual(engine.cancelledAt, []);
 
-    const previewVoice = refreshedState.voicesById["voice-a"];
-    assert.ok(previewVoice !== undefined);
+    const previewClip = getActiveTestClip(refreshedState);
+    const previewVoiceState = previewClip.voiceStatesById["voice-a"];
+    assert.ok(previewVoiceState !== undefined);
     const previewState = {
       ...refreshedState,
-      voicesById: {
-        ...refreshedState.voicesById,
-        "voice-a": {
-          ...previewVoice,
-          instrument: {
-            ...previewVoice.instrument,
-            filterCutoffHz: 777,
+      clipsById: {
+        ...refreshedState.clipsById,
+        [previewClip.id]: {
+          ...previewClip,
+          voiceStatesById: {
+            ...previewClip.voiceStatesById,
+            "voice-a": {
+              ...previewVoiceState,
+              instrument: {
+                ...previewVoiceState.instrument,
+                filterCutoffHz: 777,
+              },
+            },
           },
         },
       },
@@ -2937,17 +2986,11 @@ try {
         ],
       },
       voiceOrder: ["voice-a", "voice-b"],
-    });
-    const soloState = {
-      ...state,
-      voicesById: {
-        ...state.voicesById,
-        "voice-a": {
-          ...state.voicesById["voice-a"],
-          solo: true,
-        },
+      voiceStateChangesById: {
+        "voice-a": { solo: true },
       },
-    };
+    });
+    const soloState = state;
     const snapshot = compilePlaybackSnapshot(soloState);
     const engine = new FakeAudioEngine();
     const scheduler = new LookaheadScheduler(
@@ -3244,6 +3287,15 @@ try {
           notesById: {},
         },
       },
+      voiceStatesById: {
+        "voice-a": {
+          gain: 0.8,
+          muted: false,
+          locked: false,
+          solo: false,
+          instrument: createInstrument(),
+        },
+      },
       transportSettings: {
         ...createDefaultTransportState(),
         bpm: 90,
@@ -3283,6 +3335,143 @@ try {
     );
   });
 
+  test("isolates voice playback and editing state between clips", () => {
+    const initialState = createProject();
+    const withSecondClip = dispatch(initialState, {
+      type: "AddClip",
+      clip: {
+        id: "clip-voice-state-second",
+        name: "Voice State Second",
+        measureCount: 2,
+        tracksByVoiceId: {
+          "voice-a": {
+            voiceId: "voice-a",
+            notesById: {},
+          },
+        },
+        voiceStatesById: {
+          "voice-a": {
+            gain: 0.8,
+            muted: false,
+            locked: false,
+            solo: false,
+            instrument: createInstrument(1),
+          },
+        },
+        transportSettings: createDefaultTransportState(),
+      },
+    });
+    const store = new ProjectStore(withSecondClip);
+
+    store.dispatch({
+      transactionId: "update-second-clip-voice-state",
+      createdAt: 1,
+      commands: [{
+        type: "UpdateClipVoiceState",
+        voiceId: "voice-a",
+        changes: {
+          gain: 0.35,
+          muted: true,
+          locked: true,
+          solo: true,
+          instrument: {
+            ...getActiveTestClip(withSecondClip)
+              .voiceStatesById["voice-a"].instrument,
+            oscillatorWaveform: "triangle",
+            filterCutoffHz: 1_234,
+          },
+        },
+      }],
+    });
+
+    assert.deepEqual(
+      store.getState().clipsById["clip-test"]
+        .voiceStatesById["voice-a"],
+      {
+        gain: 0.8,
+        muted: false,
+        locked: false,
+        solo: false,
+        instrument: createInstrument(),
+      },
+    );
+    assert.deepEqual(
+      store.getState().clipsById["clip-voice-state-second"]
+        .voiceStatesById["voice-a"],
+      {
+        gain: 0.35,
+        muted: true,
+        locked: true,
+        solo: true,
+        instrument: {
+          ...createInstrument(1),
+          oscillatorWaveform: "triangle",
+          filterCutoffHz: 1_234,
+        },
+      },
+    );
+    assert.equal(
+      compilePlaybackSnapshot(store.getState())
+        .voices[0].instrument.oscillatorWaveform,
+      "triangle",
+    );
+
+    store.undo();
+    assert.deepEqual(
+      store.getState().clipsById["clip-voice-state-second"]
+        .voiceStatesById["voice-a"],
+      {
+        gain: 0.8,
+        muted: false,
+        locked: false,
+        solo: false,
+        instrument: createInstrument(1),
+      },
+    );
+
+    store.redo();
+    assert.deepEqual(
+      store.getState().clipsById["clip-voice-state-second"]
+        .voiceStatesById["voice-a"],
+      {
+        gain: 0.35,
+        muted: true,
+        locked: true,
+        solo: true,
+        instrument: {
+          ...createInstrument(1),
+          oscillatorWaveform: "triangle",
+          filterCutoffHz: 1_234,
+        },
+      },
+    );
+  });
+
+  test("refreshes rendered voice styles after clip-local state changes", () => {
+    const runtime = createEditorRuntime(createProject());
+
+    assert.deepEqual(runtime.voiceStyles.get()["voice-a"], {
+      fillStyle: "#79a7ff",
+      opacity: 1,
+      locked: false,
+    });
+
+    runtime.editorCommands.dispatch(
+      [{
+        type: "UpdateClipVoiceState",
+        voiceId: "voice-a",
+        changes: { muted: true, locked: true },
+      }],
+      "Update rendered voice state",
+    );
+
+    assert.deepEqual(runtime.voiceStyles.get()["voice-a"], {
+      fillStyle: "#79a7ff",
+      opacity: 0.16,
+      locked: true,
+    });
+  });
+
   test("propagates voice lifecycle changes to every clip", () => {
     const initialState = createProject();
     const withSecondClip = dispatch(initialState, {
@@ -3297,17 +3486,52 @@ try {
             notesById: {},
           },
         },
+        voiceStatesById: {
+          "voice-a": {
+            gain: 0.8,
+            muted: false,
+            locked: false,
+            solo: false,
+            instrument: createInstrument(),
+          },
+        },
         transportSettings: createDefaultTransportState(),
       },
     });
     const withVoice = dispatch(withSecondClip, {
       type: "AddVoice",
       voice: createVoice("voice-b", 1),
+      clipVoiceStatesById: {
+        "clip-test": {
+          gain: 0.82,
+          muted: false,
+          locked: false,
+          solo: false,
+          instrument: createInstrument(1),
+        },
+        "clip-second": {
+          gain: 0.82,
+          muted: false,
+          locked: false,
+          solo: false,
+          instrument: createInstrument(1),
+        },
+      },
     });
 
     for (const clipId of withVoice.clipOrder) {
       assert.ok(
         withVoice.clipsById[clipId].tracksByVoiceId["voice-b"],
+      );
+      assert.equal(
+        withVoice.clipsById[clipId]
+          .voiceStatesById["voice-b"].gain,
+        0.82,
+      );
+      assert.equal(
+        withVoice.clipsById[clipId]
+          .voiceStatesById["voice-b"].instrument.oscillatorWaveform,
+        "sine",
       );
     }
 
@@ -3319,6 +3543,10 @@ try {
     for (const clipId of withoutVoice.clipOrder) {
       assert.equal(
         withoutVoice.clipsById[clipId].tracksByVoiceId["voice-b"],
+        undefined,
+      );
+      assert.equal(
+        withoutVoice.clipsById[clipId].voiceStatesById["voice-b"],
         undefined,
       );
     }
@@ -3341,6 +3569,15 @@ try {
               voiceId: "voice-a",
               notesById: {},
             },
+          },
+          voiceStatesById: {
+          "voice-a": {
+            gain: 0.8,
+            muted: false,
+            locked: false,
+            solo: false,
+            instrument: createInstrument(),
+          },
           },
           transportSettings: createDefaultTransportState(),
         },
@@ -3392,6 +3629,15 @@ try {
         "voice-a": {
           voiceId: "voice-a",
           notesById: {},
+        },
+      },
+      voiceStatesById: {
+        "voice-a": {
+          gain: 0.8,
+          muted: false,
+          locked: false,
+          solo: false,
+          instrument: createInstrument(),
         },
       },
       transportSettings: createDefaultTransportState(),

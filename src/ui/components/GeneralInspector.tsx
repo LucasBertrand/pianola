@@ -3,9 +3,10 @@ import type {
   UpdateVoiceChanges,
 } from "../../domain/commands";
 import {
-  MAXIMUM_PROJECT_VOICE_COUNT,
+  getActiveClip,
   type AdsrEnvelope,
   type ClipId,
+  type ClipVoiceState,
   type OscillatorWaveform,
   type ProjectState,
   type SubtractiveSynthContinuousParameter,
@@ -21,7 +22,6 @@ import {
 import {
   VoiceGainSlider,
   VoiceNameEditor,
-  SubtractivePolyphonySelect,
 } from "./VoiceControls";
 
 export interface GeneralInspectorProps {
@@ -41,7 +41,6 @@ export interface GeneralInspectorProps {
   readonly onRenameClip: (clipId: ClipId, name: string) => void;
   readonly onMoveSelectedVoice: (direction: -1 | 1) => void;
   readonly onAddVoice: () => void;
-  readonly onDuplicateVoice: (voiceId: VoiceId) => void;
   readonly onVoiceSelect: (voiceId: VoiceId) => void;
   readonly onUpdateVoice: (
     voiceId: VoiceId,
@@ -51,6 +50,11 @@ export interface GeneralInspectorProps {
   readonly onVoiceGainPreview: (
     voiceId: VoiceId,
     gain: number,
+  ) => void;
+  readonly onUpdateClipVoiceState: (
+    voiceId: VoiceId,
+    changes: Partial<ClipVoiceState>,
+    label: string,
   ) => void;
   readonly onSelectVoiceNotes: (voiceId: VoiceId) => void;
   readonly onToggleVoiceLock: (voice: Voice) => void;
@@ -104,10 +108,10 @@ export function GeneralInspector({
   onRenameClip,
   onMoveSelectedVoice,
   onAddVoice,
-  onDuplicateVoice,
   onVoiceSelect,
   onUpdateVoice,
   onVoiceGainPreview,
+  onUpdateClipVoiceState,
   onSelectVoiceNotes,
   onToggleVoiceLock,
   onDeleteVoice,
@@ -118,6 +122,8 @@ export function GeneralInspector({
   onInstrumentParameterCommit,
   onInstrumentParameterPreview,
 }: GeneralInspectorProps): React.JSX.Element {
+  const activeClip = getActiveClip(projectState);
+
   return (
   <aside
     id="general-inspector"
@@ -191,8 +197,9 @@ export function GeneralInspector({
     <div className="voice-list">
       {projectState.voiceOrder.map((voiceId) => {
         const voice = projectState.voicesById[voiceId];
+        const voiceState = activeClip.voiceStatesById[voiceId];
 
-        if (voice === undefined) {
+        if (voice === undefined || voiceState === undefined) {
           return null;
         }
 
@@ -203,8 +210,8 @@ export function GeneralInspector({
                 voice.id === selectedVoiceId
                   ? " is-selected"
                   : ""
-              }${voice.muted ? " is-muted" : ""}${
-                voice.locked ? " is-locked" : ""
+              }${voiceState.muted ? " is-muted" : ""}${
+                voiceState.locked ? " is-locked" : ""
               }`
             }
             key={voice.id}
@@ -249,28 +256,18 @@ export function GeneralInspector({
               />
             </div>
             <VoiceGainSlider
-              gain={voice.gain}
+              gain={voiceState.gain}
               voiceName={voice.name}
               onPreview={(gain) => {
                 onVoiceGainPreview(voice.id, gain);
               }}
               onCommit={(gain) => {
-                onUpdateVoice(
+                onUpdateClipVoiceState(
                   voice.id,
                   {
                     gain,
                   },
                   "Update voice volume",
-                );
-              }}
-            />
-            <SubtractivePolyphonySelect
-              value={voice.instrument.polyphony}
-              voiceName={voice.name}
-              onCommit={(polyphony) => {
-                onPolyphonyCommit(
-                  voice.id,
-                  polyphony,
                 );
               }}
             />
@@ -280,7 +277,7 @@ export function GeneralInspector({
                 type="button"
                 aria-label={`Select all notes from ${voice.name}`}
                 title="Select all notes"
-                disabled={voice.locked}
+                disabled={voiceState.locked}
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelectVoiceNotes(voice.id);
@@ -298,14 +295,14 @@ export function GeneralInspector({
               </button>
               <button
                 className={
-                  voice.locked
+                  voiceState.locked
                     ? "voice-lock-button is-active"
                     : "voice-lock-button"
                 }
                 type="button"
-                aria-label={`${voice.locked ? "Unlock" : "Lock"} ${voice.name}`}
-                aria-pressed={voice.locked}
-                title={voice.locked ? "Unlock voice" : "Lock voice"}
+                aria-label={`${voiceState.locked ? "Unlock" : "Lock"} ${voice.name}`}
+                aria-pressed={voiceState.locked}
+                title={voiceState.locked ? "Unlock voice" : "Lock voice"}
                 onClick={(event) => {
                   event.stopPropagation();
                   onToggleVoiceLock(voice);
@@ -328,21 +325,21 @@ export function GeneralInspector({
               </button>
               <button
                 className={
-                  voice.muted
+                  voiceState.muted
                     ? "voice-mute-button is-active"
                     : "voice-mute-button"
                 }
                 type="button"
-                aria-label={`${voice.muted ? "Unmute" : "Mute"} ${voice.name}`}
-                aria-pressed={voice.muted}
+                aria-label={`${voiceState.muted ? "Unmute" : "Mute"} ${voice.name}`}
+                aria-pressed={voiceState.muted}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onUpdateVoice(
+                  onUpdateClipVoiceState(
                     voice.id,
                     {
-                      muted: !voice.muted,
+                      muted: !voiceState.muted,
                     },
-                    voice.muted ? "Unmute voice" : "Mute voice",
+                    voiceState.muted ? "Unmute voice" : "Mute voice",
                   );
                 }}
               >
@@ -350,51 +347,32 @@ export function GeneralInspector({
               </button>
               <button
                 className={
-                  voice.solo
+                  voiceState.solo
                     ? "voice-solo-button is-active"
                     : "voice-solo-button"
                 }
                 type="button"
-                aria-label={`${voice.solo ? "Disable solo for" : "Solo"} ${voice.name}`}
-                aria-pressed={voice.solo}
+                aria-label={`${voiceState.solo ? "Disable solo for" : "Solo"} ${voice.name}`}
+                aria-pressed={voiceState.solo}
                 title={
-                  voice.solo
+                  voiceState.solo
                     ? "Disable solo"
                     : "Solo voice"
                 }
                 onClick={(event) => {
                   event.stopPropagation();
-                  onUpdateVoice(
+                  onUpdateClipVoiceState(
                     voice.id,
                     {
-                      solo: !voice.solo,
+                      solo: !voiceState.solo,
                     },
-                    voice.solo
+                    voiceState.solo
                       ? "Disable voice solo"
                       : "Solo voice",
                   );
                 }}
               >
                 S
-              </button>
-              <button
-                className="voice-duplicate-button"
-                type="button"
-                aria-label={`Duplicate ${voice.name}`}
-                title="Duplicate voice"
-                disabled={
-                  projectState.voiceOrder.length
-                    >= MAXIMUM_PROJECT_VOICE_COUNT
-                }
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDuplicateVoice(voice.id);
-                }}
-              >
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <rect x="6.5" y="6.5" width="9" height="9" rx="1.5" />
-                  <path d="M4 13.5H3.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1V4" />
-                </svg>
               </button>
               <button
                 className="voice-delete-button"
@@ -421,7 +399,13 @@ export function GeneralInspector({
 
     <InstrumentInspector
       voice={selectedVoice}
+      voiceState={
+        selectedVoice === undefined
+          ? undefined
+          : activeClip.voiceStatesById[selectedVoice.id]
+      }
       onWaveformCommit={onWaveformCommit}
+      onPolyphonyCommit={onPolyphonyCommit}
       onEnvelopePreview={onEnvelopePreview}
       onEnvelopeCommit={onEnvelopeCommit}
       onInstrumentParameterPreview={onInstrumentParameterPreview}

@@ -1,4 +1,6 @@
 import type {
+  ClipVoiceState,
+  InstrumentConfig,
   Note,
   ProjectState,
   TimeSignature,
@@ -100,6 +102,7 @@ export function compilePlaybackSnapshot(
 
     const voice = projectState.voicesById[voiceId];
     const track = activeClip.tracksByVoiceId[voiceId];
+    const voiceState = activeClip.voiceStatesById[voiceId];
 
     if (voice === undefined) {
       throw new PlaybackSnapshotCompilationError(
@@ -113,10 +116,17 @@ export function compilePlaybackSnapshot(
       );
     }
 
+    if (voiceState === undefined) {
+      throw new PlaybackSnapshotCompilationError(
+        `Voice state "${voiceId}" is missing from the active clip.`,
+      );
+    }
+
     compiledVoiceIds.add(voiceId);
     voices.push(
       compileVoiceSnapshot(
         voice,
+        voiceState,
         track.notesById,
         durationTicks,
       ),
@@ -143,13 +153,16 @@ export function compilePlaybackSnapshot(
 
 function compileVoiceSnapshot(
   voice: Voice,
+  voiceState: ClipVoiceState,
   notesById: Readonly<Record<string, Note>>,
   projectDurationTicks: number,
 ): PlaybackVoiceSnapshot {
-  if (voice.instrument.kind !== "subtractive") {
+  const instrument = voiceState.instrument;
+
+  if (instrument.kind !== "subtractive") {
     throw new PlaybackSnapshotCompilationError(
       `Voice "${voice.id}" uses unsupported instrument kind`
-        + ` "${voice.instrument.kind}".`,
+        + ` "${instrument.kind}".`,
     );
   }
 
@@ -166,10 +179,10 @@ function compileVoiceSnapshot(
   }
 
   if (
-    !Number.isSafeInteger(voice.instrument.polyphony)
-    || voice.instrument.polyphony
+    !Number.isSafeInteger(instrument.polyphony)
+    || instrument.polyphony
       < MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-    || voice.instrument.polyphony
+    || instrument.polyphony
       > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
   ) {
     throw new PlaybackSnapshotCompilationError(
@@ -177,7 +190,10 @@ function compileVoiceSnapshot(
     );
   }
 
-  assertFiniteNumber(voice.gain, `Voice "${voice.id}" gain`);
+  assertFiniteNumber(
+    voiceState.gain,
+    `Voice "${voice.id}" gain in active clip`,
+  );
 
   if (!Number.isFinite(voice.pan) || voice.pan < -1 || voice.pan > 1) {
     throw new PlaybackSnapshotCompilationError(
@@ -213,11 +229,11 @@ function compileVoiceSnapshot(
   const events = packVoiceEvents(voice.id, notes);
   const snapshot: PlaybackVoiceSnapshot = {
     ...events,
-    gain: voice.gain,
+    gain: voiceState.gain,
     pan: voice.pan,
-    muted: voice.muted,
-    solo: voice.solo,
-    instrument: cloneInstrument(voice),
+    muted: voiceState.muted,
+    solo: voiceState.solo,
+    instrument: cloneInstrument(voice.id, instrument),
   };
 
   return Object.freeze(snapshot);
@@ -263,13 +279,12 @@ function packVoiceEvents(
 }
 
 function cloneInstrument(
-  voice: Voice,
+  voiceId: VoiceId,
+  instrument: InstrumentConfig,
 ): SubtractivePlaybackInstrumentSnapshot {
-  const instrument = voice.instrument;
-
   if (instrument.kind !== "subtractive") {
     throw new PlaybackSnapshotCompilationError(
-      `Voice "${voice.id}" does not contain a subtractive instrument.`,
+      `Voice "${voiceId}" does not contain a subtractive instrument.`,
     );
   }
 

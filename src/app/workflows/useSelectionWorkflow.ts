@@ -248,11 +248,15 @@ export function useSelectionWorkflow({
       }
 
       const state = commands.getState();
+      const activeClip = getActiveClip(state);
 
       for (const note of originalNotes) {
         const voice = state.voicesById[note.voiceId];
 
-        if (voice === undefined || voice.locked) {
+        if (
+          voice === undefined
+          || activeClip.voiceStatesById[note.voiceId]?.locked !== false
+        ) {
           alert(
             "Transformation unavailable",
             voice === undefined

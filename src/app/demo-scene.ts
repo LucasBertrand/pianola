@@ -2,6 +2,7 @@ import type {
   Note,
   NoteId,
   Clip,
+  ClipVoiceState,
   ProjectState,
   Track,
   Voice,
@@ -20,6 +21,7 @@ import {
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
+  createDefaultClipVoiceState,
   createDefaultVoice,
   getDefaultOscillatorWaveform,
 } from "../domain/voice-factory";
@@ -165,6 +167,7 @@ function createProjectState(
 ): ProjectState {
   const voicesById: Record<VoiceId, Voice> = {};
   const tracksByVoiceId: Record<VoiceId, Track> = {};
+  const voiceStatesById: Record<VoiceId, ClipVoiceState> = {};
   const mutableNotesByVoiceId: Record<
     VoiceId,
     Record<NoteId, Note>
@@ -182,8 +185,11 @@ function createProjectState(
       continue;
     }
 
-    const voice = createDomainVoice(demoVoice, voiceIndex);
+    const voice = createDomainVoice(demoVoice);
     voicesById[voice.id] = voice;
+    voiceStatesById[voice.id] = createDefaultClipVoiceState(
+      getDefaultOscillatorWaveform(voiceIndex),
+    );
     mutableNotesByVoiceId[voice.id] = {};
     voiceOrder.push(voice.id);
   }
@@ -221,6 +227,7 @@ function createProjectState(
     name: "Main Clip",
     measureCount: DEFAULT_MEASURE_COUNT,
     tracksByVoiceId,
+    voiceStatesById,
     transportSettings: {
       ...createDefaultTransportState(),
       bpm: PROJECT_CONSTANTS.demoTempoBpm,
@@ -244,13 +251,10 @@ function createProjectState(
 
 function createDomainVoice(
   demoVoice: DemoVoice,
-  voiceIndex: number,
 ): Voice {
   return createDefaultVoice({
     id: demoVoice.id,
     name: demoVoice.name,
     color: demoVoice.color,
-    oscillatorWaveform:
-      getDefaultOscillatorWaveform(voiceIndex),
   });
 }

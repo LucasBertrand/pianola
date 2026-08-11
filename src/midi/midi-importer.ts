@@ -12,6 +12,8 @@ import type {
   TimeSignature,
   Voice,
   VoiceId,
+  ClipVoiceState,
+  SubtractiveSynthConfig,
 } from "../domain/model";
 import {
   createDefaultMasterBusState,
@@ -21,10 +23,13 @@ import {
   PROJECT_SCHEMA_VERSION,
 } from "../domain/model";
 import {
+  createDefaultClipVoiceState,
+  createDefaultSubtractiveSynthConfig,
   createDefaultVoice,
   getDefaultOscillatorWaveform,
 } from "../domain/voice-factory";
 import {
+  assertValidInstrumentConfig,
   assertValidProjectDuration,
   assertValidTrack,
   assertValidTransportState,
@@ -40,6 +45,7 @@ export type MidiImportCollisionStrategy = "merge" | "slice";
 
 export interface MidiImportVoiceCandidate {
   readonly voice: Voice;
+  readonly instrument: SubtractiveSynthConfig;
   readonly notes: readonly Note[];
 }
 
@@ -374,9 +380,10 @@ export function analyzeMidiImport(
         id: voiceId,
         name: voiceName,
         color,
-        oscillatorWaveform:
-          getDefaultOscillatorWaveform(groupIndex),
       }),
+      instrument: createDefaultSubtractiveSynthConfig(
+        getDefaultOscillatorWaveform(groupIndex),
+      ),
       notes,
     });
   }
@@ -484,6 +491,7 @@ export function createProjectFromMidiImport(
       : [createEmptyVoiceCandidate()];
   const voicesById: Record<VoiceId, Voice> = {};
   const tracksByVoiceId: Record<VoiceId, Track> = {};
+  const voiceStatesById: Record<VoiceId, ClipVoiceState> = {};
   const mutableTracks: Record<
     VoiceId,
     {
@@ -521,6 +529,10 @@ export function createProjectFromMidiImport(
 
     resolvedNoteCount += resolvedNotes.length;
     voicesById[candidate.voice.id] = candidate.voice;
+    voiceStatesById[candidate.voice.id] = {
+      ...createDefaultClipVoiceState(),
+      instrument: candidate.instrument,
+    };
     voiceOrder.push(candidate.voice.id);
     mutableTracks[candidate.voice.id] = {
       voiceId: candidate.voice.id,
@@ -571,6 +583,7 @@ export function createProjectFromMidiImport(
     name: "Imported Clip",
     measureCount,
     tracksByVoiceId,
+    voiceStatesById,
     transportSettings: {
       ...transport,
       loop: {
@@ -1266,6 +1279,7 @@ function createEmptyVoiceCandidate(): MidiImportVoiceCandidate {
         RENDERING_CONSTANTS.userVoiceColors[0]
         ?? RENDERING_CONSTANTS.defaultNoteColor,
     }),
+    instrument: createDefaultSubtractiveSynthConfig(),
     notes: [],
   };
 }
@@ -1449,10 +1463,12 @@ function assertImportedProjectState(state: ProjectState): void {
     orderedVoiceIds.add(voiceId);
     const voice = state.voicesById[voiceId];
     const track = activeClip.tracksByVoiceId[voiceId];
+    const voiceState = activeClip.voiceStatesById[voiceId];
 
     if (
       voice === undefined
       || track === undefined
+      || voiceState === undefined
       || voice.id !== voiceId
       || track.voiceId !== voiceId
     ) {
@@ -1462,6 +1478,7 @@ function assertImportedProjectState(state: ProjectState): void {
     }
 
     assertValidVoice(voice);
+    assertValidInstrumentConfig(voiceState.instrument);
     assertValidTrack(track);
 
     const notesByPitch = new Map<number, Note[]>();

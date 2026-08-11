@@ -189,7 +189,7 @@ export function canPlacePastedNotes(
 
     if (
       voice === undefined
-      || voice.locked
+      || clip.voiceStatesById[note.voiceId]?.locked !== false
       || track === undefined
       || note.startTick < 0
     ) {
@@ -247,7 +247,7 @@ export function createVoiceTransferPlan(
     };
   }
 
-  if (targetVoice.locked) {
+  if (clip.voiceStatesById[targetVoiceId]?.locked !== false) {
     return {
       valid: false,
       message: "Unlock the selected target voice before transferring notes.",
@@ -282,7 +282,7 @@ export function createVoiceTransferPlan(
       };
     }
 
-    if (sourceVoice.locked) {
+    if (clip.voiceStatesById[selectedNote.voiceId]?.locked !== false) {
       return {
         valid: false,
         message: `Unlock voice "${sourceVoice.name}" before transferring its notes.`,

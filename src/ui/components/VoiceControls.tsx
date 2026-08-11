@@ -7,25 +7,13 @@ import {
   VOICE_CONSTANTS,
 } from "../../config/program-constants";
 import {
-  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MAXIMUM_VOICE_NAME_LENGTH,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   type Voice,
   type VoiceId,
 } from "../../domain/model";
 import {
   LongPressNameEditor,
 } from "./LongPressNameEditor";
-
-const SIMULTANEOUS_NOTE_OPTIONS = Array.from(
-  {
-    length:
-      MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-      - MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-      + 1,
-  },
-  (_, index) => MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY + index,
-);
 
 export interface VoiceNameEditorProps {
   readonly voice: Voice;
@@ -60,50 +48,6 @@ export interface VoiceGainSliderProps {
   readonly voiceName: string;
   readonly onPreview: (gain: number) => void;
   readonly onCommit: (gain: number) => void;
-}
-
-export interface SubtractivePolyphonySelectProps {
-  readonly value: number;
-  readonly voiceName: string;
-  readonly onCommit: (value: number) => void;
-}
-
-/** Controls the selected voice's subtractive synthesizer polyphony. */
-export function SubtractivePolyphonySelect({
-  value,
-  voiceName,
-  onCommit,
-}: SubtractivePolyphonySelectProps): React.JSX.Element {
-  return (
-    <label
-      className="subtractive-polyphony-control"
-      title={`Subtractive synth polyphony for ${voiceName}`}
-      onClick={(event) => {
-        event.stopPropagation();
-      }}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-      }}
-      onContextMenu={(event) => {
-        event.preventDefault();
-      }}
-    >
-      <span aria-hidden="true">×</span>
-      <select
-        value={value}
-        aria-label={`Subtractive synth polyphony for ${voiceName}`}
-        onChange={(event) => {
-          onCommit(Number(event.currentTarget.value));
-        }}
-      >
-        {SIMULTANEOUS_NOTE_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
 }
 
 export function VoiceGainSlider(

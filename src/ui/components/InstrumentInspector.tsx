@@ -5,6 +5,7 @@ import {
 } from "../../config/program-constants";
 import type {
   AdsrEnvelope,
+  ClipVoiceState,
   OscillatorWaveform,
   SubtractiveSynthContinuousParameter,
   Voice,
@@ -13,12 +14,20 @@ import type {
 import {
   ParameterSlider,
 } from "./ParameterSlider";
+import {
+  SubtractivePolyphonySelect,
+} from "./InstrumentControls";
 
 export interface InstrumentInspectorProps {
   readonly voice: Voice | undefined;
+  readonly voiceState: ClipVoiceState | undefined;
   readonly onWaveformCommit: (
     voiceId: VoiceId,
     waveform: OscillatorWaveform,
+  ) => void;
+  readonly onPolyphonyCommit: (
+    voiceId: VoiceId,
+    polyphony: number,
   ) => void;
   readonly onEnvelopeCommit: (
     voiceId: VoiceId,
@@ -46,13 +55,15 @@ export interface InstrumentInspectorProps {
 
 export function InstrumentInspector({
   voice,
+  voiceState,
   onWaveformCommit,
+  onPolyphonyCommit,
   onEnvelopeCommit,
   onEnvelopePreview,
   onInstrumentParameterCommit,
   onInstrumentParameterPreview,
 }: InstrumentInspectorProps): React.JSX.Element {
-  if (voice === undefined) {
+  if (voice === undefined || voiceState === undefined) {
     return (
       <section className="instrument-card is-empty">
         <div className="section-title">
@@ -65,7 +76,7 @@ export function InstrumentInspector({
     );
   }
 
-  const instrument = voice.instrument;
+  const instrument = voiceState.instrument;
 
   return (
     <section
@@ -84,25 +95,34 @@ export function InstrumentInspector({
       <section className="instrument-module oscillator-module">
         <div className="instrument-module-heading">
           <strong>Oscillator</strong>
-          <select
-            className="waveform-select"
-            value={instrument.oscillatorWaveform}
-            aria-label="Oscillator waveform"
-            onChange={(event) => {
-              onWaveformCommit(
-                voice.id,
-                event.currentTarget.value as OscillatorWaveform,
-              );
-            }}
-          >
-            {VOICE_CONSTANTS.oscillatorWaveformOptions.map(
-              (option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ),
-            )}
-          </select>
+          <div className="oscillator-controls">
+            <select
+              className="waveform-select"
+              value={instrument.oscillatorWaveform}
+              aria-label="Oscillator waveform"
+              onChange={(event) => {
+                onWaveformCommit(
+                  voice.id,
+                  event.currentTarget.value as OscillatorWaveform,
+                );
+              }}
+            >
+              {VOICE_CONSTANTS.oscillatorWaveformOptions.map(
+                (option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ),
+              )}
+            </select>
+            <SubtractivePolyphonySelect
+              value={instrument.polyphony}
+              voiceName={voice.name}
+              onCommit={(polyphony) => {
+                onPolyphonyCommit(voice.id, polyphony);
+              }}
+            />
+          </div>
         </div>
 
         <div className="wave-display" aria-hidden="true">

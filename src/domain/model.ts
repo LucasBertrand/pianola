@@ -129,15 +129,19 @@ export interface Voice {
   readonly id: VoiceId;
   readonly name: string;
   readonly color: string;
-  readonly muted: boolean;
-  readonly locked: boolean;
-  readonly solo: boolean;
-  readonly gain: number;
   readonly pan: number;
-  readonly instrument: InstrumentConfig;
   readonly effects: readonly EffectDescriptor[];
   readonly generativeRules: readonly GenerativeRuleDescriptor[];
   readonly interpretation: VoiceInterpretation;
+}
+
+/** Per-clip mixer, editing, and instrument preset for one global voice. */
+export interface ClipVoiceState {
+  readonly gain: number;
+  readonly muted: boolean;
+  readonly locked: boolean;
+  readonly solo: boolean;
+  readonly instrument: InstrumentConfig;
 }
 
 export interface Track {
@@ -177,7 +181,15 @@ export interface Clip {
   readonly name: string;
   readonly measureCount: number;
   readonly tracksByVoiceId: Readonly<Record<VoiceId, Track>>;
+  readonly voiceStatesById: Readonly<Record<VoiceId, ClipVoiceState>>;
   readonly transportSettings: TransportState;
+}
+
+export function getActiveClipVoiceState(
+  state: ProjectState,
+  voiceId: VoiceId,
+): ClipVoiceState | undefined {
+  return getActiveClip(state).voiceStatesById[voiceId];
 }
 
 export interface ProjectState {

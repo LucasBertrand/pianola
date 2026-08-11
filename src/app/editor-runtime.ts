@@ -150,7 +150,11 @@ export function createEditorRuntime(
       rebuildSpatialIndex(state, spatialIndex, indexedNotesBuffer);
     }
 
-    if (state.voicesById !== previousState.voicesById) {
+    if (
+      state.voicesById !== previousState.voicesById
+      || nextClip.voiceStatesById !== previousClip.voiceStatesById
+      || state.activeClipId !== previousState.activeClipId
+    ) {
       voiceStyles.set(createVoiceRenderStyles(state));
     }
   });
@@ -289,15 +293,17 @@ function createVoiceRenderStyles(
   state: ProjectState,
 ): Readonly<Record<VoiceId, VoiceRenderStyle>> {
   const styles: Record<VoiceId, VoiceRenderStyle> = {};
+  const activeClip = getActiveClip(state);
 
   for (const voiceId of state.voiceOrder) {
     const voice = state.voicesById[voiceId];
+    const voiceState = activeClip.voiceStatesById[voiceId];
 
-    if (voice !== undefined) {
+    if (voice !== undefined && voiceState !== undefined) {
       styles[voiceId] = {
         fillStyle: voice.color,
-        opacity: voice.muted ? 0.16 : 1,
-        locked: voice.locked,
+        opacity: voiceState.muted ? 0.16 : 1,
+        locked: voiceState.locked,
       };
     }
   }

@@ -1,4 +1,6 @@
 import type {
+  AdsrEnvelope,
+  InstrumentConfig,
   MidiPitch,
   MidiVelocity,
   Note,
@@ -242,22 +244,6 @@ export function validateVoice(voice: Voice): ValidationResult {
   }
 
   if (
-    typeof voice.muted !== "boolean"
-    || typeof voice.locked !== "boolean"
-    || typeof voice.solo !== "boolean"
-  ) {
-    pushVoiceIssue(
-      issues,
-      "state",
-      "Voice mute, lock, and solo states must be booleans.",
-    );
-  }
-
-  if (!Number.isFinite(voice.gain)) {
-    pushVoiceIssue(issues, "gain", "Voice gain must be finite.");
-  }
-
-  if (
     !Number.isFinite(voice.pan)
     || voice.pan < -1
     || voice.pan > 1
@@ -269,7 +255,6 @@ export function validateVoice(voice: Voice): ValidationResult {
     );
   }
 
-  validateInstrument(voice, issues);
   validateDescriptors(voice.effects, "effects", issues);
   validateDescriptors(
     voice.generativeRules,
@@ -277,6 +262,19 @@ export function validateVoice(voice: Voice): ValidationResult {
     issues,
   );
   validateVoiceInterpretation(voice, issues);
+
+  return {
+    valid: issues.length === 0,
+    issues,
+  };
+}
+
+export function validateInstrumentConfig(
+  instrument: InstrumentConfig,
+): ValidationResult {
+  const issues: ValidationIssue[] = [];
+
+  validateInstrument(instrument, issues);
 
   return {
     valid: issues.length === 0,
@@ -404,6 +402,12 @@ export function assertValidVoice(voice: Voice): void {
   assertValidationResult(validateVoice(voice));
 }
 
+export function assertValidInstrumentConfig(
+  instrument: InstrumentConfig,
+): void {
+  assertValidationResult(validateInstrumentConfig(instrument));
+}
+
 export function assertValidTransportState(transport: TransportState): void {
   assertValidationResult(validateTransportState(transport));
 }
@@ -455,11 +459,9 @@ function pushVoiceIssue(
 }
 
 function validateInstrument(
-  voice: Voice,
+  instrument: InstrumentConfig,
   issues: ValidationIssue[],
 ): void {
-  const instrument = voice.instrument;
-
   validateWaveform(
     instrument.oscillatorWaveform,
     "instrument.oscillatorWaveform",
@@ -518,7 +520,7 @@ function validateInstrument(
 }
 
 function validateEnvelope(
-  envelope: Voice["instrument"]["envelope"],
+  envelope: AdsrEnvelope,
   path: string,
   issues: ValidationIssue[],
 ): void {

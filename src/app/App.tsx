@@ -436,10 +436,10 @@ export function App(): React.JSX.Element {
   const {
     select: handleVoiceSelect,
     add: handleAddVoice,
-    duplicate: handleDuplicateVoice,
     moveSelected: handleMoveSelectedVoice,
     remove: handleDeleteVoice,
     update: handleUpdateVoice,
+    updateClipState: handleUpdateClipVoiceState,
     commitEnvelopeParameter: handleEnvelopeParameterCommit,
     previewEnvelopeParameter: handleEnvelopeParameterPreview,
     commitWaveform: handleWaveformCommit,
@@ -686,7 +686,16 @@ export function App(): React.JSX.Element {
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
             noteColorMode={noteColorMode}
-            selectedVoice={selectedVoice}
+            selectedVoice={
+              selectedVoice === undefined
+                ? undefined
+                : {
+                    color: selectedVoice.color,
+                    locked:
+                      activeClip.voiceStatesById[selectedVoice.id]
+                        ?.locked ?? true,
+                  }
+            }
             onToggleInspector={(section) => {
               if (
                 generalInspectorOpen
@@ -803,9 +812,9 @@ export function App(): React.JSX.Element {
           onRenameClip={handleRenameClip}
           onMoveSelectedVoice={handleMoveSelectedVoice}
           onAddVoice={handleAddVoice}
-          onDuplicateVoice={handleDuplicateVoice}
           onVoiceSelect={handleVoiceSelect}
           onUpdateVoice={handleUpdateVoice}
+          onUpdateClipVoiceState={handleUpdateClipVoiceState}
           onVoiceGainPreview={previewVoiceGain}
           onSelectVoiceNotes={handleSelectVoiceNotes}
           onToggleVoiceLock={handleToggleVoiceLock}

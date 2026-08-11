@@ -27,7 +27,10 @@ export interface EditorToolbarProps {
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
-  readonly selectedVoice: Pick<Voice, "color" | "locked"> | undefined;
+  readonly selectedVoice: {
+    readonly color: Voice["color"];
+    readonly locked: boolean;
+  } | undefined;
   readonly onToggleInspector: (section: "voices" | "clips") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;

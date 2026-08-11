@@ -14,7 +14,12 @@ import {
   type ClipId,
   type Track,
   type VoiceId,
+  type ClipVoiceState,
 } from "../../domain/model";
+import {
+  cloneInstrumentConfig,
+  createDefaultClipVoiceState,
+} from "../../domain/voice-factory";
 import type {
   ShowApplicationConfirmation,
 } from "./dialog-types";
@@ -129,6 +134,9 @@ export function useClipWorkflow({
       id: duplicatedClipId,
       name: createCopyName(sourceClip.name, MAXIMUM_CLIP_NAME_LENGTH),
       tracksByVoiceId: cloneClipTracks(sourceClip.tracksByVoiceId),
+      voiceStatesById: cloneClipVoiceStates(
+        sourceClip.voiceStatesById,
+      ),
       transportSettings: {
         ...sourceClip.transportSettings,
         loop: { ...sourceClip.transportSettings.loop },
@@ -222,12 +230,14 @@ function createEmptyClip(
   sequence: number,
 ): Clip {
   const tracksByVoiceId: Record<VoiceId, Track> = {};
+  const voiceStatesById: Record<VoiceId, ClipVoiceState> = {};
 
   for (const voiceId of voiceOrder) {
     tracksByVoiceId[voiceId] = {
       voiceId,
       notesById: {},
     };
+    voiceStatesById[voiceId] = createDefaultClipVoiceState();
   }
 
   return {
@@ -235,8 +245,24 @@ function createEmptyClip(
     name: `Clip ${clipIndex + 1}`,
     measureCount: DEFAULT_MEASURE_COUNT,
     tracksByVoiceId,
+    voiceStatesById,
     transportSettings: createDefaultTransportState(),
   };
+}
+
+function cloneClipVoiceStates(
+  sourceStates: Readonly<Record<VoiceId, ClipVoiceState>>,
+): Record<VoiceId, ClipVoiceState> {
+  const states: Record<VoiceId, ClipVoiceState> = {};
+
+  for (const [voiceId, state] of Object.entries(sourceStates)) {
+    states[voiceId] = {
+      ...state,
+      instrument: cloneInstrumentConfig(state.instrument),
+    };
+  }
+
+  return states;
 }
 
 function createClipId(sequence: number): ClipId {

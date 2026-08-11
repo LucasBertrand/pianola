@@ -55,7 +55,8 @@ Firefox Android et un navigateur desktop.
 - panoramique et zoom à deux doigts ;
 - magnétisme temporel et magnétisme tonal par gamme ou accord ;
 - résolution des collisions par annulation, fusion ou découpe aux ancres ;
-- voix configurables : nom, couleur, ordre, volume, mute, solo et verrouillage ;
+- voix configurables : nom, couleur et ordre, avec preset d’instrument, volume,
+  mute, solo et verrouillage propres à chaque clip ;
 - clips configurables : sélection, nom, ordre, ajout et suppression ;
 - synthétiseur soustractif par voix avec pulse width, filtre modulé et deux
   enveloppes ADSR ;
@@ -136,9 +137,11 @@ fluidité ; une seule transaction est envoyée lorsque le geste est validé.
 ### Domaine et historique
 
 `src/domain/model.ts` sépare les données globales de `ProjectState` des données
-locales de chaque `Clip`. Les voix et le master bus sont globaux. Chaque clip,
-identifié par un ID stable, possède ses pistes de notes, sa longueur et son
-transport. Les propriétés persistantes sont en lecture seule.
+locales de chaque `Clip`. La définition des voix et le master bus sont globaux.
+Chaque clip, identifié par un ID stable, possède ses pistes de notes, sa
+longueur, son transport et ses réglages volume/mute/solo/lock ainsi que le
+preset d’instrument complet de chaque voix. Les propriétés persistantes sont en
+lecture seule.
 `src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
 Le reducer applique les commandes musicales au seul clip actif, tandis que la
 création ou la suppression d’une voix met à jour les pistes de tous les clips.
@@ -452,11 +455,12 @@ La section **Clips** reprend les interactions de la liste des voix :
 - la croix supprime le clip après confirmation ; le dernier clip ne peut pas
   être supprimé.
 
-Les voix, leurs instruments, mute/solo/lock, le master bus et le presse-papier
-sont partagés par tout le projet. Les notes, la longueur, le tempo, la
-métrique, la grille, la tonalité, la boucle, la tête de lecture, le scroll et
-le zoom sont propres à chaque clip. Changer de clip vide la sélection de notes,
-mais conserve le presse-papier afin de permettre un copier-coller entre clips.
+L’identité des voix, le master bus et le presse-papier sont partagés par tout
+le projet. Le preset d’instrument complet et les réglages volume/mute/solo/lock
+de chaque voix, les notes, la longueur, le tempo, la métrique, la grille, la
+tonalité, la boucle, la tête de lecture, le scroll et le zoom sont propres à
+chaque clip. Changer de clip vide la sélection de notes, mais conserve le
+presse-papier afin de permettre un copier-coller entre clips.
 
 ### Notes
 
@@ -503,11 +507,13 @@ créées utilisent la voix sélectionnée.
 - La cible sélectionne les notes de la voix sans supprimer la sélection des
   autres voix.
 
-Chaque voix possède une couleur et un volume. Son synthétiseur soustractif
-possède sa propre limite de polyphonie et propose quatre formes d’onde, une largeur
-d’impulsion pour l’onde carrée, un filtre passe-bas avec cutoff et résonance,
-ainsi que deux enveloppes ADSR indépendantes pour l’amplitude et le filtre. Le
-decay de chaque enveloppe peut atteindre 10 secondes.
+Chaque voix possède une identité et une couleur globales. Dans chaque clip,
+elle possède son propre volume et son propre preset de synthétiseur soustractif
+: limite de polyphonie, quatre formes d’onde, largeur d’impulsion pour l’onde
+carrée, filtre passe-bas avec cutoff et résonance, ainsi que deux enveloppes
+ADSR indépendantes pour l’amplitude et le filtre. Le decay de chaque enveloppe
+peut atteindre 10 secondes. Le contrôle de polyphonie se trouve à côté de la
+forme d’onde dans le module Oscillator.
 
 ### Transport et boucle
 
@@ -523,10 +529,11 @@ la nouvelle durée du clip.
 
 ### Format natif `.pianola`
 
-Le format natif conserve la liste ordonnée des clips, le clip actif, les voix,
-les notes, les instruments, le master bus et les métadonnées de document. Pour
-chaque clip, il enregistre aussi le transport, la boucle, la tête de lecture,
-la grille, le snap tonal, le guide visuel, le zoom et la position de la vue.
+Le format natif conserve la liste ordonnée des clips, le clip actif, l’identité
+des voix, les notes, le master bus et les métadonnées de document. Pour chaque
+clip, il enregistre aussi le preset d’instrument et volume/mute/solo/lock par
+voix, le transport, la boucle, la tête de lecture, la grille, le snap tonal, le
+guide visuel, le zoom et la position de la vue.
 Les préférences réellement globales — voix active, preview clavier, mode de
 sélection et coloration — sont enregistrées une seule fois. Les états
 temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
@@ -709,8 +716,9 @@ Préserver les responsabilités :
 - `audio/instruments/` crée et contrôle les sources propres aux instruments ;
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
-La polyphonie est une propriété de `SubtractiveSynthConfig`. Elle est copiée
-dans `SubtractivePlaybackVoiceSnapshot`, puis interprétée par le renderer
+La polyphonie est une propriété du `SubtractiveSynthConfig` conservé dans le
+`ClipVoiceState` du clip actif. Elle est copiée dans
+`SubtractivePlaybackVoiceSnapshot`, puis interprétée par le renderer
 soustractif. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.
 

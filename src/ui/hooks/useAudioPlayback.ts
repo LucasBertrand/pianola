@@ -114,8 +114,16 @@ export function useAudioPlayback(
 
     const unsubscribe = projectStore.subscribe(
       (state, previousState) => {
+        const activeClip = getActiveClip(state);
+        const previousActiveClip = getActiveClip(previousState);
+
         if (
-          state.voicesById !== previousState.voicesById
+          (
+            state.voicesById !== previousState.voicesById
+            || state.activeClipId !== previousState.activeClipId
+            || activeClip.voiceStatesById
+              !== previousActiveClip.voiceStatesById
+          )
           && instrumentPreviewFrameRef.current !== 0
         ) {
           cancelAnimationFrame(instrumentPreviewFrameRef.current);
@@ -140,7 +148,7 @@ export function useAudioPlayback(
 
           scheduler.replacePlaybackState(
             compilePlaybackSnapshot(state),
-            getActiveClip(state).transportSettings,
+            activeClip.transportSettings,
             clipChanged ? playheadTick.get() : undefined,
           );
         } catch (error: unknown) {
@@ -281,9 +289,15 @@ export function useAudioPlayback(
 
       const state = projectStore.getState();
       const voice = state.voicesById[preview.voiceId];
+      const activeClip = getActiveClip(state);
+      const voiceState = activeClip.voiceStatesById[preview.voiceId];
       const scheduler = schedulerRef.current;
 
-      if (voice === undefined || scheduler === null) {
+      if (
+        voice === undefined
+        || voiceState === undefined
+        || scheduler === null
+      ) {
         return;
       }
 
@@ -291,11 +305,17 @@ export function useAudioPlayback(
         scheduler.previewPlaybackSnapshot(
           compilePlaybackSnapshot({
             ...state,
-            voicesById: {
-              ...state.voicesById,
-              [preview.voiceId]: {
-                ...voice,
-                instrument: preview.instrument,
+            clipsById: {
+              ...state.clipsById,
+              [activeClip.id]: {
+                ...activeClip,
+                voiceStatesById: {
+                  ...activeClip.voiceStatesById,
+                  [preview.voiceId]: {
+                    ...voiceState,
+                    instrument: preview.instrument,
+                  },
+                },
               },
             },
           }),
@@ -342,8 +362,8 @@ function didPlaybackStateChange(
     return true;
   }
 
-  if (state.voicesById === previousState.voicesById) {
-    return false;
+  if (state.voiceOrder !== previousState.voiceOrder) {
+    return true;
   }
 
   for (
@@ -359,15 +379,20 @@ function didPlaybackStateChange(
 
     const voice = state.voicesById[voiceId];
     const previousVoice = previousState.voicesById[voiceId];
+    const voiceState = activeClip.voiceStatesById[voiceId];
+    const previousVoiceState =
+      previousActiveClip.voiceStatesById[voiceId];
 
     if (
       voice === undefined
       || previousVoice === undefined
-      || voice.muted !== previousVoice.muted
-      || voice.solo !== previousVoice.solo
-      || voice.gain !== previousVoice.gain
+      || voiceState === undefined
+      || previousVoiceState === undefined
       || voice.pan !== previousVoice.pan
-      || voice.instrument !== previousVoice.instrument
+      || voiceState.gain !== previousVoiceState.gain
+      || voiceState.muted !== previousVoiceState.muted
+      || voiceState.solo !== previousVoiceState.solo
+      || voiceState.instrument !== previousVoiceState.instrument
     ) {
       return true;
     }

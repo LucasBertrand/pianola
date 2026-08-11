@@ -45,10 +45,12 @@ commandes, reducer, validation, collisions et historique. Une modification de
 
 `ProjectState` possède les entités globales (`voicesById`, ordre des voix,
 master bus) et la collection ordonnée de clips. `Clip` ne référence pas le
-projet : il porte seulement son ID, son nom, ses pistes, sa longueur et son
-transport. Cette direction unique évite une dépendance circulaire. Les
-commandes de notes et de transport ciblent implicitement `activeClipId`; les
-commandes de voix propagent l’ajout ou la suppression de piste à chaque clip.
+projet : il porte son ID, son nom, ses pistes, sa longueur, son transport, les
+réglages volume/mute/solo/lock et le preset d’instrument indexés par `VoiceId`.
+Cette direction unique évite une dépendance circulaire. Les commandes de notes,
+de transport et d’état local des voix ciblent implicitement `activeClipId` ;
+les commandes globales de voix propagent l’ajout ou la suppression de piste et
+d’état à chaque clip.
 
 Cette couche ne connaît ni React, ni le DOM, ni Canvas, ni Web Audio.
 
@@ -104,8 +106,9 @@ le renderer à partir du discriminant `instrument.kind`.
 actuelle, `SubtractivePlaybackVoiceSnapshot`, contient uniquement les données
 nécessaires au renderer soustractif. Les propriétés communes de mixage,
 d'événements compactés restent dans `PlaybackVoiceSnapshotBase`. La polyphonie
-du synthétiseur reste dans sa variante instrument. Une future variante doit étendre cette base sans
-ajouter de champs optionnels à la variante soustractive.
+du synthétiseur reste dans la variante instrument du `ClipVoiceState` actif.
+Une future variante doit étendre cette base sans ajouter de champs optionnels à
+la variante soustractive.
 
 ### `src/interaction/core`
 
@@ -219,7 +222,8 @@ antérieure du projet, y compris après résolution d'une collision.
 - `ProjectState` est la source de vérité persistante.
 - `Clip` est la frontière persistante des données musicales et temporelles
   locales. Il ne doit jamais contenir une `Voice` complète, seulement des
-  pistes indexées par `VoiceId`.
+  pistes, des réglages volume/mute/solo/lock et un preset d’instrument indexés
+  par `VoiceId`.
 - `EditorRuntime` conserve un petit état d’édition par `ClipId` pour la tête de
   lecture, le viewport, la grille et le snap tonal. Le fichier natif persiste
   ces valeurs dans `editor.clipStatesById`.
