@@ -49,6 +49,10 @@ export interface AddProjectInstrumentCommand {
 export interface UpdateProjectInstrumentChanges {
   readonly name?: string;
   readonly color?: string;
+  readonly presetId?: ProjectInstrument["presetId"];
+  readonly gain?: number;
+  readonly muted?: boolean;
+  readonly solo?: boolean;
   readonly pan?: number;
   readonly effects?: readonly EffectDescriptor[];
   readonly generativeRules?: readonly GenerativeRuleDescriptor[];
@@ -912,6 +916,10 @@ function applyUpdateProjectInstrument(
     ...instrument,
     name: command.changes.name ?? instrument.name,
     color: command.changes.color ?? instrument.color,
+    presetId: command.changes.presetId ?? instrument.presetId,
+    gain: command.changes.gain ?? instrument.gain,
+    muted: command.changes.muted ?? instrument.muted,
+    solo: command.changes.solo ?? instrument.solo,
     pan: command.changes.pan ?? instrument.pan,
     effects: command.changes.effects ?? instrument.effects,
     generativeRules:
@@ -919,6 +927,14 @@ function applyUpdateProjectInstrument(
     interpretation:
       command.changes.interpretation ?? instrument.interpretation,
   };
+
+  if (state.instrumentPresetsById[updatedInstrument.presetId] === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Project instrument references unavailable preset "${updatedInstrument.presetId}".`,
+      command.type,
+    );
+  }
 
   assertValidProjectInstrument(updatedInstrument);
 
@@ -1132,8 +1148,7 @@ function applyUpdateClipInstrumentState(
   }
 
   const updated: ClipInstrumentState = {
-    ...current,
-    ...command.changes,
+    locked: command.changes.locked ?? current.locked,
   };
 
   assertValidClipInstrumentState(
@@ -1142,12 +1157,7 @@ function applyUpdateClipInstrumentState(
     `Active clip instrument "${command.instrumentId}"`,
   );
 
-  if (
-    updated.gain === current.gain
-    && updated.muted === current.muted
-    && updated.locked === current.locked
-    && updated.solo === current.solo
-  ) {
+  if (updated.locked === current.locked) {
     return state;
   }
 
@@ -1165,17 +1175,10 @@ function assertValidClipInstrumentState(
   commandType: PianoRollCommand["type"],
   context: string,
 ): void {
-  if (
-    !Number.isFinite(state.gain)
-    || state.gain < MINIMUM_MASTER_GAIN
-    || state.gain > MAXIMUM_MASTER_GAIN
-    || typeof state.muted !== "boolean"
-    || typeof state.locked !== "boolean"
-    || typeof state.solo !== "boolean"
-  ) {
+  if (typeof state.locked !== "boolean") {
     reject(
       "INVALID_COMMAND",
-      `${context} has invalid volume, mute, lock, or solo state.`,
+      `${context} has an invalid lock state.`,
       commandType,
     );
   }

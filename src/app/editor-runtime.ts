@@ -302,7 +302,7 @@ function createInstrumentRenderStyles(
     if (instrument !== undefined && instrumentState !== undefined) {
       styles[instrumentId] = {
         fillStyle: instrument.color,
-        opacity: instrumentState.muted ? 0.16 : 1,
+        opacity: instrument.muted ? 0.16 : 1,
         locked: instrumentState.locked,
       };
     }

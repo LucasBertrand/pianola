@@ -676,11 +676,11 @@ audio complète. Pour ajouter un preset soustractif :
 5. créer manuellement un instrument et vérifier le preset dans la modale, puis
    sa lecture dans plusieurs clips.
 
-Ne jamais remettre la configuration audio dans `ClipInstrumentState`.
-`ProjectInstrument.presetId` est l’unique choix de son de l’instrument et tous
-les clips le partagent. Les clips ne conservent que gain, mute, solo et lock.
-Le nom affiché à côté du volume est volontairement en lecture seule : changer
-le son d’un instrument existant n’est pas encore une fonctionnalité publique.
+Ne jamais remettre la configuration audio ou le mixage dans
+`ClipInstrumentState`. `ProjectInstrument` porte le preset, le gain, le mute et
+le solo : tous les clips partagent donc le même son et le même état de mixage.
+Le sélecteur de preset de l’inspecteur modifie cette référence globale dans une
+transaction Undo/Redo. Le clip ne conserve que son verrouillage d’édition.
 
 Lors de l’ajout d’un nouveau type d’instrument, créer une nouvelle variante de
 `InstrumentPreset` et de `PlaybackInstrumentSnapshot`, puis un renderer dédié.
@@ -756,9 +756,9 @@ Préserver les responsabilités :
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
 La polyphonie est une propriété du `SubtractiveSynthConfig` contenu dans un
-preset global. `ProjectInstrument` conserve son `presetId` tandis que
-`ClipInstrumentState` reste limité au mixage et au verrouillage. Le compilateur
-résout cette référence et copie la configuration dans
+preset global. `ProjectInstrument` conserve son `presetId` et ses réglages
+globaux de mixage, tandis que `ClipInstrumentState` reste limité au
+verrouillage d’édition. Le compilateur résout cette référence et copie la configuration dans
 `SubtractivePlaybackInstrumentSnapshot`, puis le renderer soustractif
 l’interprète. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.

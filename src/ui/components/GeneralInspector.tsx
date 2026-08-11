@@ -5,7 +5,6 @@ import type {
 import {
   getActiveClip,
   type ClipId,
-  type ClipInstrumentState,
   type ProjectState,
   type ProjectInstrument,
   type InstrumentId,
@@ -44,11 +43,6 @@ export interface GeneralInspectorProps {
     instrumentId: InstrumentId,
     gain: number,
   ) => void;
-  readonly onUpdateClipInstrumentState: (
-    instrumentId: InstrumentId,
-    changes: Partial<ClipInstrumentState>,
-    label: string,
-  ) => void;
   readonly onSelectInstrumentNotes: (instrumentId: InstrumentId) => void;
   readonly onToggleInstrumentLock: (instrument: ProjectInstrument) => void;
   readonly onDeleteProjectInstrument: (instrumentId: InstrumentId) => void;
@@ -73,7 +67,6 @@ export function GeneralInspector({
   onInstrumentSelect,
   onUpdateProjectInstrument,
   onInstrumentGainPreview,
-  onUpdateClipInstrumentState,
   onSelectInstrumentNotes,
   onToggleInstrumentLock,
   onDeleteProjectInstrument,
@@ -166,7 +159,7 @@ export function GeneralInspector({
                 instrument.id === selectedInstrumentId
                   ? " is-selected"
                   : ""
-              }${instrumentState.muted ? " is-muted" : ""}${
+              }${instrument.muted ? " is-muted" : ""}${
                 instrumentState.locked ? " is-locked" : ""
               }`
             }
@@ -174,7 +167,7 @@ export function GeneralInspector({
             style={{
               "--instrument-color": instrument.color,
             } as React.CSSProperties}
-            onClick={() => onInstrumentSelect(instrument.id)}
+            onClickCapture={() => onInstrumentSelect(instrument.id)}
           >
             <label
               className="instrument-color-control"
@@ -196,7 +189,7 @@ export function GeneralInspector({
                 }}
               />
             </label>
-            <div className="instrument-copy">
+            <div className="instrument-copy instrument-identity">
               <InstrumentNameEditor
                 instrument={instrument}
                 onSelect={onInstrumentSelect}
@@ -210,23 +203,89 @@ export function GeneralInspector({
                   );
                 }}
               />
-              <small title="Shared instrument preset">
-                {projectState.instrumentPresetsById[instrument.presetId]
-                  ?.name ?? "Unavailable preset"}
-              </small>
+              <div className="instrument-local-actions">
+                <button
+                  className="instrument-select-all-button"
+                  type="button"
+                  aria-label={`Select all notes from ${instrument.name}`}
+                  title="Select all notes"
+                  disabled={instrumentState.locked}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectInstrumentNotes(instrument.id);
+                  }}
+                >
+                  <svg
+                    className="instrument-select-all-icon"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                  >
+                    <circle cx="10" cy="10" r="7" />
+                    <circle cx="10" cy="10" r="3" />
+                    <path d="M10 1v3M10 16v3M1 10h3M16 10h3" />
+                  </svg>
+                </button>
+                <button
+                  className={
+                    instrumentState.locked
+                      ? "instrument-lock-button is-active"
+                      : "instrument-lock-button"
+                  }
+                  type="button"
+                  aria-label={`${instrumentState.locked ? "Unlock" : "Lock"} ${instrument.name}`}
+                  aria-pressed={instrumentState.locked}
+                  title={instrumentState.locked ? "Unlock instrument" : "Lock instrument"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleInstrumentLock(instrument);
+                  }}
+                >
+                  <svg
+                    className="instrument-lock-icon"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 8V6a4 4 0 0 1 8 0v2" />
+                    <rect x="4" y="8" width="12" height="9" rx="2" />
+                  </svg>
+                </button>
+              </div>
+              <select
+                className="instrument-preset-select"
+                aria-label={`Preset for ${instrument.name}`}
+                title="Instrument preset"
+                value={instrument.presetId}
+                onChange={(event) => {
+                  onUpdateProjectInstrument(
+                    instrument.id,
+                    { presetId: event.currentTarget.value },
+                    "Change instrument preset",
+                  );
+                }}
+              >
+                {projectState.instrumentPresetOrder.map((presetId) => {
+                  const preset = projectState.instrumentPresetsById[presetId];
+
+                  return preset === undefined ? null : (
+                    <option key={presetId} value={presetId}>
+                      {preset.name}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
             <div
               className="instrument-sound-controls"
               onClick={(event) => event.stopPropagation()}
             >
               <InstrumentGainSlider
-                gain={instrumentState.gain}
+                gain={instrument.gain}
                 instrumentName={instrument.name}
                 onPreview={(gain) => {
                   onInstrumentGainPreview(instrument.id, gain);
                 }}
                 onCommit={(gain) => {
-                  onUpdateClipInstrumentState(
+                  onUpdateProjectInstrument(
                     instrument.id,
                     {
                       gain,
@@ -235,103 +294,38 @@ export function GeneralInspector({
                   );
                 }}
               />
-            </div>
-            <div className="instrument-actions">
               <button
-                className="instrument-select-all-button"
+                className={instrument.muted
+                  ? "instrument-mute-button is-active"
+                  : "instrument-mute-button"}
                 type="button"
-                aria-label={`Select all notes from ${instrument.name}`}
-                title="Select all notes"
-                disabled={instrumentState.locked}
+                aria-label={`${instrument.muted ? "Unmute" : "Mute"} ${instrument.name}`}
+                aria-pressed={instrument.muted}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onSelectInstrumentNotes(instrument.id);
-                }}
-              >
-                <svg
-                  className="instrument-select-all-icon"
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                >
-                  <circle cx="10" cy="10" r="7" />
-                  <circle cx="10" cy="10" r="3" />
-                  <path d="M10 1v3M10 16v3M1 10h3M16 10h3" />
-                </svg>
-              </button>
-              <button
-                className={
-                  instrumentState.locked
-                    ? "instrument-lock-button is-active"
-                    : "instrument-lock-button"
-                }
-                type="button"
-                aria-label={`${instrumentState.locked ? "Unlock" : "Lock"} ${instrument.name}`}
-                aria-pressed={instrumentState.locked}
-                title={instrumentState.locked ? "Unlock instrument" : "Lock instrument"}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleInstrumentLock(instrument);
-                }}
-              >
-                <svg
-                  className="instrument-lock-icon"
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                >
-                  <path d="M6 8V6a4 4 0 0 1 8 0v2" />
-                  <rect
-                    x="4"
-                    y="8"
-                    width="12"
-                    height="9"
-                    rx="2"
-                  />
-                </svg>
-              </button>
-              <button
-                className={
-                  instrumentState.muted
-                    ? "instrument-mute-button is-active"
-                    : "instrument-mute-button"
-                }
-                type="button"
-                aria-label={`${instrumentState.muted ? "Unmute" : "Mute"} ${instrument.name}`}
-                aria-pressed={instrumentState.muted}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onUpdateClipInstrumentState(
+                  onUpdateProjectInstrument(
                     instrument.id,
-                    {
-                      muted: !instrumentState.muted,
-                    },
-                    instrumentState.muted ? "Unmute instrument" : "Mute instrument",
+                    { muted: !instrument.muted },
+                    instrument.muted ? "Unmute instrument" : "Mute instrument",
                   );
                 }}
               >
                 M
               </button>
               <button
-                className={
-                  instrumentState.solo
-                    ? "instrument-solo-button is-active"
-                    : "instrument-solo-button"
-                }
+                className={instrument.solo
+                  ? "instrument-solo-button is-active"
+                  : "instrument-solo-button"}
                 type="button"
-                aria-label={`${instrumentState.solo ? "Disable solo for" : "Solo"} ${instrument.name}`}
-                aria-pressed={instrumentState.solo}
-                title={
-                  instrumentState.solo
-                    ? "Disable solo"
-                    : "Solo instrument"
-                }
+                aria-label={`${instrument.solo ? "Disable solo for" : "Solo"} ${instrument.name}`}
+                aria-pressed={instrument.solo}
+                title={instrument.solo ? "Disable solo" : "Solo instrument"}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onUpdateClipInstrumentState(
+                  onUpdateProjectInstrument(
                     instrument.id,
-                    {
-                      solo: !instrumentState.solo,
-                    },
-                    instrumentState.solo
+                    { solo: !instrument.solo },
+                    instrument.solo
                       ? "Disable instrument solo"
                       : "Solo instrument",
                   );

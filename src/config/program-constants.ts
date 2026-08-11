@@ -21,7 +21,7 @@ export const APPLICATION_CONSTANTS = Object.freeze({
 /** Persistent project defaults and hard domain limits. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 9,
+  schemaVersion: 10,
   defaultMeasureCount: 16,
   demoProjectTitle: APPLICATION_CONSTANTS.demoProjectTitle,
   defaultTempoBpm: 120,
@@ -54,10 +54,10 @@ export const PROJECT_CONSTANTS = Object.freeze({
   maximumDescriptorParameterCount: 256,
   maximumHistoryEntries: 200,
   defaultLoopEnabled: false,
-  defaultClipInstrumentMuted: false,
+  defaultInstrumentMuted: false,
   defaultClipInstrumentLocked: false,
-  defaultClipInstrumentSolo: false,
-  defaultClipInstrumentGain: 0.82,
+  defaultInstrumentSolo: false,
+  defaultInstrumentGain: 0.82,
   minimumMidiPitch: 0,
   maximumMidiPitch: 127,
   minimumMidiVelocity: 0,

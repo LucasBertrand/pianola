@@ -3,12 +3,17 @@ import type {
   InstrumentPreset,
   PresetId,
 } from "../../domain/model";
+import {
+  MAXIMUM_INSTRUMENT_NAME_LENGTH,
+} from "../../domain/model";
 
 export interface InstrumentPresetDialogProps {
   readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly presetOrder: readonly PresetId[];
   readonly selectedPresetId: PresetId;
+  readonly instrumentName: string;
   readonly onSelectionChange: (presetId: PresetId) => void;
+  readonly onInstrumentNameChange: (name: string) => void;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
@@ -21,7 +26,9 @@ export function InstrumentPresetDialog(
     presetsById,
     presetOrder,
     selectedPresetId,
+    instrumentName,
     onSelectionChange,
+    onInstrumentNameChange,
     onConfirm,
     onCancel,
   } = props;
@@ -29,13 +36,17 @@ export function InstrumentPresetDialog(
 
   return (
     <div className="application-dialog-backdrop">
-      <section
+      <form
         className="application-dialog instrument-preset-dialog"
         data-tone="default"
         role="dialog"
         aria-modal="true"
         aria-labelledby="instrument-preset-dialog-title"
         aria-describedby="instrument-preset-dialog-message"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onConfirm();
+        }}
       >
         <div className="application-dialog-heading">
           <span className="application-dialog-mark" aria-hidden="true">
@@ -49,10 +60,22 @@ export function InstrumentPresetDialog(
           Choose the sound shared by this instrument in every clip.
         </p>
         <label className="instrument-preset-dialog-control">
+          <span>Name</span>
+          <input
+            type="text"
+            value={instrumentName}
+            maxLength={MAXIMUM_INSTRUMENT_NAME_LENGTH}
+            autoFocus
+            autoComplete="off"
+            onChange={(event) => {
+              onInstrumentNameChange(event.currentTarget.value);
+            }}
+          />
+        </label>
+        <label className="instrument-preset-dialog-control">
           <span>Preset</span>
           <select
             value={selectedPresetId}
-            autoFocus
             onChange={(event) => {
               onSelectionChange(event.currentTarget.value);
             }}
@@ -81,14 +104,16 @@ export function InstrumentPresetDialog(
           </button>
           <button
             className="application-dialog-button is-primary"
-            type="button"
-            disabled={selectedPreset === undefined}
-            onClick={onConfirm}
+            type="submit"
+            disabled={
+              selectedPreset === undefined
+              || instrumentName.trim().length === 0
+            }
           >
             Add instrument
           </button>
         </div>
-      </section>
+      </form>
     </div>
   );
 }

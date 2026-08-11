@@ -203,6 +203,9 @@ try {
       name: `Instrument ${instrumentIndex + 1}`,
       color: instrumentIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
       presetId: getDefaultInstrumentPresetId(instrumentIndex),
+      gain: 0.8,
+      muted: false,
+      solo: false,
       pan: 0,
       effects: [],
       generativeRules: [],
@@ -246,6 +249,7 @@ try {
         createDefaultMasterBusState().tuningFrequencyHz,
       transport: transportChanges = {},
       instrumentOrder = ["voice-a"],
+      projectInstrumentChangesById = {},
       instrumentStateChangesById = {},
     } = options;
     const defaultTransport = createDefaultTransportState();
@@ -283,16 +287,16 @@ try {
         notesById[note.id] = note;
       }
 
-      projectInstrumentsById[instrumentId] = createProjectInstrument(instrumentId, instrumentIndex);
+      projectInstrumentsById[instrumentId] = {
+        ...createProjectInstrument(instrumentId, instrumentIndex),
+        ...projectInstrumentChangesById[instrumentId],
+      };
       tracksByInstrumentId[instrumentId] = {
         instrumentId,
         notesById,
       };
       instrumentStatesById[instrumentId] = {
-        gain: 0.8,
-        muted: false,
         locked: false,
-        solo: false,
         ...instrumentStateChangesById[instrumentId],
       };
     }
@@ -1734,7 +1738,7 @@ try {
     });
     assert.equal(
       renamedState.projectInstrumentsById["voice-a"].presetId,
-      projectInstrument.presetId,
+      getDefaultInstrumentPresetId(1),
     );
     assert.throws(
       () => dispatch(state, {
@@ -1745,10 +1749,7 @@ try {
         },
         clipInstrumentStatesById: {
           "clip-test": {
-            gain: 0.8,
-            muted: false,
             locked: false,
-            solo: false,
           },
         },
       }),
@@ -1837,10 +1838,7 @@ try {
         },
         instrumentStatesById: {
           "voice-a": {
-            gain: 0.64,
-            muted: true,
             locked: true,
-            solo: true,
           },
         },
         transportSettings: {
@@ -1894,10 +1892,7 @@ try {
       loaded.projectState.clipsById["clip-native-second"]
         .instrumentStatesById["voice-a"],
       {
-        gain: 0.64,
-        muted: true,
         locked: true,
-        solo: true,
       },
     );
     assert.deepEqual(loaded.editorState, editorState);
@@ -2904,7 +2899,7 @@ try {
         ],
       },
       instrumentOrder: ["voice-a", "voice-b"],
-      instrumentStateChangesById: {
+      projectInstrumentChangesById: {
         "voice-a": { solo: true },
       },
     });
@@ -3207,10 +3202,7 @@ try {
       },
       instrumentStatesById: {
         "voice-a": {
-          gain: 0.8,
-          muted: false,
           locked: false,
-          solo: false,
         },
       },
       transportSettings: {
@@ -3252,7 +3244,7 @@ try {
     );
   });
 
-  test("isolates instrument playback and editing state between clips", () => {
+  test("keeps instrument playback global and editing state clip-local", () => {
     const initialState = createProject();
     const withSecondClip = dispatch(initialState, {
       type: "AddClip",
@@ -3268,10 +3260,7 @@ try {
         },
         instrumentStatesById: {
           "voice-a": {
-            gain: 0.8,
-            muted: false,
             locked: false,
-            solo: false,
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -3282,37 +3271,45 @@ try {
     store.dispatch({
       transactionId: "update-second-clip-voice-state",
       createdAt: 1,
-      commands: [{
-        type: "UpdateClipInstrumentState",
-        instrumentId: "voice-a",
-        changes: {
-          gain: 0.35,
-          muted: true,
-          locked: true,
-          solo: true,
+      commands: [
+        {
+          type: "UpdateProjectInstrument",
+          instrumentId: "voice-a",
+          changes: {
+            gain: 0.35,
+            muted: true,
+            solo: true,
+          },
         },
-      }],
+        {
+          type: "UpdateClipInstrumentState",
+          instrumentId: "voice-a",
+          changes: { locked: true },
+        },
+      ],
     });
 
     assert.deepEqual(
       store.getState().clipsById["clip-test"]
         .instrumentStatesById["voice-a"],
       {
-        gain: 0.8,
-        muted: false,
         locked: false,
-        solo: false,
       },
     );
     assert.deepEqual(
       store.getState().clipsById["clip-voice-state-second"]
         .instrumentStatesById["voice-a"],
       {
-        gain: 0.35,
-        muted: true,
         locked: true,
-        solo: true,
       },
+    );
+    assert.deepEqual(
+      {
+        gain: store.getState().projectInstrumentsById["voice-a"].gain,
+        muted: store.getState().projectInstrumentsById["voice-a"].muted,
+        solo: store.getState().projectInstrumentsById["voice-a"].solo,
+      },
+      { gain: 0.35, muted: true, solo: true },
     );
     assert.equal(
       compilePlaybackSnapshot(store.getState())
@@ -3325,10 +3322,7 @@ try {
       store.getState().clipsById["clip-voice-state-second"]
         .instrumentStatesById["voice-a"],
       {
-        gain: 0.8,
-        muted: false,
         locked: false,
-        solo: false,
       },
     );
 
@@ -3337,15 +3331,12 @@ try {
       store.getState().clipsById["clip-voice-state-second"]
         .instrumentStatesById["voice-a"],
       {
-        gain: 0.35,
-        muted: true,
         locked: true,
-        solo: true,
       },
     );
   });
 
-  test("refreshes rendered instrument styles after clip-local state changes", () => {
+  test("combines global mute with clip-local lock in rendered styles", () => {
     const runtime = createEditorRuntime(createProject());
 
     assert.deepEqual(runtime.instrumentStyles.get()["voice-a"], {
@@ -3358,9 +3349,18 @@ try {
       [{
         type: "UpdateClipInstrumentState",
         instrumentId: "voice-a",
-        changes: { muted: true, locked: true },
+        changes: { locked: true },
       }],
       "Update rendered instrument state",
+    );
+
+    runtime.editorCommands.dispatch(
+      [{
+        type: "UpdateProjectInstrument",
+        instrumentId: "voice-a",
+        changes: { muted: true },
+      }],
+      "Mute rendered instrument",
     );
 
     assert.deepEqual(runtime.instrumentStyles.get()["voice-a"], {
@@ -3386,10 +3386,7 @@ try {
         },
         instrumentStatesById: {
           "voice-a": {
-            gain: 0.8,
-            muted: false,
             locked: false,
-            solo: false,
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -3400,16 +3397,10 @@ try {
       instrument: createProjectInstrument("voice-b", 1),
       clipInstrumentStatesById: {
         "clip-test": {
-          gain: 0.82,
-          muted: false,
           locked: false,
-          solo: false,
         },
         "clip-second": {
-          gain: 0.82,
-          muted: false,
           locked: false,
-          solo: false,
         },
       },
     });
@@ -3420,8 +3411,8 @@ try {
       );
       assert.equal(
         withInstrument.clipsById[clipId]
-          .instrumentStatesById["voice-b"].gain,
-        0.82,
+          .instrumentStatesById["voice-b"].locked,
+        false,
       );
       assert.equal(
         withInstrument.projectInstrumentsById["voice-b"].presetId,
@@ -3466,10 +3457,7 @@ try {
           },
           instrumentStatesById: {
           "voice-a": {
-            gain: 0.8,
-            muted: false,
             locked: false,
-            solo: false,
           },
           },
           transportSettings: createDefaultTransportState(),
@@ -3526,10 +3514,7 @@ try {
       },
       instrumentStatesById: {
         "voice-a": {
-          gain: 0.8,
-          muted: false,
           locked: false,
-          solo: false,
         },
       },
       transportSettings: createDefaultTransportState(),

@@ -1,5 +1,4 @@
 import type {
-  ClipInstrumentState,
   InstrumentConfig,
   Note,
   ProjectState,
@@ -144,7 +143,6 @@ export function compilePlaybackSnapshot(
     instruments.push(
       compileInstrumentSnapshot(
         projectInstrument,
-        instrumentState,
         preset.config,
         track.notesById,
         durationTicks,
@@ -172,7 +170,6 @@ export function compilePlaybackSnapshot(
 
 function compileInstrumentSnapshot(
   projectInstrument: ProjectInstrument,
-  instrumentState: ClipInstrumentState,
   instrument: InstrumentConfig,
   notesById: Readonly<Record<string, Note>>,
   projectDurationTicks: number,
@@ -209,8 +206,8 @@ function compileInstrumentSnapshot(
   }
 
   assertFiniteNumber(
-    instrumentState.gain,
-    `Project instrument "${projectInstrument.id}" gain in active clip`,
+    projectInstrument.gain,
+    `Project instrument "${projectInstrument.id}" gain`,
   );
 
   if (!Number.isFinite(projectInstrument.pan) || projectInstrument.pan < -1 || projectInstrument.pan > 1) {
@@ -247,10 +244,10 @@ function compileInstrumentSnapshot(
   const events = packInstrumentEvents(projectInstrument.id, notes);
   const snapshot: PlaybackInstrumentSnapshot = {
     ...events,
-    gain: instrumentState.gain,
+    gain: projectInstrument.gain,
     pan: projectInstrument.pan,
-    muted: instrumentState.muted,
-    solo: instrumentState.solo,
+    muted: projectInstrument.muted,
+    solo: projectInstrument.solo,
     instrument: cloneInstrument(projectInstrument.id, instrument),
   };
 

@@ -22,6 +22,8 @@ import {
   MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
+  MAXIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_GAIN,
   MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
 } from "./model";
 
@@ -249,6 +251,26 @@ export function validateProjectInstrument(instrument: ProjectInstrument): Valida
       "color",
       "ProjectInstrument color must use the #RRGGBB format.",
     );
+  }
+
+  if (
+    !Number.isFinite(instrument.gain)
+    || instrument.gain < MINIMUM_MASTER_GAIN
+    || instrument.gain > MAXIMUM_MASTER_GAIN
+  ) {
+    pushProjectInstrumentIssue(
+      issues,
+      "gain",
+      `ProjectInstrument gain must be between ${MINIMUM_MASTER_GAIN} and ${MAXIMUM_MASTER_GAIN}.`,
+    );
+  }
+
+  if (typeof instrument.muted !== "boolean") {
+    pushProjectInstrumentIssue(issues, "muted", "ProjectInstrument muted must be boolean.");
+  }
+
+  if (typeof instrument.solo !== "boolean") {
+    pushProjectInstrumentIssue(issues, "solo", "ProjectInstrument solo must be boolean.");
   }
 
   if (

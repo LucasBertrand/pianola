@@ -63,7 +63,6 @@ input:focus-visible {
 
 .app-shell {
   --general-inspector-width: 306px;
-  --master-bus-width: 254px;
   display: flex;
   width: 100%;
   height: 100%;
@@ -365,7 +364,7 @@ input:focus-visible {
 
 .master-bus-control {
   display: grid;
-  width: var(--master-bus-width);
+  width: var(--general-inspector-width);
   min-width: 134px;
   height: 44px;
   padding: 4px 6px;
@@ -1577,16 +1576,16 @@ input[type="range"]::-webkit-slider-thumb {
   --instrument-color: var(--color-accent-primary);
   position: relative;
   display: grid;
-  min-height: 78px;
-  padding: 9px;
+  min-height: 0;
+  padding: 8px 8px 8px 15px;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 9px;
   background: var(--color-surface-panel);
-  grid-template-columns: 32px minmax(0, 1fr) minmax(145px, 1.4fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
 }
 
 .project-instrument-card.clip-card {
@@ -1631,20 +1630,23 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .instrument-color-control {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
   display: grid;
-  width: 32px;
-  height: 36px;
-  grid-row: 1;
+  width: 15px;
+  height: auto;
   place-items: center;
   cursor: pointer;
 }
 
 .instrument-color {
   position: relative;
-  width: 4px;
-  height: 28px;
+  width: 3px;
+  height: 100%;
+  min-height: 28px;
   border-radius: 4px;
   background: var(--instrument-color);
   box-shadow: 0 0 12px color-mix(in srgb, var(--instrument-color) 45%, transparent);
@@ -1663,10 +1665,51 @@ input[type="range"]::-webkit-slider-thumb {
 .instrument-copy {
   position: relative;
   min-width: 0;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.instrument-identity {
+  display: grid;
+  grid-column: 1;
+  grid-template-columns: 65px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 5px 7px;
+}
+
+.instrument-identity .instrument-name-input {
+  grid-column: 1 / -1;
+  grid-row: 1;
 }
 
 .instrument-copy small {
   display: block;
+}
+
+.instrument-preset-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0 5px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-control);
+  border-radius: 6px;
+  outline: 0;
+  background: var(--color-surface-inset);
+  color: var(--color-text-control);
+  font: inherit;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  touch-action: manipulation;
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.instrument-preset-select:focus-visible {
+  border-color: color-mix(in srgb, var(--instrument-color) 55%, var(--color-border-strong));
 }
 
 .instrument-name-input {
@@ -1706,7 +1749,7 @@ input[type="range"]::-webkit-slider-thumb {
   position: relative;
   z-index: 1;
   display: grid;
-  width: 72px;
+  width: 100%;
   height: 30px;
   place-items: center;
   touch-action: none;
@@ -1716,7 +1759,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .instrument-gain-control input {
   display: block;
-  width: 72px;
+  width: 100%;
   height: 24px;
   margin: 0;
   accent-color: var(--instrument-color);
@@ -1724,11 +1767,16 @@ input[type="range"]::-webkit-slider-thumb {
   touch-action: none;
 }
 
-.instrument-actions {
+.instrument-local-actions {
   position: relative;
   display: flex;
-  grid-column: 2 / -1;
-  justify-content: flex-end;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  grid-column: 1;
+  grid-row: 2;
+  align-items: center;
+  justify-content: flex-start;
   gap: 5px;
 }
 
@@ -1745,10 +1793,15 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
 }
 
+.project-instrument-card:not(.clip-card) button {
+  width: 30px;
+  height: 30px;
+}
+
 .project-instrument-card .instrument-select-all-button {
   display: grid;
-  width: 36px;
-  min-width: 36px;
+  width: 30px;
+  min-width: 30px;
   padding: 0;
   place-items: center;
 }
@@ -1839,10 +1892,17 @@ input[type="range"]::-webkit-slider-thumb {
   z-index: 1;
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(58px, 72px);
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: minmax(72px, 1fr) repeat(3, 30px);
   align-items: center;
-  justify-content: flex-end;
+  justify-content: stretch;
   gap: 6px;
+}
+
+.instrument-sound-controls button {
+  width: 30px;
+  height: 30px;
 }
 
 .instrument-preset-dialog-control {
@@ -1854,7 +1914,8 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 6px;
 }
 
-.instrument-preset-dialog-control select {
+.instrument-preset-dialog-control select,
+.instrument-preset-dialog-control input {
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
@@ -1868,7 +1929,8 @@ input[type="range"]::-webkit-slider-thumb {
   touch-action: manipulation;
 }
 
-.instrument-preset-dialog-control select:focus-visible {
+.instrument-preset-dialog-control select:focus-visible,
+.instrument-preset-dialog-control input:focus-visible {
   border-color: var(--color-border-primary);
 }
 
@@ -1935,7 +1997,6 @@ input[type="range"]::-webkit-slider-thumb {
 @media (min-width: 1121px) and (max-width: 1300px) {
   .app-shell {
     --general-inspector-width: 276px;
-    --master-bus-width: 218px;
   }
 
   .topbar {
@@ -1955,7 +2016,6 @@ input[type="range"]::-webkit-slider-thumb {
 @media (max-width: 1120px) {
   .app-shell {
     --general-inspector-width: 250px;
-    --master-bus-width: 218px;
   }
 
   .topbar {
@@ -2304,30 +2364,18 @@ input[type="range"]::-webkit-slider-thumb {
     align-content: start;
   }
 
-  .instrument-management-panel .instrument-actions {
-    width: auto;
-    grid-column: 4;
-    grid-row: 1;
-    flex-wrap: nowrap;
-    gap: 4px;
-  }
-
   .instrument-management-panel .project-instrument-card {
-    min-height: 44px;
-    padding: 6px;
-    grid-template-columns:
-      28px
-      minmax(60px, 1fr)
-      minmax(52px, 64px)
-      auto;
-    grid-template-rows: auto;
+    min-height: 0;
+    padding: 8px 8px 8px 15px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: 6px;
   }
 
   .instrument-management-panel .instrument-sound-controls {
-    grid-column: 3;
-    grid-row: 1;
-    grid-template-columns: minmax(52px, 64px);
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: minmax(72px, 1fr) repeat(3, 30px);
   }
 
   .instrument-management-panel .project-instrument-card button {
@@ -2336,7 +2384,7 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .instrument-management-panel .instrument-color-control {
-    width: 28px;
+    width: 15px;
   }
 
   .instrument-management-panel

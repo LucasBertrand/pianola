@@ -24,6 +24,9 @@ export function createDefaultProjectInstrument(
     name: options.name,
     color: options.color,
     presetId: options.presetId,
+    gain: PROJECT_CONSTANTS.defaultInstrumentGain,
+    muted: PROJECT_CONSTANTS.defaultInstrumentMuted,
+    solo: PROJECT_CONSTANTS.defaultInstrumentSolo,
     pan: INSTRUMENT_CONSTANTS.pan,
     effects: [],
     generativeRules: [],
@@ -39,12 +42,9 @@ export function createDefaultProjectInstrument(
   };
 }
 
-/** Creates default mixer and editing state for one clip instrument. */
+/** Creates the default clip-local editing state for one instrument. */
 export function createDefaultClipInstrumentState(): ClipInstrumentState {
   return {
-    gain: PROJECT_CONSTANTS.defaultClipInstrumentGain,
-    muted: PROJECT_CONSTANTS.defaultClipInstrumentMuted,
     locked: PROJECT_CONSTANTS.defaultClipInstrumentLocked,
-    solo: PROJECT_CONSTANTS.defaultClipInstrumentSolo,
   };
 }

@@ -41,7 +41,7 @@ export interface ProjectInstrumentWorkflowOptions {
 
 export interface ProjectInstrumentWorkflow {
   readonly select: (instrumentId: InstrumentId) => void;
-  readonly add: (presetId: PresetId) => void;
+  readonly add: (presetId: PresetId, name: string) => void;
   readonly moveSelected: (direction: -1 | 1) => void;
   readonly remove: (instrumentId: InstrumentId) => void;
   readonly update: (
@@ -104,10 +104,14 @@ export function useProjectInstrumentWorkflow({
     );
   }, [commands]);
 
-  const add = useCallback((presetId: PresetId): void => {
+  const add = useCallback((presetId: PresetId, name: string): void => {
     const state = commands.getState();
+    const normalizedName = name.trim();
 
-    if (state.instrumentPresetsById[presetId] === undefined) {
+    if (
+      state.instrumentPresetsById[presetId] === undefined
+      || normalizedName.length === 0
+    ) {
       return;
     }
 
@@ -116,6 +120,7 @@ export function useProjectInstrumentWorkflow({
       state.instrumentOrder.length,
       instrumentSequenceRef.current,
       presetId,
+      normalizedName,
     );
     const clipInstrumentStatesById = createInitialClipInstrumentStates(
       state.clipOrder,
@@ -274,6 +279,7 @@ function createUserInstrument(
   instrumentIndex: number,
   sequence: number,
   presetId: PresetId,
+  name: string,
 ): ProjectInstrument {
   const color =
     RENDERING_CONSTANTS.userInstrumentColors[
@@ -283,7 +289,7 @@ function createUserInstrument(
 
   return createDefaultProjectInstrument({
     id: `instrument-${Date.now()}-${sequence}`,
-    name: `Instrument ${instrumentIndex + 1}`,
+    name,
     color,
     presetId,
   });

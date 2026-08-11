@@ -173,6 +173,7 @@ export function App(): React.JSX.Element {
     useState<ApplicationDialogState | null>(null);
   const [pendingInstrumentPresetId, setPendingInstrumentPresetId] =
     useState<PresetId | null>(null);
+  const [pendingInstrumentName, setPendingInstrumentName] = useState("");
   const selectedInstrument =
     selectedInstrumentId === null
       ? undefined
@@ -447,7 +448,6 @@ export function App(): React.JSX.Element {
     moveSelected: handleMoveSelectedInstrument,
     remove: handleDeleteProjectInstrument,
     update: handleUpdateProjectInstrument,
-    updateClipState: handleUpdateClipInstrumentState,
     selectNotes: handleSelectInstrumentNotes,
     toggleLock: handleToggleInstrumentLock,
   } = useProjectInstrumentWorkflow({
@@ -471,6 +471,7 @@ export function App(): React.JSX.Element {
     );
 
     setApplicationDialog(null);
+    setPendingInstrumentName(`Instrument ${state.instrumentOrder.length + 1}`);
     setPendingInstrumentPresetId(presetId);
   }, [scene]);
   const handleConfirmAddInstrument = useCallback((): void => {
@@ -478,9 +479,14 @@ export function App(): React.JSX.Element {
       return;
     }
 
-    addProjectInstrument(pendingInstrumentPresetId);
+    if (pendingInstrumentName.trim().length === 0) {
+      return;
+    }
+
+    addProjectInstrument(pendingInstrumentPresetId, pendingInstrumentName);
     setPendingInstrumentPresetId(null);
-  }, [addProjectInstrument, pendingInstrumentPresetId]);
+    setPendingInstrumentName("");
+  }, [addProjectInstrument, pendingInstrumentName, pendingInstrumentPresetId]);
   const getPianoRollEventController = useCallback(
     (): PianoRollEventController | null =>
       pianoRollEventControllerRef.current,
@@ -832,7 +838,6 @@ export function App(): React.JSX.Element {
           onAddProjectInstrument={handleOpenAddInstrumentDialog}
           onInstrumentSelect={handleInstrumentSelect}
           onUpdateProjectInstrument={handleUpdateProjectInstrument}
-          onUpdateClipInstrumentState={handleUpdateClipInstrumentState}
           onInstrumentGainPreview={previewInstrumentGain}
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
           onToggleInstrumentLock={handleToggleInstrumentLock}
@@ -850,9 +855,14 @@ export function App(): React.JSX.Element {
           presetsById={projectState.instrumentPresetsById}
           presetOrder={projectState.instrumentPresetOrder}
           selectedPresetId={pendingInstrumentPresetId}
+          instrumentName={pendingInstrumentName}
           onSelectionChange={setPendingInstrumentPresetId}
+          onInstrumentNameChange={setPendingInstrumentName}
           onConfirm={handleConfirmAddInstrument}
-          onCancel={() => setPendingInstrumentPresetId(null)}
+          onCancel={() => {
+            setPendingInstrumentPresetId(null);
+            setPendingInstrumentName("");
+          }}
         />
       )}
     </main>

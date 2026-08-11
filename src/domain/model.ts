@@ -135,18 +135,18 @@ export interface ProjectInstrument {
   readonly name: string;
   readonly color: string;
   readonly presetId: PresetId;
+  readonly gain: number;
+  readonly muted: boolean;
+  readonly solo: boolean;
   readonly pan: number;
   readonly effects: readonly EffectDescriptor[];
   readonly generativeRules: readonly GenerativeRuleDescriptor[];
   readonly interpretation: ProjectInstrumentInterpretation;
 }
 
-/** Per-clip mixer and editing state for one global instrument. */
+/** Per-clip editing state for one global instrument. */
 export interface ClipInstrumentState {
-  readonly gain: number;
-  readonly muted: boolean;
   readonly locked: boolean;
-  readonly solo: boolean;
 }
 
 export interface Track {

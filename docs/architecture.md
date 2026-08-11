@@ -110,8 +110,8 @@ actuelle, `SubtractivePlaybackInstrumentSnapshot`, contient uniquement les donn�
 nécessaires au renderer soustractif. Les propriétés communes de mixage,
 d'événements compactés restent dans `PlaybackInstrumentSnapshotBase`. La
 polyphonie du synthétiseur appartient à la configuration du preset global ; le
-`ProjectInstrument` conserve l’ID du preset sélectionné et le
-`ClipInstrumentState` actif reste un état de mixage/édition.
+`ProjectInstrument` conserve l’ID du preset sélectionné ainsi que gain, mute et
+solo. Le `ClipInstrumentState` actif ne conserve que le verrouillage d’édition.
 `playback-snapshot.ts` résout et valide cette référence avant de produire le
 snapshot audio. Une future variante doit étendre cette base sans ajouter de
 champs optionnels à la variante soustractive.

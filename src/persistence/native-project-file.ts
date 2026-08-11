@@ -979,15 +979,7 @@ function parseClipInstrumentStates(
     const state = readRecord(sourceStates[instrumentId], statePath);
 
     states[instrumentId] = {
-      gain: readNumberInRange(
-        state["gain"],
-        `${statePath}.gain`,
-        INSTRUMENT_CONSTANTS.minimumGain,
-        INSTRUMENT_CONSTANTS.maximumGain,
-      ),
-      muted: readBoolean(state["muted"], `${statePath}.muted`),
       locked: readBoolean(state["locked"], `${statePath}.locked`),
-      solo: readBoolean(state["solo"], `${statePath}.solo`),
     };
   }
 
@@ -1083,6 +1075,14 @@ function parseProjectInstrument(
     ),
     color,
     presetId,
+    gain: readNumberInRange(
+      instrument["gain"],
+      `${path}.gain`,
+      INSTRUMENT_CONSTANTS.minimumGain,
+      INSTRUMENT_CONSTANTS.maximumGain,
+    ),
+    muted: readBoolean(instrument["muted"], `${path}.muted`),
+    solo: readBoolean(instrument["solo"], `${path}.solo`),
     pan: readNumberInRange(
       instrument["pan"],
       `${path}.pan`,
