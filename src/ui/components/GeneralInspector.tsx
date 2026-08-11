@@ -143,6 +143,7 @@ export function GeneralInspector({
       onRename={onRenameClip}
     />
     <section className="voice-inspector-section">
+    <div className="voice-management-panel">
     <div className="general-inspector-heading">
       <div>
         <h1>Voices</h1>
@@ -415,6 +416,7 @@ export function GeneralInspector({
           Add a voice to start drawing notes.
         </p>
       ) : null}
+    </div>
     </div>
 
     <InstrumentInspector

@@ -147,101 +147,100 @@ export function InstrumentInspector({
         ) : null}
       </section>
 
-      <section className="instrument-module">
-        <div className="instrument-module-heading">
-          <strong>Filter</strong>
-          <span>Low-pass</span>
-        </div>
-        <div className="parameter-grid is-filter-grid">
-          <ParameterSlider
-            key={`${voice.id}-filter-cutoff`}
-            label="Cutoff"
-            value={instrument.filterCutoffHz}
-            minimum={VOICE_CONSTANTS.minimumFilterCutoffHz}
-            maximum={VOICE_CONSTANTS.maximumFilterCutoffHz}
-            step={EDITOR_CONSTANTS.filterCutoffStepHz}
-            scale="logarithmic"
-            formatValue={formatFrequency}
-            onPreview={(value) => {
-              onInstrumentParameterPreview(
-                voice.id,
-                "filterCutoffHz",
-                value,
-              );
-            }}
-            onCommit={(value) => {
-              onInstrumentParameterCommit(
-                voice.id,
-                "filterCutoffHz",
-                value,
-              );
-            }}
-          />
-          <ParameterSlider
-            key={`${voice.id}-filter-resonance`}
-            label="Reso"
-            value={instrument.filterResonance}
-            minimum={VOICE_CONSTANTS.minimumFilterResonance}
-            maximum={VOICE_CONSTANTS.maximumFilterResonance}
-            step={EDITOR_CONSTANTS.filterResonanceStep}
-            scale="linear"
-            formatValue={formatDecimal}
-            onPreview={(value) => {
-              onInstrumentParameterPreview(
-                voice.id,
-                "filterResonance",
-                value,
-              );
-            }}
-            onCommit={(value) => {
-              onInstrumentParameterCommit(
-                voice.id,
-                "filterResonance",
-                value,
-              );
-            }}
-          />
-          <ParameterSlider
-            key={`${voice.id}-filter-envelope-amount`}
-            label="Env"
-            value={instrument.filterEnvelopeAmountOctaves}
-            minimum={VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
-            maximum={VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
-            step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
-            scale="linear"
-            formatValue={formatOctaves}
-            onPreview={(value) => {
-              onInstrumentParameterPreview(
-                voice.id,
-                "filterEnvelopeAmountOctaves",
-                value,
-              );
-            }}
-            onCommit={(value) => {
-              onInstrumentParameterCommit(
-                voice.id,
-                "filterEnvelopeAmountOctaves",
-                value,
-              );
-            }}
-          />
-        </div>
-      </section>
-
-      <div className="instrument-envelope-grid">
-        <EnvelopeModule
-          voiceId={voice.id}
-          title="Amplitude Envelope"
-          envelopeKind="amplitude"
-          envelope={instrument.envelope}
-          onPreview={onEnvelopePreview}
-          onCommit={onEnvelopeCommit}
-        />
+      <div className="instrument-parameter-modules">
+        <section className="instrument-module filter-module">
+          <div className="instrument-module-heading">
+            <strong>Filter</strong>
+            <span>Low-pass</span>
+          </div>
+          <div className="parameter-grid is-filter-grid">
+            <ParameterSlider
+              key={`${voice.id}-filter-cutoff`}
+              label="Cutoff"
+              value={instrument.filterCutoffHz}
+              minimum={VOICE_CONSTANTS.minimumFilterCutoffHz}
+              maximum={VOICE_CONSTANTS.maximumFilterCutoffHz}
+              step={EDITOR_CONSTANTS.filterCutoffStepHz}
+              scale="logarithmic"
+              formatValue={formatFrequency}
+              onPreview={(value) => {
+                onInstrumentParameterPreview(
+                  voice.id,
+                  "filterCutoffHz",
+                  value,
+                );
+              }}
+              onCommit={(value) => {
+                onInstrumentParameterCommit(
+                  voice.id,
+                  "filterCutoffHz",
+                  value,
+                );
+              }}
+            />
+            <ParameterSlider
+              key={`${voice.id}-filter-resonance`}
+              label="Reso"
+              value={instrument.filterResonance}
+              minimum={VOICE_CONSTANTS.minimumFilterResonance}
+              maximum={VOICE_CONSTANTS.maximumFilterResonance}
+              step={EDITOR_CONSTANTS.filterResonanceStep}
+              scale="linear"
+              formatValue={formatDecimal}
+              onPreview={(value) => {
+                onInstrumentParameterPreview(
+                  voice.id,
+                  "filterResonance",
+                  value,
+                );
+              }}
+              onCommit={(value) => {
+                onInstrumentParameterCommit(
+                  voice.id,
+                  "filterResonance",
+                  value,
+                );
+              }}
+            />
+            <ParameterSlider
+              key={`${voice.id}-filter-envelope-amount`}
+              label="Env"
+              value={instrument.filterEnvelopeAmountOctaves}
+              minimum={VOICE_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
+              maximum={VOICE_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
+              step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
+              scale="linear"
+              formatValue={formatOctaves}
+              onPreview={(value) => {
+                onInstrumentParameterPreview(
+                  voice.id,
+                  "filterEnvelopeAmountOctaves",
+                  value,
+                );
+              }}
+              onCommit={(value) => {
+                onInstrumentParameterCommit(
+                  voice.id,
+                  "filterEnvelopeAmountOctaves",
+                  value,
+                );
+              }}
+            />
+          </div>
+        </section>
         <EnvelopeModule
           voiceId={voice.id}
           title="Filter Envelope"
           envelopeKind="filter"
           envelope={instrument.filterEnvelope}
+          onPreview={onEnvelopePreview}
+          onCommit={onEnvelopeCommit}
+        />
+        <EnvelopeModule
+          voiceId={voice.id}
+          title="Amplitude Envelope"
+          envelopeKind="amplitude"
+          envelope={instrument.envelope}
           onPreview={onEnvelopePreview}
           onCommit={onEnvelopeCommit}
         />
@@ -276,7 +275,7 @@ function EnvelopeModule({
       <div className="parameter-grid">
         <ParameterSlider
           key={`${voiceId}-${envelopeKind}-attack`}
-          label="Attack"
+          label="A"
           value={envelope.attackSeconds}
           minimum={0}
           maximum={EDITOR_CONSTANTS.envelopeTimeMaximumSeconds}
@@ -291,7 +290,7 @@ function EnvelopeModule({
         />
         <ParameterSlider
           key={`${voiceId}-${envelopeKind}-decay`}
-          label="Decay"
+          label="D"
           value={envelope.decaySeconds}
           minimum={0}
           maximum={EDITOR_CONSTANTS.envelopeDecayMaximumSeconds}
@@ -306,7 +305,7 @@ function EnvelopeModule({
         />
         <ParameterSlider
           key={`${voiceId}-${envelopeKind}-sustain`}
-          label="Sustain"
+          label="S"
           value={envelope.sustainLevel}
           minimum={0}
           maximum={1}
@@ -321,7 +320,7 @@ function EnvelopeModule({
         />
         <ParameterSlider
           key={`${voiceId}-${envelopeKind}-release`}
-          label="Release"
+          label="R"
           value={envelope.releaseSeconds}
           minimum={0}
           maximum={EDITOR_CONSTANTS.envelopeTimeMaximumSeconds}
