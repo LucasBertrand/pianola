@@ -102,7 +102,7 @@ export function GeneralInspector({
     <div className="instrument-management-panel">
     <div className="general-inspector-heading">
       <div>
-        <h1>Instruments</h1>
+        <h1>INSTRUMENTS</h1>
       </div>
       <div className="general-inspector-heading-actions">
         <button
@@ -114,7 +114,8 @@ export function GeneralInspector({
           onClick={() => onMoveSelectedInstrument(-1)}
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
+            <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
+            <path d="M10 13V7M7.5 9.5 10 7l2.5 2.5" />
           </svg>
         </button>
         <button
@@ -130,7 +131,8 @@ export function GeneralInspector({
           onClick={() => onMoveSelectedInstrument(1)}
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M10 5v10M5.5 10.5 10 15l4.5-4.5" />
+            <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
+            <path d="M10 7v6M7.5 10.5 10 13l2.5-2.5" />
           </svg>
         </button>
         <button
@@ -139,7 +141,10 @@ export function GeneralInspector({
           aria-label="Add instrument"
           onClick={onAddProjectInstrument}
         >
-          +
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 6.5v7M6.5 10h7" />
+          </svg>
         </button>
       </div>
     </div>
@@ -308,7 +313,10 @@ export function GeneralInspector({
                   onDeleteProjectInstrument(instrument.id);
                 }}
               >
-                ×
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4.5 6h11M8 6l.5-2h3L12 6" />
+                  <path d="m6 6 .7 10h6.6L14 6M8.5 9v4M11.5 9v4" />
+                </svg>
               </button>
             </div>
           </article>

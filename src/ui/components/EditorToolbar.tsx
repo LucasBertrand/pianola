@@ -85,6 +85,8 @@ export function EditorToolbar({
         <button
           className="general-inspector-toggle-button"
           type="button"
+          aria-label="Open instruments"
+          title="Instruments"
           aria-expanded={
             generalInspectorOpen && inspectorSection === "instruments"
           }
@@ -92,14 +94,17 @@ export function EditorToolbar({
           onClick={() => onToggleInspector("instruments")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 8.5h3l2-2.5v12l-2-2.5H5Z" />
-            <path d="M14 8.5c1.5 1 1.5 6 0 7M17 6c3 2.5 3 9.5 0 12" />
+            <path d="M6 4v16M12 4v16M18 4v16" />
+            <circle cx="6" cy="9" r="2" />
+            <circle cx="12" cy="15" r="2" />
+            <circle cx="18" cy="7" r="2" />
           </svg>
-          Instruments
         </button>
         <button
           className="general-inspector-toggle-button"
           type="button"
+          aria-label="Open clips"
+          title="Clips"
           aria-expanded={
             generalInspectorOpen && inspectorSection === "clips"
           }
@@ -107,11 +112,9 @@ export function EditorToolbar({
           onClick={() => onToggleInspector("clips")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="5" y="5" width="12" height="7" rx="1.5" />
-            <path d="M8 15h11v5H8a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2Z" />
-            <path d="M9 8.5h5M10 17.5h6" />
+            <rect x="4" y="5" width="13" height="6" rx="2" />
+            <rect x="7" y="13" width="13" height="6" rx="2" />
           </svg>
-          Clips
         </button>
       </div>
       <div
@@ -154,8 +157,8 @@ export function EditorToolbar({
           onClick={onInsertMeasure}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-            <path d="M3 5v14M21 5v14" />
+            <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+            <path d="M8 5v14M11 12h6M14 9v6" />
           </svg>
         </button>
         <button
@@ -169,8 +172,8 @@ export function EditorToolbar({
           onClick={onRemoveMeasure}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14" />
-            <path d="M7 5v14M17 5v14" />
+            <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+            <path d="M8 5v14M11 12h6" />
           </svg>
         </button>
         <button
@@ -196,9 +199,10 @@ export function EditorToolbar({
           onClick={onToggleSelectionEnabled}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3.5" y="6" width="13" height="12" rx="2" />
-            <path d="M7 10h6M7 14h4" />
-            <path d="m15 8 6 8M21 8l-6 8" />
+            <path d="M15 4v11.5M15 7.5 8 9v8" />
+            <ellipse cx="5.5" cy="17" rx="2.5" ry="2" />
+            <ellipse cx="12.5" cy="15.5" rx="2.5" ry="2" />
+            <path d="M4 4l16 16" />
           </svg>
         </button>
         <button
@@ -278,8 +282,8 @@ export function EditorToolbar({
           onClick={() => onSelectionModeChange("add")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="13" height="13" rx="2" />
-            <path d="M17 14v7M13.5 17.5h7" />
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <path d="M12 8v8M8 12h8" />
           </svg>
         </button>
         <button
@@ -297,8 +301,8 @@ export function EditorToolbar({
           onClick={() => onSelectionModeChange("subtract")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="13" height="13" rx="2" />
-            <path d="M13.5 17.5h7" />
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <path d="M8 12h8" />
           </svg>
         </button>
         <button
@@ -331,11 +335,9 @@ export function EditorToolbar({
           onClick={onSliceSelectionAtPlayhead}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2.5v5" />
-            <path d="m9.5 5.5 2.5 3 2.5-3" />
-            <rect x="2.5" y="10.5" width="8" height="6" rx="1.5" />
-            <rect x="13.5" y="10.5" width="8" height="6" rx="1.5" />
-            <path d="M12 10.5v11" strokeDasharray="2 2" />
+            <path d="m4 16 11-11 5 5L9 21H4Z" />
+            <path d="m12.5 7.5 4 4M4 16h5v5" />
+            <path d="M15 5 17.5 2.5 22 7l-2 3" />
           </svg>
         </button>
         <button

@@ -77,6 +77,8 @@ interface NeutralThemeColors {
   readonly textQuiet: string;
   /** Disabled controls and placeholders. */
   readonly textDisabled: string;
+  /** Subdued blue-gray used by inspector section headings. */
+  readonly inspectorHeading: string;
 }
 
 interface AccentThemeColors {
@@ -243,6 +245,7 @@ const DARK_APPLICATION_THEME = Object.freeze({
     textMuted: "#8a94a3",
     textQuiet: "#697484",
     textDisabled: "#596271",
+    inspectorHeading: "#344a69",
   }),
   accent: Object.freeze({
     primary: "#79a7ff",
@@ -412,6 +415,7 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
     textMuted: "#85755d",
     textQuiet: "#998a72",
     textDisabled: "#b1a58f",
+    inspectorHeading: "#66758a",
   }),
   accent: Object.freeze({
     primary: "#557d78",
@@ -598,6 +602,7 @@ export const APPLICATION_CSS_COLOR_VARIABLES = Object.freeze({
   "--color-text-muted": APPLICATION_COLORS.neutral.textMuted,
   "--color-text-quiet": APPLICATION_COLORS.neutral.textQuiet,
   "--color-text-disabled": APPLICATION_COLORS.neutral.textDisabled,
+  "--color-inspector-heading": APPLICATION_COLORS.neutral.inspectorHeading,
   "--color-accent-primary": APPLICATION_COLORS.accent.primary,
   "--color-accent-primary-bright": APPLICATION_COLORS.accent.primaryBright,
   "--color-accent-warm": APPLICATION_COLORS.accent.warm,

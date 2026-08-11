@@ -38,7 +38,7 @@ export function ClipInspector({
     <section className="clip-inspector-section">
       <div className="general-inspector-heading">
         <div>
-          <h1>Clips</h1>
+          <h1>CLIPS</h1>
         </div>
         <div className="general-inspector-heading-actions">
           <button
@@ -50,7 +50,8 @@ export function ClipInspector({
             onClick={() => onMoveActive(-1)}
           >
             <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
+              <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
+              <path d="M10 13V7M7.5 9.5 10 7l2.5 2.5" />
             </svg>
           </button>
           <button
@@ -65,7 +66,8 @@ export function ClipInspector({
             onClick={() => onMoveActive(1)}
           >
             <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 5v10M5.5 10.5 10 15l4.5-4.5" />
+              <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
+              <path d="M10 7v6M7.5 10.5 10 13l2.5-2.5" />
             </svg>
           </button>
           <button
@@ -74,7 +76,9 @@ export function ClipInspector({
             aria-label="Close inspector"
             onClick={onClose}
           >
-            ×
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M5 5l10 10M15 5 5 15" />
+            </svg>
           </button>
           <button
             className="add-button"
@@ -86,7 +90,10 @@ export function ClipInspector({
             }
             onClick={onAdd}
           >
-            +
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="7" />
+              <path d="M10 6.5v7M6.5 10h7" />
+            </svg>
           </button>
         </div>
       </div>
@@ -143,8 +150,9 @@ export function ClipInspector({
                 }}
               >
                 <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <rect x="6.5" y="6.5" width="9" height="9" rx="1.5" />
-                  <path d="M4 13.5H3.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1V4" />
+                  <rect x="7" y="7" width="9" height="9" rx="1.5" />
+                  <path d="M4 13V5.5A1.5 1.5 0 0 1 5.5 4H13" />
+                  <path d="M11.5 9.5v4M9.5 11.5h4" />
                 </svg>
               </button>
               <button
@@ -158,7 +166,10 @@ export function ClipInspector({
                   onDelete(clip.id);
                 }}
               >
-                ×
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4.5 6h11M8 6l.5-2h3L12 6" />
+                  <path d="m6 6 .7 10h6.6L14 6M8.5 9v4M11.5 9v4" />
+                </svg>
               </button>
             </article>
           );
