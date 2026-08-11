@@ -202,6 +202,7 @@ try {
       id: instrumentId,
       name: `Instrument ${instrumentIndex + 1}`,
       color: instrumentIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
+      presetId: getDefaultInstrumentPresetId(instrumentIndex),
       pan: 0,
       effects: [],
       generativeRules: [],
@@ -292,7 +293,6 @@ try {
         muted: false,
         locked: false,
         solo: false,
-        presetId: getDefaultInstrumentPresetId(instrumentIndex),
         ...instrumentStateChangesById[instrumentId],
       };
     }
@@ -1337,7 +1337,7 @@ try {
     assert.notEqual(
       instrumentA.instrument,
       state.instrumentPresetsById[
-        getActiveTestClip(state).instrumentStatesById["voice-a"].presetId
+        state.projectInstrumentsById["voice-a"].presetId
       ].config,
     );
     assert.equal(instrumentA.instrument.pulseWidth, 0.5);
@@ -1712,40 +1712,38 @@ try {
     );
   });
 
-  test("updates clip preset selection immutably", () => {
+  test("keeps preset selection on the global project instrument", () => {
     const state = createProject();
     const projectInstrument = state.projectInstrumentsById["voice-a"];
-    const nextPresetId = state.instrumentPresetOrder[1];
-    const updatedState = dispatch(state, {
-      type: "UpdateClipInstrumentState",
-      instrumentId: projectInstrument.id,
-      changes: {
-        presetId: nextPresetId,
-      },
-    });
 
     assert.equal(
-      getActiveTestClip(updatedState).instrumentStatesById["voice-a"]
-        .presetId,
-      nextPresetId,
+      projectInstrument.presetId,
+      getDefaultInstrumentPresetId(0),
     );
     assert.equal(
-      getActiveTestClip(state).instrumentStatesById["voice-a"]
-        .presetId,
-      getDefaultInstrumentPresetId(0),
+      "presetId" in getActiveTestClip(state).instrumentStatesById["voice-a"],
+      false,
     );
     assert.throws(
       () => dispatch(state, {
-        type: "UpdateClipInstrumentState",
-        instrumentId: projectInstrument.id,
-        changes: {
+        type: "AddProjectInstrument",
+        instrument: {
+          ...createProjectInstrument("missing-preset-instrument", 1),
           presetId: "missing-preset",
+        },
+        clipInstrumentStatesById: {
+          "clip-test": {
+            gain: 0.8,
+            muted: false,
+            locked: false,
+            solo: false,
+          },
         },
       }),
       (error) => (
         error instanceof CommandRejectedError
         && error.code === "INVALID_COMMAND"
-        && error.commandType === "UpdateClipInstrumentState"
+        && error.commandType === "AddProjectInstrument"
       ),
     );
   });
@@ -1790,8 +1788,7 @@ try {
     );
     assert.equal(
       loaded.projectState.instrumentPresetsById[
-        getActiveTestClip(loaded.projectState)
-          .instrumentStatesById["voice-a"].presetId
+        loaded.projectState.projectInstrumentsById["voice-a"].presetId
       ].config.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
@@ -1832,7 +1829,6 @@ try {
             muted: true,
             locked: true,
             solo: true,
-            presetId: getDefaultInstrumentPresetId(2),
           },
         },
         transportSettings: {
@@ -1890,7 +1886,6 @@ try {
         muted: true,
         locked: true,
         solo: true,
-        presetId: getDefaultInstrumentPresetId(2),
       },
     );
     assert.deepEqual(loaded.editorState, editorState);
@@ -3204,7 +3199,6 @@ try {
           muted: false,
           locked: false,
           solo: false,
-          presetId: getDefaultInstrumentPresetId(0),
         },
       },
       transportSettings: {
@@ -3266,7 +3260,6 @@ try {
             muted: false,
             locked: false,
             solo: false,
-            presetId: getDefaultInstrumentPresetId(1),
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -3285,7 +3278,6 @@ try {
           muted: true,
           locked: true,
           solo: true,
-          presetId: getDefaultInstrumentPresetId(2),
         },
       }],
     });
@@ -3298,7 +3290,6 @@ try {
         muted: false,
         locked: false,
         solo: false,
-        presetId: getDefaultInstrumentPresetId(0),
       },
     );
     assert.deepEqual(
@@ -3309,13 +3300,12 @@ try {
         muted: true,
         locked: true,
         solo: true,
-        presetId: getDefaultInstrumentPresetId(2),
       },
     );
     assert.equal(
       compilePlaybackSnapshot(store.getState())
         .instruments[0].instrument.oscillatorWaveform,
-      "triangle",
+      "sawtooth",
     );
 
     store.undo();
@@ -3327,7 +3317,6 @@ try {
         muted: false,
         locked: false,
         solo: false,
-        presetId: getDefaultInstrumentPresetId(1),
       },
     );
 
@@ -3340,7 +3329,6 @@ try {
         muted: true,
         locked: true,
         solo: true,
-        presetId: getDefaultInstrumentPresetId(2),
       },
     );
   });
@@ -3390,7 +3378,6 @@ try {
             muted: false,
             locked: false,
             solo: false,
-            presetId: getDefaultInstrumentPresetId(0),
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -3405,14 +3392,12 @@ try {
           muted: false,
           locked: false,
           solo: false,
-          presetId: getDefaultInstrumentPresetId(1),
         },
         "clip-second": {
           gain: 0.82,
           muted: false,
           locked: false,
           solo: false,
-          presetId: getDefaultInstrumentPresetId(1),
         },
       },
     });
@@ -3427,8 +3412,7 @@ try {
         0.82,
       );
       assert.equal(
-        withInstrument.clipsById[clipId]
-          .instrumentStatesById["voice-b"].presetId,
+        withInstrument.projectInstrumentsById["voice-b"].presetId,
         getDefaultInstrumentPresetId(1),
       );
     }
@@ -3474,7 +3458,6 @@ try {
             muted: false,
             locked: false,
             solo: false,
-            presetId: getDefaultInstrumentPresetId(0),
           },
           },
           transportSettings: createDefaultTransportState(),
@@ -3535,7 +3518,6 @@ try {
           muted: false,
           locked: false,
           solo: false,
-          presetId: getDefaultInstrumentPresetId(0),
         },
       },
       transportSettings: createDefaultTransportState(),

@@ -38,10 +38,6 @@ try {
   const {
     createDefaultProjectInstrument,
   } = await vite.ssrLoadModule("/src/domain/project-instrument-factory.ts");
-  const {
-    getDefaultInstrumentPresetId,
-  } = await vite.ssrLoadModule("/src/domain/instrument-presets.ts");
-
   const tests = [];
 
   function test(name, callback) {
@@ -114,7 +110,6 @@ try {
       instrumentCandidates: [
         {
           projectInstrument,
-          presetId: getDefaultInstrumentPresetId(0),
           notes,
         },
       ],

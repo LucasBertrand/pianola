@@ -124,11 +124,11 @@ export function compilePlaybackSnapshot(
     }
 
     const preset =
-      projectState.instrumentPresetsById[instrumentState.presetId];
+      projectState.instrumentPresetsById[projectInstrument.presetId];
 
     if (preset === undefined) {
       throw new PlaybackSnapshotCompilationError(
-        `Instrument "${instrumentId}" references unavailable preset "${instrumentState.presetId}".`,
+        `Instrument "${instrumentId}" references unavailable preset "${projectInstrument.presetId}".`,
       );
     }
 

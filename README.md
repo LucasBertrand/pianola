@@ -137,17 +137,17 @@ fluidité ; une seule transaction est envoyée lorsque le geste est validé.
 ### Domaine et historique
 
 `src/domain/model.ts` sépare les données globales de `ProjectState` des données
-locales de chaque `Clip`. Les identités d’instruments, la bibliothèque de
-presets et le master bus sont globaux. Chaque clip, identifié par un ID stable,
-possède ses pistes de notes, sa longueur, son transport et, pour chaque
-instrument, ses réglages volume/mute/solo/lock ainsi qu’une référence
-`presetId`. Les paramètres de synthèse ne sont donc jamais dupliqués dans les
-clips. Les propriétés persistantes sont en lecture seule.
+locales de chaque `Clip`. Les identités d’instruments, leur `presetId`, la
+bibliothèque de presets et le master bus sont globaux. Chaque clip, identifié
+par un ID stable, possède ses pistes de notes, sa longueur, son transport et,
+pour chaque instrument, uniquement ses réglages volume/mute/solo/lock. Les
+paramètres et le choix de synthèse ne sont donc jamais dupliqués dans les clips.
+Les propriétés persistantes sont en lecture seule.
 
 `src/domain/instrument-presets.ts` constitue le catalogue intégré. Les presets
-sont nommés, identifiés par un ID stable et profondément immuables. Le clip ne
-choisit qu’un ID ; `playback-snapshot.ts` résout cet ID à la frontière du moteur
-audio.
+sont nommés, identifiés par un ID stable et profondément immuables. Chaque
+instrument global choisit un preset lors de sa création ;
+`playback-snapshot.ts` résout cet ID à la frontière du moteur audio.
 `src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
 Le reducer applique les commandes musicales au seul clip actif, tandis que la
 création ou la suppression d’un instrument met à jour les pistes de tous les clips.
@@ -205,10 +205,10 @@ discriminé et immuable. Chaque renderer expose sa propre politique de
 polyphonie : la limite du synthétiseur soustractif ne s’applique donc pas aux
 futurs instruments comme le drumkit.
 
-Le compilateur audio reçoit un `presetId` local au clip, récupère sa définition
-dans la bibliothèque globale, la valide, puis produit le snapshot discriminé
-attendu par le renderer. Le scheduler n’a aucune connaissance du stockage des
-presets et ne doit pas en acquérir.
+Le compilateur audio reçoit le `presetId` de l’instrument global, récupère sa
+définition dans la bibliothèque globale, la valide, puis produit le snapshot
+discriminé attendu par le renderer. Le scheduler n’a aucune connaissance du
+stockage des presets et ne doit pas en acquérir.
 
 Les événements futurs sont recalculés après une édition sans couper les notes
 déjà audibles. La vélocité est conservée dans les fichiers, mais le niveau de
@@ -466,13 +466,12 @@ La section **Clips** reprend les interactions de la liste des instruments :
 - la croix supprime le clip après confirmation ; le dernier clip ne peut pas
   être supprimé.
 
-L’identité des instruments, la bibliothèque de presets, le master bus et le
-presse-papier sont partagés par tout le projet. Le choix du preset par
-`presetId`, les réglages volume/mute/solo/lock de chaque instrument, les notes,
-la longueur, le tempo, la métrique, la grille, la tonalité, la boucle, la tête
-de lecture, le scroll et le zoom sont propres à chaque clip. Changer de clip
-vide la sélection de notes, mais conserve le presse-papier afin de permettre
-un copier-coller entre clips.
+L’identité des instruments, leur choix de preset, la bibliothèque de presets,
+le master bus et le presse-papier sont partagés par tout le projet. Les réglages
+volume/mute/solo/lock de chaque instrument, les notes, la longueur, le tempo,
+la métrique, la grille, la tonalité, la boucle, la tête de lecture, le scroll et
+le zoom sont propres à chaque clip. Changer de clip vide la sélection de notes,
+mais conserve le presse-papier afin de permettre un copier-coller entre clips.
 
 ### Notes
 
@@ -510,8 +509,9 @@ se superposer dans le temps.
 
 ### Voix et instrument
 
-L’inspecteur permet d’ajouter, supprimer et réordonner les instruments. Les notes
-créées utilisent l’instrument sélectionné.
+L’inspecteur permet d’ajouter, supprimer et réordonner les instruments. Le
+bouton d’ajout ouvre une modale dans laquelle le preset partagé est choisi une
+fois. Les notes créées utilisent l’instrument sélectionné.
 
 - **Mute** coupe l’instrument et atténue ses notes visuellement.
 - **Solo** ne lit que les instruments solo.
@@ -519,11 +519,12 @@ créées utilisent l’instrument sélectionné.
 - La cible sélectionne les notes de l’instrument sans supprimer la sélection des
   autres instruments.
 
-Chaque instrument possède une identité et une couleur globales. Dans chaque
-clip, il possède son propre volume et choisit un preset dans le menu situé à
-côté du slider. Les paramètres complets du preset — polyphonie, forme d’onde,
-largeur d’impulsion, filtre et enveloppes ADSR — résident dans la bibliothèque
-globale et ne sont plus éditables depuis l’inspecteur dans cette version.
+Chaque instrument possède une identité, une couleur et un preset globaux. Son
+volume reste propre à chaque clip. Le nom du preset est affiché à côté du
+slider, sans contrôle de changement. Les paramètres complets du preset —
+polyphonie, forme d’onde, largeur d’impulsion, filtre et enveloppes ADSR —
+résident dans la bibliothèque globale et ne sont plus éditables depuis
+l’inspecteur dans cette version.
 
 ### Transport et boucle
 
@@ -540,9 +541,9 @@ la nouvelle durée du clip.
 ### Format natif `.pianola`
 
 Le format natif conserve la liste ordonnée des clips, le clip actif, l’identité
-des instruments, la bibliothèque ordonnée de presets, les notes, le master bus
-et les métadonnées de document. Pour chaque clip, il enregistre aussi le
-`presetId` et volume/mute/solo/lock par instrument, le transport, la boucle, la
+et le `presetId` des instruments, la bibliothèque ordonnée de presets, les
+notes, le master bus et les métadonnées de document. Pour chaque clip, il
+enregistre volume/mute/solo/lock par instrument, le transport, la boucle, la
 tête de lecture, la grille, le snap tonal, le guide visuel, le zoom et la
 position de la vue.
 Les préférences réellement globales — instrument actif, preview clavier, mode de
@@ -728,8 +729,9 @@ Préserver les responsabilités :
 - `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
 
 La polyphonie est une propriété du `SubtractiveSynthConfig` contenu dans un
-preset global. `ClipInstrumentState` ne conserve que son `presetId`. Le
-compilateur résout cette référence et copie la configuration dans
+preset global. `ProjectInstrument` conserve son `presetId` tandis que
+`ClipInstrumentState` reste limité au mixage et au verrouillage. Le compilateur
+résout cette référence et copie la configuration dans
 `SubtractivePlaybackInstrumentSnapshot`, puis le renderer soustractif
 l’interprète. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.

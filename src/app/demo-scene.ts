@@ -7,6 +7,7 @@ import type {
   Track,
   ProjectInstrument,
   InstrumentId,
+  PresetId,
 } from "../domain/model";
 import {
   APPLICATION_CONSTANTS,
@@ -188,11 +189,12 @@ function createProjectState(
       continue;
     }
 
-    const instrument = createDomainInstrument(demoInstrument);
-    projectInstrumentsById[instrument.id] = instrument;
-    instrumentStatesById[instrument.id] = createDefaultClipInstrumentState(
+    const instrument = createDomainInstrument(
+      demoInstrument,
       getDefaultInstrumentPresetId(instrumentIndex),
     );
+    projectInstrumentsById[instrument.id] = instrument;
+    instrumentStatesById[instrument.id] = createDefaultClipInstrumentState();
     mutableNotesByInstrumentId[instrument.id] = {};
     instrumentOrder.push(instrument.id);
   }
@@ -257,10 +259,12 @@ function createProjectState(
 
 function createDomainInstrument(
   demoInstrument: DemoInstrument,
+  presetId: PresetId,
 ): ProjectInstrument {
   return createDefaultProjectInstrument({
     id: demoInstrument.id,
     name: demoInstrument.name,
     color: demoInstrument.color,
+    presetId,
   });
 }

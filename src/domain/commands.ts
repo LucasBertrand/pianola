@@ -392,9 +392,7 @@ type ActiveClipCommand = Exclude<
 
 type ActiveClipProjectState = Pick<
   ProjectState,
-  | "projectInstrumentsById"
-  | "instrumentOrder"
-  | "instrumentPresetsById"
+  "projectInstrumentsById" | "instrumentOrder"
 > & Pick<
   Clip,
   | "measureCount"
@@ -411,7 +409,6 @@ function applyActiveClipCommand(
   const context: ActiveClipProjectState = {
     projectInstrumentsById: state.projectInstrumentsById,
     instrumentOrder: state.instrumentOrder,
-    instrumentPresetsById: state.instrumentPresetsById,
     measureCount: clip.measureCount,
     tracksByInstrumentId: clip.tracksByInstrumentId,
     instrumentStatesById: clip.instrumentStatesById,
@@ -732,7 +729,6 @@ function assertValidClip(
     }
 
     assertValidClipInstrumentState(
-      state.instrumentPresetsById,
       instrumentState,
       commandType,
       `Clip "${clip.id}" instrument "${instrumentId}"`,
@@ -803,6 +799,17 @@ function applyAddProjectInstrument(
   command: AddProjectInstrumentCommand,
 ): ProjectState {
   assertValidProjectInstrument(command.instrument);
+  const preset = state.instrumentPresetsById[command.instrument.presetId];
+
+  if (preset === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Project instrument references unavailable preset "${command.instrument.presetId}".`,
+      command.type,
+    );
+  }
+
+  assertValidInstrumentPreset(preset);
 
   if (state.instrumentOrder.length >= MAXIMUM_PROJECT_INSTRUMENT_COUNT) {
     reject(
@@ -867,7 +874,6 @@ function applyAddProjectInstrument(
     }
 
     assertValidClipInstrumentState(
-      state.instrumentPresetsById,
       clipInstrumentState,
       command.type,
       `Clip "${clipId}" instrument "${command.instrument.id}"`,
@@ -904,7 +910,14 @@ function applyUpdateProjectInstrument(
   const instrument = requireProjectInstrument(state, command.instrumentId, command.type);
   const updatedInstrument: ProjectInstrument = {
     ...instrument,
-    ...command.changes,
+    name: command.changes.name ?? instrument.name,
+    color: command.changes.color ?? instrument.color,
+    pan: command.changes.pan ?? instrument.pan,
+    effects: command.changes.effects ?? instrument.effects,
+    generativeRules:
+      command.changes.generativeRules ?? instrument.generativeRules,
+    interpretation:
+      command.changes.interpretation ?? instrument.interpretation,
   };
 
   assertValidProjectInstrument(updatedInstrument);
@@ -1124,7 +1137,6 @@ function applyUpdateClipInstrumentState(
   };
 
   assertValidClipInstrumentState(
-    state.instrumentPresetsById,
     updated,
     command.type,
     `Active clip instrument "${command.instrumentId}"`,
@@ -1135,7 +1147,6 @@ function applyUpdateClipInstrumentState(
     && updated.muted === current.muted
     && updated.locked === current.locked
     && updated.solo === current.solo
-    && updated.presetId === current.presetId
   ) {
     return state;
   }
@@ -1150,7 +1161,6 @@ function applyUpdateClipInstrumentState(
 }
 
 function assertValidClipInstrumentState(
-  presetsById: ProjectState["instrumentPresetsById"],
   state: ClipInstrumentState,
   commandType: PianoRollCommand["type"],
   context: string,
@@ -1170,17 +1180,6 @@ function assertValidClipInstrumentState(
     );
   }
 
-  const preset = presetsById[state.presetId];
-
-  if (preset === undefined) {
-    reject(
-      "INVALID_COMMAND",
-      `${context} references unavailable preset "${state.presetId}".`,
-      commandType,
-    );
-  }
-
-  assertValidInstrumentPreset(preset);
 }
 
 function applyInsertMeasure(

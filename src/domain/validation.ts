@@ -225,6 +225,12 @@ export function validateProjectInstrument(instrument: ProjectInstrument): Valida
   const issues: ValidationIssue[] = [];
 
   validateBoundedIdentifier(instrument.id, "id", "ProjectInstrument ID", issues);
+  validateBoundedIdentifier(
+    instrument.presetId,
+    "presetId",
+    "Instrument preset ID",
+    issues,
+  );
 
   if (
     instrument.name.trim().length === 0

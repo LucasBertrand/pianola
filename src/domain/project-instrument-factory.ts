@@ -16,6 +16,7 @@ export interface CreateDefaultProjectInstrumentOptions {
   readonly id: InstrumentId;
   readonly name: string;
   readonly color: string;
+  readonly presetId?: PresetId;
 }
 
 /** Creates a global instrument identity using the shared product defaults. */
@@ -26,6 +27,7 @@ export function createDefaultProjectInstrument(
     id: options.id,
     name: options.name,
     color: options.color,
+    presetId: options.presetId ?? DEFAULT_INSTRUMENT_PRESET_ID,
     pan: INSTRUMENT_CONSTANTS.pan,
     effects: [],
     generativeRules: [],
@@ -41,15 +43,12 @@ export function createDefaultProjectInstrument(
   };
 }
 
-/** Creates default mixer and preset-selection state for one clip instrument. */
-export function createDefaultClipInstrumentState(
-  presetId: PresetId = DEFAULT_INSTRUMENT_PRESET_ID,
-): ClipInstrumentState {
+/** Creates default mixer and editing state for one clip instrument. */
+export function createDefaultClipInstrumentState(): ClipInstrumentState {
   return {
     gain: PROJECT_CONSTANTS.defaultClipInstrumentGain,
     muted: PROJECT_CONSTANTS.defaultClipInstrumentMuted,
     locked: PROJECT_CONSTANTS.defaultClipInstrumentLocked,
     solo: PROJECT_CONSTANTS.defaultClipInstrumentSolo,
-    presetId,
   };
 }

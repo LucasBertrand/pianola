@@ -26,9 +26,6 @@ import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
 } from "../../domain/project-instrument-factory";
-import {
-  selectInstrumentPresetId,
-} from "../../domain/instrument-presets";
 import type {
   ShowApplicationConfirmation,
 } from "./dialog-types";
@@ -44,7 +41,7 @@ export interface ProjectInstrumentWorkflowOptions {
 
 export interface ProjectInstrumentWorkflow {
   readonly select: (instrumentId: InstrumentId) => void;
-  readonly add: () => void;
+  readonly add: (presetId: PresetId) => void;
   readonly moveSelected: (direction: -1 | 1) => void;
   readonly remove: (instrumentId: InstrumentId) => void;
   readonly update: (
@@ -107,19 +104,21 @@ export function useProjectInstrumentWorkflow({
     );
   }, [commands]);
 
-  const add = useCallback((): void => {
+  const add = useCallback((presetId: PresetId): void => {
     const state = commands.getState();
+
+    if (state.instrumentPresetsById[presetId] === undefined) {
+      return;
+    }
+
     instrumentSequenceRef.current += 1;
     const instrument = createUserInstrument(
       state.instrumentOrder.length,
       instrumentSequenceRef.current,
+      presetId,
     );
     const clipInstrumentStatesById = createInitialClipInstrumentStates(
       state.clipOrder,
-      selectInstrumentPresetId(
-        state.instrumentPresetOrder,
-        state.instrumentOrder.length,
-      ),
     );
 
     commands.dispatch(
@@ -274,6 +273,7 @@ export function useProjectInstrumentWorkflow({
 function createUserInstrument(
   instrumentIndex: number,
   sequence: number,
+  presetId: PresetId,
 ): ProjectInstrument {
   const color =
     RENDERING_CONSTANTS.userInstrumentColors[
@@ -285,17 +285,17 @@ function createUserInstrument(
     id: `instrument-${Date.now()}-${sequence}`,
     name: `Instrument ${instrumentIndex + 1}`,
     color,
+    presetId,
   });
 }
 
 function createInitialClipInstrumentStates(
   clipIds: readonly ClipId[],
-  presetId: PresetId,
 ): Record<ClipId, ClipInstrumentState> {
   const states: Record<ClipId, ClipInstrumentState> = {};
 
   for (const clipId of clipIds) {
-    states[clipId] = createDefaultClipInstrumentState(presetId);
+    states[clipId] = createDefaultClipInstrumentState();
   }
 
   return states;

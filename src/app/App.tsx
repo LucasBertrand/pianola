@@ -19,6 +19,7 @@ import {
 } from "../domain/commands";
 import type {
   ClipId,
+  PresetId,
   ProjectState,
   InstrumentId,
 } from "../domain/model";
@@ -65,6 +66,9 @@ import {
 import {
   GeneralInspector,
 } from "../ui/components/GeneralInspector";
+import {
+  InstrumentPresetDialog,
+} from "../ui/components/InstrumentPresetDialog";
 import {
   EditorHeader,
 } from "../ui/components/EditorHeader";
@@ -114,6 +118,9 @@ import {
 import type {
   ApplicationConfirmationOptions,
 } from "./workflows/dialog-types";
+import {
+  selectInstrumentPresetId,
+} from "../domain/instrument-presets";
 
 export function App(): React.JSX.Element {
   const sceneRef = useRef<EditorRuntime | null>(null);
@@ -164,6 +171,8 @@ export function App(): React.JSX.Element {
     );
   const [applicationDialog, setApplicationDialog] =
     useState<ApplicationDialogState | null>(null);
+  const [pendingInstrumentPresetId, setPendingInstrumentPresetId] =
+    useState<PresetId | null>(null);
   const selectedInstrument =
     selectedInstrumentId === null
       ? undefined
@@ -434,7 +443,7 @@ export function App(): React.JSX.Element {
   );
   const {
     select: handleInstrumentSelect,
-    add: handleAddProjectInstrument,
+    add: addProjectInstrument,
     moveSelected: handleMoveSelectedInstrument,
     remove: handleDeleteProjectInstrument,
     update: handleUpdateProjectInstrument,
@@ -454,6 +463,24 @@ export function App(): React.JSX.Element {
     },
     confirm: showApplicationConfirmation,
   });
+  const handleOpenAddInstrumentDialog = useCallback((): void => {
+    const state = scene.projectStore.getState();
+    const presetId = selectInstrumentPresetId(
+      state.instrumentPresetOrder,
+      state.instrumentOrder.length,
+    );
+
+    setApplicationDialog(null);
+    setPendingInstrumentPresetId(presetId);
+  }, [scene]);
+  const handleConfirmAddInstrument = useCallback((): void => {
+    if (pendingInstrumentPresetId === null) {
+      return;
+    }
+
+    addProjectInstrument(pendingInstrumentPresetId);
+    setPendingInstrumentPresetId(null);
+  }, [addProjectInstrument, pendingInstrumentPresetId]);
   const getPianoRollEventController = useCallback(
     (): PianoRollEventController | null =>
       pianoRollEventControllerRef.current,
@@ -802,7 +829,7 @@ export function App(): React.JSX.Element {
           onDeleteClip={handleDeleteClip}
           onRenameClip={handleRenameClip}
           onMoveSelectedInstrument={handleMoveSelectedInstrument}
-          onAddProjectInstrument={handleAddProjectInstrument}
+          onAddProjectInstrument={handleOpenAddInstrumentDialog}
           onInstrumentSelect={handleInstrumentSelect}
           onUpdateProjectInstrument={handleUpdateProjectInstrument}
           onUpdateClipInstrumentState={handleUpdateClipInstrumentState}
@@ -818,6 +845,16 @@ export function App(): React.JSX.Element {
         onAlternate={handleApplicationDialogAlternate}
         onCancel={handleApplicationDialogCancel}
       />
+      {pendingInstrumentPresetId === null ? null : (
+        <InstrumentPresetDialog
+          presetsById={projectState.instrumentPresetsById}
+          presetOrder={projectState.instrumentPresetOrder}
+          selectedPresetId={pendingInstrumentPresetId}
+          onSelectionChange={setPendingInstrumentPresetId}
+          onConfirm={handleConfirmAddInstrument}
+          onCancel={() => setPendingInstrumentPresetId(null)}
+        />
+      )}
     </main>
   );
 }

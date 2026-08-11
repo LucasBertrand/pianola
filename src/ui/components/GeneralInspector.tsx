@@ -231,32 +231,13 @@ export function GeneralInspector({
                   );
                 }}
               />
-              <select
-                className="instrument-preset-select"
-                value={instrumentState.presetId}
-                aria-label={`Preset for ${instrument.name}`}
-                title={`Preset for ${instrument.name}`}
-                onChange={(event) => {
-                  onUpdateClipInstrumentState(
-                    instrument.id,
-                    {
-                      presetId: event.currentTarget.value,
-                    },
-                    "Change instrument preset",
-                  );
-                }}
+              <span
+                className="instrument-preset-name"
+                title="Shared instrument preset"
               >
-                {projectState.instrumentPresetOrder.map((presetId) => {
-                  const preset =
-                    projectState.instrumentPresetsById[presetId];
-
-                  return preset === undefined ? null : (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.name}
-                    </option>
-                  );
-                })}
-              </select>
+                {projectState.instrumentPresetsById[instrument.presetId]
+                  ?.name ?? "Unavailable preset"}
+              </span>
             </div>
             <div className="instrument-actions">
               <button

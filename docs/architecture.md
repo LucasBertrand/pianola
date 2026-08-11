@@ -44,12 +44,12 @@ commandes, reducer, validation, collisions et historique. Une modification de
 `ProjectState` doit normalement passer par une commande du domaine.
 
 `ProjectState` possède les entités globales (`projectInstrumentsById`, ordre des
-instruments, bibliothèque ordonnée de presets, master bus) et la collection
-ordonnée de clips. `Clip` ne référence pas le projet : il porte son ID, son nom,
-ses pistes, sa longueur, son transport, les réglages volume/mute/solo/lock et un
-`presetId` indexés par `InstrumentId`. La définition complète du preset reste
-globale et n’est jamais dupliquée dans un clip. `instrument-presets.ts` fournit
-le catalogue intégré immuable.
+instruments avec leur `presetId`, bibliothèque ordonnée de presets, master bus)
+et la collection ordonnée de clips. `Clip` ne référence pas le projet : il
+porte son ID, son nom, ses pistes, sa longueur, son transport et les réglages
+volume/mute/solo/lock indexés par `InstrumentId`. Le choix et la définition
+complète du preset restent globaux et ne sont jamais dupliqués dans un clip.
+`instrument-presets.ts` fournit le catalogue intégré immuable.
 Cette direction unique évite une dépendance circulaire. Les commandes de notes,
 de transport et d’état local des instruments ciblent implicitement `activeClipId` ;
 les commandes globales d’instruments propagent l’ajout ou la suppression de piste et
@@ -110,7 +110,8 @@ actuelle, `SubtractivePlaybackInstrumentSnapshot`, contient uniquement les donn�
 nécessaires au renderer soustractif. Les propriétés communes de mixage,
 d'événements compactés restent dans `PlaybackInstrumentSnapshotBase`. La
 polyphonie du synthétiseur appartient à la configuration du preset global ; le
-`ClipInstrumentState` actif ne conserve que l’ID du preset sélectionné.
+`ProjectInstrument` conserve l’ID du preset sélectionné et le
+`ClipInstrumentState` actif reste un état de mixage/édition.
 `playback-snapshot.ts` résout et valide cette référence avant de produire le
 snapshot audio. Une future variante doit étendre cette base sans ajouter de
 champs optionnels à la variante soustractive.
@@ -226,9 +227,9 @@ antérieure du projet, y compris après résolution d'une collision.
 - `ProjectState` est la source de vérité persistante.
 - `Clip` est la frontière persistante des données musicales et temporelles
   locales. Il ne doit jamais contenir un `ProjectInstrument` complet, seulement des
-  pistes, des réglages volume/mute/solo/lock et un `presetId` indexés par
-  `InstrumentId`. Les définitions immuables des presets restent dans
-  `ProjectState.instrumentPresetsById`.
+  pistes et des réglages volume/mute/solo/lock indexés par `InstrumentId`.
+  `ProjectInstrument.presetId` choisit le son partagé ; les définitions
+  immuables restent dans `ProjectState.instrumentPresetsById`.
 - `EditorRuntime` conserve un petit état d’édition par `ClipId` pour la tête de
   lecture, le viewport, la grille et le snap tonal. Le fichier natif persiste
   ces valeurs dans `editor.clipStatesById`.

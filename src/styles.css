@@ -1844,16 +1844,81 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 6px;
 }
 
+.instrument-preset-dialog-control {
+  display: grid;
+  margin-bottom: 14px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.instrument-preset-dialog-control select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--color-surface-inset);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 12px;
+  touch-action: manipulation;
+}
+
+.instrument-preset-dialog-control select:focus-visible {
+  border-color: var(--color-border-primary);
+}
+
+.instrument-preset-dialog-summary {
+  display: grid;
+  margin: 0 0 20px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-deep);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.instrument-preset-dialog-summary div {
+  min-width: 0;
+}
+
+.instrument-preset-dialog-summary dt,
+.instrument-preset-dialog-summary dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-preset-dialog-summary dt {
+  color: var(--color-text-muted);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.instrument-preset-dialog-summary dd {
+  margin-top: 4px;
+  color: var(--color-text-control);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
 .instrument-sound-controls .instrument-gain-control,
 .instrument-sound-controls .instrument-gain-control input {
   width: 100%;
 }
 
-.instrument-preset-select {
+.instrument-preset-name {
+  display: block;
   width: min(100%, 96px);
   min-width: 0;
   height: 28px;
-  padding: 0 18px 0 7px;
+  padding: 8px 7px 0;
+  overflow: hidden;
   border: 1px solid color-mix(
     in srgb,
     var(--instrument-color) 35%,
@@ -1864,11 +1929,9 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--color-surface-inset);
   color: var(--color-text-control);
   font-size: 9px;
-  touch-action: manipulation;
-}
-
-.instrument-preset-select:focus-visible {
-  border-color: var(--instrument-color);
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .master-gain-input {

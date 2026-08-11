@@ -620,9 +620,19 @@ function parseProjectSnapshot(
     project["instrumentOrder"],
     `${path}.instrumentOrder`,
   );
+  const instrumentPresetOrder = parsePresetOrder(
+    project["instrumentPresetOrder"],
+    `${path}.instrumentPresetOrder`,
+  );
+  const instrumentPresetsById = parseInstrumentPresets(
+    project["instrumentPresetsById"],
+    instrumentPresetOrder,
+    `${path}.instrumentPresetsById`,
+  );
   const projectInstrumentsById = parseProjectInstruments(
     project["projectInstrumentsById"],
     instrumentOrder,
+    instrumentPresetsById,
     `${path}.projectInstrumentsById`,
   );
   const masterBus = parseMasterBus(
@@ -632,15 +642,6 @@ function parseProjectSnapshot(
   const clipOrder = parseClipOrder(
     project["clipOrder"],
     `${path}.clipOrder`,
-  );
-  const instrumentPresetOrder = parsePresetOrder(
-    project["instrumentPresetOrder"],
-    `${path}.instrumentPresetOrder`,
-  );
-  const instrumentPresetsById = parseInstrumentPresets(
-    project["instrumentPresetsById"],
-    instrumentPresetOrder,
-    `${path}.instrumentPresetsById`,
   );
   const sourceClips = readRecord(
     project["clipsById"],
@@ -654,7 +655,6 @@ function parseProjectSnapshot(
       sourceClips[clipId],
       clipId,
       instrumentOrder,
-      instrumentPresetsById,
       `${path}.clipsById.${clipId}`,
     );
   }
@@ -735,7 +735,6 @@ function parseClip(
   source: unknown,
   clipId: ClipId,
   instrumentOrder: readonly InstrumentId[],
-  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): Clip {
   const clip = readRecord(source, path);
@@ -787,7 +786,6 @@ function parseClip(
   const instrumentStatesById = parseClipInstrumentStates(
     clip["instrumentStatesById"],
     instrumentOrder,
-    presetsById,
     `${path}.instrumentStatesById`,
   );
   const parsedClip: Clip = {
@@ -969,7 +967,6 @@ function parseInstrumentPresets(
 function parseClipInstrumentStates(
   source: unknown,
   instrumentOrder: readonly InstrumentId[],
-  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): Readonly<Record<InstrumentId, ClipInstrumentState>> {
   const sourceStates = readRecord(source, path);
@@ -981,20 +978,6 @@ function parseClipInstrumentStates(
     const statePath = `${path}.${instrumentId}`;
     const state = readRecord(sourceStates[instrumentId], statePath);
 
-    const presetId = readNonEmptyString(
-      state["presetId"],
-      `${statePath}.presetId`,
-      MAXIMUM_ID_LENGTH,
-    );
-
-    if (presetsById[presetId] === undefined) {
-      fail(
-        "INVALID_DATA",
-        `${statePath}.presetId`,
-        `Preset "${presetId}" does not exist.`,
-      );
-    }
-
     states[instrumentId] = {
       gain: readNumberInRange(
         state["gain"],
@@ -1005,7 +988,6 @@ function parseClipInstrumentStates(
       muted: readBoolean(state["muted"], `${statePath}.muted`),
       locked: readBoolean(state["locked"], `${statePath}.locked`),
       solo: readBoolean(state["solo"], `${statePath}.solo`),
-      presetId,
     };
   }
 
@@ -1015,6 +997,7 @@ function parseClipInstrumentStates(
 function parseProjectInstruments(
   source: unknown,
   instrumentOrder: readonly InstrumentId[],
+  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): Readonly<Record<InstrumentId, ProjectInstrument>> {
   const sourceInstruments = readRecord(source, path);
@@ -1033,6 +1016,7 @@ function parseProjectInstruments(
       projectInstrumentsById[instrumentId] = parseProjectInstrument(
         sourceInstruments[instrumentId],
         instrumentId,
+        presetsById,
         `${path}.${instrumentId}`,
       );
     }
@@ -1044,6 +1028,7 @@ function parseProjectInstruments(
 function parseProjectInstrument(
   source: unknown,
   expectedInstrumentId: InstrumentId,
+  presetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   path: string,
 ): ProjectInstrument {
   const instrument = readRecord(source, path);
@@ -1075,6 +1060,20 @@ function parseProjectInstrument(
     );
   }
 
+  const presetId = readNonEmptyString(
+    instrument["presetId"],
+    `${path}.presetId`,
+    MAXIMUM_ID_LENGTH,
+  );
+
+  if (presetsById[presetId] === undefined) {
+    fail(
+      "INVALID_DATA",
+      `${path}.presetId`,
+      `Preset "${presetId}" does not exist.`,
+    );
+  }
+
   const parsedInstrument: ProjectInstrument = {
     id,
     name: readNonEmptyString(
@@ -1083,6 +1082,7 @@ function parseProjectInstrument(
       MAXIMUM_NAME_LENGTH,
     ),
     color,
+    presetId,
     pan: readNumberInRange(
       instrument["pan"],
       `${path}.pan`,

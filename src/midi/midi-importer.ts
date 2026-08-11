@@ -13,7 +13,6 @@ import type {
   ProjectInstrument,
   InstrumentId,
   ClipInstrumentState,
-  PresetId,
 } from "../domain/model";
 import {
   createDefaultMasterBusState,
@@ -47,7 +46,6 @@ export type MidiImportCollisionStrategy = "merge" | "slice";
 
 export interface MidiImportInstrumentCandidate {
   readonly projectInstrument: ProjectInstrument;
-  readonly presetId: PresetId;
   readonly notes: readonly Note[];
 }
 
@@ -382,8 +380,8 @@ export function analyzeMidiImport(
         id: instrumentId,
         name: instrumentName,
         color,
+        presetId: getDefaultInstrumentPresetId(groupIndex),
       }),
-      presetId: getDefaultInstrumentPresetId(groupIndex),
       notes,
     });
   }
@@ -530,9 +528,8 @@ export function createProjectFromMidiImport(
     resolvedNoteCount += resolvedNotes.length;
     projectInstrumentsById[candidate.projectInstrument.id] =
       candidate.projectInstrument;
-    instrumentStatesById[candidate.projectInstrument.id] = {
-      ...createDefaultClipInstrumentState(candidate.presetId),
-    };
+    instrumentStatesById[candidate.projectInstrument.id] =
+      createDefaultClipInstrumentState();
     instrumentOrder.push(candidate.projectInstrument.id);
     mutableTracks[candidate.projectInstrument.id] = {
       instrumentId: candidate.projectInstrument.id,
@@ -1281,8 +1278,8 @@ function createEmptyInstrumentCandidate(): MidiImportInstrumentCandidate {
       color:
         RENDERING_CONSTANTS.userInstrumentColors[0]
         ?? RENDERING_CONSTANTS.defaultNoteColor,
+      presetId: getDefaultInstrumentPresetId(0),
     }),
-    presetId: getDefaultInstrumentPresetId(0),
     notes: [],
   };
 }
@@ -1481,11 +1478,11 @@ function assertImportedProjectState(state: ProjectState): void {
     }
 
     assertValidProjectInstrument(instrument);
-    const preset = state.instrumentPresetsById[instrumentState.presetId];
+    const preset = state.instrumentPresetsById[instrument.presetId];
 
     if (preset === undefined) {
       throw new MidiImportError(
-        `The imported instrument references unavailable preset "${instrumentState.presetId}".`,
+        `The imported instrument references unavailable preset "${instrument.presetId}".`,
       );
     }
 
