@@ -60,7 +60,6 @@ export interface SelectionWorkflowOptions {
   readonly getPlayheadTick: () => number;
   readonly setPlayheadTick: (tick: number) => void;
   readonly getGridResolutionTicks: () => number;
-  readonly selectedInstrumentId: InstrumentId | null;
   readonly resolveCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -82,7 +81,7 @@ export interface SelectionWorkflow {
   ) => void;
   readonly sliceAtPlayhead: () => void;
   readonly paste: () => void;
-  readonly transferToSelectedInstrument: () => void;
+  readonly transferToInstrument: (instrumentId: InstrumentId) => void;
 }
 
 export function useSelectionWorkflow({
@@ -92,7 +91,6 @@ export function useSelectionWorkflow({
   getPlayheadTick,
   setPlayheadTick,
   getGridResolutionTicks,
-  selectedInstrumentId,
   resolveCollision,
   alert,
 }: SelectionWorkflowOptions): SelectionWorkflow {
@@ -463,11 +461,12 @@ export function useSelectionWorkflow({
     setPlayheadTick,
   ]);
 
-  const transferToSelectedInstrument = useCallback((): void => {
+  const transferToInstrument = useCallback((
+    targetInstrumentId: InstrumentId,
+  ): void => {
     const controller = getController();
-    const targetInstrumentId = selectedInstrumentId;
 
-    if (controller === null || targetInstrumentId === null) {
+    if (controller === null) {
       return;
     }
 
@@ -557,7 +556,6 @@ export function useSelectionWorkflow({
     commands,
     getController,
     resolveCollision,
-    selectedInstrumentId,
   ]);
 
   return {
@@ -572,7 +570,7 @@ export function useSelectionWorkflow({
     transform,
     sliceAtPlayhead,
     paste,
-    transferToSelectedInstrument,
+    transferToInstrument,
   };
 }
 

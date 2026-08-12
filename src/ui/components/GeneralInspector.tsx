@@ -22,6 +22,7 @@ export interface GeneralInspectorProps {
   readonly projectState: ProjectState;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly selectedInstrumentIndex: number;
+  readonly selectionAvailable: boolean;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClose: () => void;
   readonly onClipSelect: (clipId: ClipId) => void;
@@ -44,6 +45,9 @@ export interface GeneralInspectorProps {
     gain: number,
   ) => void;
   readonly onSelectInstrumentNotes: (instrumentId: InstrumentId) => void;
+  readonly onTransferSelectionToInstrument: (
+    instrumentId: InstrumentId,
+  ) => void;
   readonly onToggleInstrumentLock: (instrument: ProjectInstrument) => void;
   readonly onDeleteProjectInstrument: (instrumentId: InstrumentId) => void;
 }
@@ -54,6 +58,7 @@ export function GeneralInspector({
   projectState,
   selectedInstrumentId,
   selectedInstrumentIndex,
+  selectionAvailable,
   setToolbarHost,
   onClose,
   onClipSelect,
@@ -69,6 +74,7 @@ export function GeneralInspector({
   onUpdateProjectInstrument,
   onInstrumentGainPreview,
   onSelectInstrumentNotes,
+  onTransferSelectionToInstrument,
   onToggleInstrumentLock,
   onDeleteProjectInstrument,
 }: GeneralInspectorProps): React.JSX.Element {
@@ -200,6 +206,22 @@ export function GeneralInspector({
                     <circle cx="10" cy="10" r="7" />
                     <circle cx="10" cy="10" r="3" />
                     <path d="M10 1v3M10 16v3M1 10h3M16 10h3" />
+                  </svg>
+                </button>
+                <button
+                  className="instrument-transfer-button"
+                  type="button"
+                  aria-label={`Move selected notes to ${instrument.name}`}
+                  title="Move selected notes to this instrument"
+                  disabled={!selectionAvailable || instrumentState.locked}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onTransferSelectionToInstrument(instrument.id);
+                  }}
+                >
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M3 6h7M3 10h7M3 14h7" />
+                    <path d="M11.5 10H17M14.5 7.5 17 10l-2.5 2.5" />
                   </svg>
                 </button>
                 <button

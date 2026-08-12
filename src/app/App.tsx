@@ -184,10 +184,6 @@ export function App(): React.JSX.Element {
     useState<SubtractiveSynthConfig | null>(null);
   const [pendingEditedInstrumentId, setPendingEditedInstrumentId] =
     useState<InstrumentId | null>(null);
-  const selectedInstrument =
-    selectedInstrumentId === null
-      ? undefined
-      : projectState.projectInstrumentsById[selectedInstrumentId];
   const selectedInstrumentIndex =
     selectedInstrumentId === null
       ? -1
@@ -621,7 +617,7 @@ export function App(): React.JSX.Element {
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
     paste: handlePaste,
-    transferToSelectedInstrument: handleTransferSelectionToInstrument,
+    transferToInstrument: handleTransferSelectionToInstrument,
   } = useSelectionWorkflow({
     commands: scene.editorCommands,
     projectStore: scene.projectStore,
@@ -633,7 +629,6 @@ export function App(): React.JSX.Element {
     getGridResolutionTicks() {
       return scene.gridResolutionTicks.get();
     },
-    selectedInstrumentId,
     resolveCollision: handleNoteCollision,
     alert: showApplicationAlert,
   });
@@ -789,16 +784,6 @@ export function App(): React.JSX.Element {
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
             noteColorMode={noteColorMode}
-            selectedInstrument={
-              selectedInstrument === undefined
-                ? undefined
-                : {
-                    color: selectedInstrument.color,
-                    locked:
-                      activeClip.instrumentStatesById[selectedInstrument.id]
-                        ?.locked ?? true,
-                  }
-            }
             onToggleInspector={(section) => {
               if (
                 generalInspectorOpen
@@ -822,7 +807,6 @@ export function App(): React.JSX.Element {
             onPaste={handlePaste}
             onSelectionModeChange={setSelectionMode}
             onNoteColorModeToggle={handleNoteColorModeToggle}
-            onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
             onSliceSelectionAtPlayhead={handleSliceSelectionAtPlayhead}
             onTransformSelection={handleTransformSelection}
           />,
@@ -902,6 +886,7 @@ export function App(): React.JSX.Element {
           projectState={projectState}
           selectedInstrumentId={selectedInstrumentId}
           selectedInstrumentIndex={selectedInstrumentIndex}
+          selectionAvailable={selectionAvailable}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClose={() => {
             setGeneralInspectorOpen(false);
@@ -919,6 +904,7 @@ export function App(): React.JSX.Element {
           onUpdateProjectInstrument={handleUpdateProjectInstrument}
           onInstrumentGainPreview={previewInstrumentGain}
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
+          onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
           onToggleInstrumentLock={handleToggleInstrumentLock}
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
         />

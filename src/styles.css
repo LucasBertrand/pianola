@@ -1813,6 +1813,22 @@ input[type="range"]::-webkit-slider-thumb {
   stroke-width: 1.6;
 }
 
+.project-instrument-card .instrument-transfer-button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.project-instrument-card .instrument-transfer-button:not(:disabled) {
+  color: var(--instrument-color);
+}
+
 .project-instrument-card button.is-active {
   border-color: var(--color-warm-medium);
   background: var(--color-warm-soft);

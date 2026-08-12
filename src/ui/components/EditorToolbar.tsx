@@ -1,11 +1,7 @@
 import React from "react";
 import {
-  APPLICATION_COLORS,
-} from "../../config/application-colors";
-import {
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
-  type ProjectInstrument,
 } from "../../domain/model";
 import type {
   SelectionTransformationKind,
@@ -27,10 +23,6 @@ export interface EditorToolbarProps {
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
-  readonly selectedInstrument: {
-    readonly color: ProjectInstrument["color"];
-    readonly locked: boolean;
-  } | undefined;
   readonly onToggleInspector: (section: "instruments" | "clips") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
@@ -43,7 +35,6 @@ export interface EditorToolbarProps {
   readonly onPaste: () => void;
   readonly onSelectionModeChange: (mode: SelectionMode) => void;
   readonly onNoteColorModeToggle: () => void;
-  readonly onTransferSelectionToInstrument: () => void;
   readonly onSliceSelectionAtPlayhead: () => void;
   readonly onTransformSelection: (
     kind: SelectionTransformationKind,
@@ -61,7 +52,6 @@ export function EditorToolbar({
   clipboardAvailable,
   selectionMode,
   noteColorMode,
-  selectedInstrument,
   onToggleInspector,
   onUndo,
   onRedo,
@@ -74,7 +64,6 @@ export function EditorToolbar({
   onPaste,
   onSelectionModeChange,
   onNoteColorModeToggle,
-  onTransferSelectionToInstrument,
   onSliceSelectionAtPlayhead,
   onTransformSelection,
 }: EditorToolbarProps): React.JSX.Element {
@@ -199,7 +188,7 @@ export function EditorToolbar({
           onClick={onToggleSelectionEnabled}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M15 4v11.5M15 7.5 8 9v8" />
+            <path d="M8 5.5 15 4v11.5M15 7.5 8 9v8" />
             <ellipse cx="5.5" cy="17" rx="2.5" ry="2" />
             <ellipse cx="12.5" cy="15.5" rx="2.5" ry="2" />
             <path d="M4 4l16 16" />
@@ -303,28 +292,6 @@ export function EditorToolbar({
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="4" y="4" width="16" height="16" rx="2" />
             <path d="M8 12h8" />
-          </svg>
-        </button>
-        <button
-          className="instrument-transfer-button"
-          type="button"
-          title="Move selected notes to the selected instrument"
-          aria-label="Move selected notes to the selected instrument"
-          disabled={
-            !selectionAvailable
-            || selectedInstrument === undefined
-            || selectedInstrument.locked
-          }
-          style={{
-            color:
-              selectedInstrument?.color
-              ?? APPLICATION_COLORS.neutral.textDisabled,
-          }}
-          onClick={onTransferSelectionToInstrument}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 6h7M4 12h7M4 18h7" />
-            <path d="M13 12h7M17 8l4 4-4 4" />
           </svg>
         </button>
         <button
