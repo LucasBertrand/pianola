@@ -831,31 +831,21 @@ input:focus-visible {
   background: var(--color-surface-app);
 }
 
-.piano-loop-spacer,
 .piano-ruler-spacer {
   position: absolute;
+  top: 0;
   right: 0;
   left: 0;
-  pointer-events: none;
-}
-
-.piano-loop-spacer {
-  top: 0;
-  height: 22px;
-  background: var(--color-surface-app);
-}
-
-.piano-ruler-spacer {
-  top: 22px;
-  height: 28px;
+  height: 50px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-app);
+  pointer-events: none;
 }
 
 .piano-preview-toggle {
   position: absolute;
   z-index: 2;
-  top: 12px;
+  top: 13px;
   left: 50%;
   display: grid;
   width: 24px;
@@ -965,21 +955,19 @@ input:focus-visible {
   touch-action: none;
 }
 
-.timeline-loop-layer {
+.bar-ruler-loop-overlay {
   position: absolute;
-  z-index: 8;
+  z-index: 3;
   top: 0;
   right: 0;
   left: 0;
-  height: 22px;
+  height: 100%;
   overflow: hidden;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-app);
   touch-action: none;
 }
 
-.timeline-loop-band,
-.timeline-loop-flag {
+.bar-ruler-loop-band,
+.bar-ruler-loop-flag {
   position: absolute;
   margin: 0;
   padding: 0;
@@ -988,23 +976,23 @@ input:focus-visible {
   will-change: transform;
 }
 
-.timeline-loop-band {
-  top: 5px;
+.bar-ruler-loop-band {
+  top: 0;
   left: 0;
-  height: 12px;
+  height: 11px;
   border-top: 1px solid var(--color-warm-strong);
   border-bottom: 1px solid var(--color-warm-strong);
   background: var(--color-warm-soft);
   cursor: grab;
 }
 
-.timeline-loop-band:active {
+.bar-ruler-loop-band:active {
   cursor: grabbing;
 }
 
-.timeline-loop-flag {
+.bar-ruler-loop-flag {
   z-index: 2;
-  top: 1px;
+  top: 0;
   left: 0;
   display: grid;
   width: 22px;
@@ -1015,41 +1003,44 @@ input:focus-visible {
   cursor: ew-resize;
 }
 
-.timeline-loop-flag svg {
-  width: 22px;
-  height: 20px;
-  fill: var(--color-warm-soft);
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.5;
+.bar-ruler-loop-flag::before,
+.roll-playhead::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 14px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  content: "";
+  transform: translateX(-50%);
 }
 
-.timeline-loop-layer[data-enabled="false"]
-  .timeline-loop-band {
+.bar-ruler-loop-overlay[data-enabled="false"]
+  .bar-ruler-loop-band {
   border-color: var(--color-muted-strong);
   background: var(--color-muted-soft);
 }
 
-.timeline-loop-layer[data-enabled="false"]
-  .timeline-loop-flag {
+.bar-ruler-loop-overlay[data-enabled="false"]
+  .bar-ruler-loop-flag {
   color: var(--color-text-muted);
 }
 
-.timeline-loop-boundaries {
+.bar-ruler-loop-boundaries {
   position: absolute;
-  z-index: 8;
-  top: 22px;
+  z-index: 2;
+  top: 0;
   right: 0;
-  bottom: 0;
   left: 0;
+  height: 100vh;
   overflow: hidden;
   pointer-events: none;
 }
 
-.timeline-loop-boundaries i {
+.bar-ruler-loop-boundaries i {
   position: absolute;
-  top: 0;
+  top: 12px;
   bottom: 0;
   left: 0;
   display: block;
@@ -1060,54 +1051,57 @@ input:focus-visible {
   will-change: transform;
 }
 
-.timeline-loop-boundaries[data-enabled="true"] i {
+.bar-ruler-loop-boundaries[data-enabled="true"] i {
   background: var(--color-warm-strong);
   box-shadow: 0 0 5px var(--color-warm-soft);
 }
 
 .bar-ruler {
   position: absolute;
-  z-index: 4;
-  top: 22px;
+  z-index: 8;
+  top: 0;
   right: 0;
   left: 0;
-  display: block;
-  width: 100%;
-  height: 28px;
-  overflow: hidden;
-  contain: strict;
+  height: 50px;
+  overflow: visible;
+  border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   border-left: 1px solid var(--color-border-subtle);
   border-right: 1px solid var(--color-border-subtle);
   background: var(--color-surface-app);
-  cursor: ew-resize;
-  touch-action: none;
+}
+
+.bar-ruler-canvas {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 50px;
+  overflow: hidden;
+  contain: strict;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-app);
+  pointer-events: none;
 }
 
 .roll-playhead {
   position: absolute;
   z-index: 9;
-  top: 22px;
+  top: 12px;
   bottom: 0;
   left: 0;
   width: 2px;
   margin-left: -1px;
   background: var(--color-accent-playhead);
+  color: var(--color-accent-playhead);
   box-shadow: 0 0 7px var(--color-playhead-glow);
   pointer-events: none;
   will-change: transform;
 }
 
 .roll-playhead::before {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 10px;
-  height: 7px;
-  border-radius: 0 0 4px 4px;
-  background: var(--color-accent-playhead);
-  content: "";
-  transform: translateX(-50%);
+  top: -12px;
 }
 
 .canvas-host {
@@ -1428,7 +1422,7 @@ input[type="range"]::-webkit-slider-thumb {
 .general-inspector {
   display: grid;
   min-height: 0;
-  padding: 22px 16px 18px;
+  padding: 0 16px 18px;
   overflow: hidden;
   background: var(--color-surface-app);
   grid-template-rows: auto minmax(0, 1fr);
@@ -1529,7 +1523,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .clip-reorder-handle svg {
   width: 16px;
-  height: 20px;
+  height: 19px;
   fill: currentColor;
   stroke: none;
 }
@@ -1774,6 +1768,17 @@ input[type="range"]::-webkit-slider-thumb {
   stroke-width: 1.6;
 }
 
+.inspector-menu-icon .keyboard-black-keys {
+  fill: currentColor;
+  stroke: none;
+}
+
+.inspector-menu-icon.is-violin,
+.inspector-menu-icon.is-music-folder {
+  fill: currentColor;
+  stroke: none;
+}
+
 .project-instrument-card .instrument-transfer-button svg {
   display: block;
   width: 17px;
@@ -1897,7 +1902,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .instrument-reorder-handle svg {
   width: 16px;
-  height: 20px;
+  height: 19px;
   fill: currentColor;
   stroke: none;
 }
@@ -2244,7 +2249,7 @@ input[type="range"]::-webkit-slider-thumb {
     bottom: 0;
     display: grid;
     width: min(86vw, 320px);
-    padding: 22px 16px 18px;
+    padding: 0 16px 18px;
     box-shadow: none;
     transform: translate3d(100%, 0, 0);
     transition: transform 180ms ease;

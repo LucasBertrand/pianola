@@ -83,10 +83,12 @@ export function EditorToolbar({
           onClick={() => onToggleInspector("instruments")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 4v16M12 4v16M18 4v16" />
-            <circle cx="6" cy="9" r="2" />
-            <circle cx="12" cy="15" r="2" />
-            <circle cx="18" cy="7" r="2" />
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="M7.5 5v14M12 5v14M16.5 5v14" />
+            <path
+              className="keyboard-black-keys"
+              d="M6.2 5h2.6v7H6.2zM10.7 5h2.6v7h-2.6zM15.2 5h2.6v7h-2.6z"
+            />
           </svg>
         </button>
         <button
@@ -101,8 +103,8 @@ export function EditorToolbar({
           onClick={() => onToggleInspector("clips")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="5" width="13" height="6" rx="2" />
-            <rect x="7" y="13" width="13" height="6" rx="2" />
+            <path d="M3 7h7l2-2h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+            <path d="M3 9h18" />
           </svg>
         </button>
       </div>
@@ -320,13 +322,11 @@ export function EditorToolbar({
           }}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M2.5 18 8 6.5" />
-            <circle cx="2.5" cy="18" r="1.5" />
-            <circle cx="8" cy="6.5" r="1.5" />
-            <path d="M10.5 12h3M12 10.5l1.5 1.5-1.5 1.5" />
-            <path d="m16 6.5 5.5 11.5" />
-            <circle cx="16" cy="6.5" r="1.5" />
-            <circle cx="21.5" cy="18" r="1.5" />
+            <path d="M8 7v9M14 4v8M20 7v8" />
+            <circle cx="6.5" cy="16" r="2" />
+            <circle cx="12.5" cy="12" r="2" />
+            <circle cx="18.5" cy="15" r="2" />
+            <path d="M3 5v14M1 8l2-3 2 3M1 16l2 3 2-3" />
           </svg>
         </button>
         <button
@@ -342,10 +342,11 @@ export function EditorToolbar({
           }}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="5" width="4" height="6" rx="1" />
-            <rect x="10" y="7" width="4" height="4" rx="1" />
-            <rect x="16" y="3" width="4" height="8" rx="1" />
-            <path d="M20 18H4M8 14l-4 4 4 4" />
+            <path d="M5 6v8M11 4v8M17 7v8" />
+            <circle cx="3.5" cy="14" r="2" />
+            <circle cx="9.5" cy="12" r="2" />
+            <circle cx="15.5" cy="15" r="2" />
+            <path d="M20 20H5M8 17l-3 3 3 3" />
           </svg>
         </button>
         <button
@@ -360,11 +361,9 @@ export function EditorToolbar({
             );
           }}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="4" width="7" height="5" rx="1" />
-            <path d="M12 6.5h5M15 4l2.5 2.5L15 9" />
-            <rect x="3" y="15" width="18" height="5" rx="1" />
-            <path d="M7 12h10" strokeDasharray="1.5 2" />
+          <svg className="transformation-factor-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 7l7 10M10 7 3 17" />
+            <path d="M14 9c.6-2 5.5-2.4 6.2.3.8 3-5.8 4.1-6.2 7.7h7" />
           </svg>
         </button>
         <button
@@ -379,11 +378,11 @@ export function EditorToolbar({
             );
           }}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="5" rx="1" />
-            <path d="M17.5 12h-5M15 9.5 12.5 12l2.5 2.5" />
-            <rect x="3" y="15" width="7" height="5" rx="1" />
-            <path d="M7 12h3" strokeDasharray="1.5 2" />
+          <svg className="transformation-factor-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="6" cy="7" r="1" />
+            <path d="M2.5 12h7" />
+            <circle cx="6" cy="17" r="1" />
+            <path d="M14 9c.6-2 5.5-2.4 6.2.3.8 3-5.8 4.1-6.2 7.7h7" />
           </svg>
         </button>
         <button

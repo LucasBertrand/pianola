@@ -373,7 +373,6 @@ export function PianoKeyboard(
 
   return (
     <div className="piano-strip" aria-label="Piano keyboard">
-      <div className="piano-loop-spacer" aria-hidden="true" />
       <div className="piano-ruler-spacer" aria-hidden="true" />
       <button
         className={
@@ -458,4 +457,3 @@ function createPianoKeys(): readonly React.JSX.Element[] {
 function getPitchClassName(pitchClass: number): string {
   return PITCH_CLASS_NAMES[pitchClass] ?? "Unknown";
 }
-

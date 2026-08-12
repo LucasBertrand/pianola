@@ -35,7 +35,7 @@ export interface BarRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
-  readonly onSeek: (tick: number) => void;
+  readonly onLoopCommit: (loop: LoopRegion) => void;
 }
 
 type LoopGestureMode =
@@ -47,15 +47,15 @@ type LoopGestureMode =
   | "resize-start"
   | "resize-end";
 
-export interface TimelineLoopRegionProps {
+interface BarRulerLoopOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly onCommit: (loop: LoopRegion) => void;
 }
 
-export function TimelineLoopRegion(
-  props: TimelineLoopRegionProps,
+function BarRulerLoopOverlay(
+  props: BarRulerLoopOverlayProps,
 ): React.JSX.Element {
   const {
     viewport,
@@ -500,12 +500,12 @@ export function TimelineLoopRegion(
     <>
       <div
         ref={layerRef}
-        className="timeline-loop-layer"
+        className="bar-ruler-loop-overlay"
         aria-label="Loop region"
       >
         <button
           ref={bandRef}
-          className="timeline-loop-band"
+          className="bar-ruler-loop-band"
           type="button"
           data-loop-mode="move"
           title="Move loop region"
@@ -513,32 +513,24 @@ export function TimelineLoopRegion(
         />
         <button
           ref={startFlagRef}
-          className="timeline-loop-flag is-start"
+          className="bar-ruler-loop-flag is-start"
           type="button"
           data-loop-mode="resize-start"
           title="Adjust loop start"
           aria-label="Adjust loop start"
-        >
-          <svg viewBox="0 0 22 20" aria-hidden="true">
-            <path d="M11 2v16M11 3h8l-3.5 4L19 11h-8" />
-          </svg>
-        </button>
+        />
         <button
           ref={endFlagRef}
-          className="timeline-loop-flag is-end"
+          className="bar-ruler-loop-flag is-end"
           type="button"
           data-loop-mode="resize-end"
           title="Adjust loop end"
           aria-label="Adjust loop end"
-        >
-          <svg viewBox="0 0 22 20" aria-hidden="true">
-            <path d="M11 2v16M11 3H3l3.5 4L3 11h8" />
-          </svg>
-        </button>
+        />
       </div>
       <div
         ref={boundaryLayerRef}
-        className="timeline-loop-boundaries"
+        className="bar-ruler-loop-boundaries"
         data-enabled="false"
         aria-hidden="true"
       >
@@ -556,7 +548,7 @@ export function BarRuler(
     viewport,
     projectStore,
     gridResolutionTicks,
-    onSeek,
+    onLoopCommit,
   } = props;
   const paintRuler = useCallback(
     (frame: CanvasFrame): void => {
@@ -654,7 +646,7 @@ export function BarRuler(
           barIndex * ticksPerBar * pixelsPerTick
           - currentViewport.scrollX;
 
-        context.fillText(String(barIndex + 1), x + 7, 7);
+        context.fillText(String(barIndex + 1), x + 7, 22);
       }
 
     },
@@ -695,58 +687,20 @@ export function BarRuler(
     viewport,
   ]);
 
-  useEffect(() => {
-    const canvas = renderer.canvasRef.current;
-
-    if (canvas === null) {
-      return undefined;
-    }
-
-    const resolveSeekTick = (clientX: number): number => {
-      const bounds = canvas.getBoundingClientRect();
-      const currentViewport = viewport.get();
-      const localX = clientX - bounds.left;
-      const rawTick =
-        (currentViewport.scrollX + localX)
-        * currentViewport.ticksPerPixel
-        / currentViewport.zoomX;
-      const resolutionTicks = gridResolutionTicks.get();
-      const snappedTick =
-        Math.round(rawTick / resolutionTicks) * resolutionTicks;
-
-      return Math.min(
-        getActiveClipDurationTicks(projectStore.getState()),
-        Math.max(0, snappedTick),
-      );
-    };
-    const handleClick = (event: MouseEvent): void => {
-      if (event.button !== 0) {
-        return;
-      }
-
-      onSeek(resolveSeekTick(event.clientX));
-      event.preventDefault();
-    };
-
-    canvas.addEventListener("click", handleClick);
-
-    return (): void => {
-      canvas.removeEventListener("click", handleClick);
-    };
-  }, [
-    gridResolutionTicks,
-    onSeek,
-    projectStore,
-    renderer.canvasRef,
-    viewport,
-  ]);
-
   return (
-    <canvas
-      ref={renderer.canvasRef}
-      className="bar-ruler"
-      aria-label="Timeline ruler. Drag to set the playhead."
-    />
+    <div className="bar-ruler">
+      <canvas
+        ref={renderer.canvasRef}
+        className="bar-ruler-canvas"
+        aria-label="Timeline ruler"
+      />
+      <BarRulerLoopOverlay
+        viewport={viewport}
+        projectStore={projectStore}
+        gridResolutionTicks={gridResolutionTicks}
+        onCommit={onLoopCommit}
+      />
+    </div>
   );
 }
 

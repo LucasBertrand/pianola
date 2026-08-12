@@ -397,8 +397,7 @@ export const TONAL_SNAP_CONSTANTS = Object.freeze({
 
 /** Piano-roll layout and control response values. */
 export const EDITOR_CONSTANTS = Object.freeze({
-  rulerHeightCssPixels: 28,
-  loopRegionHeightCssPixels: 22,
+  rulerHeightCssPixels: 50,
   defaultPitchPreviewEnabled: true,
   envelopeSliderCurveExponent: 2.6,
   tempoMinimumBpm: 30,

@@ -58,7 +58,6 @@ import {
 import {
   BarRuler,
   RollPlayhead,
-  TimelineLoopRegion,
 } from "../ui/components/Timeline";
 import {
   PianoKeyboard,
@@ -828,13 +827,7 @@ export function App(): React.JSX.Element {
                 viewport={scene.viewport}
                 projectStore={scene.projectStore}
                 gridResolutionTicks={scene.gridResolutionTicks}
-                onSeek={seekPlayback}
-              />
-              <TimelineLoopRegion
-                viewport={scene.viewport}
-                projectStore={scene.projectStore}
-                gridResolutionTicks={scene.gridResolutionTicks}
-                onCommit={handleLoopRegionCommit}
+                onLoopCommit={handleLoopRegionCommit}
               />
               <div className="canvas-host">
                 <PianoRollLayers
