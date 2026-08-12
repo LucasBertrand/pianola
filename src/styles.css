@@ -775,8 +775,7 @@ input:focus-visible {
 
 /* General inspector toolbar */
 
-.general-inspector-toggle-button,
-.general-inspector-close-button {
+.general-inspector-toggle-button {
   display: none;
   min-height: 36px;
   padding: 0 12px;
@@ -1440,24 +1439,12 @@ input[type="range"]::-webkit-slider-thumb {
   overflow: auto;
 }
 
-.general-inspector-heading,
 .section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.general-inspector-heading {
-  padding: 0 2px 14px;
-}
-
-.general-inspector-heading-actions {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.general-inspector-heading small,
 .section-title small {
   display: block;
   margin-bottom: 4px;
@@ -1468,75 +1455,49 @@ input[type="range"]::-webkit-slider-thumb {
   text-transform: uppercase;
 }
 
-.general-inspector-heading h1 {
-  margin: 0;
-  color: var(--color-inspector-heading);
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.add-button {
-  display: grid;
-  width: 30px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
-  background: var(--color-surface-raised);
-  color: var(--color-text-secondary);
-  font-size: 17px;
-  place-items: center;
-  cursor: pointer;
-}
-
-.add-button:disabled {
-  cursor: default;
-  opacity: 0.28;
-}
-
-.add-button svg,
-.general-inspector-close-button svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.6;
-}
-
-.instrument-order-button {
-  display: grid;
-  width: 30px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid var(--color-border-control);
-  border-radius: 8px;
-  background: var(--color-surface-card);
-  color: var(--color-text-muted);
-  place-items: center;
-  cursor: pointer;
-}
-
-.instrument-order-button svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.6;
-}
-
-.instrument-order-button:disabled {
-  opacity: 0.28;
-  cursor: default;
-}
-
 .instrument-list {
   display: grid;
   gap: 7px;
+}
+
+.add-card {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px;
+  border: 1px dashed var(--color-border-control);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text-muted);
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.add-card svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.7;
+}
+
+.add-card span {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.add-card:active:not(:disabled) {
+  border-color: var(--color-border-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-accent-primary-bright);
+}
+
+.add-card:disabled {
+  cursor: default;
+  opacity: 0.3;
 }
 
 .clip-inspector-section {
@@ -1544,38 +1505,38 @@ input[type="range"]::-webkit-slider-thumb {
   border-bottom: 0;
 }
 
-.clip-inspector-section + .instrument-inspector-section
-  > .general-inspector-heading {
-  padding-top: 18px;
-}
-
 .clip-card {
   --instrument-color: var(--color-accent-primary);
   min-height: 0;
-  grid-template-columns: 32px minmax(0, 1fr) 30px 30px;
+  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
   grid-template-rows: auto;
 }
 
-.clip-order-index {
+.clip-reorder-handle {
   position: relative;
   z-index: 1;
   display: grid;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--color-border-control);
-  border-radius: 7px;
-  background: var(--color-surface-deep);
-  color: var(--color-text-muted);
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 10px;
-  font-weight: 700;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-disabled);
   place-items: center;
+  cursor: grab;
+  touch-action: none;
 }
 
-.clip-card.is-selected .clip-order-index {
-  border-color: var(--color-primary-medium);
-  background: var(--color-primary-soft);
-  color: var(--color-accent-primary-bright);
+.clip-reorder-handle svg {
+  width: 16px;
+  height: 20px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.project-instrument-card .clip-reorder-handle {
+  border-color: transparent;
+  background: transparent;
 }
 
 .clip-card .instrument-delete-button {
@@ -1604,7 +1565,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .project-instrument-card.clip-card {
   min-height: 0;
-  grid-template-columns: 32px minmax(0, 1fr) 30px 30px;
+  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
   grid-template-rows: auto;
   gap: 6px;
 }
@@ -1899,17 +1860,6 @@ input[type="range"]::-webkit-slider-thumb {
   stroke-width: 1.5;
 }
 
-.instrument-empty-state {
-  margin: 4px 0 0;
-  padding: 14px;
-  border: 1px dashed var(--color-border);
-  border-radius: 9px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-  line-height: 1.5;
-  text-align: center;
-}
-
 .instrument-sound-controls {
   position: relative;
   z-index: 1;
@@ -1921,6 +1871,51 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   justify-content: stretch;
   gap: 6px;
+}
+
+.project-instrument-card:not(.clip-card) {
+  padding-left: 43px;
+}
+
+.instrument-reorder-handle {
+  position: absolute !important;
+  z-index: 3;
+  top: 50%;
+  left: 14px;
+  display: grid;
+  width: 24px !important;
+  height: 30px !important;
+  padding: 0;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--color-text-disabled) !important;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+  transform: translateY(-50%);
+}
+
+.instrument-reorder-handle svg {
+  width: 16px;
+  height: 20px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.reorder-handle:active,
+.project-instrument-card.is-reordering .reorder-handle {
+  cursor: grabbing;
+}
+
+.project-instrument-card.is-reordering {
+  border-color: var(--instrument-color);
+  box-shadow: inset 0 0 0 1px var(--instrument-color);
+  opacity: 0.62;
+}
+
+.project-instrument-card.is-reorder-target {
+  border-color: var(--reorder-color, var(--instrument-color));
+  box-shadow: inset 0 2px 0 var(--reorder-color, var(--instrument-color));
 }
 
 .instrument-sound-controls button {
@@ -2259,8 +2254,7 @@ input[type="range"]::-webkit-slider-thumb {
     transform: translate3d(0, 0, 0);
   }
 
-  .general-inspector-toggle-button,
-  .general-inspector-close-button {
+  .general-inspector-toggle-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2345,7 +2339,7 @@ input[type="range"]::-webkit-slider-thumb {
 
   .general-inspector.is-clips-panel,
   .general-inspector.is-instruments-panel {
-    max-height: 33vh;
+    max-height: 30vh;
   }
 
   .general-inspector:not(.is-open) {
@@ -2363,8 +2357,7 @@ input[type="range"]::-webkit-slider-thumb {
     border-bottom: 0;
   }
 
-  .general-inspector-toggle-button,
-  .general-inspector-close-button {
+  .general-inspector-toggle-button {
     display: inline-flex;
   }
 
@@ -2523,10 +2516,6 @@ input[type="range"]::-webkit-slider-thumb {
     grid-template-rows: auto auto;
   }
 
-  .instrument-management-panel .general-inspector-heading {
-    padding-right: 2px;
-  }
-
   .instrument-management-panel .instrument-list {
     min-height: 0;
     padding-right: 3px;
@@ -2536,7 +2525,7 @@ input[type="range"]::-webkit-slider-thumb {
 
   .instrument-management-panel .project-instrument-card {
     min-height: 0;
-    padding: 8px 8px 8px 15px;
+    padding: 8px 8px 8px 43px;
     grid-template-columns: minmax(54px, 0.65fr) auto minmax(210px, 1.35fr);
     grid-template-rows: auto;
     gap: 6px;
@@ -2583,18 +2572,9 @@ input[type="range"]::-webkit-slider-thumb {
     display: none;
   }
 
-  .clip-inspector-section + .instrument-inspector-section
-    > .general-inspector-heading {
-    padding-top: 0;
-  }
-
   .clip-inspector-section {
     padding-bottom: 0;
     border-bottom: 0;
-  }
-
-  .clip-inspector-section .general-inspector-close-button {
-    display: none;
   }
 
 }

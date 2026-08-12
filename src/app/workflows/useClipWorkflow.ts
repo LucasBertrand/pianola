@@ -37,7 +37,7 @@ export interface ClipWorkflow {
   readonly select: (clipId: ClipId) => void;
   readonly add: () => void;
   readonly duplicate: (clipId: ClipId) => void;
-  readonly moveActive: (direction: -1 | 1) => void;
+  readonly reorder: (clipId: ClipId, targetIndex: number) => void;
   readonly remove: (clipId: ClipId) => void;
   readonly rename: (clipId: ClipId, name: string) => void;
 }
@@ -86,32 +86,33 @@ export function useClipWorkflow({
     commands.dispatch([{ type: "AddClip", clip }], "Add clip");
   }, [beginClipChange, commands]);
 
-  const moveActive = useCallback((direction: -1 | 1): void => {
+  const reorder = useCallback((
+    clipId: ClipId,
+    targetIndex: number,
+  ): void => {
     const state = commands.getState();
-    const currentIndex = state.clipOrder.indexOf(state.activeClipId);
-    const nextIndex = currentIndex + direction;
+    const currentIndex = state.clipOrder.indexOf(clipId);
 
     if (
       currentIndex < 0
-      || nextIndex < 0
-      || nextIndex >= state.clipOrder.length
+      || targetIndex < 0
+      || targetIndex >= state.clipOrder.length
+      || targetIndex === currentIndex
     ) {
       return;
     }
 
-    const displacedClipId = state.clipOrder[nextIndex];
+    const clipOrder = [...state.clipOrder];
+    const [movedClipId] = clipOrder.splice(currentIndex, 1);
 
-    if (displacedClipId === undefined) {
+    if (movedClipId === undefined) {
       return;
     }
 
-    const clipOrder = [...state.clipOrder];
-
-    clipOrder[currentIndex] = displacedClipId;
-    clipOrder[nextIndex] = state.activeClipId;
+    clipOrder.splice(targetIndex, 0, movedClipId);
     commands.dispatch(
       [{ type: "ReorderClips", clipOrder }],
-      direction < 0 ? "Move clip up" : "Move clip down",
+      "Reorder clips",
     );
   }, [commands]);
 
@@ -196,7 +197,7 @@ export function useClipWorkflow({
     select,
     add,
     duplicate,
-    moveActive,
+    reorder,
     remove,
     rename,
   };

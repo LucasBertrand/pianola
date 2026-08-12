@@ -8,96 +8,33 @@ import {
 import {
   LongPressNameEditor,
 } from "./LongPressNameEditor";
+import {
+  useCardReorder,
+} from "../hooks/useCardReorder";
 
 export interface ClipInspectorProps {
   readonly projectState: ProjectState;
-  readonly onClose: () => void;
   readonly onSelect: (clipId: ClipId) => void;
   readonly onAdd: () => void;
   readonly onDuplicate: (clipId: ClipId) => void;
-  readonly onMoveActive: (direction: -1 | 1) => void;
+  readonly onReorder: (clipId: ClipId, targetIndex: number) => void;
   readonly onDelete: (clipId: ClipId) => void;
   readonly onRename: (clipId: ClipId, name: string) => void;
 }
 
 export function ClipInspector({
   projectState,
-  onClose,
   onSelect,
   onAdd,
   onDuplicate,
-  onMoveActive,
+  onReorder,
   onDelete,
   onRename,
 }: ClipInspectorProps): React.JSX.Element {
-  const activeIndex = projectState.clipOrder.indexOf(
-    projectState.activeClipId,
-  );
+  const reorder = useCardReorder(projectState.clipOrder, onReorder);
 
   return (
     <section className="clip-inspector-section">
-      <div className="general-inspector-heading">
-        <div>
-          <h1>CLIPS</h1>
-        </div>
-        <div className="general-inspector-heading-actions">
-          <button
-            className="instrument-order-button"
-            type="button"
-            aria-label="Move selected clip up"
-            title="Move selected clip up"
-            disabled={activeIndex <= 0}
-            onClick={() => onMoveActive(-1)}
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
-              <path d="M10 13V7M7.5 9.5 10 7l2.5 2.5" />
-            </svg>
-          </button>
-          <button
-            className="instrument-order-button"
-            type="button"
-            aria-label="Move selected clip down"
-            title="Move selected clip down"
-            disabled={
-              activeIndex < 0
-              || activeIndex >= projectState.clipOrder.length - 1
-            }
-            onClick={() => onMoveActive(1)}
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
-              <path d="M10 7v6M7.5 10.5 10 13l2.5-2.5" />
-            </svg>
-          </button>
-          <button
-            className="general-inspector-close-button"
-            type="button"
-            aria-label="Close inspector"
-            onClick={onClose}
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M5 5l10 10M15 5 5 15" />
-            </svg>
-          </button>
-          <button
-            className="add-button"
-            type="button"
-            aria-label="Add clip"
-            title="Add clip"
-            disabled={
-              projectState.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT
-            }
-            onClick={onAdd}
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <circle cx="10" cy="10" r="7" />
-              <path d="M10 6.5v7M6.5 10h7" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
       <div className="instrument-list clip-list">
         {projectState.clipOrder.map((clipId, clipIndex) => {
           const clip = projectState.clipsById[clipId];
@@ -116,11 +53,38 @@ export function ClipInspector({
                 }`
               }
               key={clip.id}
+              data-reorder-index={clipIndex}
               onClick={() => onSelect(clip.id)}
             >
-              <span className="clip-order-index" aria-hidden="true">
-                {clipIndex + 1}
-              </span>
+              <button
+                className="clip-reorder-handle reorder-handle"
+                aria-label={`Move ${clip.name}`}
+                type="button"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  const direction =
+                    event.key === "ArrowUp"
+                      ? -1
+                      : event.key === "ArrowDown"
+                        ? 1
+                        : 0;
+
+                  if (direction !== 0) {
+                    event.preventDefault();
+                    onReorder(clip.id, clipIndex + direction);
+                  }
+                }}
+                onPointerDown={(event) => reorder.begin(clip.id, event)}
+              >
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <circle cx="7" cy="6" r="1" />
+                  <circle cx="13" cy="6" r="1" />
+                  <circle cx="7" cy="10" r="1" />
+                  <circle cx="13" cy="10" r="1" />
+                  <circle cx="7" cy="14" r="1" />
+                  <circle cx="13" cy="14" r="1" />
+                </svg>
+              </button>
               <div className="instrument-copy">
                 <LongPressNameEditor
                   entityId={clip.id}
@@ -174,6 +138,20 @@ export function ClipInspector({
             </article>
           );
         })}
+        <button
+          className="add-card"
+          type="button"
+          aria-label="Add clip"
+          disabled={
+            projectState.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT
+          }
+          onClick={onAdd}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M10 4v12M4 10h12" />
+          </svg>
+          <span>Add clip</span>
+        </button>
       </div>
     </section>
   );

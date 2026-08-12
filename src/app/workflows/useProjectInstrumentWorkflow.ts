@@ -40,7 +40,10 @@ export interface ProjectInstrumentWorkflow {
     instrument: InstrumentConfig,
     color: string,
   ) => void;
-  readonly moveSelected: (direction: -1 | 1) => void;
+  readonly reorder: (
+    instrumentId: InstrumentId,
+    targetIndex: number,
+  ) => void;
   readonly remove: (instrumentId: InstrumentId) => void;
   readonly update: (
     instrumentId: InstrumentId,
@@ -136,43 +139,37 @@ export function useProjectInstrumentWorkflow({
     selectInstrument(instrument.id);
   }, [commands, selectInstrument]);
 
-  const moveSelected = useCallback(
-    (direction: -1 | 1): void => {
-      if (selectedInstrumentId === null) {
-        return;
-      }
-
+  const reorder = useCallback(
+    (instrumentId: InstrumentId, targetIndex: number): void => {
       const state = commands.getState();
-      const currentIndex = state.instrumentOrder.indexOf(selectedInstrumentId);
-      const nextIndex = currentIndex + direction;
+      const currentIndex = state.instrumentOrder.indexOf(instrumentId);
 
       if (
         currentIndex < 0
-        || nextIndex < 0
-        || nextIndex >= state.instrumentOrder.length
+        || targetIndex < 0
+        || targetIndex >= state.instrumentOrder.length
+        || targetIndex === currentIndex
       ) {
         return;
       }
 
-      const displacedInstrumentId = state.instrumentOrder[nextIndex];
+      const instrumentOrder = [...state.instrumentOrder];
+      const [movedInstrumentId] = instrumentOrder.splice(currentIndex, 1);
 
-      if (displacedInstrumentId === undefined) {
+      if (movedInstrumentId === undefined) {
         return;
       }
 
-      const instrumentOrder = [...state.instrumentOrder];
-
-      instrumentOrder[currentIndex] = displacedInstrumentId;
-      instrumentOrder[nextIndex] = selectedInstrumentId;
+      instrumentOrder.splice(targetIndex, 0, movedInstrumentId);
       commands.dispatch(
         [{
           type: "ReorderProjectInstruments",
           instrumentOrder,
         }],
-        direction < 0 ? "Move instrument up" : "Move instrument down",
+        "Reorder instruments",
       );
     },
-    [commands, selectedInstrumentId],
+    [commands],
   );
 
   const remove = useCallback(
@@ -265,7 +262,7 @@ export function useProjectInstrumentWorkflow({
   return {
     select,
     add,
-    moveSelected,
+    reorder,
     remove,
     update,
     updateClipState,

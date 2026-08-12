@@ -4,6 +4,7 @@ import type {
 } from "../../domain/commands";
 import {
   getActiveClip,
+  MAXIMUM_PROJECT_INSTRUMENT_COUNT,
   type ClipId,
   type ProjectState,
   type ProjectInstrument,
@@ -15,23 +16,27 @@ import {
 import {
   InstrumentGainSlider,
 } from "./ProjectInstrumentControls";
+import {
+  useCardReorder,
+} from "../hooks/useCardReorder";
 
 export interface GeneralInspectorProps {
   readonly open: boolean;
   readonly portraitSection: "instruments" | "clips";
   readonly projectState: ProjectState;
   readonly selectedInstrumentId: InstrumentId | null;
-  readonly selectedInstrumentIndex: number;
   readonly selectionAvailable: boolean;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
-  readonly onClose: () => void;
   readonly onClipSelect: (clipId: ClipId) => void;
   readonly onAddClip: () => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
-  readonly onMoveActiveClip: (direction: -1 | 1) => void;
+  readonly onReorderClip: (clipId: ClipId, targetIndex: number) => void;
   readonly onDeleteClip: (clipId: ClipId) => void;
   readonly onRenameClip: (clipId: ClipId, name: string) => void;
-  readonly onMoveSelectedInstrument: (direction: -1 | 1) => void;
+  readonly onReorderInstrument: (
+    instrumentId: InstrumentId,
+    targetIndex: number,
+  ) => void;
   readonly onAddProjectInstrument: () => void;
   readonly onInstrumentSelect: (instrumentId: InstrumentId) => void;
   readonly onEditProjectInstrument: (instrumentId: InstrumentId) => void;
@@ -57,17 +62,15 @@ export function GeneralInspector({
   portraitSection,
   projectState,
   selectedInstrumentId,
-  selectedInstrumentIndex,
   selectionAvailable,
   setToolbarHost,
-  onClose,
   onClipSelect,
   onAddClip,
   onDuplicateClip,
-  onMoveActiveClip,
+  onReorderClip,
   onDeleteClip,
   onRenameClip,
-  onMoveSelectedInstrument,
+  onReorderInstrument,
   onAddProjectInstrument,
   onInstrumentSelect,
   onEditProjectInstrument,
@@ -79,6 +82,10 @@ export function GeneralInspector({
   onDeleteProjectInstrument,
 }: GeneralInspectorProps): React.JSX.Element {
   const activeClip = getActiveClip(projectState);
+  const instrumentReorder = useCardReorder(
+    projectState.instrumentOrder,
+    onReorderInstrument,
+  );
 
   return (
   <aside
@@ -96,67 +103,17 @@ export function GeneralInspector({
     <div className="general-inspector-scroll-content">
     <ClipInspector
       projectState={projectState}
-      onClose={onClose}
       onSelect={onClipSelect}
       onAdd={onAddClip}
       onDuplicate={onDuplicateClip}
-      onMoveActive={onMoveActiveClip}
+      onReorder={onReorderClip}
       onDelete={onDeleteClip}
       onRename={onRenameClip}
     />
     <section className="instrument-inspector-section">
     <div className="instrument-management-panel">
-    <div className="general-inspector-heading">
-      <div>
-        <h1>INSTRUMENTS</h1>
-      </div>
-      <div className="general-inspector-heading-actions">
-        <button
-          className="instrument-order-button"
-          type="button"
-          aria-label="Move selected instrument up"
-          title="Move selected instrument up"
-          disabled={selectedInstrumentIndex <= 0}
-          onClick={() => onMoveSelectedInstrument(-1)}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
-            <path d="M10 13V7M7.5 9.5 10 7l2.5 2.5" />
-          </svg>
-        </button>
-        <button
-          className="instrument-order-button"
-          type="button"
-          aria-label="Move selected instrument down"
-          title="Move selected instrument down"
-          disabled={
-            selectedInstrumentIndex < 0
-            || selectedInstrumentIndex
-              >= projectState.instrumentOrder.length - 1
-          }
-          onClick={() => onMoveSelectedInstrument(1)}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <rect x="3.5" y="3.5" width="13" height="13" rx="2" />
-            <path d="M10 7v6M7.5 10.5 10 13l2.5-2.5" />
-          </svg>
-        </button>
-        <button
-          className="add-button"
-          type="button"
-          aria-label="Add instrument"
-          onClick={onAddProjectInstrument}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <circle cx="10" cy="10" r="7" />
-            <path d="M10 6.5v7M6.5 10h7" />
-          </svg>
-        </button>
-      </div>
-    </div>
-
     <div className="instrument-list">
-      {projectState.instrumentOrder.map((instrumentId) => {
+      {projectState.instrumentOrder.map((instrumentId, instrumentIndex) => {
         const instrument = projectState.projectInstrumentsById[instrumentId];
         const instrumentState = activeClip.instrumentStatesById[instrumentId];
 
@@ -176,11 +133,46 @@ export function GeneralInspector({
               }`
             }
             key={instrument.id}
+            data-reorder-index={instrumentIndex}
             style={{
               "--instrument-color": instrument.color,
             } as React.CSSProperties}
             onClickCapture={() => onInstrumentSelect(instrument.id)}
           >
+            <button
+              className="instrument-reorder-handle reorder-handle"
+              type="button"
+              aria-label={`Move ${instrument.name}`}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                const direction =
+                  event.key === "ArrowUp"
+                    ? -1
+                    : event.key === "ArrowDown"
+                      ? 1
+                      : 0;
+
+                if (direction !== 0) {
+                  event.preventDefault();
+                  onReorderInstrument(
+                    instrument.id,
+                    instrumentIndex + direction,
+                  );
+                }
+              }}
+              onPointerDown={(event) => {
+                instrumentReorder.begin(instrument.id, event);
+              }}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="7" cy="6" r="1" />
+                <circle cx="13" cy="6" r="1" />
+                <circle cx="7" cy="10" r="1" />
+                <circle cx="13" cy="10" r="1" />
+                <circle cx="7" cy="14" r="1" />
+                <circle cx="13" cy="14" r="1" />
+              </svg>
+            </button>
             <span className="instrument-color-control" aria-hidden="true">
               <span className="instrument-color" />
             </span>
@@ -344,11 +336,20 @@ export function GeneralInspector({
           </article>
         );
       })}
-      {projectState.instrumentOrder.length === 0 ? (
-        <p className="instrument-empty-state">
-          Add an instrument to start drawing notes.
-        </p>
-      ) : null}
+      <button
+        className="add-card"
+        type="button"
+        aria-label="Add instrument"
+        disabled={
+          projectState.instrumentOrder.length >= MAXIMUM_PROJECT_INSTRUMENT_COUNT
+        }
+        onClick={onAddProjectInstrument}
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M10 4v12M4 10h12" />
+        </svg>
+        <span>Add instrument</span>
+      </button>
     </div>
     </div>
 

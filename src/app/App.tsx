@@ -184,10 +184,6 @@ export function App(): React.JSX.Element {
     useState<SubtractiveSynthConfig | null>(null);
   const [pendingEditedInstrumentId, setPendingEditedInstrumentId] =
     useState<InstrumentId | null>(null);
-  const selectedInstrumentIndex =
-    selectedInstrumentId === null
-      ? -1
-      : projectState.instrumentOrder.indexOf(selectedInstrumentId);
   const activeClip = getActiveClip(projectState);
 
   const totalTicks = getActiveClipDurationTicks(projectState);
@@ -451,7 +447,7 @@ export function App(): React.JSX.Element {
   const {
     select: handleInstrumentSelect,
     add: addProjectInstrument,
-    moveSelected: handleMoveSelectedInstrument,
+    reorder: handleReorderInstrument,
     remove: handleDeleteProjectInstrument,
     update: handleUpdateProjectInstrument,
     selectNotes: handleSelectInstrumentNotes,
@@ -582,7 +578,7 @@ export function App(): React.JSX.Element {
     select: handleClipSelect,
     add: handleAddClip,
     duplicate: handleDuplicateClip,
-    moveActive: handleMoveActiveClip,
+    reorder: handleReorderClip,
     remove: handleDeleteClip,
     rename: handleRenameClip,
   } = useClipWorkflow({
@@ -885,19 +881,15 @@ export function App(): React.JSX.Element {
           portraitSection={generalInspectorSection}
           projectState={projectState}
           selectedInstrumentId={selectedInstrumentId}
-          selectedInstrumentIndex={selectedInstrumentIndex}
           selectionAvailable={selectionAvailable}
           setToolbarHost={setGeneralInspectorToolbarHost}
-          onClose={() => {
-            setGeneralInspectorOpen(false);
-          }}
           onClipSelect={handleClipSelect}
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
-          onMoveActiveClip={handleMoveActiveClip}
+          onReorderClip={handleReorderClip}
           onDeleteClip={handleDeleteClip}
           onRenameClip={handleRenameClip}
-          onMoveSelectedInstrument={handleMoveSelectedInstrument}
+          onReorderInstrument={handleReorderInstrument}
           onAddProjectInstrument={handleOpenAddInstrumentDialog}
           onInstrumentSelect={handleInstrumentSelect}
           onEditProjectInstrument={handleOpenEditInstrumentDialog}
