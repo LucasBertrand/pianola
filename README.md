@@ -5,12 +5,17 @@ fonctionne entièrement dans le navigateur. L’application permet de composer,
 éditer, lire, sauvegarder et échanger des projets MIDI sans serveur applicatif
 ni compte utilisateur.
 
-Cette documentation est le guide de référence pour installer, comprendre,
-déployer, maintenir et dépanner le projet.
+Ce README est le point d’entrée pour installer, utiliser et dépanner le projet.
+La représentation technique détaillée se trouve dans
+[`docs/architecture.md`](docs/architecture.md) et les améliorations de
+maintenabilité sont ordonnées dans [`docs/roadmap.md`](docs/roadmap.md). Une
+[feuille de route distincte](docs/rewrite-roadmap.md) décrit l’option d’une
+réécriture globale compatible avec l’expérience actuelle.
 
 ## Sommaire
 
 - [État du projet](#état-du-projet)
+- [Documentation associée](#documentation-associée)
 - [Fonctionnalités principales](#fonctionnalités-principales)
 - [Architecture et stack](#architecture-et-stack)
 - [Développement local](#développement-local)
@@ -24,6 +29,17 @@ déployer, maintenir et dépanner le projet.
 - [Dépannage](#dépannage)
 - [Checklist de release](#checklist-de-release)
 - [Limites connues et évolutions](#limites-connues-et-évolutions)
+
+## Documentation associée
+
+| Document | À consulter pour |
+| --- | --- |
+| [`README.md`](README.md) | installer, lancer, utiliser, déployer et dépanner Pianola |
+| [`docs/architecture.md`](docs/architecture.md) | comprendre les modules, propriétaires d’état, flux et règles de dépendances |
+| [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
+| [`docs/rewrite-roadmap.md`](docs/rewrite-roadmap.md) | préparer une réécriture v2, ses choix de stack, ses preuves et sa bascule |
+| [`src/ui/rendering/README.md`](src/ui/rendering/README.md) | modifier le pipeline Canvas et ses contraintes de performance |
+| [`src/geometry/__tests__/TEST_PLAN.md`](src/geometry/__tests__/TEST_PLAN.md) | implémenter les tests de propriétés et benchmarks géométriques |
 
 ## État du projet
 
@@ -55,13 +71,14 @@ Firefox Android et un navigateur desktop.
 - panoramique et zoom à deux doigts ;
 - magnétisme temporel et magnétisme tonal par gamme ou accord ;
 - résolution des collisions par annulation, fusion ou découpe aux ancres ;
-- instruments configurables : nom, couleur et ordre globaux, avec choix de
-  preset, volume, mute, solo et verrouillage propres à chaque clip ;
+- instruments configurables : nom, couleur, configuration sonore, volume,
+  mute, solo et ordre globaux ; seul le verrouillage d’édition est propre à
+  chaque clip ;
 - clips configurables : sélection, nom, ordre, ajout et suppression ;
 - presets intégrés de synthétiseur soustractif avec pulse width, filtre modulé
   et deux enveloppes ADSR ;
-- polyphonie définie par preset de 1 à 16 occurrences, avec vol de l’occurrence
-  la plus ancienne lorsque cette limite est saturée ;
+- polyphonie configurable de 1 à 16 occurrences, initialisée par le preset,
+  avec vol de l’occurrence la plus ancienne lorsque cette limite est saturée ;
 - tête de lecture, tempo, métrique, grille straight/triplet/dotted et boucle ;
 - import MIDI SMF 0/1 et export MIDI SMF 1 ;
 - sauvegarde et chargement du format natif `.pianola` ;
@@ -92,8 +109,9 @@ de panne et simplifie les mises à jour.
 ```text
 .
 ├── .github/workflows/ci.yml   Vérification automatique GitHub Actions
+├── docs/                      Architecture détaillée et feuille de route
 ├── public/                    Manifeste et icône copiés tels quels dans dist
-├── scripts/                   Suites de tests audio/domaine et MIDI
+├── scripts/                   Runner actuel des 71 scénarios automatisés
 ├── src/
 │   ├── app/                   Composition, runtime et workflows navigateur
 │   ├── application/           Cas d'usage, sélection et plans de commandes
@@ -190,7 +208,9 @@ rendu ou de `pointermove`.
 
 Les règles de dépendances, le cycle détaillé d'un geste et l'ordre conseillé
 pour poursuivre la modularisation sont décrits dans
-[`docs/architecture.md`](docs/architecture.md).
+[`docs/architecture.md`](docs/architecture.md). Les écarts constatés entre les
+frontières actuelles et la structure cible sont priorisés dans
+[`docs/roadmap.md`](docs/roadmap.md).
 
 ### Audio
 
@@ -285,7 +305,7 @@ utiliser le déploiement Vercel en HTTPS.
 | `npm run typecheck` | Vérifie tout le TypeScript strict |
 | `npm run typecheck:core` | Vérifie domaine, géométrie, MIDI et persistance |
 | `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
-| `npm run test:audio` | Lance la suite domaine/application/audio/persistance |
+| `npm run test:audio` | Lance 62 scénarios domaine/application/audio/persistance |
 | `npm run test:midi` | Lance 9 tests d’intégration MIDI |
 | `npm test` | Lance les deux suites de tests |
 | `npm run build` | Typecheck puis produit le bundle `dist/` |
@@ -360,14 +380,16 @@ les fichiers de production.
 
 ### Couverture actuelle
 
-Les tests exécutables couvrent les invariants du domaine, les commandes,
+Les 71 scénarios exécutables couvrent les invariants du domaine, les commandes,
 l’historique, les collisions, la persistance, le timing audio, le scheduler,
 la polyphonie, le solo, les boucles et les conversions MIDI.
 
 Les gestes tactiles, le layout responsive, le rendu Canvas et le comportement
 réel de Web Audio doivent encore être validés manuellement. Le plan des tests
 géométriques complémentaires se trouve dans
-`src/geometry/__tests__/TEST_PLAN.md`.
+`src/geometry/__tests__/TEST_PLAN.md`. La migration vers des tests isolables et
+les parcours navigateur prioritaires sont détaillés dans
+[`docs/roadmap.md`](docs/roadmap.md).
 
 ## Déploiement continu GitHub vers Vercel
 
@@ -465,12 +487,13 @@ La section **Clips** reprend les interactions de la liste des instruments :
 - la croix supprime le clip après confirmation ; le dernier clip ne peut pas
   être supprimé.
 
-L’identité, la configuration, le volume, le mute et le solo des instruments,
-la bibliothèque de presets, le master bus et le presse-papier sont partagés par
-tout le projet. Le verrouillage de chaque instrument, les notes, la longueur, le tempo,
-la métrique, la grille, la tonalité, la boucle, la tête de lecture, le scroll et
-le zoom sont propres à chaque clip. Changer de clip vide la sélection de notes,
-mais conserve le presse-papier afin de permettre un copier-coller entre clips.
+L’identité, la configuration sonore, le volume, le panoramique, le mute et le
+solo des instruments, la bibliothèque de presets, le master bus et le
+presse-papier sont partagés par tout le projet. Le verrouillage de chaque
+instrument, les notes, la longueur, le tempo, la métrique, la grille, la
+tonalité, la boucle, la tête de lecture, le scroll et le zoom sont propres à
+chaque clip. Changer de clip vide la sélection de notes, mais conserve le
+presse-papier afin de permettre un copier-coller entre clips.
 
 ### Notes
 
@@ -508,9 +531,11 @@ se superposer dans le temps.
 
 ### Instruments
 
-L’inspecteur permet d’ajouter, supprimer et réordonner les instruments. Le
-bouton d’ajout ouvre une modale dans laquelle le preset partagé est choisi une
-fois. Les notes créées utilisent l’instrument sélectionné.
+L’inspecteur permet d’ajouter, supprimer, réordonner et éditer les instruments.
+Le bouton d’ajout ouvre une modale : un preset initialise la configuration,
+puis le nom, la couleur et les paramètres du synthétiseur peuvent être ajustés.
+Le bouton d’engrenage rouvre le même éditeur pour l’instrument existant. Les
+notes créées utilisent l’instrument sélectionné.
 
 - **Mute** coupe l’instrument et atténue ses notes visuellement.
 - **Solo** ne lit que les instruments solo.
@@ -518,12 +543,12 @@ fois. Les notes créées utilisent l’instrument sélectionné.
 - La cible sélectionne les notes de l’instrument sans supprimer la sélection des
   autres instruments.
 
-Chaque instrument possède une identité, une couleur et un preset globaux. Son
-volume reste propre à chaque clip. Le nom du preset est affiché à côté du
-slider, sans contrôle de changement. Les paramètres complets du preset —
-polyphonie, forme d’onde, largeur d’impulsion, filtre et enveloppes ADSR —
-résident dans la bibliothèque globale et ne sont plus éditables depuis
-l’inspecteur dans cette version.
+Chaque instrument possède une identité, une couleur, une configuration sonore
+et un mixage globaux. Le preset choisi à la création est un modèle : Pianola en
+copie la configuration dans l’instrument, sans conserver de lien dynamique vers
+le preset. La polyphonie, la forme d’onde, la largeur d’impulsion, le filtre et
+les enveloppes ADSR restent donc éditables indépendamment pour chaque
+instrument.
 
 ### Transport et boucle
 
@@ -619,6 +644,25 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 | Audio | `src/audio/` et `src/ui/hooks/useAudioPlayback.ts` |
 | Format natif | `src/persistence/native-project-file.ts` |
 | MIDI | `src/midi/` |
+| Frontières et propriétaires d’état | `docs/architecture.md` |
+| Priorités de refactoring | `docs/roadmap.md` |
+
+Conventions de navigation actuelles :
+
+- fichiers TypeScript non React en `kebab-case.ts` ;
+- composants React en `PascalCase.tsx` ;
+- hooks React en `useCamelCase.ts` ;
+- identifiants suffixés par `Id`, dictionnaires par `ById` et tableaux d’ordre
+  par `Order` ;
+- grandeurs suffixées par leur unité : `Ticks`, `Seconds`, `Hz` ou
+  `CssPixels` ;
+- `instrument` désigne l’entité musicale, tandis que `voice` est réservé à une
+  occurrence audio active.
+
+Les dossiers plats et les fichiers monolithiques encore présents sont des états
+transitoires documentés dans la feuille de route. Ne pas créer de nouveau
+dossier générique `utils`, `common` ou `helpers` : nommer le propriétaire réel
+de la responsabilité.
 
 Le nom Pianola existe volontairement dans plusieurs fichiers statiques que le
 navigateur ou npm lit avant l’exécution TypeScript. Pour un futur renommage,
@@ -630,7 +674,7 @@ rg -n -i "pianola" .
 
 ### Modifier les constantes
 
-Les réglages produit sont centralisés dans
+Les réglages sont actuellement centralisés dans
 `src/config/program-constants.ts`. Les groupes sont commentés en anglais :
 
 - `APPLICATION_CONSTANTS` : identité produit ;
@@ -647,6 +691,11 @@ Les réglages produit sont centralisés dans
 
 Après toute modification, exécuter `npm run verify` et tester la valeur sur
 tablette si elle touche au rendu ou aux interactions.
+
+Cette centralisation est pratique mais mélange plusieurs propriétaires. Sa
+séparation progressive en configuration produit, domaine, audio, éditeur,
+interaction, rendu, fichiers et MIDI est un chantier P1 de la
+[feuille de route](docs/roadmap.md#p14-séparer-les-constantes-par-propriétaire).
 
 ### Ajouter une commande métier
 
