@@ -151,6 +151,8 @@ const TRANSPARENT_CONTEXT_ATTRIBUTES: CanvasRenderingContext2DSettings = {
 const GRID_BACKGROUND_COLOR = APPLICATION_SURFACE_COLOR;
 const BLACK_KEY_ROW_COLOR =
   RENDERING_CONSTANTS.gridBlackKeyRowColor;
+const ALTERNATE_MEASURE_COLOR =
+  RENDERING_CONSTANTS.gridAlternateMeasureColor;
 const PITCH_LINE_COLOR =
   RENDERING_CONSTANTS.gridPitchLineColor;
 const SUBDIVISION_LINE_COLOR =
@@ -734,6 +736,15 @@ function paintGrid(
     }
   }
 
+  paintAlternatingMeasures(
+    context,
+    converter,
+    region,
+    width,
+    height,
+    transport,
+  );
+
   if (pitchSnapSettings.visualGuideEnabled) {
     for (
       let pitch = firstPitch;
@@ -846,6 +857,52 @@ function paintGrid(
     ticksPerBeat * transport.timeSignature.numerator,
     BAR_LINE_COLOR,
   );
+}
+
+function paintAlternatingMeasures(
+  context: CanvasRenderingContext2D,
+  converter: CoordinateConverter,
+  region: Rect,
+  width: number,
+  height: number,
+  transport: TransportState,
+): void {
+  const ticksPerMeasure =
+    transport.ppqn
+    * 4
+    / transport.timeSignature.denominator
+    * transport.timeSignature.numerator;
+
+  if (!Number.isSafeInteger(ticksPerMeasure) || ticksPerMeasure <= 0) {
+    return;
+  }
+
+  let measureIndex = Math.max(
+    0,
+    Math.floor(region.startTick / ticksPerMeasure),
+  );
+
+  if (measureIndex % 2 === 0) {
+    measureIndex += 1;
+  }
+
+  context.fillStyle = ALTERNATE_MEASURE_COLOR;
+
+  for (
+    let startTick = measureIndex * ticksPerMeasure;
+    startTick < region.endTick;
+    startTick += ticksPerMeasure * 2
+  ) {
+    const startX = Math.max(0, converter.tickToCssPixelX(startTick));
+    const endX = Math.min(
+      width,
+      converter.tickToCssPixelX(startTick + ticksPerMeasure),
+    );
+
+    if (endX > startX) {
+      context.fillRect(startX, 0, endX - startX, height);
+    }
+  }
 }
 
 function getEffectiveGridResolution(

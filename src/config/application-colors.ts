@@ -104,6 +104,8 @@ interface AccentThemeColors {
 
 interface PianoRollThemeColors {
   readonly background: string;
+  /** Subtle overlay painted on every second measure column. */
+  readonly alternateMeasure: string;
   readonly blackKeyRow: string;
   readonly pitchLine: string;
   readonly subdivisionLine: string;
@@ -258,6 +260,7 @@ const DARK_APPLICATION_THEME = Object.freeze({
   }),
   pianoRoll: Object.freeze({
     background: "#111318",
+    alternateMeasure: "rgba(76, 103, 145, 0.075)",
     blackKeyRow: "#121419",
     pitchLine: "#252a33",
     subdivisionLine: "#242933",
@@ -427,6 +430,7 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
   }),
   pianoRoll: Object.freeze({
     background: "#f2ead9",
+    alternateMeasure: "rgba(116, 91, 51, 0.065)",
     blackKeyRow: "#e5d8be",
     pitchLine: "#ddcfb3",
     subdivisionLine: "#d7c7a7",

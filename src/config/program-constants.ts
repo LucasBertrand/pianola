@@ -492,6 +492,8 @@ export const RENDERING_CONSTANTS = Object.freeze({
     APPLICATION_COLORS.pianoRoll.activePitchLane,
   gridBlackKeyRowColor:
     APPLICATION_COLORS.pianoRoll.blackKeyRow,
+  gridAlternateMeasureColor:
+    APPLICATION_COLORS.pianoRoll.alternateMeasure,
   gridPitchLineColor: APPLICATION_COLORS.pianoRoll.pitchLine,
   gridSubdivisionLineColor:
     APPLICATION_COLORS.pianoRoll.subdivisionLine,
