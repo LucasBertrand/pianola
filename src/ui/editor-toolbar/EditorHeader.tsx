@@ -11,7 +11,7 @@ import type {
 import {
   getActiveClip,
   type ProjectState,
-} from "../../domain/model";
+} from "../../domain/project/project-document";
 import {
   MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
 } from "../../project-io/native/version";

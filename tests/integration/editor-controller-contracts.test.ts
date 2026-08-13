@@ -8,8 +8,10 @@ import {
 } from "../../src/app/create-app-runtime";
 import {
   createDefaultProjectClock,
+} from "../../src/domain/transport/transport";
+import {
   getActiveClip,
-} from "../../src/domain/model";
+} from "../../src/domain/project/project-document";
 import type {
   GestureCompletion,
 } from "../../src/editor/interactions/gestures/gesture-state-machine";

@@ -1,9 +1,14 @@
 import { EDITOR_CONSTANTS, VIEWPORT_CONSTANTS } from "../../../config/editor-config";
 import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
-import type { ClipId, ProjectDocument } from "../../../domain/model";
+import {
+  type ClipId,
+} from "../../../domain/identifiers";
+import {
+  type ProjectDocument,
+} from "../../../domain/project/project-document";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
-} from "../../../domain/model";
+} from "../../../domain/identifiers";
 import { createGridSettings, parseGridSubdivision, type GridSettings } from "../../../editor/model/grid-settings";
 import {
   getTonalPatternDefinition,

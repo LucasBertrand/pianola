@@ -1,7 +1,9 @@
-import type {
-  AudioEngineConfig,
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type AudioEngineConfig,
+} from "../audio-engine-config";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 import type {
   PlaybackInstrumentSnapshot,
   ScheduledNoteEvent,

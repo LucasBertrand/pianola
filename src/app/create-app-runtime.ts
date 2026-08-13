@@ -10,12 +10,18 @@ import {
 } from "../config/editor-config";
 import {
   getActiveClip,
-  getClipDurationTicks,
-  type ClipId,
-  type Note,
   type ProjectState,
+} from "../domain/project/project-document";
+import {
+  getClipDurationTicks,
+} from "../domain/clips/clip";
+import {
+  type ClipId,
   type InstrumentId,
-} from "../domain/model";
+} from "../domain/identifiers";
+import {
+  type Note,
+} from "../domain/notes/note";
 import {
   ProjectStore,
 } from "../domain/project-store";

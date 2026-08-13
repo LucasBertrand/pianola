@@ -24,7 +24,7 @@ import {
 } from "../../src/domain/note-collision";
 import {
   getActiveClip,
-} from "../../src/domain/model";
+} from "../../src/domain/project/project-document";
 import {
   ProjectStore,
 } from "../../src/domain/project-store";

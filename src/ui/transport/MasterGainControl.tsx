@@ -14,7 +14,7 @@ import {
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
-} from "../../domain/model";
+} from "../../domain/master-bus";
 
 export interface MasterGainControlProps {
   readonly gain: number;

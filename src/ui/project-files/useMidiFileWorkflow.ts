@@ -47,12 +47,12 @@ import type {
 import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
-import type {
-  ProjectState,
-} from "../../domain/model";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import {
   getActiveClip,
-} from "../../domain/model";
+} from "../../domain/project/project-document";
 import {
   createDefaultNativeEditorState,
   createNativeProjectFileMetadata,

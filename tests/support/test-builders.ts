@@ -4,16 +4,26 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+} from "../../src/domain/master-bus";
+import {
   createDefaultClipTimeline,
+  type Clip,
+} from "../../src/domain/clips/clip";
+import {
   createDefaultProjectClock,
   createDefaultTransportState,
+} from "../../src/domain/transport/transport";
+import {
   PROJECT_SCHEMA_VERSION,
-  type Clip,
+  type ProjectState,
+} from "../../src/domain/project/project-document";
+import {
   type ClipId,
   type InstrumentId,
+} from "../../src/domain/identifiers";
+import {
   type Note,
-  type ProjectState,
-} from "../../src/domain/model";
+} from "../../src/domain/notes/note";
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,

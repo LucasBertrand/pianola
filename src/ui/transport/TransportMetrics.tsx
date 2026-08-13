@@ -21,9 +21,13 @@ import type {
 } from "../../domain/commands/command-types";
 import {
   getActiveClip,
+} from "../../domain/project/project-document";
+import {
   getClipTimeSignature,
+} from "../../domain/clips/clip";
+import {
   type TimeSignature,
-} from "../../domain/model";
+} from "../../domain/transport/transport";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -212,7 +216,7 @@ export function TransportMetrics(
           min={PROJECT_CONSTANTS.minimumTempoBpm}
           max={PROJECT_CONSTANTS.maximumTempoBpm}
           step={PROJECT_CONSTANTS.tempoStepBpm}
-          defaultValue={PROJECT_CONSTANTS.demoTempoBpm.toFixed(1)}
+          defaultValue={projectStore.getState().clock.tempoBpm.toFixed(1)}
           inputMode="decimal"
           onBlur={handleTempoCommit}
           onKeyDown={handleTempoKeyDown}

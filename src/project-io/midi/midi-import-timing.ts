@@ -1,6 +1,14 @@
 import { MIDI_CONSTANTS } from "../../config/midi-config";
 import { PROJECT_CONSTANTS } from "../../config/domain-limits";
-import type { InstrumentId, Note, TimeSignature } from "../../domain/model";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
+import {
+  type Note,
+} from "../../domain/notes/note";
+import {
+  type TimeSignature,
+} from "../../domain/transport/transport";
 import { MidiImportError } from "./midi-import-error";
 import type {
   ImportedSourceNote,

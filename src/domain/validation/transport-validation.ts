@@ -1,10 +1,14 @@
-import type {
-  ClipTimeline,
-  ProjectClock,
-  TimeSignature,
-  TransportState,
-} from "../model";
-import { getTicksPerMeasure } from "../model";
+import {
+  type ClipTimeline,
+} from "../clips/clip";
+import {
+  type ProjectClock,
+  type TimeSignature,
+  type TransportState,
+} from "../transport/transport";
+import {
+  getTicksPerMeasure,
+} from "../transport/transport";
 import { isValidTick } from "./note-validation";
 import {
   assertValidationResult,

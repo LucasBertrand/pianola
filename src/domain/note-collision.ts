@@ -1,17 +1,23 @@
 import type {
   PianoRollCommand,
 } from "./commands/command-types";
-import type {
-  Note,
-  NoteId,
-  Clip,
-  ClipId,
-  ProjectDocument,
-  InstrumentId,
-} from "./model";
+import {
+  type Note,
+} from "./notes/note";
+import {
+  type NoteId,
+  type ClipId,
+  type InstrumentId,
+} from "./identifiers";
+import {
+  type Clip,
+} from "./clips/clip";
+import {
+  type ProjectDocument,
+} from "./project/project-document";
 import {
   getClip,
-} from "./model";
+} from "./project/project-document";
 
 export type NoteCollisionResolutionMode = "merge" | "slice";
 

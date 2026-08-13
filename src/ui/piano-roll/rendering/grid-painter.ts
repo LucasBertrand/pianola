@@ -4,10 +4,10 @@ import {
 import {
   RENDERING_CONSTANTS,
 } from "../../../config/rendering-config";
-import type {
-  ProjectClock,
-  TimeSignature,
-} from "../../../domain/model";
+import {
+  type ProjectClock,
+  type TimeSignature,
+} from "../../../domain/transport/transport";
 import {
   MAX_MIDI_PITCH,
   MIN_MIDI_PITCH,

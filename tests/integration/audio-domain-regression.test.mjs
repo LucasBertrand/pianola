@@ -15,10 +15,10 @@ import {
   buildDeleteNoteCommands,
   buildRepositionNoteCommands,
   buildSetNotesEnabledCommands,
-} from "../../src/use-cases/notes/note-edit-commands";
+} from "../../src/use-cases/piano-roll/notes/note-edit-commands";
 import {
   NoteGestureWorkflow,
-} from "../../src/use-cases/notes/note-gesture-workflow";
+} from "../../src/use-cases/piano-roll/notes/note-gesture-workflow";
 import {
   buildSliceCommandsForNotes,
   canPlacePastedNotes,
@@ -26,7 +26,7 @@ import {
   createPastedNotes,
   findNotesByIds,
   getRequiredMeasureCountForNotes,
-} from "../../src/use-cases/selection/selection-edit-plans";
+} from "../../src/use-cases/piano-roll/selection/selection-edit-plans";
 import {
   createEditorRuntime,
 } from "../../src/app/create-app-runtime";
@@ -34,9 +34,11 @@ import {
   SubtractiveInstrumentRenderer,
 } from "../../src/audio/instruments/subtractive-instrument-renderer";
 import {
-  DEFAULT_AUDIO_ENGINE_CONFIG,
   LookaheadScheduler,
 } from "../../src/audio/lookahead-scheduler";
+import {
+  DEFAULT_AUDIO_ENGINE_CONFIG,
+} from "../../src/audio/default-audio-engine-config";
 import {
   resolveNoteEnvelopePeakLevel,
 } from "../../src/audio/note-dynamics";
@@ -70,13 +72,21 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+} from "../../src/domain/master-bus";
+import {
   createDefaultClipTimeline,
+  getClipMeasureCount,
+} from "../../src/domain/clips/clip";
+import {
   createDefaultProjectClock,
   createDefaultTransportState,
-  getClipMeasureCount,
+} from "../../src/domain/transport/transport";
+import {
   DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
+} from "../../src/domain/instruments/instrument";
+import {
   PROJECT_SCHEMA_VERSION,
-} from "../../src/domain/model";
+} from "../../src/domain/project/project-document";
 import {
   countNoteEditCollisions,
   createNoteCollisionResolutionPlan,

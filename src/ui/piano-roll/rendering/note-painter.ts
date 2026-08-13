@@ -1,11 +1,13 @@
 import {
   RENDERING_CONSTANTS,
 } from "../../../config/rendering-config";
-import type {
-  InstrumentId,
-  Note,
-  NoteId,
-} from "../../../domain/model";
+import {
+  type InstrumentId,
+  type NoteId,
+} from "../../../domain/identifiers";
+import {
+  type Note,
+} from "../../../domain/notes/note";
 import type {
   InstrumentRenderStyle,
 } from "../../../editor/model/instrument-render-style";

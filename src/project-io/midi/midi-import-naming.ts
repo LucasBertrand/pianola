@@ -1,5 +1,7 @@
 import { PROJECT_CONSTANTS } from "../../config/domain-limits";
-import type { InstrumentId } from "../../domain/model";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 import type { MutableInstrumentGroup } from "./midi-import-types";
 
 export function createImportedInstrumentName(

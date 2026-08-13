@@ -1,20 +1,32 @@
-import type {
-  InstrumentConfig,
-  Note,
-  ProjectDocument,
-  MeterMapSegment,
-  ProjectInstrument,
-  InstrumentId,
-} from "../domain/model";
+import {
+  type InstrumentConfig,
+  type ProjectInstrument,
+} from "../domain/instruments/instrument";
+import {
+  type Note,
+} from "../domain/notes/note";
+import {
+  type ProjectDocument,
+} from "../domain/project/project-document";
+import {
+  type MeterMapSegment,
+} from "../domain/transport/transport";
+import {
+  type InstrumentId,
+} from "../domain/identifiers";
 import {
   getClipDurationTicks,
+} from "../domain/clips/clip";
+import {
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+} from "../domain/instruments/instrument";
+import {
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
-} from "../domain/model";
+} from "../domain/master-bus";
 import {
   validateProjectInstrument,
 } from "../domain/validation/instrument-validation";

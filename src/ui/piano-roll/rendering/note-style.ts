@@ -1,7 +1,9 @@
-import type {
-  Note,
-  InstrumentId,
-} from "../../../domain/model";
+import {
+  type Note,
+} from "../../../domain/notes/note";
+import {
+  type InstrumentId,
+} from "../../../domain/identifiers";
 import type {
   NoteColorMode,
 } from "../../../editor/model/note-color-mode";

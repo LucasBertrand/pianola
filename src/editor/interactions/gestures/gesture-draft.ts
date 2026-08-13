@@ -1,7 +1,7 @@
-import type {
-  NoteId,
-  InstrumentId,
-} from "../../../domain/model";
+import {
+  type NoteId,
+  type InstrumentId,
+} from "../../../domain/identifiers";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   type PitchSnapSettings,

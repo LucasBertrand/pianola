@@ -1,7 +1,9 @@
-import type {
-  LoopRegion,
-  Tick,
-} from "../domain/model";
+import {
+  type LoopRegion,
+} from "../domain/transport/transport";
+import {
+  type Tick,
+} from "../domain/identifiers";
 import type {
   TempoMapSnapshot,
 } from "./playback-model";

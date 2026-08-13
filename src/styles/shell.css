@@ -1,5 +1,5 @@
 .app-shell {
-  --general-inspector-width: 306px;
+  --project-inspector-width: 306px;
   display: flex;
   width: 100%;
   height: 100%;
@@ -16,7 +16,7 @@
   background: var(--color-surface-app);
   grid-template-columns:
     minmax(0, 1fr)
-    var(--general-inspector-width);
+    var(--project-inspector-width);
 }
 
 .editor-panel {

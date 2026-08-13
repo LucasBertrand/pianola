@@ -1,9 +1,13 @@
 import {
   getActiveClip,
+} from "../../../domain/project/project-document";
+import {
   type InstrumentId,
-  type Note,
   type NoteId,
-} from "../../../domain/model";
+} from "../../../domain/identifiers";
+import {
+  type Note,
+} from "../../../domain/notes/note";
 import type {
   ViewportState,
 } from "../../../editor/geometry/converter";

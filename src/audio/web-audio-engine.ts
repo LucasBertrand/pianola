@@ -1,7 +1,9 @@
-import type {
-  AudioEngineConfig,
-  InstrumentId,
-} from "../domain/model";
+import {
+  type AudioEngineConfig,
+} from "./audio-engine-config";
+import {
+  type InstrumentId,
+} from "../domain/identifiers";
 import {
   AUDIO_CONSTANTS,
 } from "../config/audio-config";
@@ -12,8 +14,7 @@ import type {
   ScheduledNoteEvent,
 } from "./playback-model";
 import {
-  countOverlappingVoiceWindows,
-  findOldestOverlappingVoiceIndex,
+  reservePolyphonySlot,
 } from "./voice-allocation";
 import type {
   ActiveInstrumentVoice,
@@ -22,15 +23,17 @@ import type {
 import {
   SubtractiveInstrumentRenderer,
 } from "./instruments/subtractive-instrument-renderer";
+import {
+  setAudioParamSmoothly,
+} from "./audio-param-automation";
+import {
+  synchronizeInstrumentBuses,
+  type InstrumentBus,
+} from "./web-audio-routing";
 
 export type AudioContextFactory = (
   config: AudioEngineConfig,
 ) => AudioContext;
-
-interface InstrumentBus {
-  readonly gainNode: GainNode;
-  readonly panNode: StereoPannerNode;
-}
 
 const DEFAULT_INSTRUMENT_RENDERERS: readonly InstrumentRenderer[] =
   Object.freeze([
@@ -188,8 +191,8 @@ export class WebAudioEngine implements AudioEnginePort {
       );
     }
 
-    this.reservePolyphonySlot(
-      event.instrument.instrumentId,
+    reservePolyphonySlot(
+      this.activeVoicesByInstrumentId.get(event.instrument.instrumentId),
       startAudioTimeSeconds,
       noteEndAudioTimeSeconds,
       maximumPolyphony,
@@ -411,167 +414,18 @@ export class WebAudioEngine implements AudioEnginePort {
   }
 
   private synchronizeInstrumentBuses(): void {
-    const context = this.audioContext;
-    const masterGain = this.masterGainNode;
-
-    if (context === null || masterGain === null) {
+    if (this.audioContext === null || this.masterGainNode === null) {
       return;
     }
 
-    setAudioParamSmoothly(
-      masterGain.gain,
-      this.currentSnapshot.masterMuted
-        ? 0
-        : this.currentSnapshot.masterGain,
-      context.currentTime,
-    );
-
-    const retainedInstrumentIds = new Set<InstrumentId>();
-    let hasSoloInstrument = false;
-
-    for (
-      let instrumentIndex = 0;
-      instrumentIndex < this.currentSnapshot.instruments.length;
-      instrumentIndex += 1
-    ) {
-      const instrument = this.currentSnapshot.instruments[instrumentIndex];
-
-      if (instrument !== undefined && instrument.solo) {
-        hasSoloInstrument = true;
-        break;
-      }
-    }
-
-    for (
-      let instrumentIndex = 0;
-      instrumentIndex < this.currentSnapshot.instruments.length;
-      instrumentIndex += 1
-    ) {
-      const instrument = this.currentSnapshot.instruments[instrumentIndex];
-
-      if (instrument === undefined) {
-        continue;
-      }
-
-      retainedInstrumentIds.add(instrument.instrumentId);
-      let instrumentBus = this.instrumentBuses.get(instrument.instrumentId);
-
-      if (instrumentBus === undefined) {
-        const gainNode = context.createGain();
-        const panNode = context.createStereoPanner();
-
-        gainNode.connect(panNode);
-        panNode.connect(masterGain);
-        instrumentBus = {
-          gainNode,
-          panNode,
-        };
-        this.instrumentBuses.set(instrument.instrumentId, instrumentBus);
-      }
-
-      const audible =
-        !instrument.muted && (!hasSoloInstrument || instrument.solo);
-      setAudioParamSmoothly(
-        instrumentBus.gainNode.gain,
-        audible ? instrument.gain : 0,
-        context.currentTime,
-      );
-      setAudioParamSmoothly(
-        instrumentBus.panNode.pan,
-        instrument.pan,
-        context.currentTime,
-      );
-    }
-
-    for (const [instrumentId, instrumentBus] of this.instrumentBuses) {
-      if (!retainedInstrumentIds.has(instrumentId)) {
-        const activeVoices =
-          this.activeVoicesByInstrumentId.get(instrumentId);
-
-        if (activeVoices !== undefined) {
-          for (
-            let instrumentIndex = 0;
-            instrumentIndex < activeVoices.length;
-            instrumentIndex += 1
-          ) {
-            const activeVoice = activeVoices[instrumentIndex];
-
-            if (activeVoice !== undefined) {
-              activeVoice.stop(context.currentTime);
-            }
-          }
-        }
-
-        instrumentBus.gainNode.disconnect();
-        instrumentBus.panNode.disconnect();
-        this.instrumentBuses.delete(instrumentId);
-        this.activeVoicesByInstrumentId.delete(instrumentId);
-      }
-    }
+    synchronizeInstrumentBuses({
+      context: this.audioContext,
+      masterGain: this.masterGainNode,
+      snapshot: this.currentSnapshot,
+      buses: this.instrumentBuses,
+      activeVoicesByInstrumentId: this.activeVoicesByInstrumentId,
+    });
   }
-
-  private reservePolyphonySlot(
-    instrumentId: InstrumentId,
-    startAudioTimeSeconds: number,
-    endAudioTimeSeconds: number,
-    maximumPolyphony: number,
-  ): void {
-    const activeVoices = this.activeVoicesByInstrumentId.get(instrumentId);
-
-    if (activeVoices === undefined) {
-      return;
-    }
-
-    let writeIndex = 0;
-
-    for (
-      let readIndex = 0;
-      readIndex < activeVoices.length;
-      readIndex += 1
-    ) {
-      const activeVoice = activeVoices[readIndex];
-
-      if (
-        activeVoice !== undefined
-        && !activeVoice.ended
-        && activeVoice.stopAudioTimeSeconds
-          > startAudioTimeSeconds
-      ) {
-        activeVoices[writeIndex] = activeVoice;
-        writeIndex += 1;
-      }
-    }
-
-    activeVoices.length = writeIndex;
-
-    while (
-      countOverlappingVoiceWindows(
-        activeVoices,
-        startAudioTimeSeconds,
-        endAudioTimeSeconds,
-      ) >= maximumPolyphony
-    ) {
-      const instrumentIndex = findOldestOverlappingVoiceIndex(
-        activeVoices,
-        startAudioTimeSeconds,
-        endAudioTimeSeconds,
-      );
-
-      if (instrumentIndex < 0) {
-        break;
-      }
-
-      const voiceToSteal = activeVoices[instrumentIndex];
-
-      if (voiceToSteal === undefined) {
-        break;
-      }
-
-      voiceToSteal.stop(startAudioTimeSeconds);
-      activeVoices.splice(instrumentIndex, 1);
-    }
-  }
-
   private assertUsable(): void {
     if (this.disposed) {
       throw new Error("The audio engine has been disposed.");
@@ -589,33 +443,6 @@ function createBrowserAudioContext(
   return new AudioContext({
     latencyHint: config.latencyHint,
   });
-}
-
-function setAudioParamSmoothly(
-  parameter: AudioParam,
-  value: number,
-  atAudioTimeSeconds: number,
-): void {
-  holdAudioParam(parameter, atAudioTimeSeconds);
-  parameter.linearRampToValueAtTime(
-    value,
-    atAudioTimeSeconds + AUDIO_CONSTANTS.busRampSeconds,
-  );
-}
-
-function holdAudioParam(
-  parameter: AudioParam,
-  atAudioTimeSeconds: number,
-): void {
-  try {
-    parameter.cancelAndHoldAtTime(atAudioTimeSeconds);
-  } catch {
-    parameter.cancelScheduledValues(atAudioTimeSeconds);
-    parameter.setValueAtTime(
-      parameter.value,
-      atAudioTimeSeconds,
-    );
-  }
 }
 
 function assertValidAudioEngineConfig(

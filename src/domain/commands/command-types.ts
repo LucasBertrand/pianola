@@ -1,19 +1,27 @@
-import type {
-  Clip,
-  ClipId,
-  ClipInstrumentState,
-  EffectDescriptor,
-  GenerativeRuleDescriptor,
-  InstrumentConfig,
-  InstrumentId,
-  LoopRegion,
-  Note,
-  NoteId,
-  ProjectInstrument,
-  ProjectInstrumentInterpretation,
-  Tick,
-  TimeSignature,
-} from "../model";
+import {
+  type Clip,
+  type ClipInstrumentState,
+} from "../clips/clip";
+import {
+  type ClipId,
+  type InstrumentId,
+  type NoteId,
+  type Tick,
+} from "../identifiers";
+import {
+  type EffectDescriptor,
+  type GenerativeRuleDescriptor,
+  type InstrumentConfig,
+  type ProjectInstrument,
+  type ProjectInstrumentInterpretation,
+} from "../instruments/instrument";
+import {
+  type LoopRegion,
+  type TimeSignature,
+} from "../transport/transport";
+import {
+  type Note,
+} from "../notes/note";
 
 export interface AddProjectInstrumentCommand {
   readonly type: "AddProjectInstrument";

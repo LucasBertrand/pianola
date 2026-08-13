@@ -1,14 +1,24 @@
-import type {
-  Note,
-} from "../../domain/model";
+import {
+  type Note,
+} from "../../domain/notes/note";
 import {
   MAX_MIDI_PITCH,
   MIN_MIDI_PITCH,
 } from "./converter";
+import {
+  SPATIAL_SEARCH_BLOCK_SIZE,
+  clampSpatialPitch,
+  compareSpatialNotes,
+  isValidTouchQuery,
+  lowerBoundStartTick,
+  rebuildBlockMaxEndTicks,
+  upperBoundStartTick,
+  validateIndexableNotes,
+  type SpatialIndexBucket,
+} from "./spatial-index-search";
 
 const PITCH_BUCKET_COUNT =
   MAX_MIDI_PITCH - MIN_MIDI_PITCH + 1;
-const SEARCH_BLOCK_SIZE = 32;
 const TOUCH_QUERY_END_EPSILON_TICKS = 0.000_001;
 
 export interface SpatialTouchEnvelope {
@@ -27,18 +37,13 @@ export interface SpatialNoteEdgeHit {
 export type SpatialNotePredicate = (note: Note) => boolean;
 export type SpatialNoteComparator = (left: Note, right: Note) => number;
 
-interface PitchBucket {
-  readonly notes: Note[];
-  readonly blockMaxEndTicks: number[];
-}
-
 export class SpatialIndex {
-  private readonly buckets: PitchBucket[];
+  private readonly buckets: SpatialIndexBucket[];
   private readonly touchQueryBuffer: Note[] = [];
   private indexedNoteCount = 0;
 
   public constructor() {
-    const buckets: PitchBucket[] = new Array<PitchBucket>(
+    const buckets: SpatialIndexBucket[] = new Array<SpatialIndexBucket>(
       PITCH_BUCKET_COUNT,
     );
 
@@ -72,7 +77,7 @@ export class SpatialIndex {
       const bucket = this.buckets[pitch];
 
       if (bucket !== undefined && bucket.notes.length > 0) {
-        bucket.notes.sort(compareNotes);
+        bucket.notes.sort(compareSpatialNotes);
         rebuildBlockMaxEndTicks(bucket);
       }
     }
@@ -118,14 +123,14 @@ export class SpatialIndex {
     let preferredNote: Note | undefined;
 
     while (candidateIndex >= 0) {
-      const blockIndex = Math.floor(candidateIndex / SEARCH_BLOCK_SIZE);
+      const blockIndex = Math.floor(candidateIndex / SPATIAL_SEARCH_BLOCK_SIZE);
       const blockMaxEndTick = bucket.blockMaxEndTicks[blockIndex];
 
       if (
         blockMaxEndTick !== undefined
         && blockMaxEndTick > tick
       ) {
-        const blockStartIndex = blockIndex * SEARCH_BLOCK_SIZE;
+        const blockStartIndex = blockIndex * SPATIAL_SEARCH_BLOCK_SIZE;
 
         for (
           let noteIndex = candidateIndex;
@@ -154,7 +159,7 @@ export class SpatialIndex {
         }
       }
 
-      candidateIndex = blockIndex * SEARCH_BLOCK_SIZE - 1;
+      candidateIndex = blockIndex * SPATIAL_SEARCH_BLOCK_SIZE - 1;
     }
 
     return preferredNote;
@@ -363,8 +368,8 @@ export class SpatialIndex {
       return result;
     }
 
-    const firstPitch = clampPitch(Math.ceil(minPitch));
-    const lastPitch = clampPitch(Math.floor(maxPitch));
+    const firstPitch = clampSpatialPitch(Math.ceil(minPitch));
+    const lastPitch = clampSpatialPitch(Math.floor(maxPitch));
 
     if (firstPitch > lastPitch) {
       return result;
@@ -382,7 +387,7 @@ export class SpatialIndex {
         endTick,
       );
       const lastBlockIndex = Math.floor(
-        (candidateEndIndex - 1) / SEARCH_BLOCK_SIZE,
+        (candidateEndIndex - 1) / SPATIAL_SEARCH_BLOCK_SIZE,
       );
 
       for (
@@ -399,9 +404,9 @@ export class SpatialIndex {
           continue;
         }
 
-        const blockStartIndex = blockIndex * SEARCH_BLOCK_SIZE;
+        const blockStartIndex = blockIndex * SPATIAL_SEARCH_BLOCK_SIZE;
         const blockEndIndex = Math.min(
-          blockStartIndex + SEARCH_BLOCK_SIZE,
+          blockStartIndex + SPATIAL_SEARCH_BLOCK_SIZE,
           candidateEndIndex,
         );
 
@@ -425,146 +430,4 @@ export class SpatialIndex {
 
     return result;
   }
-}
-
-function isValidTouchQuery(
-  tick: number,
-  pitch: number,
-  envelope: SpatialTouchEnvelope,
-): boolean {
-  return (
-    Number.isFinite(tick)
-    && Number.isFinite(pitch)
-    && Number.isFinite(envelope.tickRadius)
-    && envelope.tickRadius >= 0
-    && Number.isFinite(envelope.pitchRadius)
-    && envelope.pitchRadius >= 0
-  );
-}
-
-function validateIndexableNotes(notes: readonly Note[]): void {
-  for (let index = 0; index < notes.length; index += 1) {
-    const note = notes[index];
-
-    if (
-      note === undefined
-      || !Number.isInteger(note.pitch)
-      || note.pitch < MIN_MIDI_PITCH
-      || note.pitch > MAX_MIDI_PITCH
-      || !Number.isSafeInteger(note.startTick)
-      || note.startTick < 0
-      || !Number.isSafeInteger(note.durationTicks)
-      || note.durationTicks <= 0
-    ) {
-      throw new RangeError(
-        `Note at index ${index} cannot be added to the spatial index.`,
-      );
-    }
-  }
-}
-
-function rebuildBlockMaxEndTicks(bucket: PitchBucket): void {
-  const blockCount = Math.ceil(
-    bucket.notes.length / SEARCH_BLOCK_SIZE,
-  );
-  bucket.blockMaxEndTicks.length = blockCount;
-
-  for (let blockIndex = 0; blockIndex < blockCount; blockIndex += 1) {
-    const blockStartIndex = blockIndex * SEARCH_BLOCK_SIZE;
-    const blockEndIndex = Math.min(
-      blockStartIndex + SEARCH_BLOCK_SIZE,
-      bucket.notes.length,
-    );
-    let maxEndTick = Number.NEGATIVE_INFINITY;
-
-    for (
-      let noteIndex = blockStartIndex;
-      noteIndex < blockEndIndex;
-      noteIndex += 1
-    ) {
-      const note = bucket.notes[noteIndex];
-
-      if (note !== undefined) {
-        const endTick = note.startTick + note.durationTicks;
-
-        if (endTick > maxEndTick) {
-          maxEndTick = endTick;
-        }
-      }
-    }
-
-    bucket.blockMaxEndTicks[blockIndex] = maxEndTick;
-  }
-}
-
-function lowerBoundStartTick(notes: readonly Note[], tick: number): number {
-  let low = 0;
-  let high = notes.length;
-
-  while (low < high) {
-    const middle = low + ((high - low) >> 1);
-    const note = notes[middle];
-
-    if (note !== undefined && note.startTick < tick) {
-      low = middle + 1;
-    } else {
-      high = middle;
-    }
-  }
-
-  return low;
-}
-
-function upperBoundStartTick(notes: readonly Note[], tick: number): number {
-  let low = 0;
-  let high = notes.length;
-
-  while (low < high) {
-    const middle = low + ((high - low) >> 1);
-    const note = notes[middle];
-
-    if (note !== undefined && note.startTick <= tick) {
-      low = middle + 1;
-    } else {
-      high = middle;
-    }
-  }
-
-  return low;
-}
-
-function compareNotes(left: Note, right: Note): number {
-  const startDifference = left.startTick - right.startTick;
-
-  if (startDifference !== 0) {
-    return startDifference;
-  }
-
-  const durationDifference = left.durationTicks - right.durationTicks;
-
-  if (durationDifference !== 0) {
-    return durationDifference;
-  }
-
-  if (left.id < right.id) {
-    return -1;
-  }
-
-  if (left.id > right.id) {
-    return 1;
-  }
-
-  return 0;
-}
-
-function clampPitch(pitch: number): number {
-  if (pitch < MIN_MIDI_PITCH) {
-    return MIN_MIDI_PITCH;
-  }
-
-  if (pitch > MAX_MIDI_PITCH) {
-    return MAX_MIDI_PITCH;
-  }
-
-  return pitch;
 }

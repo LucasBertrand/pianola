@@ -1,1074 +1,256 @@
 # Pianola
 
-Pianola est un séquenceur piano roll polyphonique, tactile en priorité, qui
-fonctionne entièrement dans le navigateur. L’application permet de composer,
-éditer, lire, sauvegarder et échanger des projets MIDI sans serveur applicatif
-ni compte utilisateur.
+Pianola est un séquenceur piano-roll polyphonique, tactile et entièrement local,
+construit avec React, TypeScript, Canvas et Web Audio. Il fonctionne dans le
+navigateur sans serveur applicatif, base distante ni compte utilisateur.
 
-Ce README est le point d’entrée pour installer, utiliser et dépanner le projet.
-La représentation technique détaillée se trouve dans
-[`docs/architecture.md`](docs/architecture.md) et les améliorations de
-maintenabilité sont ordonnées dans [`docs/roadmap.md`](docs/roadmap.md). Une
-[ancienne hypothèse de réécriture](docs/old-hypothetical-rewrite-roadmap.md) est
-conservée uniquement comme archive de décision.
+Ce README est un portail. Les détails vivent dans les guides de `docs/` et dans
+les README placés près du code qu’ils décrivent.
 
-## Sommaire
+## Démarrage rapide
 
-- [État du projet](#état-du-projet)
-- [Documentation associée](#documentation-associée)
-- [Fonctionnalités principales](#fonctionnalités-principales)
-- [Architecture et stack](#architecture-et-stack)
-- [Développement local](#développement-local)
-- [Commandes disponibles](#commandes-disponibles)
-- [Variables d’environnement](#variables-denvironnement)
-- [Tests et build de production](#tests-et-build-de-production)
-- [Déploiement continu GitHub vers Vercel](#déploiement-continu-github-vers-vercel)
-- [Utilisation de Pianola](#utilisation-de-pianola)
-- [Formats de fichiers](#formats-de-fichiers)
-- [Guide de maintenance](#guide-de-maintenance)
-- [Dépannage](#dépannage)
-- [Checklist de release](#checklist-de-release)
-- [Limites connues et évolutions](#limites-connues-et-évolutions)
+Prérequis :
 
-## Documentation associée
+- Node.js 22, version fixée dans [`.nvmrc`](.nvmrc) ;
+- npm, fourni avec Node.js ;
+- un navigateur récent avec Web Audio et Canvas.
 
-| Document | À consulter pour |
-| --- | --- |
-| [`README.md`](README.md) | installer, lancer, utiliser, déployer et dépanner Pianola |
-| [`docs/architecture.md`](docs/architecture.md) | comprendre les modules, propriétaires d’état, flux et règles de dépendances |
-| [`docs/state-ownership.md`](docs/state-ownership.md) | décider où vit un état, sa durée, sa persistance et son rapport à Undo/Redo |
-| [`docs/p1-migration.md`](docs/p1-migration.md) | consulter les déplacements, frontières et compatibilités du chantier P1 |
-| [`docs/p2-migration.md`](docs/p2-migration.md) | consulter le découpage du domaine, le format v1 et les fondations de modèle P2 |
-| [`docs/p3-migration.md`](docs/p3-migration.md) | consulter la modularisation du rendu, des interactions, du viewport et de l’UI |
-| [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
-| [`docs/p0-baseline.md`](docs/p0-baseline.md) | consulter les garde-fous, témoins critiques et mesures de référence de P0 |
-| [`docs/old-hypothetical-rewrite-roadmap.md`](docs/old-hypothetical-rewrite-roadmap.md) | consulter l’hypothèse de réécriture v2 archivée et non planifiée |
-| [`src/ui/piano-roll/rendering/README.md`](src/ui/piano-roll/rendering/README.md) | modifier le pipeline Canvas et ses contraintes de performance |
-| [`src/editor/geometry/__tests__/TEST_PLAN.md`](src/editor/geometry/__tests__/TEST_PLAN.md) | implémenter les tests de propriétés et benchmarks géométriques |
-
-## État du projet
-
-La version courante est `1.0.0`.
-
-Pianola est une application frontend statique :
-
-- aucun backend n’est requis ;
-- aucune base de données n’est utilisée ;
-- aucune donnée utilisateur n’est envoyée à un serveur par le code actuel ;
-- le projet actif réside en mémoire dans l’onglet du navigateur ;
-- l’utilisateur doit explicitement enregistrer un fichier `.pianola` pour
-  conserver son travail.
-
-Un rechargement, une fermeture d’onglet ou la création d’un nouveau projet
-peut donc faire perdre les changements non enregistrés.
-
-Le navigateur cible doit être moderne et prendre en charge Pointer Events,
-Canvas 2D, ResizeObserver, Web Audio API et les modules JavaScript natifs. Les
-tests manuels importants doivent être effectués au minimum sur Chrome Android,
-Firefox Android et un navigateur desktop.
-
-## Fonctionnalités principales
-
-- modèle de projet immuable organisé en clips partageant les mêmes instruments ;
-- commandes atomiques avec Undo/Redo ;
-- édition tactile des notes : sélection, lasso, déplacement, resize, dessin
-  par appui long et suppression ;
-- panoramique et zoom à deux doigts ;
-- magnétisme temporel et magnétisme tonal par gamme ou accord ;
-- résolution des collisions par annulation, fusion ou découpe aux ancres ;
-- instruments configurables : nom, couleur, configuration sonore, volume,
-  mute, solo et ordre globaux ; seul le verrouillage d’édition est propre à
-  chaque clip ;
-- clips configurables : sélection, nom, ordre, ajout et suppression ;
-- presets intégrés de synthétiseur soustractif avec pulse width, filtre modulé
-  et deux enveloppes ADSR ;
-- polyphonie configurable de 1 à 16 occurrences, initialisée par le preset,
-  avec vol de l’occurrence la plus ancienne lorsque cette limite est saturée ;
-- tête de lecture, tempo, métrique, grille straight/triplet/dotted et boucle ;
-- import MIDI SMF 0/1 et export MIDI SMF 1 ;
-- sauvegarde et chargement du format natif `.pianola` ;
-- rendu Canvas multicouche HiDPI avec culling par index spatial ;
-- interface responsive paysage/portrait pensée pour tablette.
-
-## Architecture et stack
-
-### Technologies
-
-| Élément | Rôle |
-| --- | --- |
-| React 19 | Layout, contrôles à faible fréquence et cycle de vie |
-| TypeScript strict | Modèle, validation, géométrie, audio et UI |
-| Vite 7 | Serveur de développement et bundle de production |
-| Canvas 2D | Grille et rendu performant des notes |
-| Web Audio API | Synthèse soustractive et lecture planifiée |
-| Pointer Events | Souris, tactile, stylet générique et multi-touch |
-| CSS natif | Layout responsive et apparence de l’application |
-| Node.js 22 | Toolchain de développement, build et tests |
-
-Il n’y a pas de bibliothèque de state management, de moteur audio externe, de
-framework CSS ni de routeur. Le nombre limité de dépendances réduit la surface
-de panne et simplifie les mises à jour.
-
-### Structure du dépôt
-
-```text
-.
-├── .github/workflows/ci.yml   Vérification automatique GitHub Actions
-├── docs/                      Architecture détaillée et feuille de route
-├── public/                    Manifeste et icône copiés tels quels dans dist
-├── scripts/                   Contrôles de frontières et mesures de baseline
-├── tests/                     Suites Vitest et supports de test partagés
-├── src/
-│   ├── app/                   Composition, fabrique du runtime et projet démo
-│   ├── audio/                 Snapshot, scheduler et moteur Web Audio
-│   ├── config/                Configuration séparée par propriétaire
-│   ├── domain/                Modèle, validation, commandes, reducer et store
-│   ├── editor/                Modèle d’édition, géométrie et interactions
-│   ├── music/                 Théorie musicale et magnétisme tonal
-│   ├── project-io/            Format natif et lecture/écriture MIDI SMF
-│   ├── ui/                    React, Canvas et adaptateurs par capacité
-│   ├── use-cases/             Orchestration, plans et ports sans React
-│   ├── main.tsx               Point d’entrée React
-│   ├── styles/                Styles par surface fonctionnelle
-│   └── styles.css             Entrée CSS globale ordonnée
-├── index.html                 Document HTML et métadonnées de Pianola
-├── package.json               Dépendances et scripts npm
-├── vercel.json                Build, headers et fallback SPA Vercel
-```
-
-### Flux d’une modification
-
-```text
-Pointer Event
-    ↓
-Draft mutable + ghost visuel
-    ↓ au pointerup uniquement
-Transaction de commandes
-    ↓
-Reducer pur → nouveau ProjectState immuable
-    ↓
-ProjectStore → historique + abonnés
-    ├──→ reconstruction de l’index spatial si nécessaire
-    ├──→ invalidation ciblée des Canvas
-    └──→ nouveau snapshot des événements audio futurs
-```
-
-Cette séparation est une règle fondamentale. Pendant un geste, le store global
-ne doit pas être modifié à chaque `pointermove`. Le brouillon mutable assure la
-fluidité ; une seule transaction est envoyée lorsque le geste est validé.
-
-### Domaine et historique
-
-`src/domain/model.ts` sépare les données globales de `ProjectState` des données
-locales de chaque `Clip`. Les identités d’instruments, leur configuration audio,
-la bibliothèque de presets et le master bus sont globaux. Chaque clip, identifié
-par un ID stable, possède ses pistes de notes, sa longueur, son transport et,
-pour chaque instrument, uniquement son verrouillage. Le mixage et les
-paramètres de synthèse ne sont donc jamais dupliqués dans les clips.
-Les propriétés persistantes sont en lecture seule.
-
-`src/domain/instrument-presets.ts` constitue le catalogue intégré. Les presets
-sont nommés, identifiés par un ID stable et profondément immuables. Un preset
-initialise le brouillon de la modale, puis sa configuration est copiée dans
-l’instrument. `playback-snapshot.ts` compile ensuite directement cette copie.
-`src/domain/commands/` est l’unique chemin normal pour modifier le projet.
-Le reducer racine délègue chaque famille à son module, tandis que la
-création ou la suppression d’un instrument met à jour les pistes de tous les clips.
-
-`src/domain/project-store.ts` conserve un historique global de snapshots
-bornés pour Undo/Redo. Il peut donc annuler une action réalisée dans n’importe
-quel clip. La simple navigation entre clips ne crée pas d’entrée d’historique
-et Undo/Redo conserve le clip actuellement affiché lorsqu’il existe encore.
-
-### Rendu et interactions
-
-React gère la structure, les formulaires et les abonnements. Les notes ne sont
-pas des composants React individuels :
-
-- `PianoRollLayers.tsx` compose les couches et `rendering/canvas-layer.tsx`
-  adapte les signaux vers les peintres purs ;
-- `useCanvasRenderer.ts` gère ResizeObserver, HiDPI et
-  `requestAnimationFrame` ;
-- `spatial-index.ts` classe les notes dans 128 buckets MIDI et limite le rendu
-  aux notes visibles ;
-- `editor/interactions/gestures` calcule quantification, bornes et pinch/pan sans DOM ;
-- `PianoRollInteractionSession` possède le draft, la sélection et les buffers ;
-- `usePianoRollEvents.ts` monte la stratégie, dont la construction, le workflow
-  de notes et le contrôleur de sélection vivent dans trois modules distincts ;
-- `DomInteractionVisualController` affiche les ghosts et poignées temporaires ;
-- `InteractionOverlay.tsx` monte les couches DOM et branche les adaptateurs ;
-- `editor/model/render-signal.ts` permet de redessiner sans re-render React.
-
-Les surfaces React et leurs hooks sont regroupés par capacité dans `src/ui` :
-`dialogs`, `editor-toolbar`, `inspector`, `piano-roll`, `project-files` et
-`transport`.
-La logique indépendante de React vit dans `src/use-cases`. `App.tsx` sert de
-point de câblage et ne doit pas redevenir le lieu d’implémentation des cas
-d’usage.
-
-La synchronisation haute fréquence des quatre sliders de déplacement/zoom est
-pilotée par `editor/viewport/viewport-controller.ts`. Le hook
-`useViewportControls.ts` ne conserve que les références DOM, les abonnements et
-le regroupement navigateur via `requestAnimationFrame`.
-
-Éviter `setState`, `map`, `filter` et la création d'objets dans les boucles de
-rendu ou de `pointermove`.
-
-Les règles de dépendances, le cycle détaillé d'un geste et l'ordre conseillé
-pour poursuivre la modularisation sont décrits dans
-[`docs/architecture.md`](docs/architecture.md). Les écarts constatés entre les
-frontières actuelles et la structure cible sont priorisés dans
-[`docs/roadmap.md`](docs/roadmap.md).
-
-### Audio
-
-`useAudioPlayback.ts` relie le store au moteur. Un `AudioContext` est créé de
-façon paresseuse après une action utilisateur. `playback-snapshot.ts` compile
-un état immuable depuis un `PlaybackSource` choisi explicitement et
-`lookahead-scheduler.ts` programme les événements à
-l’avance. `web-audio-engine.ts` possède le contexte, le master et les bus de
-instruments. Les renderers de `src/audio/instruments/` construisent les graphes propres
-à chaque type d’instrument ; le renderer soustractif est le seul disponible.
-Les contrats audio représentent chaque famille d’instrument par un snapshot
-discriminé et immuable. Chaque renderer expose sa propre politique de
-polyphonie : la limite du synthétiseur soustractif ne s’applique donc pas aux
-futurs instruments comme le drumkit.
-
-Le compilateur audio reçoit et valide la configuration propre à l’instrument,
-puis produit le snapshot discriminé attendu par le renderer. Les presets ne
-font pas partie du chemin de lecture et le scheduler ne doit pas les connaître.
-
-Les événements futurs sont recalculés après une édition sans couper les notes
-déjà audibles. La vélocité est conservée dans les fichiers, mais le niveau de
-lecture est volontairement constant dans cette version ; cette politique est
-centralisée dans `src/audio/note-dynamics.ts`.
-
-### Persistance et MIDI
-
-Le format natif enregistre l’état complet utile de Pianola. MIDI sert à
-l’interopérabilité et ne peut pas conserver toutes les propriétés spécifiques
-à l’application. Les parseurs imposent des limites de taille et de nombre
-d’événements pour protéger la mémoire d’une tablette.
-
-## Développement local
-
-### Prérequis
-
-- Git ;
-- Node.js `22.x` ;
-- npm, fourni avec Node.js.
-
-Vérifier les versions :
-
-```bash
-node --version
-npm --version
-git --version
-```
-
-La version Node doit commencer par `v22.`. Le fichier `.nvmrc` contient la
-version majeure attendue.
-
-### Première installation
-
-Depuis la racine du dépôt :
+Installation et démarrage :
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Ouvrir ensuite :
+Vite affiche l’URL locale, normalement `http://localhost:5173`. Un projet vierge
+est créé en mémoire à l’ouverture. Pour tester depuis une tablette du même
+réseau, ouvrez l’adresse réseau indiquée par Vite et autorisez le port dans le
+pare-feu local si nécessaire.
+
+Avant de proposer un changement :
+
+```bash
+npm run verify
+```
+
+## Commandes essentielles
+
+| Commande | Rôle |
+| --- | --- |
+| `npm run dev` | lancer Vite sur le port 5173 |
+| `npm run build` | vérifier TypeScript puis produire `dist/` |
+| `npm test` | exécuter les 102 scénarios Vitest |
+| `npm run typecheck` | vérifier les trois configurations TypeScript |
+| `npm run check:docs` | vérifier liens locaux et chemins documentés |
+| `npm run check:structure` | vérifier géographie, guides et anciens chemins |
+| `npm run check:boundaries` | vérifier les dépendances entre couches |
+| `npm run verify` | exécuter tous les contrôles de référence |
+| `npm run preview` | servir localement le build de production |
+
+Les variantes de tests sont décrites dans le
+[guide de développement](docs/guides/development.md).
+
+## Où commencer
+
+| Besoin | Point d’entrée |
+| --- | --- |
+| découvrir la documentation | [`docs/README.md`](docs/README.md) |
+| trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
+| comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
+| savoir quel état persiste | [`docs/state-ownership.md`](docs/state-ownership.md) |
+| installer et vérifier | [`docs/guides/development.md`](docs/guides/development.md) |
+| utiliser l’éditeur | [`docs/guides/usage.md`](docs/guides/usage.md) |
+| comprendre `.pianola` et MIDI | [`docs/guides/project-files.md`](docs/guides/project-files.md) |
+| déployer | [`docs/guides/deployment.md`](docs/guides/deployment.md) |
+| résoudre un problème | [`docs/guides/troubleshooting.md`](docs/guides/troubleshooting.md) |
+
+## Carte du dépôt
 
 ```text
-http://localhost:5173
+src/
+├── app/                         création du runtime et assemblage racine
+├── domain/                      document musical, invariants et historique
+├── editor/           noyau d’édition indépendant du DOM
+├── use-cases/piano-roll/        intentions notes et sélection
+├── audio/                       snapshot, scheduling et Web Audio
+├── project-io/                  format natif et MIDI
+├── ui/                          React, Canvas et adaptateurs navigateur
+├── styles/                      CSS par surface propriétaire
+├── music/                       vocabulaire tonal déterministe
+└── config/                      limites et réglages par propriétaire
 ```
 
-`npm ci` recrée exactement les dépendances définies par `package-lock.json`.
-Utiliser `npm install` uniquement lorsque les dépendances doivent être
-modifiées.
+Les tests purs vivent près de leur module. Les flux traversant plusieurs
+propriétaires restent dans `tests/integration/`. Il n’existe pas de barrel
+global : les imports indiquent toujours le propriétaire précis.
 
-### Accès depuis une tablette sur le même réseau
+## Architecture en une minute
 
-Le script de développement écoute déjà sur `0.0.0.0:5173`.
-
-1. Lancer `npm run dev`.
-2. Trouver l’adresse IPv4 du PC avec `ipconfig` sous Windows.
-3. Ouvrir `http://ADRESSE_IP_DU_PC:5173` sur la tablette.
-
-Si le pare-feu Windows bloque le réseau local, exécuter une fois PowerShell en
-administrateur :
-
-```powershell
-New-NetFirewallRule -DisplayName "Pianola Vite 5173" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5173 -Profile Public -RemoteAddress LocalSubnet
-```
-
-Ne pas exposer le serveur Vite directement sur Internet. Pour un accès public,
-utiliser le déploiement Vercel en HTTPS.
-
-## Commandes disponibles
-
-| Commande | Usage |
-| --- | --- |
-| `npm run dev` | Lance Vite sur toutes les interfaces, port 5173 |
-| `npm run typecheck` | Vérifie tout le TypeScript strict |
-| `npm run typecheck:core` | Vérifie domaine, éditeur, cas d’usage et formats sans React |
-| `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
-| `npm run typecheck:test` | Vérifie les tests TypeScript et leurs supports partagés |
-| `npm test` | Lance les 102 scénarios avec Vitest |
-| `npm run test:vitest:watch` | Relance les tests concernés pendant le développement |
-| `npm run build` | Typecheck puis produit le bundle `dist/` |
-| `npm run preview` | Sert localement le dernier build de production |
-| `npm run verify` | Frontières P1, TypeScript, build et toutes les suites Vitest |
-
-La commande de référence avant un commit ou une release est :
-
-```bash
-npm run verify
-```
-
-## Variables d’environnement
-
-Pianola `1.0.0` ne requiert aucune variable d’environnement.
-
-Le fichier `.env.example` est volontairement vide de clé. Il sert de contrat :
-si une variable est ajoutée plus tard, elle doit être documentée dans ce
-fichier et dans cette section.
-
-Règles Vite à respecter :
-
-- seules les variables préfixées par `VITE_` sont accessibles au code
-  navigateur ;
-- une variable `VITE_` est publique et ne doit jamais contenir de secret ;
-- les secrets éventuels ne doivent pas être utilisés dans un frontend
-  statique : ils nécessitent une fonction serveur ou un backend ;
-- les fichiers `.env`, `.env.local` et `.env.production` sont ignorés par Git ;
-- `.env.example` est suivi par Git et ne contient que des valeurs factices.
-
-Pour préparer une configuration locale future :
-
-```bash
-cp .env.example .env.local
-```
-
-Sous PowerShell :
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-## Tests et build de production
-
-### Vérification complète
-
-```bash
-npm ci
-npm run verify
-```
-
-Le build attendu est `dist/`, avec au minimum :
+Le chemin normal d’une modification musicale est :
 
 ```text
-dist/
-├── assets/
-├── index.html
-├── manifest.webmanifest
-└── pianola-icon.svg
+composant visible
+  → hook ou adaptateur de capacité
+  → cas d’usage
+  → commandes atomiques
+  → ProjectStore
+  → reducer du domaine
+  → snapshot dérivé pour Canvas ou Web Audio
 ```
 
-Tester le résultat localement :
+`src/app/App.tsx` crée le runtime et monte `PianoRollWorkspace`. Les protocoles
+de dialogues, instruments, collisions, fichiers, sélection, transport et
+viewport appartiennent aux capacités UI correspondantes.
+
+Le noyau de l’éditeur sous `src/editor/` ne connaît ni React ni le
+DOM. Les `PointerEvent` sont convertis en échantillons immuables par l’adaptateur
+UI avant d’entrer dans la stratégie de gestes.
+
+Le domaine est réparti par vocabulaire produit :
+
+- `src/domain/identifiers.ts` pour les identifiants et ticks ;
+- `src/domain/notes/note.ts` pour une note ;
+- `src/domain/instruments/instrument.ts` pour sons et instruments projet ;
+- `src/domain/clips/clip.ts` pour pistes, timelines et clips ;
+- `src/domain/transport/transport.ts` pour horloge, métrique et boucle ;
+- `src/domain/master-bus.ts` pour le bus master ;
+- `src/domain/project/project-document.ts` pour le document et le workspace.
+
+Les frontières exécutables interdisent au domaine et au noyau d’éditeur de
+dépendre de React, du navigateur ou de la composition applicative.
+
+## Propriété des états
+
+Pianola distingue quatre durées de vie :
+
+| État | Propriétaire | Persisté | Undo/Redo |
+| --- | --- | --- | --- |
+| document musical | `ProjectDocument` dans `ProjectStore` | oui | oui |
+| espace de travail | `WorkspaceState`, runtime et hooks UI | en partie | non |
+| session de geste | sélection, draft, lasso, presse-papier | non | non |
+| temps réel | scheduler, voix audio, buffers Canvas | non | non |
+
+Une intention validée produit au plus une transaction. Les déplacements
+intermédiaires du pointeur ne modifient pas `ProjectState`. Le détail complet se
+trouve dans [`docs/state-ownership.md`](docs/state-ownership.md).
+
+## Surfaces principales
+
+### En-tête et transport
+
+L’en-tête contient le titre du projet, les fichiers, les métriques musicales et
+le transport. Le bouton de lecture part de
+`src/ui/transport/TransportControls.tsx`, traverse
+`src/ui/transport/useAudioPlayback.ts`, puis la façade
+`src/audio/lookahead-scheduler.ts`.
+
+### Piano roll
+
+Le piano roll assemble ruler, boucle, clavier, couches Canvas, playhead et
+contrôles de viewport. Le flux complet d’un geste est documenté dans
+[`src/editor/README.md`](src/editor/README.md).
+
+Le rendu musical est dessiné sur Canvas. Les éléments DOM transitoires ne
+servent qu’aux fantômes de notes, sélections, lasso et contrôles accessibles.
+
+### Inspecteur projet
+
+`src/ui/inspector/ProjectInspector.tsx` rend les clips et instruments. Le
+document musical reste propriétaire des valeurs durables ; les hooks
+d’inspecteur ne gardent que le protocole d’interaction.
+
+### Fichiers projet
+
+Le menu de fichiers est dans `src/ui/project-files/ProjectFileMenu.tsx`. Le
+format natif et le MIDI ont des pipelines indépendants sous `src/project-io/`.
+Consultez le [guide des fichiers](docs/guides/project-files.md) avant de modifier
+un schéma, un parseur ou un export.
+
+## Utilisation résumée
+
+- Lecture/Pause démarre ou suspend la lecture au playhead.
+- Stop annule les voix et replace le statut sans modifier le document.
+- Un appui long dans la grille dessine une note.
+- Le glisser déplace une sélection ; les poignées redimensionnent les notes.
+- Le lasso sélectionne une zone ; le mode additif ou soustractif modifie la
+  sélection existante.
+- Copier, couper, coller, supprimer, transformer et transférer produisent des
+  transactions cohérentes.
+- Une collision demande explicitement de fusionner ou de découper aux ancres.
+- Les clips partagent les instruments globaux mais gardent leurs notes,
+  verrouillages, timeline et boucle.
+
+Tous les gestes et contrôles sont détaillés dans
+[`docs/guides/usage.md`](docs/guides/usage.md).
+
+## Fichiers et données
+
+Le format `.pianola` v1 stocke le document musical et les préférences d’éditeur
+utiles. Le parseur traite le JSON comme inconnu, vérifie les limites, puis
+construit le domaine. Le chargement arrête la lecture et réinitialise les états
+transitoires avant de remplacer le projet.
+
+L’import MIDI analyse d’abord le SMF, présente les avertissements et collisions,
+puis construit un nouveau projet. L’export reçoit une projection musicale
+neutre ; le codec ne connaît ni React, ni le store, ni le clip affiché.
+
+Les fichiers restent locaux. Un rechargement sans sauvegarde perd les
+modifications en mémoire.
+
+## Tests et validation
+
+La référence est `npm run verify`. Elle contrôle, dans l’ordre :
+
+1. liens et chemins documentaires ;
+2. structure, noms retirés et guides locaux ;
+3. frontières d’import et isolation navigateur ;
+4. TypeScript strict ;
+5. build Vite de production ;
+6. 102 scénarios Vitest.
+
+La suite centrale de régression reste volontairement en place. Pour cibler un
+fichier :
 
 ```bash
-npm run preview
+npm test -- tests/integration/critical-behavior.test.ts
+npm test -- src/audio/__tests__/playback-plan.test.ts
 ```
 
-Puis ouvrir `http://localhost:4173`.
+Les interactions réelles tactiles, Canvas et Web Audio conservent une part de
+validation humaine.
 
-`vite preview` est uniquement destiné à vérifier le bundle local. Vercel sert
-les fichiers de production.
+## Déploiement
 
-### Couverture actuelle
+Le dépôt contient un workflow GitHub Actions et une configuration Vercel. La CI
+exécute `npm ci`, puis `npm run verify`. Vercel construit avec `npm run build` et
+publie `dist/`.
 
-Les 102 scénarios Vitest couvrent les invariants du domaine, les commandes,
-l’historique, les collisions, la persistance, le timing audio, le scheduler,
-la polyphonie, le solo, les boucles, les conversions MIDI, la géométrie et les
-frontières d’import. Chaque scénario est exécutable par fichier ou par nom.
+Les étapes de première connexion, de vérification et de retour arrière sont dans
+[`docs/guides/deployment.md`](docs/guides/deployment.md).
 
-Les gestes tactiles, le layout responsive, le rendu Canvas et le comportement
-réel de Web Audio doivent encore être validés manuellement. Le plan des tests
-géométriques complémentaires se trouve dans
-`src/editor/geometry/__tests__/TEST_PLAN.md`. Les parcours navigateur prioritaires sont détaillés dans
-[`docs/roadmap.md`](docs/roadmap.md).
+## Contribution
 
-## Déploiement continu GitHub vers Vercel
+Avant une modification structurelle, identifiez :
 
-### Ce qui est déjà configuré
+- le propriétaire de la capacité ;
+- l’ancien et le nouveau chemin de navigation ;
+- les tests, styles et documents concernés ;
+- le point d’entrée à mettre à jour dans `docs/code-map.md`.
 
-- `.github/workflows/ci.yml` lance `npm ci` puis `npm run verify` sur les push
-  vers `main` et sur les pull requests ;
-- `package.json` impose Node `22.x` ;
-- `vercel.json` sélectionne Vite, lance `npm run build` et publie `dist` ;
-- le fallback `/(.*) → /index.html` évite les erreurs 404 de navigation SPA ;
-- des headers HTTP prudents désactivent caméra, microphone et géolocalisation.
+La checklist complète est fournie par
+[`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md).
 
-### Première connexion à Vercel
+Les conventions principales sont : fichiers TypeScript en kebab-case,
+composants React en PascalCase, hooks en `useCamelCase`, imports précis et aucun
+fichier fourre-tout nommé seulement `types`, `helpers`, `utils`, `common`,
+`state`, `input` ou `contracts`.
 
-1. Créer ou utiliser un dépôt GitHub contenant ce projet.
-2. Vérifier localement avec `npm run verify`.
-3. Pousser le projet sur la branche `main`.
-4. Dans Vercel, choisir **Add New → Project**.
-5. Connecter GitHub et importer le dépôt Pianola.
-6. Vérifier les réglages détectés :
+## Limites connues
 
-| Réglage Vercel | Valeur |
-| --- | --- |
-| Framework Preset | Vite |
-| Root Directory | `.` |
-| Install Command | `npm install` ou valeur automatique |
-| Build Command | `npm run build` |
-| Output Directory | `dist` |
-| Node.js Version | 22.x |
+- aucune synchronisation cloud ou collaboration temps réel ;
+- aucun système de plugins ou d’effets audio éditables ;
+- un seul type d’instrument sonore, le synthé soustractif ;
+- pas de tests navigateur automatisés ;
+- support MIDI centré sur les événements nécessaires au piano roll.
 
-7. Ne définir aucune variable d’environnement pour cette version.
-8. Cliquer sur **Deploy**.
-9. Tester la lecture audio, le tactile, Save/Load et MIDI sur l’URL HTTPS.
-
-`vercel.json` versionne les réglages essentiels. Si le dashboard et ce fichier
-se contredisent, le fichier du dépôt doit rester la source de vérité.
-
-### Déploiements suivants
-
-Après la connexion du dépôt :
-
-- un push sur `main` déclenche la vérification GitHub et un déploiement Vercel
-  de production ;
-- une pull request déclenche la CI et crée normalement une Preview Vercel ;
-- un commit qui échoue au build ne doit pas être promu en production.
-
-Workflow normal :
-
-```bash
-git status
-npm run verify
-git add .
-git commit -m "type: concise description"
-git push origin main
-```
-
-Consulter ensuite :
-
-- l’onglet **Actions** de GitHub pour la CI ;
-- l’onglet **Deployments** de Vercel pour le build et l’URL.
-
-### Retour arrière
-
-La méthode la plus traçable est de créer un commit qui annule le commit
-défectueux :
-
-```bash
-git log --oneline
-git revert IDENTIFIANT_DU_COMMIT
-git push origin main
-```
-
-Vercel reconstruira automatiquement la version corrigée. Le dashboard Vercel
-permet aussi de promouvoir un déploiement antérieur en urgence, mais le dépôt
-Git doit ensuite être remis au même état afin d’éviter une divergence.
-
-## Utilisation de Pianola
-
-### Projet et historique
-
-Le menu hamburger contient New, Save, Load, Import MIDI et Export MIDI.
-Undo/Redo se trouvent à côté. Le titre du projet est éditable dans le header.
-
-Save télécharge un fichier `.pianola`. Il n’existe pas encore d’auto-save ni de
-stockage dans le navigateur.
-
-### Clips
-
-La grille principale affiche uniquement le clip sélectionné dans l’inspecteur.
-La section **Clips** reprend les interactions de la liste des instruments :
-
-- `+` crée un clip vide et le sélectionne ;
-- les flèches changent sa position dans la liste ;
-- un appui long sur son nom active le renommage ;
-- la croix supprime le clip après confirmation ; le dernier clip ne peut pas
-  être supprimé.
-
-L’identité, la configuration sonore, le volume, le panoramique, le mute et le
-solo des instruments, la bibliothèque de presets, le master bus et le
-presse-papier sont partagés par tout le projet. Le verrouillage de chaque
-instrument, les notes, la longueur, le tempo, la métrique, la grille, la
-tonalité, la boucle, la tête de lecture, le scroll et le zoom sont propres à
-chaque clip. Changer de clip vide la sélection de notes, mais conserve le
-presse-papier afin de permettre un copier-coller entre clips.
-
-### Notes
-
-- Tap sur une note : sélection.
-- Tap dans le vide : désélection ou début du lasso.
-- Drag d’une note sélectionnée : déplacement de la sélection.
-- Drag d’une poignée visible : redimensionnement.
-- Appui long dans une cellule vide puis drag : création et durée.
-- Appui long sur une note : active ou désactive la note. Si la note appartient
-  à la sélection, l'opération s'applique à toute la sélection.
-- Double clic/tap sur une note : suppression.
-- Icône poubelle : suppression de la sélection.
-- Copier/couper/coller : collage à partir de la tête de lecture. Si le motif
-  dépasse la fin du projet, Pianola ajoute automatiquement les mesures
-  nécessaires dans la même opération Undo/Redo.
-
-Une note désactivée reste visible, sélectionnable et transformable tant que son
-instrument n'est pas verrouillé, mais elle n'est ni jouée ni exportée en MIDI. Son
-état est conservé dans le fichier natif `.pianola`.
-
-Une collision entre notes de même pitch et même instrument ouvre une modale offrant
-l’annulation, la fusion ou la découpe. Deux notes de pitchs différents peuvent
-se superposer dans le temps.
-
-### Clavier, snap et navigation
-
-- Tap sur une touche : preview audio si le bouton de preview est activé.
-- Appui long sur une touche : ajoute ou retire les notes de ce pitch de la
-  sélection.
-- Deux doigts : pan et zoom.
-- Les sliders inférieurs contrôlent position et zoom horizontal/vertical.
-- Le snap temporel suit la grille.
-- Le snap tonal limite les déplacements aux notes de la tonique et du motif
-  sélectionnés.
-
-### Instruments
-
-L’inspecteur permet d’ajouter, supprimer, réordonner et éditer les instruments.
-Le bouton d’ajout ouvre une modale : un preset initialise la configuration,
-puis le nom, la couleur et les paramètres du synthétiseur peuvent être ajustés.
-Le bouton d’engrenage rouvre le même éditeur pour l’instrument existant. Les
-notes créées utilisent l’instrument sélectionné.
-
-- **Mute** coupe l’instrument et atténue ses notes visuellement.
-- **Solo** ne lit que les instruments solo.
-- **Lock** rend les notes non éditables et les affiche hachurées.
-- La cible sélectionne les notes de l’instrument sans supprimer la sélection des
-  autres instruments.
-
-Chaque instrument possède une identité, une couleur, une configuration sonore
-et un mixage globaux. Le preset choisi à la création est un modèle : Pianola en
-copie la configuration dans l’instrument, sans conserver de lien dynamique vers
-le preset. La polyphonie, la forme d’onde, la largeur d’impulsion, le filtre et
-les enveloppes ADSR restent donc éditables indépendamment pour chaque
-instrument.
-
-### Transport et boucle
-
-Le transport contrôle lecture, pause, stop et retour au début. Le ruler
-positionne la tête de lecture avec snap. Deux drapeaux définissent la région de
-boucle. Ses lignes restent visibles en gris quand elle est inactive.
-
-L’ajout ou la suppression de mesures transforme uniquement les données
-temporelles du clip actif. Sa boucle ne change que si elle doit être bornée à
-la nouvelle durée du clip.
-
-## Formats de fichiers
-
-### Format natif `.pianola`
-
-Le format natif conserve la liste ordonnée des clips, le clip actif, l’identité
-et la configuration propre des instruments, la bibliothèque ordonnée de presets, les
-notes, le master bus et les métadonnées de document. Pour chaque clip, il
-enregistre uniquement le verrouillage par instrument, le transport, la boucle, la
-tête de lecture, la grille, le snap tonal, le guide visuel, le zoom et la
-position de la vue.
-Les préférences réellement globales — instrument actif, preview clavier, mode de
-sélection et coloration — sont enregistrées une seule fois. Les états
-temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
-
-Son identité et sa version sont définies dans
-`src/config/native-file-config.ts`, puis reconnues par
-`src/project-io/native/version.ts` et les parseurs spécialisés de
-`src/project-io/native/parsing/`.
-
-Le passage officiel à Pianola a créé le format
-`app.pianola.native-project` et l’extension `.pianola`. Les anciens fichiers
-portant l’identité `.pianoroll` ne sont pas pris en charge par cette release.
-Le format reste en version native 1 pendant cette phase de développement. Il
-n’existe pas encore de stratégie de migration entre les sauvegardes produites
-par des révisions différentes de l’application.
-
-Avant de changer le schéma :
-
-1. modifier les types du domaine ;
-2. mettre à jour le reducer et la validation ;
-3. mettre à jour la sérialisation et le parsing ;
-4. augmenter les versions de schéma appropriées ;
-5. ajouter un test de round-trip et, si nécessaire, une migration ;
-6. vérifier Save puis Load dans le navigateur.
-
-Ne jamais accepter directement un JSON externe comme `ProjectState` sans
-passer par le parseur borné et la validation.
-
-### MIDI
-
-L’import accepte SMF format 0 et 1 avec timing PPQN. Le premier tempo et la
-première métrique supportée sont utilisés. Les événements non supportés sont
-signalés et ignorés. CC64 n’est pas appliqué.
-
-Si le MIDI contient des notes incompatibles avec les invariants de Pianola,
-l’import demande de fusionner ou découper les collisions.
-
-L’import crée un projet contenant un clip. L’export utilise uniquement le clip
-actif et produit un fichier format 1 avec une piste conductrice et une piste
-par instrument. MIDI ne conserve pas les couleurs, mute/solo/lock, paramètres du
-synthétiseur, master bus, boucle ou réglages spécifiques à Pianola.
-
-Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
-`src/config/midi-config.ts`. L’exporteur reçoit une projection musicale neutre
-et ne choisit pas lui-même le clip affiché.
-
-## Guide de maintenance
-
-### Où modifier les éléments principaux
-
-| Besoin | Fichier principal |
-| --- | --- |
-| Nom, description et titres par défaut | `src/config/product-config.ts` |
-| Métadonnées navigateur | `index.html` et `public/manifest.webmanifest` |
-| Version npm | `package.json` et `package-lock.json` |
-| Toutes les couleurs de l'application | `src/config/application-colors.ts` |
-| Layout et règles visuelles DOM | `src/styles.css` et `src/styles/` |
-| Valeurs par défaut et limites | `src/config/domain-limits.ts` et les fichiers propriétaires de `src/config` |
-| Structure principale de l’UI | `src/app/App.tsx` |
-| État initial et projet vierge | `src/app/demo-project.ts` et `src/use-cases/project-files/create-initial-project.ts` |
-| Clips, notes, instruments, transport | `src/domain/model.ts` |
-| Catalogue et paramètres des presets | `src/domain/instrument-presets.ts` |
-| Cycle de vie des clips | `src/ui/inspector/clips/useClipWorkflow.ts` |
-| Liste des clips | `src/ui/inspector/clips/ClipInspector.tsx` |
-| Modale de création d’instrument | `src/ui/dialogs/InstrumentPresetDialog.tsx` |
-| Actions mutantes | `src/domain/commands/` (`command-types.ts`, handlers et `reducer.ts`) |
-| Cas d'usage et plans de commandes | `src/use-cases/` |
-| Collisions | `src/domain/note-collision.ts` |
-| État et calculs des gestes | `src/editor/interactions/` |
-| Adaptateur des gestes au navigateur | `src/ui/piano-roll/interactions/usePianoRollEvents.ts` |
-| Capture et multi-touch | `src/ui/piano-roll/interactions/useInteractionManager.ts` |
-| Ghosts, poignées et lasso | `src/ui/piano-roll/interactions/dom-interaction-visual-controller.ts` |
-| Rendu des notes, grille et ruler | `src/ui/piano-roll/rendering/` |
-| Audio | `src/audio/` et `src/ui/transport/useAudioPlayback.ts` |
-| Format natif | `src/project-io/native/` (`serialize-native-project.ts`, `parse-native-project.ts` et `parsing/`) |
-| MIDI | `src/project-io/midi/` |
-| Frontières et propriétaires d’état | `docs/architecture.md` et `docs/state-ownership.md` |
-| Priorités de refactoring | `docs/roadmap.md` |
-
-Conventions de navigation actuelles :
-
-- fichiers TypeScript non React en `kebab-case.ts` ;
-- composants React en `PascalCase.tsx` ;
-- hooks React en `useCamelCase.ts` ;
-- identifiants suffixés par `Id`, dictionnaires par `ById` et tableaux d’ordre
-  par `Order` ;
-- grandeurs suffixées par leur unité : `Ticks`, `Seconds`, `Hz` ou
-  `CssPixels` ;
-- `instrument` désigne l’entité musicale, tandis que `voice` est réservé à une
-  occurrence audio active.
-
-Les dossiers plats et les fichiers monolithiques encore présents sont des états
-transitoires documentés dans la feuille de route. Ne pas créer de nouveau
-dossier générique `utils`, `common` ou `helpers` : nommer le propriétaire réel
-de la responsabilité.
-
-Le nom Pianola existe volontairement dans plusieurs fichiers statiques que le
-navigateur ou npm lit avant l’exécution TypeScript. Pour un futur renommage,
-chercher toutes les occurrences :
-
-```bash
-rg -n -i "pianola" .
-```
-
-### Modifier les constantes
-
-Les réglages sont séparés par propriétaire dans `src/config` :
-
-- `product-config.ts` : identité produit et démonstration ;
-- `domain-limits.ts` : limites et valeurs persistantes ;
-- `audio-config.ts` : scheduler et moteur ;
-- `editor-config.ts` : viewport, transport, grille et contrôles ;
-- `interaction-config.ts` : délais et zones tactiles ;
-- `music-config.ts` : toniques, modes et degrés ;
-- `rendering-config.ts` : budgets et couleurs de rendu ;
-- `native-file-config.ts` et `midi-config.ts` : frontières de fichiers.
-
-Après toute modification, exécuter `npm run verify` et tester la valeur sur
-tablette si elle touche au rendu ou aux interactions.
-
-Ne pas recréer de fichier d’agrégation global : importer directement la
-configuration de son propriétaire.
-
-### Ajouter une commande métier
-
-1. Ajouter le type de commande et l’inclure dans l’union de
-   `src/domain/commands/command-types.ts`.
-2. Implémenter son traitement dans le module de famille sans mutation de
-   l’état reçu.
-3. Valider toutes les données avant de produire le nouvel état.
-4. Déclencher une transaction unique depuis l’UI.
-5. Ajouter un scénario Vitest près du module ou dans `tests/integration`.
-6. Vérifier Undo et Redo.
-
-Ne pas modifier directement `ProjectState` dans un composant React.
-
-### Ajouter ou modifier un preset d’instrument
-
-Les presets intégrés sont définis dans `src/domain/instrument-presets.ts`. Un
-preset possède un ID stable, un nom, un discriminant `kind` et sa configuration
-audio complète. Pour ajouter un preset soustractif :
-
-1. ajouter une entrée à `BUILT_IN_PRESETS` avec un ID unique et durable ;
-2. construire sa configuration avec `createSubtractiveConfig` afin de conserver
-   les valeurs par défaut et les enveloppes immuables ;
-3. respecter les bornes documentées dans `INSTRUMENT_CONSTANTS` ;
-4. lancer `npm run verify` ;
-5. créer manuellement un instrument et vérifier le preset dans la modale, puis
-   sa lecture dans plusieurs clips.
-
-Ne jamais remettre la configuration audio ou le mixage dans
-`ClipInstrumentState`. `ProjectInstrument` porte sa configuration, le gain, le
-mute et le solo : tous les clips partagent donc le même son et le même état de
-mixage. Les presets servent uniquement à initialiser le brouillon de la modale.
-La confirmation copie ce brouillon dans une transaction Undo/Redo. Le clip ne
-conserve que son verrouillage d’édition.
-
-Lors de l’ajout d’un nouveau type d’instrument, créer une nouvelle variante de
-`InstrumentPreset` et de `PlaybackInstrumentSnapshot`, puis un renderer dédié.
-Ne pas ajouter de propriétés optionnelles propres à ce type dans la variante
-soustractive ou de branche spécialisée dans le scheduler commun.
-
-### Modifier les couleurs
-
-Toutes les couleurs sont définies dans `src/config/application-colors.ts`.
-Ce fichier constitue l'unique source de vérité pour le DOM, les overlays et
-les Canvas. Il est organisé par rôles visuels : surfaces neutres, accents,
-grille du piano roll, notes, interactions et clavier.
-
-Deux thèmes complets sont disponibles :
-
-- `dark` : thème sombre historique de Pianola ;
-- `score-paper` : thème clair beige inspiré du papier à musique.
-
-Le thème actif est défini par `ACTIVE_APPLICATION_THEME_ID`. Changer cette
-unique constante applique la palette choisie au CSS, aux Canvas, au ruler, au
-clavier et aux contrôles natifs du navigateur.
-
-Quelques points de repère utiles :
-
-- `APPLICATION_COLORS.pianoRoll.degreeRootRows[0]` modifie la couleur de la
-  tonique, qui appartient à la famille du degré I ;
-- `degreeAccents`, `degreePitchRows` et `degreeRootRows` définissent les sept
-  familles I à VII. Les variantes mineures et majeures d'un même intervalle
-  partagent volontairement la même famille, par exemple `bIII` et `III` ;
-- `APPLICATION_COLORS.pianoRoll.tonalSnapPitchRow` modifie les autres hauteurs
-  autorisées par le mode ou le degré ;
-- `APPLICATION_COLORS.notes.instrumentPalette` définit les couleurs proposées aux
-  nouveaux instruments ;
-- `APPLICATION_COLORS.notes.pitchClassPalette` définit les douze couleurs du
-  mode d'affichage par pitch ;
-- `APPLICATION_CSS_COLOR_VARIABLES` relie la palette TypeScript aux variables
-  CSS utilisées dans `src/styles/`.
-
-Ne pas ajouter directement de couleur hexadécimale, `rgb()` ou `rgba()` dans
-un composant ou dans `src/styles/`. Ajouter un rôle documenté à la palette,
-puis consommer ce rôle depuis le Canvas ou via une variable CSS.
-
-Exception statique : `index.html`, `public/manifest.webmanifest` et
-`public/pianola-icon.svg` sont lus par le navigateur avant le code TypeScript.
-Ils reprennent manuellement le fond principal et les deux accents de la
-palette. Si ces trois couleurs changent, rechercher leurs anciennes valeurs
-dans ces fichiers et les synchroniser.
-
-### Modifier le rendu
-
-Une modification de taille doit être testée dans ces configurations :
-
-- desktop paysage ;
-- tablette paysage ;
-- tablette portrait, inspecteur fermé ;
-- tablette portrait, inspecteur ouvert ;
-- zoom horizontal minimal et maximal ;
-- zoom vertical minimal et maximal ;
-- devicePixelRatio élevé.
-
-Ne pas dessiner les notes comme éléments DOM individuels. Conserver le culling
-via `SpatialIndex.queryRect`.
-
-### Modifier l’audio
-
-Préserver les responsabilités :
-
-- `playback-snapshot.ts` transforme le projet en données de lecture ;
-- `time-math.ts` convertit ticks, secondes et boucles ;
-- `lookahead-scheduler.ts` décide quand programmer ;
-- `web-audio-engine.ts` possède le contexte, le master et les bus d’instruments ;
-- `audio/instruments/` crée et contrôle les sources propres aux instruments ;
-- `useAudioPlayback.ts` connecte le moteur au cycle de vie React.
-
-La polyphonie est une propriété du `SubtractiveSynthConfig` contenu dans un
-preset de départ. `ProjectInstrument` conserve une copie indépendante de sa
-configuration et ses réglages globaux de mixage, tandis que
-`ClipInstrumentState` reste limité au verrouillage d’édition. Le compilateur copie cette configuration dans
-`SubtractivePlaybackInstrumentSnapshot`, puis le renderer soustractif
-l’interprète. Ne pas généraliser cette limite à tous les instruments : un futur
-drumkit définira sa propre politique de superposition et de choke groups.
-
-Toute correction de timing doit être testable avec le faux moteur de
-`tests/support/fake-audio-engine.ts`. Éviter de dépendre de l’horloge murale
-directement dans les calculs purs.
-
-### Mettre à jour les dépendances
-
-Commencer par une branche dédiée et conserver le lockfile :
-
-```bash
-git switch -c maintenance/dependency-update
-npm outdated
-npm audit
-npm update
-npm run verify
-```
-
-Pour une version majeure, mettre à jour une dépendance à la fois :
-
-```bash
-npm install NOM_DU_PACKAGE@latest
-npm run verify
-```
-
-Contrôler ensuite manuellement Canvas, tactile, audio, import/export et
-responsive. Commiter `package.json` et `package-lock.json` ensemble.
-
-Ne pas supprimer `package-lock.json` pour résoudre un problème. Il garantit la
-reproductibilité du build GitHub/Vercel.
-
-### Modifier la version
-
-Pour un correctif :
-
-```bash
-npm version patch --no-git-tag-version
-npm run verify
-```
-
-Utiliser `minor` pour une fonctionnalité rétrocompatible et `major` pour un
-changement incompatible. Mettre aussi à jour la ligne de version de ce README,
-puis commiter les deux fichiers npm modifiés.
-
-### Discipline Git recommandée
-
-Avant de commencer :
-
-```bash
-git status
-git pull --ff-only
-git switch -c type/description-courte
-```
-
-Avant de pousser :
-
-```bash
-npm run verify
-git diff --check
-git status
-git add .
-git commit -m "type: concise description"
-git push -u origin type/description-courte
-```
-
-Types de commits utiles : `feat`, `fix`, `refactor`, `docs`, `test`, `build`,
-`chore`.
-
-Éviter `git reset --hard` pour corriger une erreur. Préférer un commit de
-correction ou `git revert` si le commit est déjà partagé.
-
-## Dépannage
-
-### `npm ci` échoue avec `EPERM` sous Windows
-
-Cause fréquente : le serveur Vite garde `esbuild.exe` ou Rollup ouvert.
-
-1. Arrêter `npm run dev` avec `Ctrl+C`.
-2. Fermer les terminaux Node inutiles.
-3. Relancer `npm ci`.
-
-Ne pas supprimer `node_modules` pendant qu’un serveur Vite l’utilise.
-
-### `React is not defined` ou page blanche
-
-1. Ouvrir les DevTools, onglet Console.
-2. Exécuter `npm run typecheck`.
-3. Vérifier que `src/main.tsx` importe React/StrictMode et monte `App`.
-4. Vérifier qu’aucun fichier JSX n’est exclu de `tsconfig.ui.json`.
-5. Supprimer uniquement le cache Vite si nécessaire, puis relancer le serveur.
-
-Le build production doit toujours être testé avec `npm run build`.
-
-### Le build fonctionne localement mais échoue sur Vercel
-
-Vérifier dans cet ordre :
-
-1. Node.js `22.x` dans Vercel ;
-2. Root Directory à la racine du dépôt ;
-3. commande `npm run build` ;
-4. dossier de sortie `dist` ;
-5. présence et commit de `package-lock.json` ;
-6. logs complets du déploiement Vercel ;
-7. résultat de `npm ci && npm run verify` en local.
-
-Ne pas masquer une erreur TypeScript dans le script de build : elle protège la
-production.
-
-### Une URL Vercel renvoie 404
-
-Le fallback SPA se trouve dans `vercel.json` :
-
-```json
-{
-  "source": "/(.*)",
-  "destination": "/index.html"
-}
-```
-
-Vérifier que `vercel.json` est à la racine et inclus dans le commit. Les vrais
-fichiers de `dist` restent servis avant ce fallback.
-
-### Aucun son
-
-1. Déclencher Play ou une touche après une interaction utilisateur ; le
-   navigateur bloque l’audio automatique.
-2. Vérifier le mute master.
-3. Vérifier mute et solo de chaque instrument.
-4. Vérifier le volume master et celui de l’instrument.
-5. Regarder la Console pour une erreur d’`AudioContext`.
-6. Tester l’URL HTTPS Vercel ou `localhost`.
-7. Tester sans casque Bluetooth pour isoler la latence du périphérique.
-
-Le code n’utilise pas le microphone et ne demande aucune permission audio.
-
-### Le son saute après une édition
-
-Inspecter :
-
-- `didPlaybackStateChange` dans `useAudioPlayback.ts` ;
-- `replacePlaybackState` dans `lookahead-scheduler.ts` ;
-- l’annulation des événements futurs dans le moteur ;
-- les tests « keeps active notes sounding » et « recurring loop ».
-
-Une édition ne doit pas recréer tout le moteur ni redémarrer les notes déjà
-commencées.
-
-### La grille, le ruler ou les notes sont désalignés
-
-Vérifier que tous utilisent :
-
-- le même `ViewportState` ;
-- le même `CoordinateConverter` ;
-- le même `GridSettings` ;
-- le même nombre de ticks par mesure.
-
-Reproduire aux zooms minimum/maximum et après ouverture/fermeture de
-l’inspecteur. Toute modification de viewport doit invalider les couches
-concernées et recalculer la région visible.
-
-### Le Canvas est flou ou absent sur Android
-
-1. Tester le devicePixelRatio réel.
-2. Vérifier les dimensions CSS et bitmap du Canvas.
-3. Vérifier ResizeObserver et la limite DPR dans `VIEWPORT_CONSTANTS`.
-4. Vérifier qu’une largeur/hauteur n’est jamais nulle après un changement de
-   layout.
-5. Tester Chrome Android et Firefox Android séparément.
-6. Observer les erreurs de contexte Canvas dans la Console distante.
-
-Éviter d’augmenter aveuglément le DPR maximal : la mémoire Canvas croît très
-vite sur tablette.
-
-### Le tactile sélectionne du texte ou ouvre un menu contextuel
-
-Vérifier les règles `touch-action`, `user-select` et
-`-webkit-touch-callout` de la zone concernée. Les sliders utilisent une
-protection tactile standard. Ne pas bloquer globalement tous les événements :
-cela casserait le multi-touch et l’accessibilité.
-
-### Un fichier `.pianola` ne charge pas
-
-1. Vérifier l’extension et la taille.
-2. Ouvrir le fichier comme JSON sans le modifier.
-3. Contrôler `format`, `formatVersion` et `project.schemaVersion`.
-4. Lire le chemin précis affiché par `NativeProjectFileError`.
-5. Reproduire avec un petit projet sauvegardé par la même version.
-
-Ne pas contourner la validation pour récupérer un fichier. Écrire plutôt une
-migration explicite et testée.
-
-### Un MIDI ne s’importe pas
-
-Pianola accepte SMF 0/1 avec PPQN, pas le timing SMPTE. Consulter le message
-d’erreur, puis tester le fichier dans un autre séquenceur. Les limites de
-taille, pistes, événements et notes sont intentionnelles.
-
-Après toute correction du codec, exécuter :
-
-```bash
-npx vitest run tests/integration/midi-regression.test.mjs
-```
-
-### La CI GitHub échoue alors que le poste local passe
-
-La CI part d’une installation propre avec `npm ci`. Les causes habituelles
-sont :
-
-- fichier non ajouté au commit ;
-- différence de casse dans un chemin ;
-- lockfile non synchronisé ;
-- dépendance disponible seulement globalement sur le PC ;
-- code dépendant de Windows ;
-- version Node différente.
-
-Lire la première erreur réelle dans le job GitHub, pas seulement la dernière
-ligne.
-
-## Checklist de release
-
-Avant chaque mise en production :
-
-- [ ] `git status` ne montre aucun fichier inattendu.
-- [ ] La version de `package.json` est correcte.
-- [ ] Le README reflète les changements visibles.
-- [ ] `npm ci` fonctionne serveur Vite arrêté.
-- [ ] `npm run verify` passe.
-- [ ] `npm run preview` affiche le build.
-- [ ] New, Save et Load fonctionnent.
-- [ ] Import et export MIDI fonctionnent.
-- [ ] Play, stop, seek, loop, mute et solo fonctionnent.
-- [ ] Les gestes à un et deux doigts sont testés sur tablette.
-- [ ] Portrait et paysage sont testés.
-- [ ] Aucun `.env` ou fichier sensible n’est suivi par Git.
-- [ ] La CI GitHub est verte.
-- [ ] La Preview Vercel est testée avant promotion.
-
-## Limites connues et évolutions
-
-- un seul projet est ouvert à la fois ;
-- pas d’auto-save, IndexedDB ou synchronisation cloud ;
-- pas de backend, compte utilisateur ou collaboration ;
-- pas encore de système d’onglets multi-projets ;
-- un seul type d’instrument, le synthétiseur soustractif ;
-- les descripteurs d’effets, règles génératives et interprétations d’instrument ne
-  sont pas encore exécutés par le moteur audio ;
-- la vélocité est stockée et exportée, mais pas appliquée au volume de lecture ;
-- MIDI ne représente pas toutes les données du format natif ;
-- les interactions Canvas/tactiles reposent surtout sur des tests manuels ;
-- le dépôt est publié sous la licence Unlicense, décrite dans `LICENSE`.
-
-La licence Unlicense place le code dans le domaine public dans la mesure
-permise par la juridiction applicable et fournit le logiciel sans garantie.
-
-Les extensions futures les plus naturelles sont l’auto-save local, les onglets
-de projets, des tests navigateur automatisés, des effets audio, l’automation et
-une stratégie explicite de compatibilité du format natif.
+Licence : [MIT](LICENSE).

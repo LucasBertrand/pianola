@@ -18,9 +18,10 @@
     "test": "npm run test:vitest",
     "test:vitest": "vitest run",
     "test:vitest:watch": "vitest",
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:structure": "node scripts/check-structure.mjs",
     "check:boundaries": "node scripts/check-import-boundaries.mjs",
-    "baseline:capture": "npm run build && node --expose-gc scripts/measure-baseline.mjs && node scripts/measure-browser-baseline.mjs",
-    "verify": "npm run check:boundaries && npm run build && npm test"
+    "verify": "npm run check:structure && npm run check:boundaries && npm run build && npm test"
   },
   "dependencies": {
     "react": "^19.0.0",

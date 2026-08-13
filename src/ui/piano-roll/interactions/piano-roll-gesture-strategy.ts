@@ -2,10 +2,8 @@ import {
   INTERACTION_CONSTANTS,
 } from "../../../config/interaction-config";
 import {
-  getActiveClip,
   type InstrumentId,
-  type NoteId,
-} from "../../../domain/model";
+} from "../../../domain/identifiers";
 import type {
   ViewportState,
 } from "../../../editor/geometry/converter";
@@ -16,7 +14,6 @@ import {
   calculateResizeDeltaBounds,
   measureNoteSelection,
   quantizeTick,
-  snapTickToCellStart,
 } from "../../../editor/interactions/gestures/note-gesture-math";
 import type {
   SelectionMode,
@@ -40,9 +37,8 @@ import type {
 import type {
   ReadonlyRenderSignal,
 } from "../../../editor/model/render-signal";
-import {
-  snapPitchToTonalPattern,
-  type PitchSnapSettings,
+import type {
+  PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import type {
   EditorCommandPort,
@@ -59,6 +55,15 @@ import type {
 import type {
   PianoRollSelectionController,
 } from "./piano-roll-selection-controller";
+import {
+  handleDirectNoteTap,
+} from "./direct-note-tap";
+import {
+  completePianoRollLasso,
+} from "./complete-piano-roll-lasso";
+import {
+  beginPianoRollLongPressDraw,
+} from "./begin-piano-roll-long-press-draw";
 
 export interface PianoRollGestureStrategyOptions {
   readonly overlay: HTMLElement;
@@ -80,10 +85,6 @@ export interface PianoRollGestureStrategyOptions {
   readonly onGridSeek: ((tick: number) => void) | undefined;
 }
 
-const TOUCH_DOUBLE_TAP_DELAY_MS =
-  INTERACTION_CONSTANTS.touchDoubleTapDelayMs;
-const TOUCH_DOUBLE_TAP_DISTANCE_CSS_PIXELS =
-  INTERACTION_CONSTANTS.touchDoubleTapDistanceCssPixels;
 const TAP_MOVEMENT_TOLERANCE_CSS_PIXELS =
   INTERACTION_CONSTANTS.tapMovementToleranceCssPixels;
 const MOUSE_RESIZE_HANDLE_CSS_PIXELS =
@@ -144,43 +145,6 @@ export function createPianoRollGestureStrategy(
     session.resetDraft();
     selectionController.showSelection();
   };
-  const registerDirectPointerTap = (
-    event: PointerSample,
-    noteId: NoteId,
-  ): void => {
-    if (event.pointerType !== "touch" && event.pointerType !== "pen") {
-      return;
-    }
-
-    const elapsed = event.timeStamp - tapState.timeStamp;
-    const deltaX = event.clientX - tapState.clientX;
-    const deltaY = event.clientY - tapState.clientY;
-    const maximumDistanceSquared =
-      TOUCH_DOUBLE_TAP_DISTANCE_CSS_PIXELS
-      * TOUCH_DOUBLE_TAP_DISTANCE_CSS_PIXELS;
-    const isDoubleTap =
-      tapState.noteId === noteId
-      && elapsed > 0
-      && elapsed <= TOUCH_DOUBLE_TAP_DELAY_MS
-      && deltaX * deltaX + deltaY * deltaY <= maximumDistanceSquared;
-
-    if (isDoubleTap) {
-      tapState.noteId = null;
-      const note = selection.find(noteId);
-
-      if (note !== undefined && workflow.commitDelete(note)) {
-        selectionController.clearSelection();
-      }
-
-      return;
-    }
-
-    tapState.noteId = noteId;
-    tapState.timeStamp = event.timeStamp;
-    tapState.clientX = event.clientX;
-    tapState.clientY = event.clientY;
-  };
-
   const handlePointerDown = (event: PointerSample): void => {
     if (!isSupportedPointerActivation(event) || draft.mode !== "IDLE") {
       return;
@@ -396,7 +360,14 @@ export function createPianoRollGestureStrategy(
       getVisuals()?.endDraw();
       selectionController.showSelection();
     } else if (mode === "LASSO_SELECTING") {
-      completeLasso(completion);
+      completePianoRollLasso({
+        completion,
+        converter,
+        selectionController,
+        spatialIndex,
+        resultBuffer: lassoBuffer,
+        visuals: getVisuals(),
+      });
     } else if (mode === "PENDING_LASSO" && pointerWasTap) {
       selectionController.clearSelection();
       const pointerTick = converter.cssPixelXToTick(
@@ -417,43 +388,14 @@ export function createPianoRollGestureStrategy(
     }
 
     if (pointerWasTap && targetNoteId !== null && mode !== "LASSO_SELECTING") {
-      registerDirectPointerTap(event, targetNoteId);
+      handleDirectNoteTap(
+        event,
+        targetNoteId,
+        tapState,
+        selectionController,
+        workflow,
+      );
     }
-  };
-
-  const completeLasso = (
-    completion: import("../../../editor/interactions/gestures/gesture-state-machine").GestureCompletion,
-  ): void => {
-    const startTick = converter.cssPixelXToTick(completion.originLocalX);
-    const endTick = converter.cssPixelXToTick(completion.currentLocalX);
-    const startPitch = converter.cssPixelYToPitch(completion.originLocalY);
-    const endPitch = converter.cssPixelYToPitch(completion.currentLocalY);
-
-    if (completion.selectionMode === "replace") {
-      selectionController.clearSelection();
-    }
-
-    spatialIndex.queryRect(
-      Math.max(0, Math.min(startTick, endTick)),
-      Math.max(startTick, endTick),
-      Math.max(0, Math.min(startPitch, endPitch)),
-      Math.min(127, Math.max(startPitch, endPitch)),
-      lassoBuffer,
-    );
-
-    for (const note of lassoBuffer) {
-      if (completion.selectionMode === "subtract") {
-        selection.delete(note.id);
-      } else if (
-        selectionController.isNoteEditable(note)
-        && !selection.has(note.id)
-      ) {
-        selection.add(note);
-      }
-    }
-
-    getVisuals()?.endLasso();
-    selectionController.showSelection();
   };
 
   const handlePointerCancel = (event: PointerSample): void => {
@@ -477,89 +419,20 @@ export function createPianoRollGestureStrategy(
   };
   const handleLongPress = (event: PointerSample): void => {
     updateConverter();
-    const bounds = overlay.getBoundingClientRect();
-    const localX = event.clientX - bounds.left;
-    const localY = event.clientY - bounds.top;
-    const tick = converter.cssPixelXToTick(localX);
-    const pitch = converter.cssPixelYToPitch(localY);
-    const resolutionTicks = gridResolutionTicks.get();
-    const envelope = createTouchEnvelope(
-      converter,
-      event.pointerType,
-      MOUSE_NOTE_HIT_ENVELOPE_CSS_PIXELS,
-      TOUCH_NOTE_HIT_ENVELOPE_CSS_PIXELS,
-    );
-    const note = spatialIndex.queryPointWithEnvelope(
-      tick,
-      pitch,
-      envelope,
-      (candidate) => selectionController.isNoteEditable(candidate),
-      compareNotesByInstrumentRenderOrder,
-    );
-
-    if (note !== undefined) {
-      return;
-    }
-
-    const activeInstrumentId = getActiveInstrumentId();
-    const state = editorCommands.getState();
-    const activeClip = getActiveClip(state);
-
-    if (
-      pitch < 0
-      || pitch > 127
-      || state.projectInstrumentsById[activeInstrumentId] === undefined
-      || activeClip.instrumentStatesById[activeInstrumentId]?.locked !== false
-      || activeClip.tracksByInstrumentId[activeInstrumentId] === undefined
-    ) {
-      return;
-    }
-
-    const startTick = Math.max(0, snapTickToCellStart(tick, resolutionTicks));
-    const activePitchSnapSettings = pitchSnapSettings.get();
-    const drawPitch = snapPitchToTonalPattern(
-      pitch,
-      activePitchSnapSettings,
-      0,
-    );
-
-    if (startTick + resolutionTicks > totalTicks) {
-      return;
-    }
-
-    const pointerStarted = gesture.beginPointer({
-      pointerId: event.pointerId,
-      overlayLeft: bounds.left,
-      overlayTop: bounds.top,
-      localX,
-      localY,
-      pointerTick: tick,
-      pointerPitch: pitch,
-      targetNoteId: null,
-      snapResolutionTicks: resolutionTicks,
-      pitchSnapSettings: activePitchSnapSettings,
-      selectionMode: "replace",
+    beginPianoRollLongPressDraw({
+      event,
+      overlay,
+      session,
+      spatialIndex,
+      selectionController,
+      editorCommands,
+      getActiveInstrumentId,
+      totalTicks,
+      gridResolutionTicks,
+      pitchSnapSettings,
+      instrumentStyles,
+      visuals: getVisuals(),
     });
-
-    if (!pointerStarted) {
-      return;
-    }
-
-    gesture.beginDrawing(
-      startTick,
-      drawPitch,
-      resolutionTicks,
-      activeInstrumentId,
-    );
-    selectionController.clearSelection();
-    getVisuals()?.beginDraw(
-      startTick,
-      drawPitch,
-      resolutionTicks,
-      activeInstrumentId,
-      converter,
-      instrumentStyles.get()[activeInstrumentId],
-    );
   };
 
   return {

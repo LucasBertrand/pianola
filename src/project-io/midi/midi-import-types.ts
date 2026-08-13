@@ -1,4 +1,12 @@
-import type { Note, ProjectInstrument, TimeSignature } from "../../domain/model";
+import {
+  type Note,
+} from "../../domain/notes/note";
+import {
+  type ProjectInstrument,
+} from "../../domain/instruments/instrument";
+import {
+  type TimeSignature,
+} from "../../domain/transport/transport";
 import type { MidiEvent } from "./standard-midi-file";
 
 export type MidiImportCollisionStrategy = "merge" | "slice";

@@ -10,12 +10,18 @@ import type {
 } from "../../../domain/commands/command-types";
 import {
   getActiveClip,
+} from "../../../domain/project/project-document";
+import {
   type ClipId,
+  type InstrumentId,
+} from "../../../domain/identifiers";
+import {
   type InstrumentConfig,
   type ProjectInstrument,
-  type InstrumentId,
+} from "../../../domain/instruments/instrument";
+import {
   type ClipInstrumentState,
-} from "../../../domain/model";
+} from "../../../domain/clips/clip";
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,

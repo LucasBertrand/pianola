@@ -4,10 +4,12 @@ import {
 import type {
   SubtractivePlaybackInstrumentSnapshot,
 } from "../playback-model";
-import type {
-  AudioEngineConfig,
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type AudioEngineConfig,
+} from "../audio-engine-config";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 import {
   resolveNoteEnvelopePeakLevel,
 } from "../note-dynamics";

@@ -1,28 +1,34 @@
 import { INSTRUMENT_CONSTANTS } from "../../../config/domain-limits";
-import type {
-  AdsrEnvelope,
-  ClipInstrumentState,
-  EffectDescriptor,
-  EffectParameterValue,
-  GenerativeRuleDescriptor,
-  InstrumentConfig,
-  InstrumentId,
-  InstrumentPreset,
-  OscillatorWaveform,
-  PresetId,
-  ProjectInstrument,
-  ProjectInstrumentInterpretation,
-  SubtractiveSynthConfig,
-} from "../../../domain/model";
+import {
+  type AdsrEnvelope,
+  type EffectDescriptor,
+  type EffectParameterValue,
+  type GenerativeRuleDescriptor,
+  type InstrumentConfig,
+  type InstrumentPreset,
+  type OscillatorWaveform,
+  type ProjectInstrument,
+  type ProjectInstrumentInterpretation,
+  type SubtractiveSynthConfig,
+} from "../../../domain/instruments/instrument";
+import {
+  type ClipInstrumentState,
+} from "../../../domain/clips/clip";
+import {
+  type InstrumentId,
+  type PresetId,
+} from "../../../domain/identifiers";
 import {
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
-  MAXIMUM_ENTITY_ID_LENGTH,
   MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-} from "../../../domain/model";
+} from "../../../domain/instruments/instrument";
+import {
+  MAXIMUM_ENTITY_ID_LENGTH,
+} from "../../../domain/identifiers";
 import {
   validateInstrumentPreset,
   validateProjectInstrument,

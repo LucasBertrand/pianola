@@ -1,17 +1,27 @@
-import type {
-  Clip,
-  ClipId,
-  MasterBusState,
-  ProjectClock,
-  ProjectDocument,
-} from "../../../domain/model";
+import {
+  type Clip,
+} from "../../../domain/clips/clip";
+import {
+  type ClipId,
+} from "../../../domain/identifiers";
+import {
+  type MasterBusState,
+} from "../../../domain/master-bus";
+import {
+  type ProjectClock,
+} from "../../../domain/transport/transport";
+import {
+  type ProjectDocument,
+} from "../../../domain/project/project-document";
 import {
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
+} from "../../../domain/master-bus";
+import {
   PROJECT_SCHEMA_VERSION,
-} from "../../../domain/model";
+} from "../../../domain/project/project-document";
 import {
   validateProjectClock,
 } from "../../../domain/validation/transport-validation";

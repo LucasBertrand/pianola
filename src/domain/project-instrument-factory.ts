@@ -2,12 +2,16 @@ import {
   PROJECT_CONSTANTS,
   INSTRUMENT_CONSTANTS,
 } from "../config/domain-limits";
-import type {
-  ClipInstrumentState,
-  InstrumentConfig,
-  ProjectInstrument,
-  InstrumentId,
-} from "./model";
+import {
+  type ClipInstrumentState,
+} from "./clips/clip";
+import {
+  type InstrumentConfig,
+  type ProjectInstrument,
+} from "./instruments/instrument";
+import {
+  type InstrumentId,
+} from "./identifiers";
 export interface CreateDefaultProjectInstrumentOptions {
   readonly id: InstrumentId;
   readonly name: string;

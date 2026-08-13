@@ -1,0 +1,24 @@
+# Domaine
+
+## Que possède cette zone ?
+
+Le document musical, ses identifiants, notes, clips, instruments, transport,
+master bus, validations, commandes, transformations, collisions et historique.
+
+## Quel fichier lire en premier ?
+
+Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
+`instruments/instrument.ts` ou `notes/note.ts`. Une mutation commence dans
+`commands/command-types.ts` et aboutit au reducer.
+
+## Quelles dépendances sont autorisées ?
+
+Le domaine peut dépendre de configuration métier et de TypeScript. Il ne dépend
+ni de React, ni du navigateur, ni de `ui` ou `app`.
+
+## Où sont les tests ?
+
+Les unités vivent dans `__tests__/` et `commands/__tests__/`. Les invariants
+transversaux restent couverts par `tests/integration/audio-domain-regression.test.mjs`.
+`note-collision.ts` dépasse le seuil indicatif car il possède l’algorithme
+cohérent de merge/slice ; le dialogue et les gestes vivent hors de ce module.

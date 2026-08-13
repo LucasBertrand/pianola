@@ -1,8 +1,10 @@
-import type {
-  ClipId,
-  InstrumentId,
-  ProjectState,
-} from "../../domain/model";
+import {
+  type ClipId,
+  type InstrumentId,
+} from "../../domain/identifiers";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import type { ViewportState } from "../../editor/geometry/converter";
 import type { GridSettings } from "../../editor/model/grid-settings";
 import type { NoteColorMode } from "../../editor/model/note-color-mode";

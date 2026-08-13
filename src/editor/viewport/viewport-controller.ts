@@ -4,11 +4,15 @@ import {
 } from "../../config/editor-config";
 import {
   getActiveClip,
+} from "../../domain/project/project-document";
+import {
   getClipDurationTicks,
   getClipTimeSignature,
+} from "../../domain/clips/clip";
+import {
   type ProjectClock,
   type TimeSignature,
-} from "../../domain/model";
+} from "../../domain/transport/transport";
 import type {
   ViewportState,
 } from "../geometry/converter";

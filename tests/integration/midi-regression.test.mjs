@@ -7,13 +7,19 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+} from "../../src/domain/master-bus";
+import {
   createDefaultClipTimeline,
-  createDefaultProjectClock,
-  createDefaultTransportState,
   getClipMeasureCount,
   getClipTimeSignature,
+} from "../../src/domain/clips/clip";
+import {
+  createDefaultProjectClock,
+  createDefaultTransportState,
+} from "../../src/domain/transport/transport";
+import {
   PROJECT_SCHEMA_VERSION,
-} from "../../src/domain/model";
+} from "../../src/domain/project/project-document";
 import {
   createDefaultProjectInstrument,
 } from "../../src/domain/project-instrument-factory";

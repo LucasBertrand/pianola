@@ -1,5 +1,7 @@
 import { APPLICATION_CONSTANTS } from "../../config/product-config";
-import { MAXIMUM_ENTITY_ID_LENGTH } from "../../domain/model";
+import {
+  MAXIMUM_ENTITY_ID_LENGTH,
+} from "../../domain/identifiers";
 import type { NativeProjectFileMetadata } from "./native-project-schema";
 import { fail } from "./native-project-error";
 import {

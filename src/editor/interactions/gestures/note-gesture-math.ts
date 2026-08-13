@@ -1,6 +1,6 @@
-import type {
-  Note,
-} from "../../../domain/model";
+import {
+  type Note,
+} from "../../../domain/notes/note";
 import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,

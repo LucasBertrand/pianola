@@ -1,7 +1,9 @@
-import type {
-  Note,
-  NoteId,
-} from "../../domain/model";
+import {
+  type Note,
+} from "../../domain/notes/note";
+import {
+  type NoteId,
+} from "../../domain/identifiers";
 
 export type EditingNoteMaskListener = () => void;
 

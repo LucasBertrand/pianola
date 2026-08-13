@@ -1,230 +1,162 @@
 # Architecture de Pianola
 
-Ce document décrit l’architecture réellement présente après le chantier P3.
-Le [README](../README.md) couvre l’installation et l’usage ; la
-[feuille de route](roadmap.md) ordonne les étapes suivantes. La propriété des
-états est détaillée dans [state-ownership.md](state-ownership.md).
-Les migrations sont consignées dans [`p2-migration.md`](p2-migration.md) et
-[`p3-migration.md`](p3-migration.md). Les prochaines tranches sont suivies dans
-la [roadmap](roadmap.md).
+Ce document décrit les frontières et les principaux pipelines. Pour chercher un
+comportement précis, partir de la [carte du code](code-map.md). Pour décider si
+un état doit persister ou entrer dans Undo/Redo, consulter
+[`state-ownership.md`](state-ownership.md).
 
 Dernière revue complète : 13 août 2026.
 
 ## Vue d’ensemble
 
-Pianola est une application web statique. Le document musical, l’historique,
-l’espace de travail et le moteur audio vivent dans l’onglet du navigateur. Il
-n’existe ni serveur applicatif, ni base distante, ni synchronisation implicite.
+Pianola est une application web statique. Le document, l’historique, le runtime
+d’édition et le moteur audio vivent dans l’onglet du navigateur.
 
 ```text
 main.tsx
-  └─ app                    composition et création du runtime
-      ├─ ui                 React, DOM, Canvas et adaptateurs navigateur
-      ├─ use-cases          orchestration indépendante de React
-      ├─ editor             modèle d’édition, géométrie et interactions
-      ├─ audio              compilation, scheduling et Web Audio
-      └─ project-io         format natif et Standard MIDI File
+  → app                    création du runtime
+  → ui                     composition React et adaptateurs DOM/Canvas
+  → use-cases              intentions indépendantes de React
+  → domain                 document, commandes et invariants
 
-domain                     document musical, invariants et historique
-music                      vocabulaire tonal déterministe
-config                     configuration divisée par propriétaire
+editor          noyau d’édition sans DOM
+audio                      snapshot, transport, occurrences, voix et bus
+project-io                 format natif et MIDI
 ```
 
-Les règles centrales sont les suivantes :
+Règles exécutables :
 
-1. `app` assemble mais n’héberge pas de protocole métier complet ;
-2. `domain`, `editor` et `music` ne connaissent ni React ni le navigateur ;
-3. `use-cases` ne dépend pas de composants UI ;
-4. `audio` et `project-io` ne dépendent pas de la composition `app` ;
-5. un geste validé produit une transaction unique dans l’historique.
+1. `src/app/` assemble et n’héberge aucun protocole complet ;
+2. `src/domain/`, `src/editor/` et `src/music/` ne connaissent ni React ni le
+   navigateur ;
+3. `src/use-cases/` ne dépend pas de l’UI ;
+4. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
+5. une intention musicale validée produit au plus une transaction.
 
-Le script `scripts/check-import-boundaries.mjs` vérifie ces frontières ainsi que
-la liste fermée des fichiers autorisés dans `src/app` et l’absence de noms de
-fichiers génériques.
+## Composition
 
-## Carte des capacités
+`src/app/App.tsx` crée `EditorRuntime` et monte
+`src/ui/piano-roll/PianoRollWorkspace.tsx`. Le workspace assemble les surfaces,
+mais délègue les protocoles à des hooks nommés :
 
-### `src/app`
+- `useApplicationDialogs` pour alertes et confirmations ;
+- `useInstrumentDialogWorkflow` pour le brouillon d’instrument ;
+- `useNoteCollisionDialogWorkflow` pour merge/slice ;
+- `usePianoRollProjectState` pour projet, clip, instrument et sélection ;
+- les workflows fichiers, MIDI, transport, viewport, clips et sélection.
 
-Le dossier est volontairement limité à trois fichiers :
+L’inventaire détaillé des états de composition est dans
+[`app-composition.md`](app-composition.md).
 
-- `App.tsx` compose contrôleurs, hooks de capacité et dialogues ;
-- `create-app-runtime.ts` construit les services et signaux d’un onglet ;
-- `demo-project.ts` produit les seules données de démonstration.
+## Domaine
 
-Aucun module interne ne doit importer cette couche de composition.
+Le domaine est réparti par propriétaire :
 
-### `src/domain`
-
-Le domaine possède `ProjectState`, les commandes par famille, le reducer racine,
-les validations par propriétaire, les collisions, les transformations et
-`ProjectStore`. Les modifications
-durables passent par `EditorCommandPort`, une `Transaction`, puis le reducer.
-
-Le mixage et la configuration sonore appartiennent à `ProjectInstrument`. Les
-notes sont stockées dans les pistes d’un clip. Le changement de clip reste une
-navigation et ne consomme pas d’entrée Undo/Redo.
-
-### `src/use-cases`
-
-Cette couche contient les intentions et projections indépendantes de React :
-
-- `commands` : façade de mutation de l’éditeur ;
-- `notes` et `selection` : plans atomiques et protocole de collision ;
-- `dialogs` : port de dialogue consommé par les workflows ;
-- `project-files` : création initiale, état natif d’éditeur et projection MIDI.
-
-Les hooks React qui déclenchent ces intentions vivent auprès de leur capacité
-dans `ui`, jamais dans `app/workflows`.
-
-### `src/editor`
-
-`editor/model` porte les contrats neutres de grille, couleur, signaux et styles
-dérivés. `editor/runtime` décrit les services d’un onglet. `editor/selection`
-possède la sélection transitoire.
-
-`editor/geometry` regroupe conversions ticks/pixels, bornes du viewport, région
-visible et index spatial. `editor/viewport` possède le contrôleur testable de
-publication, suivi de lecture et batching. `editor/interactions` regroupe la
-session du piano roll, le masque de notes et deux sous-capacités :
-
-```text
-editor/interactions/
-├─ gestures/                draft, machine à états et calculs déterministes
-├─ pointer/                 PointerSample et stratégie indépendante du DOM
-├─ editing-note-mask.ts
-├─ piano-roll-controller-port.ts
-└─ piano-roll-interaction-session.ts
-```
-
-Les `PointerEvent` natifs ne franchissent pas cette frontière : l’adaptateur UI
-les transforme d’abord en `PointerSample` immuable.
-
-### `src/ui`
-
-Les composants et hooks sont rangés par capacité : `dialogs`,
-`editor-toolbar`, `inspector/clips`, `inspector/instruments`, `piano-roll`,
-`project-files`, `shared` et `transport`. Il n’existe pas de barrel global ni
-de dossiers génériques `components`, `hooks` ou `browser`.
-
-Le piano roll conserve ses adaptations DOM sous
-`ui/piano-roll/interactions` et ses peintres sous
-`ui/piano-roll/rendering`. Les stratégies, workflows et contrôleurs impératifs
-sont séparés de leurs hooks React. Les notes ne sont pas des composants React ;
-Canvas lit des `RenderSignal` depuis `requestAnimationFrame` et réutilise ses
-buffers.
-
-`src/styles.css` ne contient que les imports ordonnés. Les règles propriétaires
-vivent sous `src/styles` par shell, header/transport, piano roll, inspecteur,
-dialogues et responsive.
-
-### `src/audio`
-
-```text
-ProjectDocument + PlaybackSource explicite
-  → compilePlaybackPlan
-  → LookaheadScheduler
-  → WebAudioEngine
-  → InstrumentRenderer enregistré par kind
-  → sources Web Audio
-```
-
-Le compilateur ne consulte pas `activeClipId`. Le scheduler ne contient aucune
-branche propre au synthé soustractif : le moteur choisit un renderer dans son
-registre par `instrument.kind`. Ajouter un second kind étend la variante de
-snapshot et enregistre un renderer sans modifier l’algorithme de scheduling.
-
-### `src/project-io`
-
-`project-io/native` sépare schéma JSON v1, version, métadonnées, sérialiseur,
-parseur et lecteurs spécialisés. Le schéma stocké est un arbre JSON distinct de
-`ProjectState`; les contrats d’éditeur persistés viennent de `editor/model`, pas
-de l’UI. Une future migration `v1 → v2` s’insérera après reconnaissance de la
-version et avant la construction du domaine.
-
-`project-io/midi` sépare le codec SMF, sa validation, l’analyse d’import, le
-temps, les collisions, les avertissements, la fabrique de projet et l’export.
-L’import ne dépend plus de la palette de rendu. L’export reçoit un
-`MidiExportPlan` musical neutre construit dans `use-cases` ; il ne
-connaît ni store ni écran actif.
-
-### `src/config`
-
-Chaque groupe possède un propriétaire explicite :
-
-| Fichier | Propriétaire |
+| Propriétaire | Contenu |
 | --- | --- |
-| `product-config.ts` | identité et données de démonstration |
-| `domain-limits.ts` | valeurs durables et limites métier |
-| `audio-config.ts` | moteur et lookahead |
-| `editor-config.ts` | viewport et contrôles d’édition |
-| `interaction-config.ts` | gestes et seuils pointeur |
-| `music-config.ts` | snap tonal |
-| `rendering-config.ts` | budgets et couleurs de rendu |
-| `native-file-config.ts` | format `.pianola` |
-| `midi-config.ts` | limites et valeurs SMF |
+| `src/domain/identifiers.ts` | identifiants et tick |
+| `src/domain/notes/note.ts` | note, pitch et vélocité |
+| `src/domain/instruments/instrument.ts` | sons, presets et instruments |
+| `src/domain/clips/clip.ts` | pistes, timeline et clips |
+| `src/domain/transport/transport.ts` | horloge, métrique et boucle |
+| `src/domain/master-bus.ts` | gain, mute et accordage master |
+| `src/domain/project/project-document.ts` | document, workspace et accès clip |
 
-Le fichier fourre-tout `program-constants.ts` n’existe plus. Le domaine
-n’importe pas les paramètres d’éditeur et le MIDI n’importe pas la configuration
-de rendu.
+Les mutations durables passent par `EditorCommandPort`, une transaction et les
+reducers de `src/domain/commands/`. `ProjectStore` est le propriétaire de
+l’historique musical.
 
-## Flux principaux
+## Noyau du piano roll
 
-### Validation d’un geste
+Tout le noyau propre à l’éditeur visible partage la racine
+`src/editor/` :
+
+```text
+geometry/       conversions, bornes, région visible et index spatial
+interactions/   draft, machine de gestes, pointeurs et session
+model/          signaux et réglages neutres
+runtime/        services d’un workspace
+selection/      sélection transitoire et requêtes
+viewport/       publication, batching et suivi de lecture
+```
+
+Les cas d’usage correspondants partagent
+`src/use-cases/piano-roll/notes/` et
+`src/use-cases/piano-roll/selection/`. Les primitives réellement transversales,
+comme le service de commandes, restent au niveau `src/use-cases/commands/`.
+
+## UI et styles
+
+Les composants sont rangés par surface : dialogs, editor-toolbar, inspector,
+piano-roll, project-files et transport. Le piano roll garde ses adaptateurs DOM
+dans `src/ui/piano-roll/interactions/` et ses peintres Canvas dans
+`src/ui/piano-roll/rendering/`.
+
+`src/styles.css` importe des propriétaires symétriques : shell, application
+header, editor toolbar, transport, project files, piano roll, inspector,
+dialogs et responsive. Le fichier responsive ne coordonne que plusieurs
+surfaces.
+
+## Pipeline d’un geste
 
 ```text
 PointerEvent
-  → adaptateur DOM / PointerSample
-  → PianoRollInteractionSession + GestureStateMachine
-  → feedback visuel immédiat
+  → dom-pointer-sample
+  → stratégie de geste
+  → PianoRollInteractionSession
+  → feedback DOM/Canvas transitoire
   → NoteGestureWorkflow
   → plan de commandes ou demande de collision
   → EditorCommandPort
   → ProjectStore / reducer / Undo-Redo
 ```
 
-Pendant `pointermove`, `ProjectState` ne change pas. La transaction est publiée
-une seule fois au terme du geste validé.
+Pendant `pointermove`, le document ne change pas. Les rôles fréquents sont
+séparés : manager de pointeurs, politique de seuils, double-tap, lasso,
+ciblage/stratégie, contrôleur de sélection et contrôleur visuel.
 
-### Lecture
-
-Le hook de transport choisit explicitement le clip, crée un
-`ClipPlaybackSource`, compile un `PlaybackPlan` immuable puis le donne au
-scheduler sous forme de snapshot.
-Le scheduler manipule une horloge de lecture ; les occurrences audio et voix
-sont temporaires et ne rejoignent jamais le document.
-
-### Sauvegarde et échange
+## Pipeline audio
 
 ```text
-Save  : ProjectDocument + WorkspaceState + NativeEditorState → validation → JSON → Blob
-Load  : File → JSON inconnu → parse borné → remplacement du runtime
+ClipPlaybackSource
+  → compilePlaybackPlan
+  → PlaybackSnapshot
+  → LookaheadScheduler (horloge et fenêtre)
+  → playback-occurrence-scheduler (occurrences et notes tenues)
+  → WebAudioEngine (cycle de vie navigateur)
+  → web-audio-routing + voice-allocation
+  → InstrumentRenderer
+```
+
+Les façades publiques restent `src/audio/lookahead-scheduler.ts` et
+`src/audio/web-audio-engine.ts`. Le scheduler ne connaît aucun synthé concret ;
+le moteur choisit un renderer selon `instrument.kind`.
+
+## Fichiers projet
+
+Le format natif sépare schéma, sérialiseur, parseur et lecteurs par section. Le
+MIDI sépare validation, lecture/écriture SMF, analyse, avertissements, collisions
+et construction de projet. Ces pipelines n’ont pas été restructurés dans le
+chantier de navigabilité actuel.
+
+```text
+Save  : ProjectDocument + NativeEditorState → JSON validé → Blob
+Load  : File → JSON inconnu → parse borné → projet + workspace
 MIDI  : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ```
 
-Le chargement et l’import arrêtent la lecture, annulent le geste, vident la
-sélection et le presse-papier, puis remplacent le projet et restaurent l’espace
-de travail.
+## Exceptions au seuil de 500 lignes
 
-## Nommage
-
-- fichiers TypeScript : `kebab-case.ts` ;
-- composants React : `PascalCase.tsx` ;
-- hooks : `useCamelCase.ts` ;
-- tests : `*.test.ts[x]` ou `.test.mjs`, tous exécutés par Vitest avec les
-  builders partagés ;
-- ports : suffixe `-port.ts` ; adaptateurs : technologie explicite ;
-- aucun fichier nommé seulement `types`, `contracts`, `state`, `input`,
-  `helpers`, `utils` ou `common`.
+Le seuil déclenche une revue, pas un échec de CI. Les exceptions restantes ont
+une responsabilité unique documentée dans leur guide local : données de palette,
+composition du workspace, résolution de collisions et parseurs MIDI/natif. Le
+contrôle structurel affiche la liste courante à chaque vérification.
 
 ## Vérification
 
-La commande de référence est :
+`npm run verify` exécute documentation, structure, frontières, TypeScript,
+build et les 102 tests. Les règles structurelles sont dans
+`scripts/check-structure.mjs`; les frontières techniques restent dans
+`scripts/check-import-boundaries.mjs`.
 
-```bash
-npm run verify
-```
-
-Elle exécute le contrôle des frontières, TypeScript strict, le build Vite et
-102 scénarios Vitest. Les gestes DOM, Canvas, le responsive et Web Audio réel
-restent complétés par la vérification manuelle décrite dans la roadmap.
+La documentation de référence est indexée dans [`README.md`](README.md).

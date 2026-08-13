@@ -7,16 +7,20 @@ import type {
 } from "../../../use-cases/commands/editor-command-service";
 import {
   createDefaultTransportState,
+} from "../../../domain/transport/transport";
+import {
   createDefaultClipTimeline,
   DEFAULT_MEASURE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
   MAXIMUM_CLIP_NAME_LENGTH,
   type Clip,
-  type ClipId,
   type Track,
-  type InstrumentId,
   type ClipInstrumentState,
-} from "../../../domain/model";
+} from "../../../domain/clips/clip";
+import {
+  type ClipId,
+  type InstrumentId,
+} from "../../../domain/identifiers";
 import {
   createDefaultClipInstrumentState,
 } from "../../../domain/project-instrument-factory";

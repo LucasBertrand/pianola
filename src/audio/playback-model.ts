@@ -1,13 +1,19 @@
-import type {
-  AudioEngineConfig,
-  ClipId,
-  NoteId,
-  OscillatorWaveform,
-  Tick,
-  TimeSignature,
-  TransportState,
-  InstrumentId,
-} from "../domain/model";
+import {
+  type AudioEngineConfig,
+} from "./audio-engine-config";
+import {
+  type ClipId,
+  type NoteId,
+  type Tick,
+  type InstrumentId,
+} from "../domain/identifiers";
+import {
+  type OscillatorWaveform,
+} from "../domain/instruments/instrument";
+import {
+  type TimeSignature,
+  type TransportState,
+} from "../domain/transport/transport";
 
 export interface PackedInstrumentEvents {
   readonly sourceId: ClipId;

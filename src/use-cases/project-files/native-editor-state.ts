@@ -2,10 +2,12 @@ import {
   EDITOR_CONSTANTS,
   VIEWPORT_CONSTANTS,
 } from "../../config/editor-config";
-import type {
-  ClipId,
-  ProjectState,
-} from "../../domain/model";
+import {
+  type ClipId,
+} from "../../domain/identifiers";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../music/pitch-snap";

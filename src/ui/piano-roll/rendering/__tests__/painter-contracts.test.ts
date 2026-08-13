@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
   createDefaultProjectClock,
+} from "../../../../domain/transport/transport";
+import {
   type Note,
-} from "../../../../domain/model";
+} from "../../../../domain/notes/note";
 import {
   CoordinateConverter,
   type ViewportState,

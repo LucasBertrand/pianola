@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
-import type { Note } from "../model";
+import {
+  type Note,
+} from "../notes/note";
 import {
   createTargetedNoteTransformationPlan,
 } from "../targeted-note-transformations";

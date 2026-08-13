@@ -1,6 +1,6 @@
-import type {
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 
 export type EditorSelectionRequest =
   | { readonly type: "clear" }

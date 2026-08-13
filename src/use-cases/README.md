@@ -1,0 +1,22 @@
+# Cas d’usage
+
+## Que possède cette zone ?
+
+Les intentions indépendantes de React : service de commandes, ports de dialogue,
+création/projection de fichiers et workflows de notes/sélection du piano roll.
+
+## Quel fichier lire en premier ?
+
+Lire `commands/editor-command-service.ts` pour le port de mutation. Pour le
+piano roll, commencer par `piano-roll/notes/note-gesture-workflow.ts` ou
+`piano-roll/selection/selection-edit-plans.ts`.
+
+## Quelles dépendances sont autorisées ?
+
+Les cas d’usage dépendent du domaine, du noyau éditeur et des types de formats
+nécessaires. Ils ne dépendent jamais de composants ou hooks UI.
+
+## Où sont les tests ?
+
+Les plans sont couverts par la suite centrale sous `tests/integration/`. Les
+commandes métier ont leurs unités dans `src/domain/commands/__tests__/`.

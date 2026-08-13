@@ -1,11 +1,13 @@
-import type {
-  Clip,
-  ProjectDocument,
-} from "../../domain/model";
+import {
+  type Clip,
+} from "../../domain/clips/clip";
+import {
+  type ProjectDocument,
+} from "../../domain/project/project-document";
 import {
   getClipTimeSignature,
   getClipDurationTicks,
-} from "../../domain/model";
+} from "../../domain/clips/clip";
 import type {
   MidiExportPlan,
 } from "../../project-io/midi/midi-exporter";

@@ -4,9 +4,9 @@ import type {
 import type {
   EditorSelectionRequests,
 } from "../../editor/selection/editor-selection-requests";
-import type {
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -35,7 +35,7 @@ import type {
 /**
  * Stable services and high-frequency signals required by the piano-roll UI.
  * The editor runtime satisfies this port structurally, while components remain
- * independent from its concrete composition and from demo project fixtures.
+ * independent from its concrete application composition.
  */
 export interface PianoRollRuntimePort {
   readonly projectStore: ProjectStorePort;

@@ -7,9 +7,11 @@ import {
 import {
   getActiveClip,
   type ProjectState,
+} from "../../domain/project/project-document";
+import {
   type Tick,
   type InstrumentId,
-} from "../../domain/model";
+} from "../../domain/identifiers";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -17,9 +19,11 @@ import type {
   PlaybackStatus,
 } from "../../audio/playback-model";
 import {
-  DEFAULT_AUDIO_ENGINE_CONFIG,
   LookaheadScheduler,
 } from "../../audio/lookahead-scheduler";
+import {
+  DEFAULT_AUDIO_ENGINE_CONFIG,
+} from "../../audio/default-audio-engine-config";
 import {
   compilePlaybackPlan,
 } from "../../audio/playback-snapshot";

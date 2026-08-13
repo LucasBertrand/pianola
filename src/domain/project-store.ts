@@ -5,11 +5,13 @@ import type { Transaction } from "./commands/transaction";
 import {
   PROJECT_CONSTANTS,
 } from "../config/domain-limits";
-import type {
-  ClipId,
-  ProjectDocument,
-  ProjectState,
-} from "./model";
+import {
+  type ClipId,
+} from "./identifiers";
+import {
+  type ProjectDocument,
+  type ProjectState,
+} from "./project/project-document";
 
 export type ProjectStoreListener = (
   state: ProjectState,

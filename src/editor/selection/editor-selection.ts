@@ -1,12 +1,16 @@
-import type {
-  Note,
-  NoteId,
-  ProjectState,
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type Note,
+} from "../../domain/notes/note";
+import {
+  type NoteId,
+  type InstrumentId,
+} from "../../domain/identifiers";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import {
   getActiveClip,
-} from "../../domain/model";
+} from "../../domain/project/project-document";
 
 export type NoteSelectionPredicate = (note: Note) => boolean;
 

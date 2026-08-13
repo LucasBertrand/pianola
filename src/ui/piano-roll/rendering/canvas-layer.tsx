@@ -7,10 +7,16 @@ import React, {
 } from "react";
 import {
   getActiveClip,
+} from "../../../domain/project/project-document";
+import {
   getClipTimeSignature,
+} from "../../../domain/clips/clip";
+import {
   type InstrumentId,
+} from "../../../domain/identifiers";
+import {
   type Note,
-} from "../../../domain/model";
+} from "../../../domain/notes/note";
 import type {
   ProjectStorePort,
 } from "../../../domain/project-store";

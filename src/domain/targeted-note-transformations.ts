@@ -1,7 +1,9 @@
-import type {
-  Note,
-  Tick,
-} from "./model";
+import {
+  type Note,
+} from "./notes/note";
+import {
+  type Tick,
+} from "./identifiers";
 import {
   SelectionTransformationError,
   transformNoteSelection,

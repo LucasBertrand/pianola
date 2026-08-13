@@ -93,6 +93,4 @@ export const EDITOR_CONSTANTS = Object.freeze({
       label: "Dotted",
     }),
   ] as const),
-  demoNoteCount: 100,
-  demoInitialNoteSpanTicks: PROJECT_CONSTANTS.ppqn * 4 * 8,
 } as const);

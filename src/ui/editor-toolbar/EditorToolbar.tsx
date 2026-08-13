@@ -2,7 +2,7 @@ import React from "react";
 import {
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
-} from "../../domain/model";
+} from "../../domain/clips/clip";
 import type {
   SelectionTransformationKind,
 } from "../../domain/selection-transformations";
@@ -43,7 +43,7 @@ export interface EditorToolbarProps {
 }
 
 export function EditorToolbar({
-  inspectorOpen: generalInspectorOpen,
+  inspectorOpen: projectInspectorOpen,
   inspectorSection,
   canUndo,
   canRedo,
@@ -72,14 +72,14 @@ export function EditorToolbar({
     <div className="editor-toolbar-actions">
       <div className="inspector-toggle-group">
         <button
-          className="general-inspector-toggle-button"
+          className="project-inspector-toggle-button"
           type="button"
           aria-label="Open instruments"
           title="Instruments"
           aria-expanded={
-            generalInspectorOpen && inspectorSection === "instruments"
+            projectInspectorOpen && inspectorSection === "instruments"
           }
-          aria-controls="general-inspector"
+          aria-controls="project-inspector"
           onClick={() => onToggleInspector("instruments")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -92,14 +92,14 @@ export function EditorToolbar({
           </svg>
         </button>
         <button
-          className="general-inspector-toggle-button"
+          className="project-inspector-toggle-button"
           type="button"
           aria-label="Open clips"
           title="Clips"
           aria-expanded={
-            generalInspectorOpen && inspectorSection === "clips"
+            projectInspectorOpen && inspectorSection === "clips"
           }
-          aria-controls="general-inspector"
+          aria-controls="project-inspector"
           onClick={() => onToggleInspector("clips")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">

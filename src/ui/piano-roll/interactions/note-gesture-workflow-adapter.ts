@@ -1,10 +1,12 @@
 import {
   EDITOR_CONSTANTS,
 } from "../../../config/editor-config";
-import type {
-  Note,
-  NoteId,
-} from "../../../domain/model";
+import {
+  type Note,
+} from "../../../domain/notes/note";
+import {
+  type NoteId,
+} from "../../../domain/identifiers";
 import type {
   GestureCompletion,
 } from "../../../editor/interactions/gestures/gesture-state-machine";
@@ -19,10 +21,10 @@ import type {
 } from "../../../use-cases/commands/editor-command-service";
 import type {
   NoteCollisionResolutionRequest,
-} from "../../../use-cases/notes/note-collision-resolution";
+} from "../../../use-cases/piano-roll/notes/note-collision-resolution";
 import {
   NoteGestureWorkflow,
-} from "../../../use-cases/notes/note-gesture-workflow";
+} from "../../../use-cases/piano-roll/notes/note-gesture-workflow";
 
 export interface NoteGestureWorkflowAdapterOptions {
   readonly editorCommands: EditorCommandPort;

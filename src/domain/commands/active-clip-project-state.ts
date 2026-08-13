@@ -1,4 +1,9 @@
-import type { Clip, ProjectState } from "../model";
+import {
+  type Clip,
+} from "../clips/clip";
+import {
+  type ProjectState,
+} from "../project/project-document";
 
 export type ActiveClipProjectState = Pick<
   ProjectState,

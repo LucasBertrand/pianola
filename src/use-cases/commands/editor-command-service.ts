@@ -2,10 +2,12 @@ import type {
   PianoRollCommand,
 } from "../../domain/commands/command-types";
 import type { Transaction } from "../../domain/commands/transaction";
-import type {
-  ClipId,
-  ProjectState,
-} from "../../domain/model";
+import {
+  type ClipId,
+} from "../../domain/identifiers";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";

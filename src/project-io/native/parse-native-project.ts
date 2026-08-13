@@ -1,4 +1,6 @@
-import { MAXIMUM_INSTRUMENT_NAME_LENGTH } from "../../domain/model";
+import {
+  MAXIMUM_INSTRUMENT_NAME_LENGTH,
+} from "../../domain/instruments/instrument";
 import { fail } from "./native-project-error";
 import { parseMetadata } from "./native-project-metadata";
 import type { LoadedNativeProject } from "./native-project-schema";

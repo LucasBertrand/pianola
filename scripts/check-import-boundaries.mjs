@@ -21,7 +21,6 @@ const ADAPTER_SOURCE_ZONES = new Set([
 const ALLOWED_APP_FILES = new Set([
   "App.tsx",
   "create-app-runtime.ts",
-  "demo-project.ts",
 ]);
 const GENERIC_SOURCE_FILE_NAMES = new Set([
   "common.ts",

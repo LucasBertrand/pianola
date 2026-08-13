@@ -1,23 +1,37 @@
 import { MIDI_CONSTANTS } from "../../config/midi-config";
 import { PROJECT_CONSTANTS } from "../../config/domain-limits";
-import type {
-  Clip,
-  ClipInstrumentState,
-  InstrumentId,
-  Note,
-  ProjectInstrument,
-  ProjectState,
-  Track,
-} from "../../domain/model";
+import {
+  type Clip,
+  type ClipInstrumentState,
+  type Track,
+} from "../../domain/clips/clip";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
+import {
+  type Note,
+} from "../../domain/notes/note";
+import {
+  type ProjectInstrument,
+} from "../../domain/instruments/instrument";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import {
   createDefaultMasterBusState,
+} from "../../domain/master-bus";
+import {
   createDefaultProjectClock,
   createDefaultTransportState,
-  getClip,
-  getClipTimeSignature,
   getTicksPerMeasure,
+} from "../../domain/transport/transport";
+import {
+  getClip,
   PROJECT_SCHEMA_VERSION,
-} from "../../domain/model";
+} from "../../domain/project/project-document";
+import {
+  getClipTimeSignature,
+} from "../../domain/clips/clip";
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,

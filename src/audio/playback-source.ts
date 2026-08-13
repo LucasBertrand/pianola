@@ -1,7 +1,9 @@
-import type {
-  Clip,
-  ClipId,
-} from "../domain/model";
+import {
+  type Clip,
+} from "../domain/clips/clip";
+import {
+  type ClipId,
+} from "../domain/identifiers";
 
 /** Explicit, immutable input selected by the caller for audio compilation. */
 export interface ClipPlaybackSource {

@@ -1,5 +1,12 @@
-import type { Note, NoteId } from "../model";
-import { MAXIMUM_CLIP_NOTE_COUNT } from "../model";
+import {
+  type Note,
+} from "../notes/note";
+import {
+  type NoteId,
+} from "../identifiers";
+import {
+  MAXIMUM_CLIP_NOTE_COUNT,
+} from "../notes/note";
 import { assertValidNoteForTrack } from "../validation/note-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type { AddNotesCommand, MoveNotesCommand } from "./command-types";

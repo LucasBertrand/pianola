@@ -1,13 +1,23 @@
-import type {
-  Clip,
-  InstrumentId,
-  Note,
-  NoteId,
-  ProjectInstrument,
-  ProjectState,
-  Track,
-  TransportState,
-} from "../model";
+import {
+  type Clip,
+  type Track,
+} from "../clips/clip";
+import {
+  type InstrumentId,
+  type NoteId,
+} from "../identifiers";
+import {
+  type Note,
+} from "../notes/note";
+import {
+  type ProjectInstrument,
+} from "../instruments/instrument";
+import {
+  type ProjectState,
+} from "../project/project-document";
+import {
+  type TransportState,
+} from "../transport/transport";
 import { assertValidClipTimeline } from "../validation/transport-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import { CommandRejectedError } from "./command-errors";

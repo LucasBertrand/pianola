@@ -1,5 +1,7 @@
 import { PROJECT_CONSTANTS } from "../../config/domain-limits";
-import type { Note } from "../../domain/model";
+import {
+  type Note,
+} from "../../domain/notes/note";
 import type {
   MidiImportCollisionStrategy,
   MidiImportInstrumentCandidate,

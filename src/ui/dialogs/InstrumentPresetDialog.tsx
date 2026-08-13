@@ -11,9 +11,11 @@ import {
   MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   type InstrumentPreset,
   type OscillatorWaveform,
-  type PresetId,
   type SubtractiveSynthConfig,
-} from "../../domain/model";
+} from "../../domain/instruments/instrument";
+import {
+  type PresetId,
+} from "../../domain/identifiers";
 
 export interface InstrumentPresetDialogProps {
   readonly mode: "create" | "edit";

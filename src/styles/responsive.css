@@ -16,7 +16,7 @@
 
 @media (min-width: 1121px) and (max-width: 1300px) {
   .app-shell {
-    --general-inspector-width: 276px;
+    --project-inspector-width: 276px;
   }
 
   .topbar {
@@ -35,7 +35,7 @@
 
 @media (max-width: 1120px) {
   .app-shell {
-    --general-inspector-width: 250px;
+    --project-inspector-width: 250px;
   }
 
   .topbar {
@@ -108,7 +108,7 @@
 
   /* Responsive general inspector */
 
-  .general-inspector {
+  .project-inspector {
     position: absolute;
     z-index: 12;
     top: 0;
@@ -122,11 +122,11 @@
     transition: transform 180ms ease;
   }
 
-  .general-inspector.is-open {
+  .project-inspector.is-open {
     transform: translate3d(0, 0, 0);
   }
 
-  .general-inspector-toggle-button {
+  .project-inspector-toggle-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -174,7 +174,7 @@
     grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .workspace.is-general-inspector-open {
+  .workspace.is-project-inspector-open {
     grid-template-rows: auto minmax(0, 1fr);
   }
 
@@ -187,11 +187,11 @@
     grid-row: 2;
   }
 
-  .workspace.is-general-inspector-open .editor-panel {
+  .workspace.is-project-inspector-open .editor-panel {
     grid-row: 2;
   }
 
-  .general-inspector {
+  .project-inspector {
     position: relative;
     z-index: 2;
     top: auto;
@@ -209,45 +209,45 @@
     grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .general-inspector.is-clips-panel,
-  .general-inspector.is-instruments-panel {
+  .project-inspector.is-clips-panel,
+  .project-inspector.is-instruments-panel {
     max-height: 30vh;
   }
 
-  .general-inspector:not(.is-open) {
+  .project-inspector:not(.is-open) {
     overflow: hidden;
   }
 
-  .general-inspector:not(.is-open)
-    .general-inspector-scroll-content {
+  .project-inspector:not(.is-open)
+    .project-inspector-scroll-content {
     display: none;
   }
 
-  .general-inspector:not(.is-open) .editor-toolbar {
+  .project-inspector:not(.is-open) .editor-toolbar {
     margin: 0;
     padding: 0;
     border-bottom: 0;
   }
 
-  .general-inspector-toggle-button {
+  .project-inspector-toggle-button {
     display: inline-flex;
   }
 
-  .general-inspector-toggle-button {
+  .project-inspector-toggle-button {
     height: 40px;
     min-height: 40px;
   }
 
-  .general-inspector
+  .project-inspector
     .editor-toolbar
     .inspector-toggle-group {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .general-inspector
+  .project-inspector
     .editor-toolbar
-    .general-inspector-toggle-button {
+    .project-inspector-toggle-button {
     display: inline-grid;
     grid-auto-flow: column;
     align-items: center;
@@ -364,8 +364,8 @@
     font-size: 9px;
   }
 
-  .general-inspector.is-instruments-panel
-    .general-inspector-scroll-content {
+  .project-inspector.is-instruments-panel
+    .project-inspector-scroll-content {
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -439,8 +439,8 @@
     min-width: 30px;
   }
 
-  .general-inspector.is-instruments-panel .clip-inspector-section,
-  .general-inspector.is-clips-panel .instrument-inspector-section {
+  .project-inspector.is-instruments-panel .clip-inspector-section,
+  .project-inspector.is-clips-panel .instrument-inspector-section {
     display: none;
   }
 

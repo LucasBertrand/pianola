@@ -1,4 +1,17 @@
-import type { Clip, LoopRegion, Note, NoteId, Track, TransportState } from "../model";
+import {
+  type Clip,
+  type Track,
+} from "../clips/clip";
+import {
+  type LoopRegion,
+  type TransportState,
+} from "../transport/transport";
+import {
+  type Note,
+} from "../notes/note";
+import {
+  type NoteId,
+} from "../identifiers";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type { PianoRollCommand } from "./command-types";
 import { reject } from "./command-context";

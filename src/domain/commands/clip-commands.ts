@@ -1,11 +1,26 @@
-import type { Clip, Note, NoteId, ProjectState } from "../model";
+import {
+  type Clip,
+} from "../clips/clip";
+import {
+  type Note,
+} from "../notes/note";
+import {
+  type NoteId,
+} from "../identifiers";
+import {
+  type ProjectState,
+} from "../project/project-document";
 import {
   getClipTimeSignature,
-  getTicksPerMeasure,
   MAXIMUM_CLIP_NAME_LENGTH,
-  MAXIMUM_CLIP_NOTE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
-} from "../model";
+} from "../clips/clip";
+import {
+  getTicksPerMeasure,
+} from "../transport/transport";
+import {
+  MAXIMUM_CLIP_NOTE_COUNT,
+} from "../notes/note";
 import {
   assertValidNoteForTrack,
 } from "../validation/note-validation";

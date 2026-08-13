@@ -3,14 +3,18 @@ import {
 } from "react";
 import {
   getActiveClip,
+} from "../../domain/project/project-document";
+import {
   getClipDurationTicks,
   getClipMeasureCount,
   getClipTimeSignature,
-  getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
+} from "../../domain/clips/clip";
+import {
+  getTicksPerMeasure,
   type LoopRegion,
-} from "../../domain/model";
+} from "../../domain/transport/transport";
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";

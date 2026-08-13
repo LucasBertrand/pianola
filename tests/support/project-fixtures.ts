@@ -4,20 +4,32 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+} from "../../src/domain/master-bus";
+import {
   createDefaultProjectClock,
   createDefaultTransportState,
   getTicksPerMeasure,
-  getActiveClip,
-  PROJECT_SCHEMA_VERSION,
-  type ClipInstrumentState,
-  type InstrumentId,
-  type Note,
-  type ProjectInstrument,
-  type ProjectState,
-  type Track,
   type TransportState,
   type TimeSignature,
-} from "../../src/domain/model";
+} from "../../src/domain/transport/transport";
+import {
+  getActiveClip,
+  PROJECT_SCHEMA_VERSION,
+  type ProjectState,
+} from "../../src/domain/project/project-document";
+import {
+  type ClipInstrumentState,
+  type Track,
+} from "../../src/domain/clips/clip";
+import {
+  type InstrumentId,
+} from "../../src/domain/identifiers";
+import {
+  type Note,
+} from "../../src/domain/notes/note";
+import {
+  type ProjectInstrument,
+} from "../../src/domain/instruments/instrument";
 import type {
   NativeEditorState,
 } from "../../src/project-io/native/native-project-schema";

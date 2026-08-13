@@ -2,10 +2,12 @@ import {
   EditorSelection,
   type NoteSelectionPredicate,
 } from "../selection/editor-selection";
-import type {
-  Note,
-  NoteId,
-} from "../../domain/model";
+import {
+  type Note,
+} from "../../domain/notes/note";
+import {
+  type NoteId,
+} from "../../domain/identifiers";
 import {
   CoordinateConverter,
   type ViewportState,

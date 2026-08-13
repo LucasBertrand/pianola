@@ -1,6 +1,9 @@
 @import "./styles/tokens-reset.css";
 @import "./styles/shell.css";
-@import "./styles/header-transport.css";
+@import "./styles/application-header.css";
+@import "./styles/editor-toolbar.css";
+@import "./styles/transport.css";
+@import "./styles/project-files.css";
 @import "./styles/piano-roll.css";
 @import "./styles/inspector.css";
 @import "./styles/dialogs.css";

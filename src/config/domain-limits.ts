@@ -4,7 +4,6 @@ export const PROJECT_CONSTANTS = Object.freeze({
   schemaVersion: 11,
   defaultMeasureCount: 16,
   defaultTempoBpm: 120,
-  demoTempoBpm: 112,
   minimumTempoBpm: 30,
   maximumTempoBpm: 240,
   tempoStepBpm: 0.1,

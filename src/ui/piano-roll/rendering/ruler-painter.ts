@@ -1,10 +1,10 @@
 import {
   APPLICATION_COLORS,
 } from "../../../config/application-colors";
-import type {
-  ProjectClock,
-  TimeSignature,
-} from "../../../domain/model";
+import {
+  type ProjectClock,
+  type TimeSignature,
+} from "../../../domain/transport/transport";
 import type {
   ViewportState,
 } from "../../../editor/geometry/converter";

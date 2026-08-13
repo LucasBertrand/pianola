@@ -1,22 +1,13 @@
 import {
   useEffect,
-  type RefObject,
 } from "react";
-import {
-  INTERACTION_CONSTANTS,
-} from "../../../config/interaction-config";
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
-  type ViewportState,
 } from "../../../editor/geometry/converter";
 import {
-  type PointerInteractionStrategy,
   isSupportedPointerActivation,
 } from "../../../editor/interactions/pointer/pointer-interaction-strategy";
-import type {
-  ReadonlyRenderSignal,
-} from "../../../editor/model/render-signal";
 import type {
   PointerSample,
 } from "../../../editor/interactions/pointer/pointer-sample";
@@ -27,47 +18,17 @@ import {
   TwoPointerDoubleTapGesture,
 } from "../../../editor/interactions/gestures/two-pointer-double-tap";
 import {
-  createMousePointerSample,
   createPointerSample,
 } from "./dom-pointer-sample";
-
-export interface UseInteractionManagerOptions {
-  readonly overlayRef: RefObject<HTMLElement | null>;
-  readonly strategyRef: RefObject<
-    PointerInteractionStrategy | null
-  >;
-  readonly viewport: ReadonlyRenderSignal<ViewportState>;
-  readonly totalTicks: number;
-  readonly setViewport: (viewport: ViewportState) => void;
-  readonly onHorizontalViewportInteractionStart: () => void;
-  readonly onHorizontalViewportInteractionEnd: () => void;
-  readonly onTwoFingerDoubleTap: () => void;
-}
-
-const LONG_PRESS_DELAY_MS =
-  INTERACTION_CONSTANTS.longPressDelayMs;
-const PEN_LONG_PRESS_DELAY_MS =
-  INTERACTION_CONSTANTS.penLongPressDelayMs;
-const LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS =
-  INTERACTION_CONSTANTS.longPressMovementToleranceCssPixels;
-const MINIMUM_PINCH_DISTANCE_CSS_PIXELS =
-  INTERACTION_CONSTANTS.minimumPinchDistanceCssPixels;
-const PINCH_AXIS_LOCK_RATIO =
-  INTERACTION_CONSTANTS.pinchAxisLockRatio;
-const MINIMUM_PINCH_SCALE =
-  INTERACTION_CONSTANTS.minimumPinchScale;
-const MAXIMUM_PINCH_SCALE =
-  INTERACTION_CONSTANTS.maximumPinchScale;
-const PINCH_SCALE_DEAD_ZONE =
-  INTERACTION_CONSTANTS.pinchScaleDeadZone;
-const TWO_FINGER_TAP_MAXIMUM_DURATION_MS =
-  INTERACTION_CONSTANTS.twoFingerTapMaximumDurationMs;
-const TWO_FINGER_TAP_MOVEMENT_TOLERANCE_CSS_PIXELS =
-  INTERACTION_CONSTANTS.twoFingerTapMovementToleranceCssPixels;
-const TWO_FINGER_DOUBLE_TAP_DELAY_MS =
-  INTERACTION_CONSTANTS.twoFingerDoubleTapDelayMs;
-const TWO_FINGER_DOUBLE_TAP_DISTANCE_CSS_PIXELS =
-  INTERACTION_CONSTANTS.twoFingerDoubleTapDistanceCssPixels;
+import {
+  PIANO_ROLL_POINTER_POLICY,
+} from "./piano-roll-pointer-policy";
+import {
+  bindPianoRollPointerEvents,
+} from "./bind-piano-roll-pointer-events";
+import type {
+  UseInteractionManagerOptions,
+} from "./piano-roll-interaction-manager-options";
 
 export function useInteractionManager(
   options: UseInteractionManagerOptions,
@@ -95,18 +56,18 @@ export function useInteractionManager(
     const gestureEvents: PointerSample[] = [];
     const pinchGesture = new PinchViewportGesture({
       minimumDistanceCssPixels:
-        MINIMUM_PINCH_DISTANCE_CSS_PIXELS,
-      axisLockRatio: PINCH_AXIS_LOCK_RATIO,
-      minimumScale: MINIMUM_PINCH_SCALE,
-      maximumScale: MAXIMUM_PINCH_SCALE,
-      scaleDeadZone: PINCH_SCALE_DEAD_ZONE,
+        PIANO_ROLL_POINTER_POLICY.minimumPinchDistanceCssPixels,
+      axisLockRatio: PIANO_ROLL_POINTER_POLICY.pinchAxisLockRatio,
+      minimumScale: PIANO_ROLL_POINTER_POLICY.minimumPinchScale,
+      maximumScale: PIANO_ROLL_POINTER_POLICY.maximumPinchScale,
+      scaleDeadZone: PIANO_ROLL_POINTER_POLICY.pinchScaleDeadZone,
       maximumZoomX: MAXIMUM_HORIZONTAL_ZOOM,
       maximumZoomY: MAXIMUM_VERTICAL_ZOOM,
     });
     const twoPointerDoubleTap = new TwoPointerDoubleTapGesture({
-      maximumDelayMs: TWO_FINGER_DOUBLE_TAP_DELAY_MS,
+      maximumDelayMs: PIANO_ROLL_POINTER_POLICY.twoFingerDoubleTapDelayMs,
       maximumDistanceCssPixels:
-        TWO_FINGER_DOUBLE_TAP_DISTANCE_CSS_PIXELS,
+        PIANO_ROLL_POINTER_POLICY.twoFingerDoubleTapDistanceCssPixels,
     });
     let suppressSinglePointer = false;
     let gestureAnimationFrameId: number | null = null;
@@ -173,8 +134,8 @@ export function useInteractionManager(
       }
 
       const toleranceSquared =
-        TWO_FINGER_TAP_MOVEMENT_TOLERANCE_CSS_PIXELS
-        * TWO_FINGER_TAP_MOVEMENT_TOLERANCE_CSS_PIXELS;
+        PIANO_ROLL_POINTER_POLICY.twoFingerTapMovementToleranceCssPixels
+        * PIANO_ROLL_POINTER_POLICY.twoFingerTapMovementToleranceCssPixels;
       const firstDeltaX = first.clientX - firstOrigin.clientX;
       const firstDeltaY = first.clientY - firstOrigin.clientY;
       const secondDeltaX = second.clientX - secondOrigin.clientX;
@@ -304,8 +265,8 @@ export function useInteractionManager(
       longPressEvent = event;
       const delay =
         event.pointerType === "pen"
-          ? PEN_LONG_PRESS_DELAY_MS
-          : LONG_PRESS_DELAY_MS;
+          ? PIANO_ROLL_POINTER_POLICY.penLongPressDelayMs
+          : PIANO_ROLL_POINTER_POLICY.longPressDelayMs;
 
       longPressTimerId = window.setTimeout(() => {
         const retainedEvent = longPressEvent;
@@ -373,9 +334,9 @@ export function useInteractionManager(
         longPressPointerId === event.pointerId
         && (
           Math.abs(event.clientX - longPressOriginX)
-            > LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS
+            > PIANO_ROLL_POINTER_POLICY.longPressMovementToleranceCssPixels
           || Math.abs(event.clientY - longPressOriginY)
-            > LONG_PRESS_MOVEMENT_TOLERANCE_CSS_PIXELS
+            > PIANO_ROLL_POINTER_POLICY.longPressMovementToleranceCssPixels
         )
       ) {
         cancelLongPress();
@@ -417,7 +378,7 @@ export function useInteractionManager(
         && gestureUsesTouchPointers
         && !gestureMoved
         && sample.timeStamp - gestureStartTimeStamp
-          <= TWO_FINGER_TAP_MAXIMUM_DURATION_MS;
+          <= PIANO_ROLL_POINTER_POLICY.twoFingerTapMaximumDurationMs;
 
       if (
         !pinchGesture.active
@@ -478,16 +439,6 @@ export function useInteractionManager(
       event.preventDefault();
     };
 
-    const handlePointerUp = (event: PointerEvent): void => {
-      finishPointer(event, false);
-    };
-
-    const handlePointerCancel = (
-      event: PointerEvent,
-    ): void => {
-      finishPointer(event, true);
-    };
-
     const handleLostPointerCapture = (
       event: PointerEvent,
     ): void => {
@@ -508,27 +459,16 @@ export function useInteractionManager(
       }
     };
 
-    const handleDoubleClick = (event: MouseEvent): void => {
-      strategyRef.current?.onDoubleClick(
-        createMousePointerSample(event),
-      );
-      event.preventDefault();
-    };
-
-    const handleContextMenu = (event: MouseEvent): void => {
-      event.preventDefault();
-    };
-
-    overlay.addEventListener("pointerdown", handlePointerDown);
-    overlay.addEventListener("pointermove", handlePointerMove);
-    overlay.addEventListener("pointerup", handlePointerUp);
-    overlay.addEventListener("pointercancel", handlePointerCancel);
-    overlay.addEventListener(
-      "lostpointercapture",
-      handleLostPointerCapture,
+    const unbindPointerEvents = bindPianoRollPointerEvents(
+      overlay,
+      strategyRef,
+      {
+        pointerDown: handlePointerDown,
+        pointerMove: handlePointerMove,
+        finishPointer,
+        lostPointerCapture: handleLostPointerCapture,
+      },
     );
-    overlay.addEventListener("dblclick", handleDoubleClick);
-    overlay.addEventListener("contextmenu", handleContextMenu);
     return (): void => {
       cancelLongPress();
       if (gestureAnimationFrameId !== null) {
@@ -540,28 +480,7 @@ export function useInteractionManager(
       activePointers.clear();
       pointerOrigins.clear();
       twoPointerDoubleTap.reset();
-      overlay.removeEventListener(
-        "pointerdown",
-        handlePointerDown,
-      );
-      overlay.removeEventListener(
-        "pointermove",
-        handlePointerMove,
-      );
-      overlay.removeEventListener("pointerup", handlePointerUp);
-      overlay.removeEventListener(
-        "pointercancel",
-        handlePointerCancel,
-      );
-      overlay.removeEventListener(
-        "lostpointercapture",
-        handleLostPointerCapture,
-      );
-      overlay.removeEventListener("dblclick", handleDoubleClick);
-      overlay.removeEventListener(
-        "contextmenu",
-        handleContextMenu,
-      );
+      unbindPointerEvents();
     };
   }, [
     overlayRef,

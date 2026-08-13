@@ -9,10 +9,10 @@ import {
 } from "../../config/application-colors";
 import type {
   NoteCollisionResolutionRequest,
-} from "../../use-cases/notes/note-collision-resolution";
-import type {
-  InstrumentId,
-} from "../../domain/model";
+} from "../../use-cases/piano-roll/notes/note-collision-resolution";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";

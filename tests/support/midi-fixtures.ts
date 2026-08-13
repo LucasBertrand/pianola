@@ -1,13 +1,21 @@
-import type {
-  Clip,
-  InstrumentId,
-  Note,
-  ProjectInstrument,
-  ProjectState,
-} from "../../src/domain/model";
+import {
+  type Clip,
+} from "../../src/domain/clips/clip";
+import {
+  type InstrumentId,
+} from "../../src/domain/identifiers";
+import {
+  type Note,
+} from "../../src/domain/notes/note";
+import {
+  type ProjectInstrument,
+} from "../../src/domain/instruments/instrument";
+import {
+  type ProjectState,
+} from "../../src/domain/project/project-document";
 import {
   getActiveClip,
-} from "../../src/domain/model";
+} from "../../src/domain/project/project-document";
 import type {
   MidiImportAnalysis,
 } from "../../src/project-io/midi/midi-import-types";

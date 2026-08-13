@@ -1,5 +1,15 @@
-import type { Clip, ClipId, ProjectState } from "../../domain/model";
-import { PROJECT_SCHEMA_VERSION } from "../../domain/model";
+import {
+  type Clip,
+} from "../../domain/clips/clip";
+import {
+  type ClipId,
+} from "../../domain/identifiers";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
+import {
+  PROJECT_SCHEMA_VERSION,
+} from "../../domain/project/project-document";
 import { parseNativeProjectFile } from "./parse-native-project";
 import type {
   NativeEditorState,

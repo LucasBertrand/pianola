@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { MAXIMUM_MASTER_GAIN } from "../../model";
+import {
+  MAXIMUM_MASTER_GAIN,
+} from "../../master-bus";
 import { ProjectStore } from "../../project-store";
 import { CommandRejectedError } from "../command-errors";
 import type { PianoRollCommand } from "../command-types";

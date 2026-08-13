@@ -4,9 +4,13 @@ import {
   getClipTimeSignature,
   MAXIMUM_CLIP_NAME_LENGTH,
   MAXIMUM_PROJECT_CLIP_COUNT,
+} from "../../../domain/clips/clip";
+import {
   type ClipId,
+} from "../../../domain/identifiers";
+import {
   type ProjectState,
-} from "../../../domain/model";
+} from "../../../domain/project/project-document";
 import {
   LongPressNameEditor,
 } from "../../shared/LongPressNameEditor";

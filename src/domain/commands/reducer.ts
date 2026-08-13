@@ -1,4 +1,9 @@
-import type { Clip, ProjectState } from "../model";
+import {
+  type Clip,
+} from "../clips/clip";
+import {
+  type ProjectState,
+} from "../project/project-document";
 import { DomainValidationError } from "../validation/validation-result";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import {
@@ -34,13 +39,17 @@ import {
 } from "./instrument-commands";
 import { applyAddNotes, applyMoveNotes } from "./note-commands";
 import {
-  applyDeleteNotes,
   applyRepositionNotes,
   applyResizeNotes,
-  applySetNotesEnabled,
+} from "./note-position-commands";
+import {
   applySliceNotes,
   applyTransformNotes,
-} from "./note-transformation-commands";
+} from "./note-shape-commands";
+import {
+  applyDeleteNotes,
+  applySetNotesEnabled,
+} from "./note-state-commands";
 import {
   applySetMasterMuted,
   applyUpdateMasterGain,

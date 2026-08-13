@@ -3,6 +3,60 @@ export interface VoiceAllocationWindow {
   readonly stopAudioTimeSeconds: number;
 }
 
+export interface StealableVoiceAllocationWindow
+extends VoiceAllocationWindow {
+  readonly ended: boolean;
+  stop(atAudioTimeSeconds: number): void;
+}
+
+/** Prunes ended voices and steals the oldest overlap at the polyphony limit. */
+export function reservePolyphonySlot(
+  activeVoices: StealableVoiceAllocationWindow[] | undefined,
+  startAudioTimeSeconds: number,
+  endAudioTimeSeconds: number,
+  maximumPolyphony: number,
+): void {
+  if (activeVoices === undefined) {
+    return;
+  }
+
+  let writeIndex = 0;
+
+  for (const activeVoice of activeVoices) {
+    if (
+      !activeVoice.ended
+      && activeVoice.stopAudioTimeSeconds > startAudioTimeSeconds
+    ) {
+      activeVoices[writeIndex] = activeVoice;
+      writeIndex += 1;
+    }
+  }
+
+  activeVoices.length = writeIndex;
+
+  while (
+    countOverlappingVoiceWindows(
+      activeVoices,
+      startAudioTimeSeconds,
+      endAudioTimeSeconds,
+    ) >= maximumPolyphony
+  ) {
+    const voiceIndex = findOldestOverlappingVoiceIndex(
+      activeVoices,
+      startAudioTimeSeconds,
+      endAudioTimeSeconds,
+    );
+    const voiceToSteal = activeVoices[voiceIndex];
+
+    if (voiceIndex < 0 || voiceToSteal === undefined) {
+      break;
+    }
+
+    voiceToSteal.stop(startAudioTimeSeconds);
+    activeVoices.splice(voiceIndex, 1);
+  }
+}
+
 export function countOverlappingVoiceWindows(
   voices: readonly VoiceAllocationWindow[],
   startAudioTimeSeconds: number,

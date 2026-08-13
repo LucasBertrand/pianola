@@ -4,10 +4,10 @@ import type {
 import type {
   EditorSelectionRequests,
 } from "../selection/editor-selection-requests";
-import type {
-  ClipId,
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type ClipId,
+  type InstrumentId,
+} from "../../domain/identifiers";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";

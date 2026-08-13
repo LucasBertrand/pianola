@@ -3,12 +3,12 @@ import React, {
   type CSSProperties,
   type MutableRefObject,
 } from "react";
-import type {
-  InstrumentId,
-} from "../../domain/model";
+import {
+  type InstrumentId,
+} from "../../domain/identifiers";
 import type {
   NoteCollisionResolutionRequest,
-} from "../../use-cases/notes/note-collision-resolution";
+} from "../../use-cases/piano-roll/notes/note-collision-resolution";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";

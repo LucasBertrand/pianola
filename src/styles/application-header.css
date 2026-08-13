@@ -1,0 +1,66 @@
+.topbar {
+  position: relative;
+  z-index: 15;
+  display: grid;
+  min-height: 72px;
+  padding: 0 15px;
+  background: var(--color-surface-app);
+  box-shadow: none;
+  grid-template-columns:
+    minmax(300px, 1fr)
+    auto
+    auto
+    minmax(300px, 1fr);
+  grid-template-areas: "brand transport metrics master";
+  align-items: center;
+  gap: 22px;
+}
+
+.brand {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  grid-area: brand;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.brand > div {
+  min-width: 0;
+}
+
+.brand strong,
+.project-title-input {
+  display: block;
+}
+
+.brand strong,
+.project-title-input {
+  color: var(--color-text-bright);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.project-title-input {
+  width: min(300px, 100%);
+  min-width: 0;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  outline: 0;
+  background: transparent;
+}
+
+.project-title-input:focus {
+  border-color: var(--color-border-active);
+  background: var(--color-surface-low);
+}
+
+.topbar-actions {
+  display: flex;
+  min-width: 0;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}

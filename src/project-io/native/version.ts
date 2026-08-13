@@ -1,5 +1,7 @@
 import { FILE_CONSTANTS } from "../../config/native-file-config";
-import { MAXIMUM_PROJECT_TITLE_LENGTH } from "../../domain/model";
+import {
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+} from "../../domain/project/project-document";
 
 export const NATIVE_PROJECT_FILE_FORMAT =
   FILE_CONSTANTS.nativeProjectFormat;

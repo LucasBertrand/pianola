@@ -1,11 +1,15 @@
-import type { ProjectState } from "../model";
+import {
+  type ProjectState,
+} from "../project/project-document";
 import {
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
-  MAXIMUM_PROJECT_TITLE_LENGTH,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
-} from "../model";
+} from "../master-bus";
+import {
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+} from "../project/project-document";
 import type {
   SetMasterMutedCommand,
   UpdateMasterGainCommand,

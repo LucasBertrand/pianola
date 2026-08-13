@@ -4,9 +4,9 @@ import {
   type ChangeEvent,
   type RefObject,
 } from "react";
-import type {
-  ProjectState,
-} from "../../domain/model";
+import {
+  type ProjectState,
+} from "../../domain/project/project-document";
 import {
   downloadBrowserFile,
 } from "./download-browser-file";

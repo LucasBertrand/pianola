@@ -1,12 +1,18 @@
-import type {
-  InstrumentId,
-  MidiPitch,
-  MidiVelocity,
-  Note,
-  Tick,
-  Track,
-} from "../model";
-import { MAXIMUM_ENTITY_ID_LENGTH } from "../model";
+import {
+  type InstrumentId,
+  type Tick,
+} from "../identifiers";
+import {
+  type MidiPitch,
+  type MidiVelocity,
+  type Note,
+} from "../notes/note";
+import {
+  type Track,
+} from "../clips/clip";
+import {
+  MAXIMUM_ENTITY_ID_LENGTH,
+} from "../identifiers";
 import {
   assertValidationResult,
   type ValidationIssue,

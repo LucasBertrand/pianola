@@ -2,11 +2,13 @@ import {
   INSTRUMENT_CONSTANTS,
   PROJECT_CONSTANTS,
 } from "../config/domain-limits";
-import type {
-  InstrumentPreset,
-  PresetId,
-  SubtractiveSynthConfig,
-} from "./model";
+import {
+  type InstrumentPreset,
+  type SubtractiveSynthConfig,
+} from "./instruments/instrument";
+import {
+  type PresetId,
+} from "./identifiers";
 
 export const DEFAULT_INSTRUMENT_PRESET_ID =
   "subtractive-sawtooth";

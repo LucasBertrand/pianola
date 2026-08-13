@@ -1,21 +1,29 @@
 import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
-import type {
-  Clip,
-  ClipId,
-  ClipTimeline,
-  InstrumentId,
-  LoopRegion,
-  Note,
-  NoteId,
-  ProjectClock,
-  TimeSignature,
-  Track,
-  TransportState,
-} from "../../../domain/model";
+import {
+  type Clip,
+  type ClipTimeline,
+  type Track,
+} from "../../../domain/clips/clip";
+import {
+  type ClipId,
+  type InstrumentId,
+  type NoteId,
+} from "../../../domain/identifiers";
+import {
+  type LoopRegion,
+  type ProjectClock,
+  type TimeSignature,
+  type TransportState,
+} from "../../../domain/transport/transport";
+import {
+  type Note,
+} from "../../../domain/notes/note";
 import {
   MAXIMUM_CLIP_NOTE_COUNT,
+} from "../../../domain/notes/note";
+import {
   MAXIMUM_ENTITY_ID_LENGTH,
-} from "../../../domain/model";
+} from "../../../domain/identifiers";
 import { validateNoteForTrack } from "../../../domain/validation/note-validation";
 import {
   validateClipTimeline,

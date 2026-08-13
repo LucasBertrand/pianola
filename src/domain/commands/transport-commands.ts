@@ -1,11 +1,15 @@
 import {
   getClipMeasureCount,
   getClipTimeSignature,
-  getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
-} from "../model";
-import type { ProjectState } from "../model";
+} from "../clips/clip";
+import {
+  getTicksPerMeasure,
+} from "../transport/transport";
+import {
+  type ProjectState,
+} from "../project/project-document";
 import {
   assertValidClipTimeline,
   assertValidProjectClock,

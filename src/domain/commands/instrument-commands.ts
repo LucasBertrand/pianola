@@ -1,12 +1,20 @@
-import type {
-  Clip,
-  ClipId,
-  ClipInstrumentState,
-  ProjectInstrument,
-  ProjectState,
-  Track,
-} from "../model";
-import { MAXIMUM_PROJECT_INSTRUMENT_COUNT } from "../model";
+import {
+  type Clip,
+  type ClipInstrumentState,
+  type Track,
+} from "../clips/clip";
+import {
+  type ClipId,
+} from "../identifiers";
+import {
+  type ProjectInstrument,
+} from "../instruments/instrument";
+import {
+  type ProjectState,
+} from "../project/project-document";
+import {
+  MAXIMUM_PROJECT_INSTRUMENT_COUNT,
+} from "../instruments/instrument";
 import { assertValidProjectInstrument } from "../validation/instrument-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {

@@ -4,13 +4,17 @@ import type {
   ScheduledNoteEvent,
 } from "../../src/audio/playback-model";
 import {
-  DEFAULT_AUDIO_ENGINE_CONFIG,
   type SchedulerTimerPort,
-} from "../../src/audio/lookahead-scheduler";
-import type {
-  AudioEngineConfig,
-  InstrumentId,
-} from "../../src/domain/model";
+} from "../../src/audio/scheduler-timer";
+import {
+  DEFAULT_AUDIO_ENGINE_CONFIG,
+} from "../../src/audio/default-audio-engine-config";
+import {
+  type AudioEngineConfig,
+} from "../../src/audio/audio-engine-config";
+import {
+  type InstrumentId,
+} from "../../src/domain/identifiers";
 
 export class FakeAudioEngine implements AudioEnginePort {
   public config: AudioEngineConfig;
