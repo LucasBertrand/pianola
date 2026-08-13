@@ -42,14 +42,15 @@ Les jalons de décision sont les suivants :
 | M1 — Frontières lisibles | propriétaires d’état, carte de code et conventions appliqués | aucun nouveau couplage interdit ; migrations P1 prioritaires terminées |
 | M2 — Noyau découpé | commandes, validation et I/O modulaires | format v1 déterministe, suites de contrats vertes et monolithes P2 réduits |
 | M3 — Éditeur modulaire | contrôleurs, gestes, rendu et UI séparés | P3 terminé sur les parcours critiques sans régression mesurée |
-| M4 — Qualité produit automatisée | navigateur, accessibilité, bundle et budgets suivis | parcours critiques automatisés et dépassements expliqués ou corrigés |
-| M5 — Extensions produit | instruments, launcher, patterns, transformations et scenes | P5 commence seulement après validation explicite de M4 |
+| M4 — Qualité produit automatisée | délaissé par décision produit | hors trajectoire active ; risques navigateur et performance acceptés |
+| M5 — Extensions produit | instruments, launcher, patterns, transformations et scenes | P5 peut commencer après la clôture de P3 |
 
-M4 se prépare dès M0 : un smoke test ou une mesure peut être ajouté avant la
-fin de P3. En revanche, aucune extension P5 ne doit être engagée pour justifier
-une abstraction encore sans consommateur.
+M4 est délaissé après la clôture de P3. Son contenu reste documenté comme backlog
+non planifié, sans constituer une condition de passage vers P5. Cette décision
+accepte explicitement l’absence de tests navigateur automatisés, de budgets CI
+et de correction immédiate de l’avertissement Vite sur le chunk principal.
 
-## État après P2
+## État au démarrage de P3 (baseline P2)
 
 Le socle est déjà robuste : TypeScript strict, modèle immuable, mutations par
 transactions, rendu haute fréquence hors React, codec MIDI borné et moteur audio
@@ -118,8 +119,8 @@ Chaque chantier doit respecter ces règles :
 | P1 | frontières et arborescence | emplacement prévisible de chaque responsabilité | moyen | P0 |
 | P2 | découpage du domaine et des formats | réduction des fichiers monolithiques les plus risqués | moyen | P0–P1 |
 | P3 | découpage de l’éditeur et de l’UI | meilleure navigation et isolation des chemins haute fréquence | moyen à élevé | P1–P2 |
-| P4 | automatisation navigateur et performance | prévention des régressions tactiles, Canvas et bundle | moyen | P0–P3 partiel |
-| P5 | extensions produit après migration | instruments, patterns, lecture de clips et scenes sur un socle commun | variable | P1–P4 |
+| P4 | automatisation navigateur et performance | délaissée ; backlog conservé sans planification | — | P0–P3 partiel |
+| P5 | extensions produit après migration | instruments, patterns, lecture de clips et scenes sur un socle commun | variable | P1–P3 |
 
 P0 et P1 sont les travaux les plus urgents. P2 doit commencer par les commandes
 et le format natif, car ces modules concentrent le plus de règles persistantes.
@@ -717,6 +718,15 @@ Critères de sortie :
 
 ## P3 — Modulariser l’éditeur et l’interface
 
+**État au 13 août 2026 : terminé.** P3.1 à P3.5 sont implémentées. Les peintres
+reçoivent des snapshots explicites, la stratégie de gestes, l’adaptateur vers
+`NoteGestureWorkflow` et le contrôleur de sélection sont séparés, et
+`ViewportController` possède bornage, publication, suivi et batching. L’UI suit
+les groupes fonctionnels ci-dessous sans barrel global ; `styles.css` indexe
+sept feuilles propriétaires. Sept tests de contrat P3 portent la suite à 102
+scénarios Vitest. Le jalon M3 est atteint. P4 étant délaissée par décision
+produit, la prochaine phase active est P5.
+
 ### P3.1 Extraire les peintres Canvas
 
 `PianoRollLayers.tsx` doit seulement monter les couches et abonner les signaux.
@@ -791,6 +801,13 @@ au fichier de style propriétaire.
 
 ## P4 — Automatiser le navigateur et surveiller les performances
 
+**État au 13 août 2026 : délaissée.** Cette phase ne sera pas exécutée dans la
+trajectoire active. Les sous-sections ci-dessous sont conservées uniquement
+comme backlog de qualité réactivable ; elles ne bloquent plus P5. Les risques
+résiduels concernent principalement les gestes tactiles réels, le responsive,
+Web Audio en navigateur, l’accessibilité automatisée et le bundle principal qui
+dépasse encore le seuil d’avertissement Vite.
+
 ### P4.1 Tests navigateur ciblés
 
 Introduire Playwright avec un petit nombre de parcours à forte valeur :
@@ -853,13 +870,13 @@ dépassement.
 
 ## P5 — Construire les prochaines fonctionnalités
 
-P5 commence après la migration structurelle et l’établissement du nouveau
+P5 commence après la migration structurelle P1–P3 et l’établissement du nouveau
 format natif v1. Les fonctionnalités suivantes partagent le même document, la
 même horloge, le même compilateur musical et le même moteur audio. Leur ordre
 évite de créer un lecteur séparé pour les clips, les patterns et les scenes.
-Le passage de M4 à P5 fait l’objet d’une décision explicite : les frontières
-P1–P3 sont en place, les budgets critiques sont connus et aucun contournement
-temporaire n’est introduit pour accélérer une fonctionnalité.
+La décision explicite de délaissement de P4 autorise ce passage sans automatiser
+au préalable le navigateur ni les budgets de performance. Aucun contournement
+temporaire des frontières P1–P3 ne doit néanmoins être introduit.
 
 ### P5.1 Généraliser les instruments et leur preview
 
@@ -1130,17 +1147,15 @@ Pour conserver des pull requests petites et réversibles :
 15. extraire la stratégie de gestes hors du hook React ;
 16. extraire les peintres Canvas, le ruler et le port de rendu ;
 17. réorganiser les composants et les styles par fonctionnalité ;
-18. compléter les smoke tests navigateur amorcés dès M0, ajouter les parcours
-    Playwright et faire respecter les budgets mesurés ;
-19. généraliser les instruments et ajouter la session de preview ;
-20. livrer le drumkit sur le registre de renderers ;
-21. construire le launcher de clips quantifié sur l’horloge et le compilateur
+18. généraliser les instruments et ajouter la session de preview ;
+19. livrer le drumkit sur le registre de renderers ;
+20. construire le launcher de clips quantifié sur l’horloge et le compilateur
     existants ;
-22. ajouter les patterns et leur projection résolue dans les clips ;
-23. généraliser symétries, transposition, diminution et augmentation aux cibles
+21. ajouter les patterns et leur projection résolue dans les clips ;
+22. généraliser symétries, transposition, diminution et augmentation aux cibles
     `Pattern` et `Clip` ;
-24. introduire les marqueurs et l’édition de la carte de métrique ;
-25. construire les scenes sur le même plan d’occurrences ;
+23. introduire les marqueurs et l’édition de la carte de métrique ;
+24. construire les scenes sur le même plan d’occurrences ;
 26. étendre l’export MIDI aux patterns, clips et scenes.
 
 Ne pas commencer deux déplacements structurels qui touchent les mêmes imports en

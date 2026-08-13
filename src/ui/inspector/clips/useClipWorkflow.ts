@@ -4,7 +4,7 @@ import {
 } from "react";
 import type {
   EditorCommandPort,
-} from "../../use-cases/commands/editor-command-service";
+} from "../../../use-cases/commands/editor-command-service";
 import {
   createDefaultTransportState,
   createDefaultClipTimeline,
@@ -16,13 +16,13 @@ import {
   type Track,
   type InstrumentId,
   type ClipInstrumentState,
-} from "../../domain/model";
+} from "../../../domain/model";
 import {
   createDefaultClipInstrumentState,
-} from "../../domain/project-instrument-factory";
+} from "../../../domain/project-instrument-factory";
 import type {
   ShowApplicationConfirmation,
-} from "../../use-cases/dialogs/application-dialog-port";
+} from "../../../use-cases/dialogs/application-dialog-port";
 
 export interface ClipWorkflowOptions {
   readonly commands: EditorCommandPort;

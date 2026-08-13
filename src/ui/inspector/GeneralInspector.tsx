@@ -12,10 +12,10 @@ import {
 } from "../../domain/model";
 import {
   ClipInspector,
-} from "../clips/ClipInspector";
+} from "./clips/ClipInspector";
 import {
   InstrumentGainSlider,
-} from "../instruments/ProjectInstrumentControls";
+} from "./instruments/ProjectInstrumentControls";
 import {
   useCardReorder,
 } from "../shared/useCardReorder";

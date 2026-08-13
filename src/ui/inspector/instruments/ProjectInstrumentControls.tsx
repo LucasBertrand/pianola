@@ -4,10 +4,10 @@ import React, {
 } from "react";
 import {
   EDITOR_CONSTANTS,
-} from "../../config/editor-config";
+} from "../../../config/editor-config";
 import {
   INSTRUMENT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../../../config/domain-limits";
 export interface InstrumentGainSliderProps {
   readonly gain: number;
   readonly instrumentName: string;

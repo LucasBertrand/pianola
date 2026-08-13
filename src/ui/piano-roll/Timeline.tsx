@@ -7,9 +7,6 @@ import {
   INTERACTION_CONSTANTS,
 } from "../../config/interaction-config";
 import {
-  APPLICATION_COLORS,
-} from "../../config/application-colors";
-import {
   getActiveClip,
   getClipDurationTicks,
   getClipMeasureCount,
@@ -30,8 +27,8 @@ import type {
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";
 import {
-  APPLICATION_SURFACE_COLOR,
-} from "./rendering/theme";
+  paintRuler as paintRulerCanvas,
+} from "./rendering/ruler-painter";
 
 export interface BarRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
@@ -552,108 +549,28 @@ export function BarRuler(
     gridResolutionTicks,
     onLoopCommit,
   } = props;
-  const paintRuler = useCallback(
+  const renderRuler = useCallback(
     (frame: CanvasFrame): void => {
       const currentViewport = viewport.get();
       const projectState = projectStore.getState();
       const activeClip = getActiveClip(projectState);
       const timeSignature = getClipTimeSignature(activeClip);
       const totalTicks = getClipDurationTicks(activeClip);
-      const pixelsPerTick =
-        currentViewport.zoomX / currentViewport.ticksPerPixel;
-      const firstVisibleTick =
-        currentViewport.scrollX / pixelsPerTick;
-      const lastVisibleTick =
-        Math.min(
-          totalTicks,
-          firstVisibleTick
-          + frame.widthCssPixels / pixelsPerTick,
-        );
-      const ticksPerBeat =
-        projectState.clock.ppqn
-        * 4
-        / timeSignature.denominator;
-      const ticksPerBar =
-        ticksPerBeat * timeSignature.numerator;
-      const effectiveGridTicks = getVisibleGridResolution(
-        gridResolutionTicks.get(),
-        pixelsPerTick,
-      );
-      const context = frame.context;
-
-      context.fillStyle = APPLICATION_SURFACE_COLOR;
-      context.fillRect(
-        0,
-        0,
-        frame.widthCssPixels,
-        frame.heightCssPixels,
-      );
-      drawRulerTicks(
-        context,
-        firstVisibleTick,
-        lastVisibleTick,
-        effectiveGridTicks,
-        pixelsPerTick,
-        currentViewport.scrollX,
-        frame.heightCssPixels,
-        5,
-        frame.devicePixelRatio,
-        APPLICATION_COLORS.pianoRoll.rulerSubdivision,
-      );
-      drawRulerTicks(
-        context,
-        firstVisibleTick,
-        lastVisibleTick,
-        ticksPerBeat,
-        pixelsPerTick,
-        currentViewport.scrollX,
-        frame.heightCssPixels,
-        10,
-        frame.devicePixelRatio,
-        APPLICATION_COLORS.pianoRoll.rulerBeat,
-      );
-      drawRulerTicks(
-        context,
-        firstVisibleTick,
-        lastVisibleTick,
-        ticksPerBar,
-        pixelsPerTick,
-        currentViewport.scrollX,
-        frame.heightCssPixels,
-        frame.heightCssPixels,
-        frame.devicePixelRatio,
-        APPLICATION_COLORS.pianoRoll.rulerBar,
-      );
-
-      context.fillStyle = APPLICATION_COLORS.pianoRoll.rulerText;
-      context.font =
-        '9px "SFMono-Regular", Consolas, monospace';
-      context.textBaseline = "top";
-
-      const firstBarIndex = Math.max(
-        0,
-        Math.floor(firstVisibleTick / ticksPerBar),
-      );
-      const lastBarIndex = Math.ceil(
-        lastVisibleTick / ticksPerBar,
-      );
-      const maximumBarIndex = getClipMeasureCount(
-        projectState.clock,
-        activeClip,
-      ) - 1;
-
-      for (
-        let barIndex = firstBarIndex;
-        barIndex <= Math.min(lastBarIndex, maximumBarIndex);
-        barIndex += 1
-      ) {
-        const x =
-          barIndex * ticksPerBar * pixelsPerTick
-          - currentViewport.scrollX;
-
-        context.fillText(String(barIndex + 1), x + 7, 22);
-      }
-
+      paintRulerCanvas({
+        context: frame.context,
+        widthCssPixels: frame.widthCssPixels,
+        heightCssPixels: frame.heightCssPixels,
+        devicePixelRatio: frame.devicePixelRatio,
+        viewport: currentViewport,
+        clock: projectState.clock,
+        timeSignature,
+        durationTicks: totalTicks,
+        measureCount: getClipMeasureCount(
+          projectState.clock,
+          activeClip,
+        ),
+        gridResolutionTicks: gridResolutionTicks.get(),
+      });
     },
     [
       gridResolutionTicks,
@@ -662,7 +579,7 @@ export function BarRuler(
     ],
   );
   const renderer = useCanvasRenderer({
-    render: paintRuler,
+    render: renderRuler,
     mode: "on-demand",
     clearBeforeRender: true,
   });
@@ -761,60 +678,4 @@ export function RollPlayhead(
       aria-hidden="true"
     />
   );
-}
-
-function getVisibleGridResolution(
-  requestedTicks: number,
-  pixelsPerTick: number,
-): number {
-  let resolutionTicks = requestedTicks;
-
-  while (
-    resolutionTicks * pixelsPerTick < 4
-    && Number.isSafeInteger(resolutionTicks * 2)
-  ) {
-    resolutionTicks *= 2;
-  }
-
-  return resolutionTicks;
-}
-
-function drawRulerTicks(
-  context: CanvasRenderingContext2D,
-  firstVisibleTick: number,
-  lastVisibleTick: number,
-  intervalTicks: number,
-  pixelsPerTick: number,
-  scrollX: number,
-  rulerHeight: number,
-  markerHeight: number,
-  devicePixelRatio: number,
-  color: string,
-): void {
-  if (!Number.isFinite(intervalTicks) || intervalTicks <= 0) {
-    return;
-  }
-
-  const firstTick =
-    Math.floor(firstVisibleTick / intervalTicks) * intervalTicks;
-  const lineWidth = 1 / devicePixelRatio;
-
-  context.fillStyle = color;
-
-  for (
-    let tick = firstTick;
-    tick <= lastVisibleTick;
-    tick += intervalTicks
-  ) {
-    const rawX = tick * pixelsPerTick - scrollX;
-    const x =
-      Math.round(rawX * devicePixelRatio) / devicePixelRatio;
-
-    context.fillRect(
-      x,
-      rulerHeight - markerHeight,
-      lineWidth,
-      markerHeight,
-    );
-  }
 }

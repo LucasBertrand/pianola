@@ -4,10 +4,10 @@ import {
 } from "react";
 import type {
   EditorCommandPort,
-} from "../../use-cases/commands/editor-command-service";
+} from "../../../use-cases/commands/editor-command-service";
 import type {
   UpdateProjectInstrumentChanges,
-} from "../../domain/commands/command-types";
+} from "../../../domain/commands/command-types";
 import {
   getActiveClip,
   type ClipId,
@@ -15,14 +15,14 @@ import {
   type ProjectInstrument,
   type InstrumentId,
   type ClipInstrumentState,
-} from "../../domain/model";
+} from "../../../domain/model";
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
-} from "../../domain/project-instrument-factory";
+} from "../../../domain/project-instrument-factory";
 import type {
   ShowApplicationConfirmation,
-} from "../../use-cases/dialogs/application-dialog-port";
+} from "../../../use-cases/dialogs/application-dialog-port";
 
 export interface ProjectInstrumentWorkflowOptions {
   readonly commands: EditorCommandPort;

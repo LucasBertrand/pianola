@@ -1,11 +1,12 @@
 # Architecture de Pianola
 
-Ce document décrit l’architecture réellement présente après le chantier P1.
+Ce document décrit l’architecture réellement présente après le chantier P3.
 Le [README](../README.md) couvre l’installation et l’usage ; la
 [feuille de route](roadmap.md) ordonne les étapes suivantes. La propriété des
 états est détaillée dans [state-ownership.md](state-ownership.md).
-La tranche actuelle de découpage est suivie dans
-[`p2-migration.md`](p2-migration.md).
+Les migrations sont consignées dans [`p2-migration.md`](p2-migration.md) et
+[`p3-migration.md`](p3-migration.md). Les prochaines tranches sont suivies dans
+la [roadmap](roadmap.md).
 
 Dernière revue complète : 13 août 2026.
 
@@ -83,8 +84,9 @@ dérivés. `editor/runtime` décrit les services d’un onglet. `editor/selectio
 possède la sélection transitoire.
 
 `editor/geometry` regroupe conversions ticks/pixels, bornes du viewport, région
-visible et index spatial. `editor/interactions` regroupe la session du piano
-roll, le masque de notes et deux sous-capacités :
+visible et index spatial. `editor/viewport` possède le contrôleur testable de
+publication, suivi de lecture et batching. `editor/interactions` regroupe la
+session du piano roll, le masque de notes et deux sous-capacités :
 
 ```text
 editor/interactions/
@@ -100,15 +102,21 @@ les transforme d’abord en `PointerSample` immuable.
 
 ### `src/ui`
 
-Les composants et hooks sont rangés par capacité : `clips`, `dialogs`, `editor`,
-`instruments`, `piano-roll`, `project-files`, `shared` et `transport`. Il
-n’existe plus de dossiers globaux `components`, `hooks`, `browser` ou
-`interactions`.
+Les composants et hooks sont rangés par capacité : `dialogs`,
+`editor-toolbar`, `inspector/clips`, `inspector/instruments`, `piano-roll`,
+`project-files`, `shared` et `transport`. Il n’existe pas de barrel global ni
+de dossiers génériques `components`, `hooks` ou `browser`.
 
 Le piano roll conserve ses adaptations DOM sous
 `ui/piano-roll/interactions` et ses peintres sous
-`ui/piano-roll/rendering`. Les notes ne sont pas des composants React ; Canvas
-lit des `RenderSignal` depuis `requestAnimationFrame` et réutilise ses buffers.
+`ui/piano-roll/rendering`. Les stratégies, workflows et contrôleurs impératifs
+sont séparés de leurs hooks React. Les notes ne sont pas des composants React ;
+Canvas lit des `RenderSignal` depuis `requestAnimationFrame` et réutilise ses
+buffers.
+
+`src/styles.css` ne contient que les imports ordonnés. Les règles propriétaires
+vivent sous `src/styles` par shell, header/transport, piano roll, inspecteur,
+dialogues et responsive.
 
 ### `src/audio`
 
@@ -218,5 +226,5 @@ npm run verify
 ```
 
 Elle exécute le contrôle des frontières, TypeScript strict, le build Vite et
-95 scénarios Vitest. Les gestes DOM, Canvas, le responsive et Web Audio réel
+102 scénarios Vitest. Les gestes DOM, Canvas, le responsive et Web Audio réel
 restent complétés par la vérification manuelle décrite dans la roadmap.

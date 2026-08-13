@@ -1,0 +1,64 @@
+/*
+ * Color policy
+ * ------------
+ * Do not add hexadecimal, rgb(), or rgba() literals to this stylesheet.
+ * All color values live in config/application-colors.ts and are installed on
+ * the document root by main.tsx. This stylesheet only consumes semantic CSS
+ * custom properties. Keeping the values outside CSS also lets Canvas layers
+ * use the exact same palette without querying computed DOM styles.
+ *
+ * When adding a visual state:
+ * 1. Look for an existing semantic token that expresses the same meaning.
+ * 2. If none exists, add a documented token to application-colors.ts.
+ * 3. Reference the new token here with var(--color-name).
+ *
+ * Piano-roll degree colors are Canvas colors. Change degreeAccents,
+ * degreePitchRows, and degreeRootRows in application-colors.ts. The tonic is
+ * degree I, so its root highlight is degreeRootRows[0].
+ */
+:root {
+  color-scheme: var(--color-browser-scheme);
+  font-family:
+    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  background: var(--color-surface-app);
+  color: var(--color-text-primary);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  touch-action: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+

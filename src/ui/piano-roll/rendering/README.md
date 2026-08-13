@@ -5,9 +5,25 @@ React owns only the stable layer tree and lifecycle subscriptions. It never owns
 ## Invalidation model
 
 - `GridCanvas` runs in on-demand mode. Viewport, visible-region, grid-resolution, resize, and DPR changes invalidate it.
-- `NotesCanvas` runs continuously and reads the latest signal snapshots inside the animation-frame callback.
+- `NotesCanvas` also runs in on-demand mode. Project, viewport, style, editing-mask, resize, and DPR changes invalidate it.
 - `InteractionOverlay` writes playhead and lasso styles directly from signal subscriptions.
 - `MutableRenderSignal.invalidate()` supports externally mutated controllers without requiring a React render.
+
+## Rendering ports
+
+`canvas-layer.tsx` is the React/store adapter. It samples the render signals,
+updates the coordinate converter and queries `SpatialIndex` before invoking the
+painters.
+
+The grid, note and ruler painters accept explicit snapshot objects. They do not
+read React state or the global project store, and they do not own interaction,
+selection, snapping, collision or hit-testing decisions. The note snapshot is a
+pre-culled projection; the editing mask only prevents the stable projection
+from being drawn underneath its DOM draft.
+
+The label-width and locked-note-pattern caches are isolated in their own
+modules. DOM overlays remain responsible for focus, menus, playhead, lasso and
+other accessible interaction feedback.
 
 ## Pixel spaces
 

@@ -1,0 +1,30 @@
+.app-shell {
+  --general-inspector-width: 306px;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  background: var(--color-surface-app);
+}
+
+
+.workspace {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  background: var(--color-surface-app);
+  grid-template-columns:
+    minmax(0, 1fr)
+    var(--general-inspector-width);
+}
+
+.editor-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-surface-app);
+  flex-direction: column;
+}
+
+

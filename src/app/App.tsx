@@ -61,7 +61,7 @@ import {
 } from "../ui/piano-roll/PianoRollLayers";
 import {
   ViewControls,
-} from "../ui/editor/ViewControls";
+} from "../ui/editor-toolbar/ViewControls";
 import {
   BarRuler,
   RollPlayhead,
@@ -71,16 +71,16 @@ import {
 } from "../ui/piano-roll/PianoKeyboard";
 import {
   EditorToolbar,
-} from "../ui/editor/EditorToolbar";
+} from "../ui/editor-toolbar/EditorToolbar";
 import {
   GeneralInspector,
-} from "../ui/editor/GeneralInspector";
+} from "../ui/inspector/GeneralInspector";
 import {
   InstrumentPresetDialog,
-} from "../ui/instruments/InstrumentPresetDialog";
+} from "../ui/dialogs/InstrumentPresetDialog";
 import {
   EditorHeader,
-} from "../ui/editor/EditorHeader";
+} from "../ui/editor-toolbar/EditorHeader";
 import {
   useAudioPlayback,
 } from "../ui/transport/useAudioPlayback";
@@ -107,10 +107,10 @@ import type {
 } from "../editor/runtime/editor-runtime";
 import {
   useClipWorkflow,
-} from "../ui/clips/useClipWorkflow";
+} from "../ui/inspector/clips/useClipWorkflow";
 import {
   useProjectInstrumentWorkflow,
-} from "../ui/instruments/useProjectInstrumentWorkflow";
+} from "../ui/inspector/instruments/useProjectInstrumentWorkflow";
 import {
   useSelectionWorkflow,
 } from "../ui/piano-roll/useSelectionWorkflow";

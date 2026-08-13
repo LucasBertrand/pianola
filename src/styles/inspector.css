@@ -1,0 +1,562 @@
+/* General inspector toolbar */
+
+.general-inspector-toggle-button {
+  display: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 8px;
+  background: var(--color-surface-control);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+}
+
+.general-inspector-toggle-button {
+  width: 40px;
+  padding: 0;
+}
+
+.inspector-toggle-group {
+  display: flex;
+  gap: 6px;
+}
+
+.general-inspector
+  .editor-toolbar
+  .general-inspector-toggle-button {
+  display: none;
+}
+
+.general-inspector-toolbar-host:empty {
+  display: none;
+}
+
+.inspector-menu-icon {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+
+/* General inspector */
+
+.general-inspector {
+  display: grid;
+  min-height: 0;
+  padding: 0 16px 18px;
+  overflow: hidden;
+  background: var(--color-surface-app);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.general-inspector-scroll-content {
+  min-height: 0;
+  overflow: auto;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.instrument-list {
+  display: grid;
+  gap: 7px;
+}
+
+.add-card {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px;
+  border: 1px dashed var(--color-border-control);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text-muted);
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.add-card svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.7;
+}
+
+.add-card span {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.add-card:active:not(:disabled) {
+  border-color: var(--color-border-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-accent-primary-bright);
+}
+
+.add-card:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.clip-inspector-section {
+  padding-bottom: 18px;
+  border-bottom: 0;
+}
+
+.clip-card {
+  --instrument-color: var(--color-accent-primary);
+  min-height: 0;
+  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
+  grid-template-rows: auto;
+}
+
+.clip-reorder-handle {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-disabled);
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.clip-reorder-handle svg {
+  width: 16px;
+  height: 19px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.project-instrument-card .clip-reorder-handle {
+  border-color: transparent;
+  background: transparent;
+}
+
+.clip-card .instrument-delete-button {
+  grid-column: 4;
+}
+
+.clip-card .instrument-duplicate-button {
+  grid-column: 3;
+}
+
+.project-instrument-card {
+  --instrument-color: var(--color-accent-primary);
+  position: relative;
+  display: grid;
+  min-height: 0;
+  padding: 8px 8px 8px 15px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-panel);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-instrument-card.clip-card {
+  min-height: 0;
+  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
+  grid-template-rows: auto;
+  gap: 6px;
+}
+
+.project-instrument-card::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--instrument-color) 12%, transparent), transparent 55%);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
+.project-instrument-card.is-selected {
+  border-color: color-mix(in srgb, var(--instrument-color) 50%, var(--color-border-control));
+  background: var(--color-surface-selected);
+}
+
+.project-instrument-card.is-selected::before {
+  opacity: 1;
+}
+
+.project-instrument-card.is-muted {
+  border-style: dashed;
+}
+
+.project-instrument-card.is-locked {
+  border-color: var(--color-border-strong);
+  background-image:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0,
+      transparent 6px,
+      var(--color-warm-faint) 6px,
+      var(--color-warm-faint) 9px
+    );
+}
+
+.instrument-color-control {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  display: grid;
+  width: 15px;
+  height: auto;
+  place-items: center;
+  pointer-events: none;
+}
+
+.instrument-color {
+  position: relative;
+  width: 3px;
+  height: 100%;
+  min-height: 28px;
+  border-radius: 4px;
+  background: var(--instrument-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--instrument-color) 45%, transparent);
+}
+
+.instrument-copy {
+  position: relative;
+  min-width: 0;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.instrument-identity {
+  display: grid;
+  grid-column: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.instrument-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.instrument-copy small {
+  display: block;
+}
+
+.instrument-settings-button {
+  display: grid;
+  place-items: center;
+}
+
+.instrument-settings-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.instrument-name-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.instrument-name-input[readonly] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.instrument-name-input:not([readonly]):focus {
+  border-color: color-mix(in srgb, var(--instrument-color) 55%, var(--color-border-strong));
+  background: var(--color-surface-inset);
+}
+
+.instrument-copy small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--color-text-quiet);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-gain-control {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  height: 30px;
+  place-items: center;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.instrument-gain-control input {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--instrument-color);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.instrument-local-actions {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  grid-column: 2;
+  grid-row: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.project-instrument-card button {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 6px;
+  background: var(--color-surface-deep);
+  color: var(--color-text-quiet);
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.project-instrument-card .instrument-select-all-button {
+  display: grid;
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  place-items: center;
+}
+
+.instrument-select-all-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.inspector-menu-icon .keyboard-black-keys {
+  fill: currentColor;
+  stroke: none;
+}
+
+.inspector-menu-icon.is-violin,
+.inspector-menu-icon.is-music-folder {
+  fill: currentColor;
+  stroke: none;
+}
+
+.project-instrument-card .instrument-transfer-button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.project-instrument-card .instrument-transfer-button:not(:disabled) {
+  color: var(--instrument-color);
+}
+
+.project-instrument-card button.is-active {
+  border-color: var(--color-warm-medium);
+  background: var(--color-warm-soft);
+  color: var(--color-accent-warm);
+}
+
+.project-instrument-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.instrument-lock-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.project-instrument-card .instrument-mute-button.is-active {
+  border-color: var(--color-danger-strong);
+  background: var(--color-danger-soft);
+  color: var(--color-accent-danger);
+}
+
+.project-instrument-card .instrument-mute-button,
+.project-instrument-card .instrument-solo-button {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.project-instrument-card .instrument-solo-button.is-active {
+  border-color: var(--color-success-strong);
+  background: var(--color-success-soft);
+  color: var(--color-accent-success);
+}
+
+.project-instrument-card .instrument-delete-button {
+  color: var(--color-accent-danger);
+}
+
+.project-instrument-card .instrument-delete-button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.55;
+}
+
+.instrument-duplicate-button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  margin: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.instrument-sound-controls {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: repeat(2, 30px) minmax(72px, 1fr) repeat(2, 30px);
+  align-items: center;
+  justify-content: stretch;
+  gap: 6px;
+}
+
+.project-instrument-card:not(.clip-card) {
+  padding-left: 43px;
+}
+
+.instrument-reorder-handle {
+  position: absolute !important;
+  z-index: 3;
+  top: 50%;
+  left: 14px;
+  display: grid;
+  width: 24px !important;
+  height: 30px !important;
+  padding: 0;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--color-text-disabled) !important;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+  transform: translateY(-50%);
+}
+
+.instrument-reorder-handle svg {
+  width: 16px;
+  height: 19px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.reorder-handle:active,
+.project-instrument-card.is-reordering .reorder-handle {
+  cursor: grabbing;
+}
+
+.project-instrument-card.is-reordering {
+  border-color: var(--instrument-color);
+  box-shadow: inset 0 0 0 1px var(--instrument-color);
+  opacity: 0.62;
+}
+
+.project-instrument-card.is-reorder-target {
+  border-color: var(--reorder-color, var(--instrument-color));
+  box-shadow: inset 0 2px 0 var(--reorder-color, var(--instrument-color));
+}
+
+.instrument-sound-controls button {
+  width: 30px;
+  height: 30px;
+}
+
+
+.instrument-sound-controls .instrument-gain-control,
+.instrument-sound-controls .instrument-gain-control input {
+  width: 100%;
+}
+
+

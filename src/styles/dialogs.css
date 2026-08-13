@@ -1,0 +1,299 @@
+/* Application dialog */
+
+.application-dialog-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  padding: 20px;
+  background: var(--color-overlay-backdrop);
+  place-items: center;
+  touch-action: none;
+}
+
+.application-dialog {
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 40px);
+  padding: 20px;
+  overflow: auto;
+  border: 1px solid var(--color-border-control);
+  border-radius: 14px;
+  background: var(--color-surface-panel);
+  box-shadow: 0 22px 70px var(--color-shadow-strong);
+  color: var(--color-text-primary);
+}
+
+.application-dialog-heading {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.application-dialog-heading h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.application-dialog-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 50%;
+  background: var(--color-surface-information);
+  color: var(--color-accent-primary-bright);
+  font-size: 13px;
+  font-weight: 800;
+  place-items: center;
+}
+
+.application-dialog[data-tone="danger"]
+  .application-dialog-mark {
+  border-color: var(--color-border-danger);
+  background: var(--color-surface-danger);
+  color: var(--color-accent-danger);
+}
+
+.application-dialog p {
+  margin: 16px 0 20px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.application-dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.application-dialog-details {
+  display: grid;
+  margin: -8px 0 20px;
+  padding: 12px 12px 12px 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-deep);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  gap: 5px;
+}
+
+.application-dialog-actions.has-alternate {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.application-dialog-actions
+  .application-dialog-button:only-child {
+  grid-column: 2;
+}
+
+.application-dialog-button {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 9px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-control);
+  font-size: 12px;
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.application-dialog-button.is-primary {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-primary);
+  color: var(--color-text-bright);
+}
+
+.application-dialog[data-tone="danger"]
+  .application-dialog-button.is-primary {
+  border-color: var(--color-border-danger);
+  background: var(--color-surface-danger-strong);
+}
+
+
+.instrument-preset-dialog-control {
+  display: grid;
+  margin-bottom: 14px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.instrument-preset-dialog-control select,
+.instrument-preset-dialog-control input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 9px;
+  outline: 0;
+  background: var(--color-surface-inset);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 12px;
+  touch-action: manipulation;
+}
+
+.instrument-preset-dialog-control select:focus-visible,
+.instrument-preset-dialog-control input:focus-visible {
+  border-color: var(--color-border-primary);
+}
+
+.instrument-editor-dialog {
+  width: min(92vw, 720px);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+}
+
+.instrument-editor-dialog .application-dialog-heading {
+  margin-bottom: 16px;
+}
+
+.instrument-editor-color-control {
+  display: grid;
+  margin-bottom: 12px;
+  align-content: start;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.instrument-editor-color-control input {
+  width: 44px;
+  height: 44px;
+  padding: 2px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 7px;
+  background: var(--color-surface-inset);
+  cursor: pointer;
+}
+
+.instrument-editor-backdrop {
+  touch-action: pan-y;
+}
+
+.instrument-editor-identity {
+  display: grid;
+  grid-template-columns: 52px minmax(150px, 1fr) 120px minmax(140px, 1fr);
+  gap: 10px;
+}
+
+.instrument-editor-identity .instrument-preset-dialog-control {
+  margin-bottom: 12px;
+}
+
+.instrument-editor-modules {
+  display: grid;
+  margin-bottom: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.instrument-editor-module {
+  min-width: 0;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-deep);
+}
+
+.instrument-editor-module legend {
+  padding: 0 5px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.instrument-editor-select-control,
+.instrument-editor-parameter {
+  display: grid;
+  min-width: 0;
+  min-height: 30px;
+  grid-template-columns: minmax(64px, auto) minmax(0, 1fr) 58px;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.instrument-editor-select-control {
+  grid-template-columns: minmax(64px, 1fr) minmax(90px, 1.2fr);
+}
+
+.instrument-editor-select-control select {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  padding: 0 5px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 6px;
+  background: var(--color-surface-inset);
+  color: var(--color-text-control);
+  font: inherit;
+}
+
+.instrument-editor-parameter input {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--color-accent-primary);
+  touch-action: none;
+}
+
+.instrument-editor-parameter output {
+  overflow: hidden;
+  color: var(--color-text-control);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-editor-envelope-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.instrument-editor-envelope .instrument-editor-parameter {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 18px 112px 18px;
+  justify-items: center;
+  gap: 4px;
+}
+
+.instrument-editor-envelope .instrument-editor-parameter > span {
+  width: 100%;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 8px;
+  font-weight: 650;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-editor-envelope .instrument-editor-parameter input {
+  width: 24px;
+  height: 112px;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+.instrument-editor-envelope .instrument-editor-parameter output {
+  width: 100%;
+  text-align: center;
+}
+
+

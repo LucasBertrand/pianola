@@ -256,4 +256,3 @@ function getScaleDegreeAccentColor(
     : APPLICATION_COLORS.pianoRoll.degreeAccents[colorIndex]
       ?? APPLICATION_COLORS.accent.tonal;
 }
-

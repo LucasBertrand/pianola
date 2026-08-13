@@ -39,6 +39,7 @@ conservée uniquement comme archive de décision.
 | [`docs/state-ownership.md`](docs/state-ownership.md) | décider où vit un état, sa durée, sa persistance et son rapport à Undo/Redo |
 | [`docs/p1-migration.md`](docs/p1-migration.md) | consulter les déplacements, frontières et compatibilités du chantier P1 |
 | [`docs/p2-migration.md`](docs/p2-migration.md) | consulter le découpage du domaine, le format v1 et les fondations de modèle P2 |
+| [`docs/p3-migration.md`](docs/p3-migration.md) | consulter la modularisation du rendu, des interactions, du viewport et de l’UI |
 | [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
 | [`docs/p0-baseline.md`](docs/p0-baseline.md) | consulter les garde-fous, témoins critiques et mesures de référence de P0 |
 | [`docs/old-hypothetical-rewrite-roadmap.md`](docs/old-hypothetical-rewrite-roadmap.md) | consulter l’hypothèse de réécriture v2 archivée et non planifiée |
@@ -128,7 +129,8 @@ de panne et simplifie les mises à jour.
 │   ├── ui/                    React, Canvas et adaptateurs par capacité
 │   ├── use-cases/             Orchestration, plans et ports sans React
 │   ├── main.tsx               Point d’entrée React
-│   └── styles.css             Styles globaux et responsive
+│   ├── styles/                Styles par surface fonctionnelle
+│   └── styles.css             Entrée CSS globale ordonnée
 ├── index.html                 Document HTML et métadonnées de Pianola
 ├── package.json               Dépendances et scripts npm
 ├── vercel.json                Build, headers et fallback SPA Vercel
@@ -183,28 +185,31 @@ et Undo/Redo conserve le clip actuellement affiché lorsqu’il existe encore.
 React gère la structure, les formulaires et les abonnements. Les notes ne sont
 pas des composants React individuels :
 
-- `PianoRollLayers.tsx` compose les couches ;
+- `PianoRollLayers.tsx` compose les couches et `rendering/canvas-layer.tsx`
+  adapte les signaux vers les peintres purs ;
 - `useCanvasRenderer.ts` gère ResizeObserver, HiDPI et
   `requestAnimationFrame` ;
 - `spatial-index.ts` classe les notes dans 128 buckets MIDI et limite le rendu
   aux notes visibles ;
 - `editor/interactions/gestures` calcule quantification, bornes et pinch/pan sans DOM ;
 - `PianoRollInteractionSession` possède le draft, la sélection et les buffers ;
-- `usePianoRollEvents.ts` adapte les transitions vers les commandes ;
+- `usePianoRollEvents.ts` monte la stratégie, dont la construction, le workflow
+  de notes et le contrôleur de sélection vivent dans trois modules distincts ;
 - `DomInteractionVisualController` affiche les ghosts et poignées temporaires ;
 - `InteractionOverlay.tsx` monte les couches DOM et branche les adaptateurs ;
 - `editor/model/render-signal.ts` permet de redessiner sans re-render React.
 
 Les surfaces React et leurs hooks sont regroupés par capacité dans `src/ui` :
-`clips`, `editor`, `instruments`, `piano-roll`, `project-files` et `transport`.
+`dialogs`, `editor-toolbar`, `inspector`, `piano-roll`, `project-files` et
+`transport`.
 La logique indépendante de React vit dans `src/use-cases`. `App.tsx` sert de
 point de câblage et ne doit pas redevenir le lieu d’implémentation des cas
 d’usage.
 
 La synchronisation haute fréquence des quatre sliders de déplacement/zoom est
-centralisée dans `useViewportControls.ts`. Ce hook écrit directement dans les
-signaux de rendu et regroupe les entrées avec `requestAnimationFrame` ; ne pas
-la remplacer par du state React piloté à chaque événement `input`.
+pilotée par `editor/viewport/viewport-controller.ts`. Le hook
+`useViewportControls.ts` ne conserve que les références DOM, les abonnements et
+le regroupement navigateur via `requestAnimationFrame`.
 
 Éviter `setState`, `map`, `filter` et la création d'objets dans les boucles de
 rendu ou de `pointermove`.
@@ -310,7 +315,7 @@ utiliser le déploiement Vercel en HTTPS.
 | `npm run typecheck:core` | Vérifie domaine, éditeur, cas d’usage et formats sans React |
 | `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
 | `npm run typecheck:test` | Vérifie les tests TypeScript et leurs supports partagés |
-| `npm test` | Lance les 95 scénarios avec Vitest |
+| `npm test` | Lance les 102 scénarios avec Vitest |
 | `npm run test:vitest:watch` | Relance les tests concernés pendant le développement |
 | `npm run build` | Typecheck puis produit le bundle `dist/` |
 | `npm run preview` | Sert localement le dernier build de production |
@@ -384,7 +389,7 @@ les fichiers de production.
 
 ### Couverture actuelle
 
-Les 95 scénarios Vitest couvrent les invariants du domaine, les commandes,
+Les 102 scénarios Vitest couvrent les invariants du domaine, les commandes,
 l’historique, les collisions, la persistance, le timing audio, le scheduler,
 la polyphonie, le solo, les boucles, les conversions MIDI, la géométrie et les
 frontières d’import. Chaque scénario est exécutable par fichier ou par nom.
@@ -630,15 +635,15 @@ et ne choisit pas lui-même le clip affiché.
 | Métadonnées navigateur | `index.html` et `public/manifest.webmanifest` |
 | Version npm | `package.json` et `package-lock.json` |
 | Toutes les couleurs de l'application | `src/config/application-colors.ts` |
-| Layout et règles visuelles DOM | `src/styles.css` |
+| Layout et règles visuelles DOM | `src/styles.css` et `src/styles/` |
 | Valeurs par défaut et limites | `src/config/domain-limits.ts` et les fichiers propriétaires de `src/config` |
 | Structure principale de l’UI | `src/app/App.tsx` |
 | État initial et projet vierge | `src/app/demo-project.ts` et `src/use-cases/project-files/create-initial-project.ts` |
 | Clips, notes, instruments, transport | `src/domain/model.ts` |
 | Catalogue et paramètres des presets | `src/domain/instrument-presets.ts` |
-| Cycle de vie des clips | `src/ui/clips/useClipWorkflow.ts` |
-| Liste des clips | `src/ui/clips/ClipInspector.tsx` |
-| Modale de création d’instrument | `src/ui/instruments/InstrumentPresetDialog.tsx` |
+| Cycle de vie des clips | `src/ui/inspector/clips/useClipWorkflow.ts` |
+| Liste des clips | `src/ui/inspector/clips/ClipInspector.tsx` |
+| Modale de création d’instrument | `src/ui/dialogs/InstrumentPresetDialog.tsx` |
 | Actions mutantes | `src/domain/commands/` (`command-types.ts`, handlers et `reducer.ts`) |
 | Cas d'usage et plans de commandes | `src/use-cases/` |
 | Collisions | `src/domain/note-collision.ts` |
@@ -646,7 +651,7 @@ et ne choisit pas lui-même le clip affiché.
 | Adaptateur des gestes au navigateur | `src/ui/piano-roll/interactions/usePianoRollEvents.ts` |
 | Capture et multi-touch | `src/ui/piano-roll/interactions/useInteractionManager.ts` |
 | Ghosts, poignées et lasso | `src/ui/piano-roll/interactions/dom-interaction-visual-controller.ts` |
-| Rendu des notes et grille | `src/ui/piano-roll/PianoRollLayers.tsx` |
+| Rendu des notes, grille et ruler | `src/ui/piano-roll/rendering/` |
 | Audio | `src/audio/` et `src/ui/transport/useAudioPlayback.ts` |
 | Format natif | `src/project-io/native/` (`serialize-native-project.ts`, `parse-native-project.ts` et `parsing/`) |
 | MIDI | `src/project-io/midi/` |
@@ -766,10 +771,10 @@ Quelques points de repère utiles :
 - `APPLICATION_COLORS.notes.pitchClassPalette` définit les douze couleurs du
   mode d'affichage par pitch ;
 - `APPLICATION_CSS_COLOR_VARIABLES` relie la palette TypeScript aux variables
-  CSS utilisées dans `src/styles.css`.
+  CSS utilisées dans `src/styles/`.
 
 Ne pas ajouter directement de couleur hexadécimale, `rgb()` ou `rgba()` dans
-un composant ou dans `src/styles.css`. Ajouter un rôle documenté à la palette,
+un composant ou dans `src/styles/`. Ajouter un rôle documenté à la palette,
 puis consommer ce rôle depuis le Canvas ou via une variable CSS.
 
 Exception statique : `index.html`, `public/manifest.webmanifest` et

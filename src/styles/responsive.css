@@ -1,0 +1,453 @@
+@media (max-width: 700px) {
+  .instrument-editor-dialog {
+    width: min(94vw, 620px);
+  }
+
+  .instrument-editor-identity,
+  .instrument-editor-modules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .instrument-editor-identity {
+    gap: 0;
+  }
+}
+
+
+@media (min-width: 1121px) and (max-width: 1300px) {
+  .app-shell {
+    --general-inspector-width: 276px;
+  }
+
+  .topbar {
+    gap: 14px;
+    grid-template-columns:
+      minmax(200px, 1fr)
+      auto
+      auto
+      minmax(200px, 1fr);
+  }
+
+  .project-title-input {
+    width: min(180px, 100%);
+  }
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    --general-inspector-width: 250px;
+  }
+
+  .topbar {
+    min-height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto
+      minmax(0, 1fr);
+    grid-template-areas:
+      "brand transport master"
+      ". metrics .";
+    row-gap: 10px;
+  }
+
+  .brand {
+    justify-self: start;
+  }
+
+  .transport-cluster,
+  .transport-metrics {
+    justify-self: center;
+  }
+
+  .metric {
+    min-width: 94px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}
+
+@media (max-width: 920px) {
+  .topbar {
+    min-height: auto;
+    padding-right: 10px;
+    padding-left: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand transport master"
+      ". metrics .";
+    gap: 10px;
+  }
+
+  .transport-metrics {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    grid-area: metrics;
+    scrollbar-width: thin;
+  }
+
+  .transport-metrics .metric {
+    min-width: 108px;
+    flex: 1 0 auto;
+  }
+
+  .master-bus-control {
+    width: 100%;
+    min-width: 134px;
+  }
+
+  .workspace {
+    position: relative;
+    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Responsive general inspector */
+
+  .general-inspector {
+    position: absolute;
+    z-index: 12;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    width: min(86vw, 320px);
+    padding: 0 16px 18px;
+    box-shadow: none;
+    transform: translate3d(100%, 0, 0);
+    transition: transform 180ms ease;
+  }
+
+  .general-inspector.is-open {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .general-inspector-toggle-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 920px) and (orientation: portrait) {
+  .topbar {
+    grid-template-columns:
+      minmax(168px, 1fr)
+      auto
+      minmax(168px, 1fr);
+    grid-template-areas:
+      "brand transport master"
+      "metrics metrics metrics";
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 10px;
+  }
+
+  .brand {
+    width: 100%;
+    justify-self: start;
+  }
+
+  .transport-cluster {
+    align-self: center;
+    justify-self: center;
+  }
+
+  .transport-metrics {
+    width: 100%;
+    max-width: 100%;
+    justify-self: stretch;
+  }
+
+  .master-bus-control {
+    width: 168px;
+    min-width: 168px;
+    align-self: center;
+    justify-self: end;
+  }
+
+  .workspace {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .workspace.is-general-inspector-open {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .workspace.is-clips-inspector-open {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .editor-panel {
+    min-height: 0;
+    grid-row: 2;
+  }
+
+  .workspace.is-general-inspector-open .editor-panel {
+    grid-row: 2;
+  }
+
+  .general-inspector {
+    position: relative;
+    z-index: 2;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    display: grid;
+    width: 100%;
+    max-height: none;
+    padding: 0px 12px 12px 12px;
+    border-left: 0;
+    box-shadow: none;
+    grid-row: 1;
+    transform: none;
+    transition: none;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .general-inspector.is-clips-panel,
+  .general-inspector.is-instruments-panel {
+    max-height: 30vh;
+  }
+
+  .general-inspector:not(.is-open) {
+    overflow: hidden;
+  }
+
+  .general-inspector:not(.is-open)
+    .general-inspector-scroll-content {
+    display: none;
+  }
+
+  .general-inspector:not(.is-open) .editor-toolbar {
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .general-inspector-toggle-button {
+    display: inline-flex;
+  }
+
+  .general-inspector-toggle-button {
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .general-inspector
+    .editor-toolbar
+    .inspector-toggle-group {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .general-inspector
+    .editor-toolbar
+    .general-inspector-toggle-button {
+    display: inline-grid;
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .editor-toolbar-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .edit-tool-group {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    padding: 2px;
+    overflow-x: auto;
+    grid-template-columns: none;
+    grid-auto-columns: 34px;
+    grid-auto-flow: column;
+    gap: 1px;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .edit-tool-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .edit-tool-group button {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .edit-tool-group button > svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .view-controls {
+    --view-slider-track-size: clamp(46px, 9vw, 72px);
+    padding-left: 6px;
+    grid-template-columns:
+      58px
+      calc(var(--view-slider-track-size) + 20px)
+      calc(var(--view-slider-track-size) + 28px)
+      calc(
+        var(--view-slider-track-size)
+        + var(--view-slider-track-size)
+        + 57px
+      )
+      minmax(228px, 1.4fr);
+    gap: 3px;
+  }
+
+  .view-controls output {
+    font-size: 9px;
+  }
+
+  .view-zoom-control {
+    grid-template-columns:
+      18px
+      var(--view-slider-track-size);
+    padding-left: 6px;
+    gap: 4px;
+  }
+
+  .view-position-control {
+    grid-template-columns:
+      17px
+      var(--view-slider-track-size);
+    gap: 3px;
+  }
+
+  .pitch-view-controls {
+    width: 100%;
+    padding-left: 6px;
+    grid-template-columns:
+      calc(var(--view-slider-track-size) + 20px)
+      calc(var(--view-slider-track-size) + 28px);
+    gap: 3px;
+  }
+
+  .pitch-snap-control {
+    width: min(100%, 300px);
+    max-width: 300px;
+    padding: 3px;
+    grid-template-columns:
+      27px
+      27px
+      38px
+      minmax(48px, 0.8fr)
+      minmax(70px, 1.2fr);
+    gap: 3px;
+  }
+
+  .pitch-snap-toggle,
+  .pitch-guide-toggle {
+    width: 27px;
+    height: 27px;
+  }
+
+  .pitch-snap-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .pitch-snap-control select {
+    height: 28px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  .general-inspector.is-instruments-panel
+    .general-inspector-scroll-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .instrument-inspector-section {
+    display: grid;
+    width: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .instrument-management-panel {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    overflow: visible;
+    contain: none;
+    grid-template-rows: auto auto;
+  }
+
+  .instrument-management-panel .instrument-list {
+    min-height: 0;
+    padding-right: 3px;
+    overflow: visible;
+    align-content: start;
+  }
+
+  .instrument-management-panel .project-instrument-card {
+    min-height: 0;
+    padding: 8px 8px 8px 43px;
+    grid-template-columns: minmax(54px, 0.65fr) auto minmax(210px, 1.35fr);
+    grid-template-rows: auto;
+    gap: 6px;
+  }
+
+  .instrument-management-panel .instrument-identity {
+    display: contents;
+  }
+
+  .instrument-management-panel .instrument-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .instrument-management-panel .instrument-local-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .instrument-management-panel .instrument-sound-controls {
+    grid-column: 3;
+    grid-row: 1;
+    grid-template-columns: repeat(2, 30px) minmax(72px, 1fr) repeat(2, 30px);
+  }
+
+  .instrument-management-panel .project-instrument-card button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .instrument-management-panel .instrument-color-control {
+    width: 15px;
+  }
+
+  .instrument-management-panel
+    .project-instrument-card
+    .instrument-select-all-button {
+    width: 30px;
+    min-width: 30px;
+  }
+
+  .general-inspector.is-instruments-panel .clip-inspector-section,
+  .general-inspector.is-clips-panel .instrument-inspector-section {
+    display: none;
+  }
+
+  .clip-inspector-section {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+}
+

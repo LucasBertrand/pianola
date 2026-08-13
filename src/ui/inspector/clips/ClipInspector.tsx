@@ -6,13 +6,13 @@ import {
   MAXIMUM_PROJECT_CLIP_COUNT,
   type ClipId,
   type ProjectState,
-} from "../../domain/model";
+} from "../../../domain/model";
 import {
   LongPressNameEditor,
-} from "../shared/LongPressNameEditor";
+} from "../../shared/LongPressNameEditor";
 import {
   useCardReorder,
-} from "../shared/useCardReorder";
+} from "../../shared/useCardReorder";
 
 export interface ClipInspectorProps {
   readonly projectState: ProjectState;
