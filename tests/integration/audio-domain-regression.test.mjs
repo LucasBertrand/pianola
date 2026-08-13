@@ -41,7 +41,7 @@ import {
   resolveNoteEnvelopePeakLevel,
 } from "../../src/audio/note-dynamics";
 import {
-  compilePlaybackSnapshot as compileExplicitPlaybackSnapshot,
+  compilePlaybackPlan as compileExplicitPlaybackSnapshot,
 } from "../../src/audio/playback-snapshot";
 import {
   createClipPlaybackSource,
@@ -60,15 +60,20 @@ import {
 } from "../../src/audio/web-audio-engine";
 import {
   CommandRejectedError,
+} from "../../src/domain/commands/command-errors";
+import {
   projectReducer,
-} from "../../src/domain/commands";
+} from "../../src/domain/commands/reducer";
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+  createDefaultClipTimeline,
+  createDefaultProjectClock,
   createDefaultTransportState,
+  getClipMeasureCount,
   DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
   PROJECT_SCHEMA_VERSION,
 } from "../../src/domain/model";
@@ -130,8 +135,10 @@ import {
 } from "../../src/music/pitch-snap";
 import {
   parseNativeProjectFile,
+} from "../../src/project-io/native/parse-native-project";
+import {
   serializeNativeProjectFile,
-} from "../../src/project-io/native/native-project-file";
+} from "../../src/project-io/native/serialize-native-project";
 import {
   getMidiNoteLabel,
   getPreferredTonicLabel,
@@ -154,6 +161,17 @@ function compileActiveClipPlaybackSnapshot(state) {
     state,
     createClipPlaybackSource(getActiveTestClip(state)),
   );
+}
+
+function createTestTimeline(measureCount) {
+  return createDefaultClipTimeline(
+    createDefaultProjectClock(),
+    measureCount,
+  );
+}
+
+function getActiveTestMeasureCount(state) {
+  return getClipMeasureCount(state.clock, getActiveTestClip(state));
 }
 
   let transactionSequence = 0;
@@ -436,9 +454,12 @@ function compileActiveClipPlaybackSnapshot(state) {
     mask.clear();
     mask.clear();
     assert.equal(invalidationCount, 2);
-    assert.equal(buildDeleteNoteCommands([first, second]).length, 2);
     assert.equal(
-      buildRepositionNoteCommands([first, second])[0].type,
+      buildDeleteNoteCommands("clip-test", [first, second]).length,
+      2,
+    );
+    assert.equal(
+      buildRepositionNoteCommands("clip-test", [first, second])[0].type,
       "RepositionNotes",
     );
     assert.equal(createInteractionDraft().mode, "IDLE");
@@ -863,13 +884,14 @@ function compileActiveClipPlaybackSnapshot(state) {
 
     assert.equal(pasted[0].startTick, 600);
     assert.equal(pasted[0].id, "source-copy-100-2-0");
-    assert.equal(canPlacePastedNotes(state, pasted), true);
-    assert.deepEqual(findNotesByIds(state, ["target", "source"]), [
+    assert.equal(canPlacePastedNotes(state, "clip-test", pasted), true);
+    assert.deepEqual(findNotesByIds(state, "clip-test", ["target", "source"]), [
       target,
       source,
     ]);
 
     const slicePlan = buildSliceCommandsForNotes(
+      "clip-test",
       [source, target],
       240,
       100,
@@ -885,6 +907,7 @@ function compileActiveClipPlaybackSnapshot(state) {
 
     const transferPlan = createInstrumentTransferPlan(
       state,
+      "clip-test",
       [source],
       "voice-b",
     );
@@ -906,20 +929,26 @@ function compileActiveClipPlaybackSnapshot(state) {
     );
     const requiredMeasureCount = getRequiredMeasureCountForNotes(
       store.getState(),
+      "clip-test",
       [pastedNote],
     );
 
     assert.equal(requiredMeasureCount, 2);
-    assert.equal(canPlacePastedNotes(store.getState(), [pastedNote]), true);
+    assert.equal(
+      canPlacePastedNotes(store.getState(), "clip-test", [pastedNote]),
+      true,
+    );
 
     commands.dispatch(
       [
         {
           type: "AppendMeasures",
-          count: requiredMeasureCount - getActiveTestClip(store.getState()).measureCount,
+          clipId: "clip-test",
+          count: requiredMeasureCount - getActiveTestMeasureCount(store.getState()),
         },
         {
           type: "AddNotes",
+          clipId: "clip-test",
           trackInstrumentId: "voice-a",
           notes: [pastedNote],
         },
@@ -927,7 +956,7 @@ function compileActiveClipPlaybackSnapshot(state) {
       "Paste notes",
     );
 
-    assert.equal(getActiveTestClip(store.getState()).measureCount, 2);
+    assert.equal(getActiveTestMeasureCount(store.getState()), 2);
     assert.equal(
       getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["pasted"],
@@ -936,7 +965,7 @@ function compileActiveClipPlaybackSnapshot(state) {
 
     store.undo();
 
-    assert.equal(getActiveTestClip(store.getState()).measureCount, 1);
+    assert.equal(getActiveTestMeasureCount(store.getState()), 1);
     assert.equal(
       getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
         .notesById["pasted"],
@@ -954,7 +983,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     const commands = new EditorCommandService(store);
 
     commands.dispatch(
-      buildSetNotesEnabledCommands([note], false),
+      buildSetNotesEnabledCommands("clip-test", [note], false),
       "Disable selected notes",
     );
 
@@ -968,7 +997,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     );
 
     commands.dispatch(
-      buildRepositionNoteCommands([{
+      buildRepositionNoteCommands("clip-test", [{
         ...disabledNote,
         startTick: 480,
       }]),
@@ -1530,12 +1559,12 @@ function compileActiveClipPlaybackSnapshot(state) {
   });
 
   test("round-trips clip order and per-clip editor state", () => {
-    const state = dispatch(createProject(), {
+    const withSecondClip = dispatch(createProject(), {
       type: "AddClip",
       clip: {
         id: "clip-native-second",
         name: "Native Second",
-        measureCount: 2,
+        timeline: createTestTimeline(2),
         tracksByInstrumentId: {
           "voice-a": {
             instrumentId: "voice-a",
@@ -1549,15 +1578,21 @@ function compileActiveClipPlaybackSnapshot(state) {
             locked: true,
           },
         },
-        transportSettings: {
-          ...createDefaultTransportState(),
-          bpm: 84,
-        },
+        transportSettings: createDefaultTransportState(),
       },
     });
+    const tempoState = dispatch(withSecondClip, {
+      type: "UpdateTempo",
+      bpm: 84,
+    });
+    const state = {
+      ...tempoState,
+      workspace: { activeClipId: "clip-native-second" },
+    };
     const firstEditorState = createEditorState();
     const editorState = {
       ...firstEditorState,
+      activeClipId: "clip-native-second",
       clipStatesById: {
         ...firstEditorState.clipStatesById,
         "clip-native-second": {
@@ -1590,10 +1625,12 @@ function compileActiveClipPlaybackSnapshot(state) {
       loaded.projectState.clipOrder,
       ["clip-test", "clip-native-second"],
     );
-    assert.equal(loaded.projectState.activeClipId, "clip-native-second");
     assert.equal(
-      loaded.projectState.clipsById["clip-native-second"]
-        .transportSettings.bpm,
+      loaded.projectState.workspace.activeClipId,
+      "clip-native-second",
+    );
+    assert.equal(
+      loaded.projectState.clock.tempoBpm,
       84,
     );
     assert.deepEqual(
@@ -1690,6 +1727,7 @@ function compileActiveClipPlaybackSnapshot(state) {
 
     assertOverlapRejected(state, {
       type: "AddNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       notes: [
         createNote("overlap", "voice-a", 60, 0, 480),
@@ -1697,6 +1735,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     });
     assertOverlapRejected(createProject(), {
       type: "AddNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       notes: [
         createNote("batch-a", "voice-a", 65, 0, 480),
@@ -1721,6 +1760,7 @@ function compileActiveClipPlaybackSnapshot(state) {
 
     assertOverlapRejected(state, {
       type: "ResizeNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       changes: [
         {
@@ -1742,6 +1782,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     });
     const addedState = dispatch(initialState, {
       type: "AddNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       notes: [
         createNote("third", "voice-a", 64, 0, 480),
@@ -1749,6 +1790,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     });
     const resizedState = dispatch(addedState, {
       type: "ResizeNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       changes: [
         {
@@ -1925,6 +1967,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     });
     const repositionedState = dispatch(state, {
       type: "RepositionNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       changes: [
         {
@@ -1952,6 +1995,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     );
     assertOverlapRejected(repositionedState, {
       type: "RepositionNotes",
+      clipId: "clip-test",
       trackInstrumentId: "voice-a",
       changes: [
         {
@@ -1997,10 +2041,11 @@ function compileActiveClipPlaybackSnapshot(state) {
       proposedNotes: [proposed],
     };
 
-    assert.equal(countNoteEditCollisions(state, intent), 1);
+    assert.equal(countNoteEditCollisions(state, "clip-test", intent), 1);
 
     const plan = createNoteCollisionResolutionPlan(
       state,
+      "clip-test",
       intent,
       "merge",
       "merge-test",
@@ -2057,6 +2102,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     });
     const plan = createNoteCollisionResolutionPlan(
       state,
+      "clip-test",
       {
         originalNotes: [selected],
         proposedNotes: [proposed],
@@ -2145,6 +2191,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     };
     const plan = createNoteCollisionResolutionPlan(
       state,
+      "clip-test",
       intent,
       "slice",
       "consolidate-test",
@@ -2203,6 +2250,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     );
     const plan = createNoteCollisionResolutionPlan(
       state,
+      "clip-test",
       {
         originalNotes: [selected],
         proposedNotes: [
@@ -2333,6 +2381,7 @@ function compileActiveClipPlaybackSnapshot(state) {
       commands: [
         {
           type: "TransformNotes",
+          clipId: "clip-test",
           trackInstrumentId: "voice-a",
           changes: [
             {
@@ -2382,6 +2431,7 @@ function compileActiveClipPlaybackSnapshot(state) {
       commands: [
         {
           type: "SliceNotes",
+          clipId: "clip-test",
           trackInstrumentId: "voice-a",
           sliceTick: 360,
           slices: [
@@ -2892,7 +2942,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     await scheduler.dispose();
   });
 
-  test("isolates notes and transport data between clips", () => {
+  test("isolates notes and local transport data between clips", () => {
     const initialState = createProject({
       notesByInstrumentId: {
         "voice-a": [createNote("clip-a-note", "voice-a", 60, 0)],
@@ -2901,7 +2951,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     const secondClip = {
       id: "clip-second",
       name: "Second Clip",
-      measureCount: 2,
+      timeline: createTestTimeline(2),
       tracksByInstrumentId: {
         "voice-a": {
           instrumentId: "voice-a",
@@ -2915,7 +2965,7 @@ function compileActiveClipPlaybackSnapshot(state) {
       },
       transportSettings: {
         ...createDefaultTransportState(),
-        bpm: 90,
+        anchorTick: 120,
       },
     };
     const withSecondClip = dispatch(initialState, {
@@ -2924,6 +2974,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     });
     const editedSecondClip = dispatch(withSecondClip, {
       type: "AddNotes",
+      clipId: "clip-second",
       trackInstrumentId: "voice-a",
       notes: [createNote("clip-b-note", "voice-a", 67, 480)],
     });
@@ -2943,12 +2994,12 @@ function compileActiveClipPlaybackSnapshot(state) {
       ["clip-b-note"],
     );
     assert.equal(
-      editedSecondClip.clipsById["clip-test"].transportSettings.bpm,
-      120,
+      editedSecondClip.clipsById["clip-test"].transportSettings.anchorTick,
+      0,
     );
     assert.equal(
-      editedSecondClip.clipsById["clip-second"].transportSettings.bpm,
-      90,
+      editedSecondClip.clipsById["clip-second"].transportSettings.anchorTick,
+      120,
     );
   });
 
@@ -2959,7 +3010,7 @@ function compileActiveClipPlaybackSnapshot(state) {
       clip: {
         id: "clip-voice-state-second",
         name: "ProjectInstrument State Second",
-        measureCount: 2,
+        timeline: createTestTimeline(2),
         tracksByInstrumentId: {
           "voice-a": {
             instrumentId: "voice-a",
@@ -2991,6 +3042,7 @@ function compileActiveClipPlaybackSnapshot(state) {
         },
         {
           type: "UpdateClipInstrumentState",
+          clipId: "clip-voice-state-second",
           instrumentId: "voice-a",
           changes: { locked: true },
         },
@@ -3056,6 +3108,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     runtime.editorCommands.dispatch(
       [{
         type: "UpdateClipInstrumentState",
+        clipId: "clip-test",
         instrumentId: "voice-a",
         changes: { locked: true },
       }],
@@ -3085,7 +3138,7 @@ function compileActiveClipPlaybackSnapshot(state) {
       clip: {
         id: "clip-second",
         name: "Second Clip",
-        measureCount: 4,
+        timeline: createTestTimeline(4),
         tracksByInstrumentId: {
           "voice-a": {
             instrumentId: "voice-a",
@@ -3156,7 +3209,7 @@ function compileActiveClipPlaybackSnapshot(state) {
         clip: {
           id: "clip-second",
           name: "Second Clip",
-          measureCount: 4,
+          timeline: createTestTimeline(4),
           tracksByInstrumentId: {
             "voice-a": {
               instrumentId: "voice-a",
@@ -3172,28 +3225,21 @@ function compileActiveClipPlaybackSnapshot(state) {
         },
       }],
     });
-    store.dispatch({
-      transactionId: "select-first-clip",
-      createdAt: 2,
-      commands: [{ type: "ActivateClip", clipId: "clip-test" }],
-    });
+    store.selectClip("clip-test");
     store.dispatch({
       transactionId: "edit-first-clip",
       createdAt: 3,
       commands: [{
         type: "AddNotes",
+        clipId: "clip-test",
         trackInstrumentId: "voice-a",
         notes: [createNote("history-note", "voice-a", 60, 0)],
       }],
     });
-    store.dispatch({
-      transactionId: "select-second-clip",
-      createdAt: 4,
-      commands: [{ type: "ActivateClip", clipId: "clip-second" }],
-    });
+    store.selectClip("clip-second");
 
     store.undo();
-    assert.equal(store.getState().activeClipId, "clip-second");
+    assert.equal(store.getState().workspace.activeClipId, "clip-second");
     assert.equal(
       store.getState().clipsById["clip-test"]
         .tracksByInstrumentId["voice-a"].notesById["history-note"],
@@ -3201,7 +3247,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     );
 
     store.redo();
-    assert.equal(store.getState().activeClipId, "clip-second");
+    assert.equal(store.getState().workspace.activeClipId, "clip-second");
     assert.ok(
       store.getState().clipsById["clip-test"]
         .tracksByInstrumentId["voice-a"].notesById["history-note"],
@@ -3213,7 +3259,7 @@ function compileActiveClipPlaybackSnapshot(state) {
     const secondClip = {
       id: "clip-playhead-second",
       name: "Playhead Second",
-      measureCount: 4,
+      timeline: createTestTimeline(4),
       tracksByInstrumentId: {
         "voice-a": {
           instrumentId: "voice-a",
@@ -3233,19 +3279,14 @@ function compileActiveClipPlaybackSnapshot(state) {
       [{ type: "AddClip", clip: secondClip }],
       "Add second clip",
     );
+    runtime.editorCommands.selectClip(secondClip.id);
     assert.equal(runtime.playheadTick.get(), 0);
 
     runtime.playheadTick.set(1_280);
-    runtime.editorCommands.dispatch(
-      [{ type: "ActivateClip", clipId: "clip-test" }],
-      "Select first clip",
-    );
+    runtime.editorCommands.selectClip("clip-test");
     assert.equal(runtime.playheadTick.get(), 640);
 
-    runtime.editorCommands.dispatch(
-      [{ type: "ActivateClip", clipId: secondClip.id }],
-      "Select second clip",
-    );
+    runtime.editorCommands.selectClip(secondClip.id);
     assert.equal(runtime.playheadTick.get(), 1_280);
   });
 

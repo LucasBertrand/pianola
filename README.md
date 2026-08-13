@@ -38,6 +38,7 @@ conservée uniquement comme archive de décision.
 | [`docs/architecture.md`](docs/architecture.md) | comprendre les modules, propriétaires d’état, flux et règles de dépendances |
 | [`docs/state-ownership.md`](docs/state-ownership.md) | décider où vit un état, sa durée, sa persistance et son rapport à Undo/Redo |
 | [`docs/p1-migration.md`](docs/p1-migration.md) | consulter les déplacements, frontières et compatibilités du chantier P1 |
+| [`docs/p2-migration.md`](docs/p2-migration.md) | consulter le découpage du domaine, le format v1 et les fondations de modèle P2 |
 | [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
 | [`docs/p0-baseline.md`](docs/p0-baseline.md) | consulter les garde-fous, témoins critiques et mesures de référence de P0 |
 | [`docs/old-hypothetical-rewrite-roadmap.md`](docs/old-hypothetical-rewrite-roadmap.md) | consulter l’hypothèse de réécriture v2 archivée et non planifiée |
@@ -168,8 +169,8 @@ Les propriétés persistantes sont en lecture seule.
 sont nommés, identifiés par un ID stable et profondément immuables. Un preset
 initialise le brouillon de la modale, puis sa configuration est copiée dans
 l’instrument. `playback-snapshot.ts` compile ensuite directement cette copie.
-`src/domain/commands.ts` est l’unique chemin normal pour modifier le projet.
-Le reducer applique les commandes musicales au seul clip actif, tandis que la
+`src/domain/commands/` est l’unique chemin normal pour modifier le projet.
+Le reducer racine délègue chaque famille à son module, tandis que la
 création ou la suppression d’un instrument met à jour les pistes de tous les clips.
 
 `src/domain/project-store.ts` conserve un historique global de snapshots
@@ -309,7 +310,7 @@ utiliser le déploiement Vercel en HTTPS.
 | `npm run typecheck:core` | Vérifie domaine, éditeur, cas d’usage et formats sans React |
 | `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
 | `npm run typecheck:test` | Vérifie les tests TypeScript et leurs supports partagés |
-| `npm test` | Lance les 82 scénarios avec Vitest |
+| `npm test` | Lance les 95 scénarios avec Vitest |
 | `npm run test:vitest:watch` | Relance les tests concernés pendant le développement |
 | `npm run build` | Typecheck puis produit le bundle `dist/` |
 | `npm run preview` | Sert localement le dernier build de production |
@@ -383,7 +384,7 @@ les fichiers de production.
 
 ### Couverture actuelle
 
-Les 82 scénarios Vitest couvrent les invariants du domaine, les commandes,
+Les 95 scénarios Vitest couvrent les invariants du domaine, les commandes,
 l’historique, les collisions, la persistance, le timing audio, le scheduler,
 la polyphonie, le solo, les boucles, les conversions MIDI, la géométrie et les
 frontières d’import. Chaque scénario est exécutable par fichier ou par nom.
@@ -578,8 +579,9 @@ sélection et coloration — sont enregistrées une seule fois. Les états
 temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
 
 Son identité et sa version sont définies dans
-`src/config/native-file-config.ts`, puis validées dans
-`src/project-io/native/native-project-file.ts`.
+`src/config/native-file-config.ts`, puis reconnues par
+`src/project-io/native/version.ts` et les parseurs spécialisés de
+`src/project-io/native/parsing/`.
 
 Le passage officiel à Pianola a créé le format
 `app.pianola.native-project` et l’extension `.pianola`. Les anciens fichiers
@@ -637,7 +639,7 @@ et ne choisit pas lui-même le clip affiché.
 | Cycle de vie des clips | `src/ui/clips/useClipWorkflow.ts` |
 | Liste des clips | `src/ui/clips/ClipInspector.tsx` |
 | Modale de création d’instrument | `src/ui/instruments/InstrumentPresetDialog.tsx` |
-| Actions mutantes | `src/domain/commands.ts` |
+| Actions mutantes | `src/domain/commands/` (`command-types.ts`, handlers et `reducer.ts`) |
 | Cas d'usage et plans de commandes | `src/use-cases/` |
 | Collisions | `src/domain/note-collision.ts` |
 | État et calculs des gestes | `src/editor/interactions/` |
@@ -646,7 +648,7 @@ et ne choisit pas lui-même le clip affiché.
 | Ghosts, poignées et lasso | `src/ui/piano-roll/interactions/dom-interaction-visual-controller.ts` |
 | Rendu des notes et grille | `src/ui/piano-roll/PianoRollLayers.tsx` |
 | Audio | `src/audio/` et `src/ui/transport/useAudioPlayback.ts` |
-| Format natif | `src/project-io/native/native-project-file.ts` |
+| Format natif | `src/project-io/native/` (`serialize-native-project.ts`, `parse-native-project.ts` et `parsing/`) |
 | MIDI | `src/project-io/midi/` |
 | Frontières et propriétaires d’état | `docs/architecture.md` et `docs/state-ownership.md` |
 | Priorités de refactoring | `docs/roadmap.md` |
@@ -698,8 +700,9 @@ configuration de son propriétaire.
 ### Ajouter une commande métier
 
 1. Ajouter le type de commande et l’inclure dans l’union de
-   `src/domain/commands.ts`.
-2. Implémenter son traitement sans mutation de l’état reçu.
+   `src/domain/commands/command-types.ts`.
+2. Implémenter son traitement dans le module de famille sans mutation de
+   l’état reçu.
 3. Valider toutes les données avant de produire le nouvel état.
 4. Déclencher une transaction unique depuis l’UI.
 5. Ajouter un scénario Vitest près du module ou dans `tests/integration`.

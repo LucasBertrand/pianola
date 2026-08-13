@@ -1,11 +1,13 @@
 import {
   projectReducer,
-  type Transaction,
-} from "./commands";
+} from "./commands/reducer";
+import type { Transaction } from "./commands/transaction";
 import {
   PROJECT_CONSTANTS,
 } from "../config/domain-limits";
 import type {
+  ClipId,
+  ProjectDocument,
   ProjectState,
 } from "./model";
 
@@ -18,6 +20,7 @@ export type ProjectStoreListener = (
 export interface ProjectStorePort {
   getState(): ProjectState;
   dispatch(transaction: Transaction): ProjectState;
+  selectClip(clipId: ClipId): ProjectState;
   replaceState(state: ProjectState, label?: string): ProjectState;
   canUndo(): boolean;
   canRedo(): boolean;
@@ -28,8 +31,8 @@ export interface ProjectStorePort {
 
 export class ProjectStore implements ProjectStorePort {
   private currentState: ProjectState;
-  private readonly pastStates: ProjectState[] = [];
-  private readonly futureStates: ProjectState[] = [];
+  private readonly pastDocuments: ProjectDocument[] = [];
+  private readonly futureDocuments: ProjectDocument[] = [];
   private readonly listeners = new Set<ProjectStoreListener>();
   private historySequence = 0;
 
@@ -49,28 +52,41 @@ export class ProjectStore implements ProjectStorePort {
       return previousState;
     }
 
-    if (isClipActivationTransaction(transaction)) {
-      // Navigation changes the editing context without invalidating redo or
-      // consuming an undo step. Musical edits remain globally ordered.
-      this.currentState = nextState;
-      this.notify(nextState, previousState, transaction);
-      return nextState;
-    }
-
-    this.pastStates.push(previousState);
+    this.pastDocuments.push(toProjectDocument(previousState));
 
     if (
-      this.pastStates.length
+      this.pastDocuments.length
       > PROJECT_CONSTANTS.maximumHistoryEntries
     ) {
-      this.pastStates.shift();
+      this.pastDocuments.shift();
     }
 
-    this.futureStates.length = 0;
-    this.currentState = nextState;
-    this.notify(nextState, previousState, transaction);
+    this.futureDocuments.length = 0;
+    this.currentState = preserveWorkspace(nextState, previousState);
+    this.notify(this.currentState, previousState, transaction);
 
-    return nextState;
+    return this.currentState;
+  }
+
+  public selectClip(clipId: ClipId): ProjectState {
+    if (
+      this.currentState.clipsById[clipId] === undefined
+      || this.currentState.workspace.activeClipId === clipId
+    ) {
+      return this.currentState;
+    }
+
+    const previousState = this.currentState;
+    this.currentState = {
+      ...previousState,
+      workspace: { ...previousState.workspace, activeClipId: clipId },
+    };
+    this.notify(
+      this.currentState,
+      previousState,
+      this.createHistoryTransaction("Select clip"),
+    );
+    return this.currentState;
   }
 
   public replaceState(
@@ -79,8 +95,8 @@ export class ProjectStore implements ProjectStorePort {
   ): ProjectState {
     const previousState = this.currentState;
 
-    this.pastStates.length = 0;
-    this.futureStates.length = 0;
+    this.pastDocuments.length = 0;
+    this.futureDocuments.length = 0;
     this.currentState = {
       ...state,
       revision: previousState.revision + 1,
@@ -95,24 +111,25 @@ export class ProjectStore implements ProjectStorePort {
   }
 
   public canUndo(): boolean {
-    return this.pastStates.length > 0;
+    return this.pastDocuments.length > 0;
   }
 
   public canRedo(): boolean {
-    return this.futureStates.length > 0;
+    return this.futureDocuments.length > 0;
   }
 
   public undo(): ProjectState {
-    const previousSnapshot = this.pastStates.pop();
+    const previousSnapshot = this.pastDocuments.pop();
 
     if (previousSnapshot === undefined) {
       return this.currentState;
     }
 
     const previousState = this.currentState;
-    this.futureStates.push(previousState);
+    this.futureDocuments.push(toProjectDocument(previousState));
     this.currentState = {
-      ...preserveActiveClip(previousSnapshot, previousState),
+      ...previousSnapshot,
+      workspace: resolveWorkspace(previousSnapshot, previousState),
       revision: previousState.revision + 1,
     };
     this.notify(
@@ -125,24 +142,25 @@ export class ProjectStore implements ProjectStorePort {
   }
 
   public redo(): ProjectState {
-    const nextSnapshot = this.futureStates.pop();
+    const nextSnapshot = this.futureDocuments.pop();
 
     if (nextSnapshot === undefined) {
       return this.currentState;
     }
 
     const previousState = this.currentState;
-    this.pastStates.push(previousState);
+    this.pastDocuments.push(toProjectDocument(previousState));
 
     if (
-      this.pastStates.length
+      this.pastDocuments.length
       > PROJECT_CONSTANTS.maximumHistoryEntries
     ) {
-      this.pastStates.shift();
+      this.pastDocuments.shift();
     }
 
     this.currentState = {
-      ...preserveActiveClip(nextSnapshot, previousState),
+      ...nextSnapshot,
+      workspace: resolveWorkspace(nextSnapshot, previousState),
       revision: previousState.revision + 1,
     };
     this.notify(
@@ -186,25 +204,37 @@ export class ProjectStore implements ProjectStorePort {
   }
 }
 
-function isClipActivationTransaction(
-  transaction: Transaction,
-): boolean {
-  return (
-    transaction.commands.length === 1
-    && transaction.commands[0]?.type === "ActivateClip"
-  );
+function toProjectDocument(state: ProjectState): ProjectDocument {
+  const { workspace: _workspace, ...projectDocument } = state;
+  return projectDocument;
 }
 
-function preserveActiveClip(
+function preserveWorkspace(
   snapshot: ProjectState,
   currentState: ProjectState,
 ): ProjectState {
-  // Undo/redo restores musical data globally while keeping the user's current
-  // editing context whenever that clip still exists in the target snapshot.
-  return snapshot.clipsById[currentState.activeClipId] === undefined
-    ? snapshot
-    : {
-        ...snapshot,
-        activeClipId: currentState.activeClipId,
-      };
+  return {
+    ...snapshot,
+    workspace: resolveWorkspace(snapshot, currentState),
+  };
+}
+
+function resolveWorkspace(
+  projectDocument: ProjectDocument,
+  currentState: ProjectState,
+): ProjectState["workspace"] {
+  if (
+    projectDocument.clipsById[currentState.workspace.activeClipId]
+      !== undefined
+  ) {
+    return currentState.workspace;
+  }
+
+  const fallbackClipId = projectDocument.clipOrder[0];
+
+  if (fallbackClipId === undefined) {
+    throw new Error("A project document must contain at least one clip.");
+  }
+
+  return { ...currentState.workspace, activeClipId: fallbackClipId };
 }

@@ -4,7 +4,9 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+  createDefaultProjectClock,
   createDefaultTransportState,
+  getTicksPerMeasure,
   getActiveClip,
   PROJECT_SCHEMA_VERSION,
   type ClipInstrumentState,
@@ -14,10 +16,11 @@ import {
   type ProjectState,
   type Track,
   type TransportState,
+  type TimeSignature,
 } from "../../src/domain/model";
 import type {
   NativeEditorState,
-} from "../../src/project-io/native/native-project-file";
+} from "../../src/project-io/native/native-project-schema";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../src/music/pitch-snap";
@@ -39,7 +42,9 @@ interface AudioTestProjectOptions {
   readonly masterTuningFrequencyHz?: number;
   readonly transport?: Partial<TransportState> & {
     readonly loop?: Partial<TransportState["loop"]>;
-    readonly timeSignature?: Partial<TransportState["timeSignature"]>;
+    readonly bpm?: number;
+    readonly ppqn?: number;
+    readonly timeSignature?: Partial<TimeSignature>;
   };
   readonly instrumentOrder?: readonly InstrumentId[];
   readonly projectInstrumentChangesById?: Readonly<
@@ -107,16 +112,25 @@ export function createAudioTestProject({
   instrumentStateChangesById = {},
 }: AudioTestProjectOptions = {}): ProjectState {
   const defaultTransport = createDefaultTransportState();
+  const defaultClock = createDefaultProjectClock();
+  const timeSignature: TimeSignature = {
+    numerator: 4,
+    denominator: 4,
+    ...transportChanges.timeSignature,
+  };
+  const clock = {
+    ...defaultClock,
+    tempoBpm: transportChanges.bpm ?? defaultClock.tempoBpm,
+    ppqn: transportChanges.ppqn ?? defaultClock.ppqn,
+  };
   const transportSettings: TransportState = {
     ...defaultTransport,
-    ...transportChanges,
+    anchorTick: transportChanges.anchorTick ?? defaultTransport.anchorTick,
+    loopEnabled:
+      transportChanges.loopEnabled ?? defaultTransport.loopEnabled,
     loop: {
       ...defaultTransport.loop,
       ...transportChanges.loop,
-    },
-    timeSignature: {
-      ...defaultTransport.timeSignature,
-      ...transportChanges.timeSignature,
     },
   };
   const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
@@ -157,6 +171,7 @@ export function createAudioTestProject({
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision,
     title: "Audio test project",
+    clock,
     projectInstrumentsById,
     instrumentOrder: [...instrumentOrder],
     instrumentPresetsById: presetLibrary.instrumentPresetsById,
@@ -165,14 +180,20 @@ export function createAudioTestProject({
       [clipId]: {
         id: clipId,
         name: "Test Clip",
-        measureCount,
+        timeline: {
+          durationTicks:
+            measureCount * getTicksPerMeasure(clock, timeSignature),
+          meterMap: {
+            segments: [{ startTick: 0, timeSignature }],
+          },
+        },
         tracksByInstrumentId,
         instrumentStatesById,
         transportSettings,
       },
     },
     clipOrder: [clipId],
-    activeClipId: clipId,
+    workspace: { activeClipId: clipId },
     masterBus: {
       gain: masterGain,
       muted: masterMuted,
@@ -185,6 +206,7 @@ export function createAudioTestEditorState(
   overrides: Partial<NativeEditorState> = {},
 ): NativeEditorState {
   return {
+    activeClipId: "clip-test",
     selectedInstrumentId: "voice-a",
     selectionMode: "add",
     noteColorMode: "pitch",

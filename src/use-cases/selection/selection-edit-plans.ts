@@ -1,13 +1,16 @@
 import type {
   PianoRollCommand,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import {
-  getActiveClip,
+  getClip,
+  getClipMeasureCount,
+  getClipTimeSignature,
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   type Note,
+  type ClipId,
   type NoteId,
-  type ProjectState,
+  type ProjectDocument,
   type InstrumentId,
 } from "../../domain/model";
 
@@ -34,6 +37,7 @@ export type InstrumentTransferPlan =
     };
 
 export function buildTransformCommandsForNotes(
+  clipId: ClipId,
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
   const notesByInstrument = new Map<InstrumentId, Note[]>();
@@ -64,6 +68,7 @@ export function buildTransformCommandsForNotes(
   for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     commands.push({
       type: "TransformNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       changes: instrumentNotes.map((note) => ({
         noteId: note.id,
@@ -78,6 +83,7 @@ export function buildTransformCommandsForNotes(
 }
 
 export function buildSliceCommandsForNotes(
+  clipId: ClipId,
   notes: readonly Note[],
   sliceTick: number,
   timestamp: number,
@@ -122,6 +128,7 @@ export function buildSliceCommandsForNotes(
   for (const [instrumentId, slices] of slicesByInstrument) {
     commands.push({
       type: "SliceNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       sliceTick,
       slices,
@@ -168,10 +175,11 @@ export function createPastedNotes(
 }
 
 export function canPlacePastedNotes(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   notes: readonly Note[],
 ): boolean {
-  const clip = getActiveClip(state);
+  const clip = getClip(state, clipId);
 
   for (
     let noteIndex = 0;
@@ -199,16 +207,17 @@ export function canPlacePastedNotes(
 
   return (
     notes.length > 0
-    && getRequiredMeasureCountForNotes(state, notes)
+    && getRequiredMeasureCountForNotes(state, clipId, notes)
       <= MAXIMUM_MEASURE_COUNT
   );
 }
 
 export function getRequiredMeasureCountForNotes(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   notes: readonly Note[],
 ): number {
-  const clip = getActiveClip(state);
+  const clip = getClip(state, clipId);
   let maximumEndTick = 0;
 
   for (const note of notes) {
@@ -222,21 +231,23 @@ export function getRequiredMeasureCountForNotes(
   }
 
   const ticksPerMeasure = getTicksPerMeasure(
-    clip.transportSettings,
+    state.clock,
+    getClipTimeSignature(clip),
   );
 
   return Math.max(
-    clip.measureCount,
+    getClipMeasureCount(state.clock, clip),
     Math.ceil(maximumEndTick / ticksPerMeasure),
   );
 }
 
 export function createInstrumentTransferPlan(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   selectedNotes: readonly Note[],
   targetInstrumentId: InstrumentId,
 ): InstrumentTransferPlan {
-  const clip = getActiveClip(state);
+  const clip = getClip(state, clipId);
   const targetInstrument = state.projectInstrumentsById[targetInstrumentId];
   const targetTrack = clip.tracksByInstrumentId[targetInstrumentId];
 
@@ -325,6 +336,7 @@ export function createInstrumentTransferPlan(
   for (const [sourceInstrumentId, noteIds] of noteIdsBySourceInstrument) {
     commands.push({
       type: "MoveNotes",
+      clipId: clip.id,
       sourceInstrumentId,
       targetInstrumentId,
       noteIds,
@@ -342,10 +354,11 @@ export function createInstrumentTransferPlan(
 }
 
 export function findNotesByIds(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   noteIds: readonly NoteId[],
 ): readonly Note[] {
-  const clip = getActiveClip(state);
+  const clip = getClip(state, clipId);
   const notes: Note[] = [];
   const acceptedNoteIds = new Set<NoteId>();
 

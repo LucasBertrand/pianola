@@ -7,7 +7,11 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+  createDefaultClipTimeline,
+  createDefaultProjectClock,
   createDefaultTransportState,
+  getClipMeasureCount,
+  getClipTimeSignature,
   PROJECT_SCHEMA_VERSION,
 } from "../../src/domain/model";
 import {
@@ -20,12 +24,14 @@ import {
   createMidiExport as createProjectedMidiExport,
 } from "../../src/project-io/midi/midi-exporter";
 import {
-  createMidiExportProjection,
-} from "../../src/use-cases/project-files/midi-export-projection";
+  createMidiExportPlan,
+} from "../../src/use-cases/project-files/midi-export-plan";
 import {
   analyzeMidiImport,
+} from "../../src/project-io/midi/analyze-midi-import";
+import {
   createProjectFromMidiImport,
-} from "../../src/project-io/midi/midi-importer";
+} from "../../src/project-io/midi/create-project-from-midi-import";
 import {
   readStandardMidiFile,
 } from "../../src/project-io/midi/smf-reader";
@@ -42,7 +48,7 @@ import {
 
 function createActiveClipMidiExport(project) {
   return createProjectedMidiExport(
-    createMidiExportProjection(project, getActiveTestClip(project)),
+    createMidiExportPlan(project, getActiveTestClip(project)),
   );
 }
 
@@ -674,7 +680,13 @@ function createActiveClipMidiExport(project) {
       importedProject.instrumentOrder[0],
     )[0];
 
-    assert.equal(getActiveTestClip(importedProject).measureCount, 1);
+    assert.equal(
+      getClipMeasureCount(
+        importedProject.clock,
+        getActiveTestClip(importedProject),
+      ),
+      1,
+    );
     assert.deepEqual(
       [
         importedNote.startTick,
@@ -693,11 +705,16 @@ function createActiveClipMidiExport(project) {
       instrument: createDefaultInstrumentConfig(0),
     });
     const sourceTransport = createDefaultTransportState();
+    const sourceClock = {
+      ...createDefaultProjectClock(),
+      ppqn: 48_000,
+    };
     const sourceClipId = "boundary-clip";
     const sourceProject = {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision: 0,
       title: "Boundary export",
+      clock: sourceClock,
       projectInstrumentsById: {
         [instrument.id]: instrument,
       },
@@ -708,7 +725,7 @@ function createActiveClipMidiExport(project) {
         [sourceClipId]: {
           id: sourceClipId,
           name: "Boundary Clip",
-          measureCount: 1,
+          timeline: createDefaultClipTimeline(sourceClock, 1),
           tracksByInstrumentId: {
             [instrument.id]: {
               instrumentId: instrument.id,
@@ -727,7 +744,6 @@ function createActiveClipMidiExport(project) {
           },
           transportSettings: {
             ...sourceTransport,
-            ppqn: 48_000,
             loop: {
               startTick: 0,
               endTick: 192_000,
@@ -736,7 +752,7 @@ function createActiveClipMidiExport(project) {
         },
       },
       clipOrder: [sourceClipId],
-      activeClipId: sourceClipId,
+      workspace: { activeClipId: sourceClipId },
       masterBus: createDefaultMasterBusState(),
     };
     const exported = createActiveClipMidiExport(sourceProject);
@@ -770,10 +786,12 @@ function createActiveClipMidiExport(project) {
     });
     const defaultTransport = createDefaultTransportState();
     const sourceClipId = "round-trip-clip";
+    const sourceClock = createDefaultProjectClock();
     const sourceProject = {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       revision: 7,
       title: "MIDI round trip",
+      clock: sourceClock,
       projectInstrumentsById: {
         [lead.id]: lead,
         [bass.id]: bass,
@@ -786,7 +804,15 @@ function createActiveClipMidiExport(project) {
         [sourceClipId]: {
           id: sourceClipId,
           name: "Round Trip Clip",
-          measureCount: 4,
+          timeline: {
+            durationTicks: 4 * 2_880,
+            meterMap: {
+              segments: [{
+                startTick: 0,
+                timeSignature: { numerator: 3, denominator: 4 },
+              }],
+            },
+          },
           tracksByInstrumentId: {
         [lead.id]: {
           instrumentId: lead.id,
@@ -837,11 +863,6 @@ function createActiveClipMidiExport(project) {
           },
           transportSettings: {
             ...defaultTransport,
-            bpm: 120,
-            timeSignature: {
-              numerator: 3,
-              denominator: 4,
-            },
             loop: {
               startTick: 0,
               endTick: 2_880,
@@ -850,7 +871,7 @@ function createActiveClipMidiExport(project) {
         },
       },
       clipOrder: [sourceClipId],
-      activeClipId: sourceClipId,
+      workspace: { activeClipId: sourceClipId },
       masterBus: createDefaultMasterBusState(),
     };
     const exported = createActiveClipMidiExport(sourceProject);
@@ -868,15 +889,18 @@ function createActiveClipMidiExport(project) {
     assert.equal(exported.file.format, 1);
     assert.equal(exported.file.tracks.length, 3);
     assert.equal(
-      getActiveTestClip(imported).transportSettings.bpm,
+      imported.clock.tempoBpm,
       120,
     );
     assert.equal(
-      getActiveTestClip(imported).measureCount,
-      getActiveTestClip(sourceProject).measureCount,
+      getClipMeasureCount(imported.clock, getActiveTestClip(imported)),
+      getClipMeasureCount(
+        sourceProject.clock,
+        getActiveTestClip(sourceProject),
+      ),
     );
     assert.deepEqual(
-      getActiveTestClip(imported).transportSettings.timeSignature,
+      getClipTimeSignature(getActiveTestClip(imported)),
       {
         numerator: 3,
         denominator: 4,
@@ -927,15 +951,9 @@ function createActiveClipMidiExport(project) {
 
     const alternatePpqnProject = {
       ...sourceProject,
-      clipsById: {
-        ...sourceProject.clipsById,
-        [sourceClipId]: {
-          ...getActiveTestClip(sourceProject),
-          transportSettings: {
-            ...getActiveTestClip(sourceProject).transportSettings,
-            ppqn: 480,
-          },
-        },
+      clock: {
+        ...sourceProject.clock,
+        ppqn: 480,
       },
     };
     const alternatePpqnExport =

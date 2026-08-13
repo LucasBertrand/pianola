@@ -1,8 +1,8 @@
 import type {
   InstrumentConfig,
   Note,
-  ProjectState,
-  TimeSignature,
+  ProjectDocument,
+  MeterMapSegment,
   ProjectInstrument,
   InstrumentId,
 } from "../domain/model";
@@ -17,10 +17,11 @@ import {
 } from "../domain/model";
 import {
   validateProjectInstrument,
-} from "../domain/validation";
+} from "../domain/validation/instrument-validation";
 import type {
   PackedInstrumentEvents,
   PlaybackSnapshot,
+  PlaybackPlan,
   PlaybackInstrumentSnapshot,
   SubtractivePlaybackPresetSnapshot,
   TempoMapSnapshot,
@@ -36,15 +37,14 @@ export class PlaybackSnapshotCompilationError extends Error {
   }
 }
 
-export function compilePlaybackSnapshot(
-  projectState: ProjectState,
+export function compilePlaybackPlan(
+  projectState: ProjectDocument,
   source: PlaybackSource,
-): PlaybackSnapshot {
+): PlaybackPlan {
   const clip = source.clip;
-  const transport = clip.transportSettings;
 
-  assertPositiveSafeInteger(transport.ppqn, "Project PPQN");
-  assertPositiveFiniteNumber(transport.bpm, "Project BPM");
+  assertPositiveSafeInteger(projectState.clock.ppqn, "Project PPQN");
+  assertPositiveFiniteNumber(projectState.clock.tempoBpm, "Project BPM");
 
   const durationTicks = getClipDurationTicks(clip);
 
@@ -127,6 +127,7 @@ export function compilePlaybackSnapshot(
     compiledInstrumentIds.add(instrumentId);
     instruments.push(
       compileInstrumentSnapshot(
+        source.sourceId,
         projectInstrument,
         projectInstrument.instrument,
         track.notesById,
@@ -136,16 +137,18 @@ export function compilePlaybackSnapshot(
   }
 
   const snapshot: PlaybackSnapshot = {
+    sourceId: source.sourceId,
     projectRevision: projectState.revision,
-    ppqn: transport.ppqn,
+    ppqn: projectState.clock.ppqn,
     durationTicks,
     masterGain: projectState.masterBus.gain,
     masterMuted: projectState.masterBus.muted,
     masterTuningFrequencyHz:
       projectState.masterBus.tuningFrequencyHz,
-    tempoMap: createSingleTempoMapSnapshot(
-      transport.bpm,
-      transport.timeSignature,
+    tempoMap: createTempoMapSnapshot(
+      projectState.clock.tempoBpm,
+      projectState.clock.ppqn,
+      clip.timeline.meterMap.segments,
     ),
     instruments: Object.freeze(instruments),
   };
@@ -154,6 +157,7 @@ export function compilePlaybackSnapshot(
 }
 
 function compileInstrumentSnapshot(
+  sourceId: PlaybackSource["sourceId"],
   projectInstrument: ProjectInstrument,
   instrument: InstrumentConfig,
   notesById: Readonly<Record<string, Note>>,
@@ -226,7 +230,7 @@ function compileInstrumentSnapshot(
 
   notes.sort(compareNotesForPlayback);
 
-  const events = packInstrumentEvents(projectInstrument.id, notes);
+  const events = packInstrumentEvents(sourceId, projectInstrument.id, notes);
   const snapshot: PlaybackInstrumentSnapshot = {
     ...events,
     gain: projectInstrument.gain,
@@ -240,6 +244,7 @@ function compileInstrumentSnapshot(
 }
 
 function packInstrumentEvents(
+  sourceId: PlaybackSource["sourceId"],
   instrumentId: InstrumentId,
   notes: readonly Note[],
 ): PackedInstrumentEvents {
@@ -269,6 +274,7 @@ function packInstrumentEvents(
   }
 
   return Object.freeze({
+    sourceId,
     instrumentId,
     noteIds: Object.freeze(noteIds),
     pitches,
@@ -315,20 +321,36 @@ function cloneInstrument(
   });
 }
 
-function createSingleTempoMapSnapshot(
+function createTempoMapSnapshot(
   bpm: number,
-  timeSignature: TimeSignature,
+  ppqn: number,
+  segments: readonly MeterMapSegment[],
 ): TempoMapSnapshot {
-  const immutableTimeSignature = Object.freeze({
-    numerator: timeSignature.numerator,
-    denominator: timeSignature.denominator,
+  if (segments.length === 0 || segments[0]?.startTick !== 0) {
+    throw new PlaybackSnapshotCompilationError(
+      "A playback meter map must start at tick 0.",
+    );
+  }
+
+  const startTicks = new Float64Array(segments.length);
+  const startSeconds = new Float64Array(segments.length);
+  const bpms = new Float64Array(segments.length);
+  const timeSignatures = segments.map((segment, index) => {
+    startTicks[index] = segment.startTick;
+    startSeconds[index] = segment.startTick * 60 / (bpm * ppqn);
+    bpms[index] = bpm;
+
+    return Object.freeze({
+      numerator: segment.timeSignature.numerator,
+      denominator: segment.timeSignature.denominator,
+    });
   });
 
   return Object.freeze({
-    startTicks: new Float64Array([0]),
-    startSeconds: new Float64Array([0]),
-    bpms: new Float64Array([bpm]),
-    timeSignatures: Object.freeze([immutableTimeSignature]),
+    startTicks,
+    startSeconds,
+    bpms,
+    timeSignatures: Object.freeze(timeSignatures),
   });
 }
 

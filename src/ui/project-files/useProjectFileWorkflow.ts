@@ -12,13 +12,23 @@ import {
 } from "./download-browser-file";
 import {
   createNativeProjectFileName,
-  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
+} from "../../project-io/native/native-project-metadata";
+import {
   NativeProjectFileError,
+} from "../../project-io/native/native-project-error";
+import {
   parseNativeProjectFile,
+} from "../../project-io/native/parse-native-project";
+import {
   serializeNativeProjectFile,
-  type NativeEditorState,
-  type NativeProjectFileMetadata,
-} from "../../project-io/native/native-project-file";
+} from "../../project-io/native/serialize-native-project";
+import type {
+  NativeEditorState,
+  NativeProjectFileMetadata,
+} from "../../project-io/native/native-project-schema";
+import {
+  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
+} from "../../project-io/native/version";
 import {
   createBlankProjectState,
 } from "../../use-cases/project-files/create-initial-project";

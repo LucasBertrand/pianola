@@ -1,13 +1,15 @@
 import type {
   PianoRollCommand,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import type {
   Note,
   NoteId,
+  ClipId,
   ProjectState,
 } from "../../domain/model";
 import {
-  getActiveClipInstrumentState,
+  getActiveClip,
+  getClip,
 } from "../../domain/model";
 import {
   countNoteEditCollisions,
@@ -47,6 +49,7 @@ export interface NoteGestureWorkflowCallbacks {
 }
 
 interface CommitNoteEditOptions {
+  readonly clipId: ClipId;
   readonly originalNotes: readonly Note[];
   readonly proposedNotes: readonly Note[];
   readonly commands: readonly PianoRollCommand[];
@@ -70,15 +73,17 @@ export class NoteGestureWorkflow {
     proposedNotes: readonly Note[],
   ): NoteGestureCommitResult {
     const originalNotes = this.selection.copyNotes();
+    const clipId = getActiveClip(this.commands.getState()).id;
 
     if (!hasChangedPosition(originalNotes, proposedNotes)) {
       return "unchanged";
     }
 
     return this.commitNoteEdit({
+      clipId,
       originalNotes,
       proposedNotes,
-      commands: buildRepositionNoteCommands(proposedNotes),
+      commands: buildRepositionNoteCommands(clipId, proposedNotes),
       label: "Move notes",
       selectionAfterCommit: "reconcile",
     });
@@ -93,6 +98,7 @@ export class NoteGestureWorkflow {
     }
 
     const originalNotes = this.selection.copyNotes();
+    const clipId = getActiveClip(this.commands.getState()).id;
     const proposedNotes = resizeNotes(
       originalNotes,
       deltaTicks,
@@ -100,9 +106,11 @@ export class NoteGestureWorkflow {
     );
 
     return this.commitNoteEdit({
+      clipId,
       originalNotes,
       proposedNotes,
       commands: buildResizeNoteCommands(
+        clipId,
         originalNotes,
         deltaTicks,
         edge,
@@ -113,10 +121,13 @@ export class NoteGestureWorkflow {
   }
 
   public commitDraw(note: Note): NoteGestureCommitResult {
+    const clipId = getActiveClip(this.commands.getState()).id;
+
     return this.commitNoteEdit({
+      clipId,
       originalNotes: [],
       proposedNotes: [note],
-      commands: buildAddNoteCommands([note]),
+      commands: buildAddNoteCommands(clipId, [note]),
       label: "Draw note",
       selectionAfterCommit: "proposed",
     });
@@ -133,8 +144,10 @@ export class NoteGestureWorkflow {
     let nextState: ProjectState | null;
 
     try {
+      const clipId = getActiveClip(this.commands.getState()).id;
+
       nextState = this.commands.dispatch(
-        buildDeleteNoteCommands(notes),
+        buildDeleteNoteCommands(clipId, notes),
         label,
       );
     } catch (error: unknown) {
@@ -154,13 +167,18 @@ export class NoteGestureWorkflow {
     options: CommitNoteEditOptions,
   ): NoteGestureCommitResult {
     const state = this.commands.getState();
-    const collisionCount = countNoteEditCollisions(state, options);
+    const collisionCount = countNoteEditCollisions(
+      state,
+      options.clipId,
+      options,
+    );
 
     if (collisionCount > 0) {
       const originalNotes = options.originalNotes.slice();
       const proposedNotes = options.proposedNotes.slice();
 
       this.callbacks.onCollision?.({
+        clipId: options.clipId,
         label: options.label,
         collisionCount,
         originalNotes,
@@ -172,7 +190,11 @@ export class NoteGestureWorkflow {
           this.selection.replaceFromNoteIds(
             resolvedState,
             selectedNoteIds,
-            (note) => isNoteEditable(resolvedState, note),
+            (note) => isNoteEditable(
+              resolvedState,
+              options.clipId,
+              note,
+            ),
           );
           this.callbacks.onSelectionChanged?.();
         },
@@ -201,12 +223,12 @@ export class NoteGestureWorkflow {
       this.selection.replaceFromNoteIds(
         nextState,
         collectNoteIds(options.proposedNotes),
-        (note) => isNoteEditable(nextState, note),
+        (note) => isNoteEditable(nextState, options.clipId, note),
       );
     } else {
       this.selection.reconcile(
         nextState,
-        (note) => isNoteEditable(nextState, note),
+        (note) => isNoteEditable(nextState, options.clipId, note),
       );
     }
 
@@ -214,8 +236,13 @@ export class NoteGestureWorkflow {
   }
 }
 
-function isNoteEditable(state: ProjectState, note: Note): boolean {
-  return getActiveClipInstrumentState(state, note.instrumentId)?.locked === false;
+function isNoteEditable(
+  state: ProjectState,
+  clipId: ClipId,
+  note: Note,
+): boolean {
+  return getClip(state, clipId).instrumentStatesById[note.instrumentId]
+    ?.locked === false;
 }
 
 function collectNoteIds(notes: readonly Note[]): readonly NoteId[] {

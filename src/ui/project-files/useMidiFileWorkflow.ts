@@ -12,15 +12,21 @@ import {
   createMidiFileName,
 } from "../../project-io/midi/midi-exporter";
 import {
-  createMidiExportProjection,
-} from "../../use-cases/project-files/midi-export-projection";
+  createMidiExportPlan,
+} from "../../use-cases/project-files/midi-export-plan";
 import {
   analyzeMidiImport,
+} from "../../project-io/midi/analyze-midi-import";
+import {
   createProjectFromMidiImport,
+} from "../../project-io/midi/create-project-from-midi-import";
+import {
   formatMidiImportError,
-  type MidiImportAnalysis,
-  type MidiImportCollisionStrategy,
-} from "../../project-io/midi/midi-importer";
+} from "../../project-io/midi/midi-import-error";
+import type {
+  MidiImportAnalysis,
+  MidiImportCollisionStrategy,
+} from "../../project-io/midi/midi-import-types";
 import {
   readStandardMidiFile,
 } from "../../project-io/midi/smf-reader";
@@ -33,7 +39,7 @@ import {
 import type {
   NativeEditorState,
   NativeProjectFileMetadata,
-} from "../../project-io/native/native-project-file";
+} from "../../project-io/native/native-project-schema";
 import type {
   ApplicationDialogState,
   ShowApplicationAlert,
@@ -200,7 +206,7 @@ export function useMidiFileWorkflow({
     try {
       const state = runtime.projectStore.getState();
       const midiExport = createMidiExport(
-        createMidiExportProjection(state, getActiveClip(state)),
+        createMidiExportPlan(state, getActiveClip(state)),
       );
       const bytes = writeStandardMidiFile(midiExport.file);
       const payload = new Uint8Array(bytes.byteLength);

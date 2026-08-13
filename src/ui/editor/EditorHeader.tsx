@@ -14,7 +14,7 @@ import {
 } from "../../domain/model";
 import {
   MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
-} from "../../project-io/native/native-project-file";
+} from "../../project-io/native/version";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";

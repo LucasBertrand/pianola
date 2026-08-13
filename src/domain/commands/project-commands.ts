@@ -1,0 +1,131 @@
+import type { ProjectState } from "../model";
+import {
+  MAXIMUM_MASTER_GAIN,
+  MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+  MINIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
+} from "../model";
+import type {
+  SetMasterMutedCommand,
+  UpdateMasterGainCommand,
+  UpdateMasterTuningCommand,
+  UpdateProjectTitleCommand,
+} from "./command-types";
+import { reject } from "./command-context";
+
+export function applyUpdateProjectTitle(
+  state: ProjectState,
+  command: UpdateProjectTitleCommand,
+): ProjectState {
+  const title = command.title.trim();
+
+  if (
+    title.length === 0
+    || title.length > MAXIMUM_PROJECT_TITLE_LENGTH
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Project title must contain between 1 and ${MAXIMUM_PROJECT_TITLE_LENGTH} characters.`,
+      command.type,
+    );
+  }
+
+  if (title === state.title) {
+    return state;
+  }
+
+  return {
+    ...state,
+    title,
+  };
+}
+
+export function applyUpdateMasterGain(
+  state: ProjectState,
+  command: UpdateMasterGainCommand,
+): ProjectState {
+  if (
+    !Number.isFinite(command.gain)
+    || command.gain < MINIMUM_MASTER_GAIN
+    || command.gain > MAXIMUM_MASTER_GAIN
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Master gain must be between ${MINIMUM_MASTER_GAIN} and ${MAXIMUM_MASTER_GAIN}.`,
+      command.type,
+    );
+  }
+
+  if (command.gain === state.masterBus.gain) {
+    return state;
+  }
+
+  return {
+    ...state,
+    masterBus: {
+      ...state.masterBus,
+      gain: command.gain,
+    },
+  };
+}
+
+export function applySetMasterMuted(
+  state: ProjectState,
+  command: SetMasterMutedCommand,
+): ProjectState {
+  if (typeof command.muted !== "boolean") {
+    reject(
+      "INVALID_COMMAND",
+      "Master mute state must be a boolean.",
+      command.type,
+    );
+  }
+
+  if (command.muted === state.masterBus.muted) {
+    return state;
+  }
+
+  return {
+    ...state,
+    masterBus: {
+      ...state.masterBus,
+      muted: command.muted,
+    },
+  };
+}
+
+export function applyUpdateMasterTuning(
+  state: ProjectState,
+  command: UpdateMasterTuningCommand,
+): ProjectState {
+  if (
+    !Number.isFinite(command.tuningFrequencyHz)
+    || command.tuningFrequencyHz
+      < MINIMUM_MASTER_TUNING_FREQUENCY_HZ
+    || command.tuningFrequencyHz
+      > MAXIMUM_MASTER_TUNING_FREQUENCY_HZ
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Master tuning must be between ${MINIMUM_MASTER_TUNING_FREQUENCY_HZ} and ${MAXIMUM_MASTER_TUNING_FREQUENCY_HZ} Hz.`,
+      command.type,
+    );
+  }
+
+  if (
+    command.tuningFrequencyHz
+    === state.masterBus.tuningFrequencyHz
+  ) {
+    return state;
+  }
+
+  return {
+    ...state,
+    masterBus: {
+      ...state.masterBus,
+      tuningFrequencyHz: command.tuningFrequencyHz,
+    },
+  };
+}
+

@@ -13,8 +13,10 @@ import {
 } from "../../config/rendering-config";
 import {
   getActiveClip,
+  getClipTimeSignature,
   type Note,
-  type TransportState,
+  type ProjectClock,
+  type TimeSignature,
   type InstrumentId,
 } from "../../domain/model";
 import type {
@@ -293,6 +295,9 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         converterVersionRef.current = viewport.version;
       }
 
+      const state = projectStore.getState();
+      const activeClip = getActiveClip(state);
+
       paintGrid(
         frame.context,
         frame,
@@ -301,7 +306,8 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         gridResolutionTicks.get(),
         pitchSnapSettings.get(),
         highlightedPitch.get(),
-        getActiveClip(projectStore.getState()).transportSettings,
+        state.clock,
+        getClipTimeSignature(activeClip),
       );
     },
     [
@@ -713,7 +719,8 @@ function paintGrid(
   gridResolutionTicks: number,
   pitchSnapSettings: PitchSnapSettings,
   highlightedPitch: number | null,
-  transport: TransportState,
+  clock: ProjectClock,
+  timeSignature: TimeSignature,
 ): void {
   const width = frame.widthCssPixels;
   const height = frame.heightCssPixels;
@@ -746,7 +753,8 @@ function paintGrid(
     region,
     width,
     height,
-    transport,
+    clock,
+    timeSignature,
   );
 
   if (pitchSnapSettings.visualGuideEnabled) {
@@ -840,8 +848,7 @@ function paintGrid(
     effectiveResolutionTicks,
     SUBDIVISION_LINE_COLOR,
   );
-  const ticksPerBeat =
-    transport.ppqn * 4 / transport.timeSignature.denominator;
+  const ticksPerBeat = clock.ppqn * 4 / timeSignature.denominator;
 
   drawTickLines(
     context,
@@ -858,7 +865,7 @@ function paintGrid(
     converter,
     region,
     height,
-    ticksPerBeat * transport.timeSignature.numerator,
+    ticksPerBeat * timeSignature.numerator,
     BAR_LINE_COLOR,
   );
 }
@@ -869,13 +876,14 @@ function paintAlternatingMeasures(
   region: Rect,
   width: number,
   height: number,
-  transport: TransportState,
+  clock: ProjectClock,
+  timeSignature: TimeSignature,
 ): void {
   const ticksPerMeasure =
-    transport.ppqn
+    clock.ppqn
     * 4
-    / transport.timeSignature.denominator
-    * transport.timeSignature.numerator;
+    / timeSignature.denominator
+    * timeSignature.numerator;
 
   if (!Number.isSafeInteger(ticksPerMeasure) || ticksPerMeasure <= 0) {
     return;

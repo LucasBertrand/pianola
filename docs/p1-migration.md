@@ -38,10 +38,10 @@ les suites TypeScript ; aucun runner historique ne subsiste.
 
 ## Compatibilité assumée
 
-Le format `.pianola` v1 continue de sérialiser `activeClipId`. La navigation est
-déjà exclue de l’historique et n’est plus consultée par les compilateurs audio et
-MIDI, mais retirer le champ du modèle interne sera couplé à une migration native
-versionnée afin de ne pas casser les fichiers existants.
+À la clôture P1, le format sérialisait encore `activeClipId` dans le projet.
+P2 a depuis remplacé ce contrat : la navigation vit dans `WorkspaceState` et
+dans la section éditeur du nouveau format v1 de référence, hors du document
+musical et de l’historique.
 
 ## Vérification attendue
 

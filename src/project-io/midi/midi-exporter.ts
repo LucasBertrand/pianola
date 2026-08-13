@@ -15,6 +15,10 @@ import type {
 } from "./standard-midi-file";
 
 export interface MidiExportNote {
+  readonly origin: {
+    readonly sourceId: string;
+    readonly noteId: string;
+  };
   readonly id: string;
   readonly pitch: number;
   readonly velocity: number;
@@ -29,7 +33,8 @@ export interface MidiExportTrack {
 }
 
 /** Musical data required by SMF export, independent from stores and screens. */
-export interface MidiExportProjection {
+export interface MidiExportPlan {
+  readonly sourceId: string;
   readonly title: string;
   readonly ppqn: number;
   readonly bpm: number;
@@ -48,7 +53,7 @@ export interface MidiExportResult {
 
 /** Converts a neutral musical projection into a deterministic format-1 SMF. */
 export function createMidiExport(
-  source: MidiExportProjection,
+  source: MidiExportPlan,
 ): MidiExportResult {
   const warnings: string[] = [];
   let zeroVelocityNoteCount = 0;

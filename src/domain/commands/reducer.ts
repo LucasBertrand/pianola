@@ -1,0 +1,243 @@
+import type { Clip, ProjectState } from "../model";
+import { DomainValidationError } from "../validation/validation-result";
+import type { ActiveClipProjectState } from "./active-clip-project-state";
+import {
+  applyAddClip,
+  applyDeleteClip,
+  applyRenameClip,
+  applyReorderClips,
+} from "./clip-commands";
+import { CommandRejectedError } from "./command-errors";
+import { assertNever, reject } from "./command-context";
+import type {
+  AddClipCommand,
+  AddProjectInstrumentCommand,
+  DeleteClipCommand,
+  DeleteProjectInstrumentCommand,
+  PianoRollCommand,
+  RenameClipCommand,
+  ReorderClipsCommand,
+  ReorderProjectInstrumentsCommand,
+  SetMasterMutedCommand,
+  UpdateMasterGainCommand,
+  UpdateMasterTuningCommand,
+  UpdateProjectInstrumentCommand,
+  UpdateProjectTitleCommand,
+  UpdateTempoCommand,
+} from "./command-types";
+import {
+  applyAddProjectInstrument,
+  applyDeleteProjectInstrument,
+  applyReorderProjectInstruments,
+  applyUpdateClipInstrumentState,
+  applyUpdateProjectInstrument,
+} from "./instrument-commands";
+import { applyAddNotes, applyMoveNotes } from "./note-commands";
+import {
+  applyDeleteNotes,
+  applyRepositionNotes,
+  applyResizeNotes,
+  applySetNotesEnabled,
+  applySliceNotes,
+  applyTransformNotes,
+} from "./note-transformation-commands";
+import {
+  applySetMasterMuted,
+  applyUpdateMasterGain,
+  applyUpdateMasterTuning,
+  applyUpdateProjectTitle,
+} from "./project-commands";
+import {
+  applyAppendMeasures,
+  applyInsertMeasure,
+  applyRemoveMeasure,
+  applySetLoopEnabled,
+  applyUpdateLoop,
+  applyUpdateTempo,
+  applyUpdateTimeSignature,
+} from "./transport-commands";
+import { assertValidTransaction } from "./transaction";
+import type { Transaction } from "./transaction";
+
+export function projectReducer(
+  state: ProjectState,
+  transaction: Transaction,
+): ProjectState {
+  assertValidTransaction(transaction);
+
+  let nextState = state;
+
+  for (const command of transaction.commands) {
+    try {
+      nextState = applyCommand(nextState, command);
+    } catch (error: unknown) {
+      if (error instanceof DomainValidationError) {
+        throw new CommandRejectedError(
+          "INVALID_COMMAND",
+          error.message,
+          command.type,
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  if (nextState === state) {
+    return state;
+  }
+
+  return {
+    ...nextState,
+    revision: state.revision + 1,
+  };
+}
+
+function applyCommand(
+  state: ProjectState,
+  command: PianoRollCommand,
+): ProjectState {
+  switch (command.type) {
+    case "AddClip":
+      return applyAddClip(state, command);
+    case "DeleteClip":
+      return applyDeleteClip(state, command);
+    case "ReorderClips":
+      return applyReorderClips(state, command);
+    case "RenameClip":
+      return applyRenameClip(state, command);
+    case "AddProjectInstrument":
+      return applyAddProjectInstrument(state, command);
+    case "UpdateProjectInstrument":
+      return applyUpdateProjectInstrument(state, command);
+    case "DeleteProjectInstrument":
+      return applyDeleteProjectInstrument(state, command);
+    case "ReorderProjectInstruments":
+      return applyReorderProjectInstruments(state, command);
+    case "UpdateProjectTitle":
+      return applyUpdateProjectTitle(state, command);
+    case "UpdateMasterGain":
+      return applyUpdateMasterGain(state, command);
+    case "SetMasterMuted":
+      return applySetMasterMuted(state, command);
+    case "UpdateMasterTuning":
+      return applyUpdateMasterTuning(state, command);
+    case "UpdateTempo":
+      return applyUpdateTempo(state, command);
+    default:
+      return applyActiveClipCommand(state, command);
+  }
+}
+
+type ActiveClipCommand = Exclude<
+  PianoRollCommand,
+  | AddClipCommand
+  | DeleteClipCommand
+  | ReorderClipsCommand
+  | RenameClipCommand
+  | AddProjectInstrumentCommand
+  | UpdateProjectInstrumentCommand
+  | DeleteProjectInstrumentCommand
+  | ReorderProjectInstrumentsCommand
+  | UpdateProjectTitleCommand
+  | UpdateMasterGainCommand
+  | SetMasterMutedCommand
+  | UpdateMasterTuningCommand
+  | UpdateTempoCommand
+>;
+
+function applyActiveClipCommand(
+  state: ProjectState,
+  command: ActiveClipCommand,
+): ProjectState {
+  const clip = state.clipsById[command.clipId];
+
+  if (clip === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.clipId}" does not exist.`,
+      command.type,
+    );
+  }
+
+  const context: ActiveClipProjectState = {
+    projectInstrumentsById: state.projectInstrumentsById,
+    instrumentOrder: state.instrumentOrder,
+    clock: state.clock,
+    timeline: clip.timeline,
+    tracksByInstrumentId: clip.tracksByInstrumentId,
+    instrumentStatesById: clip.instrumentStatesById,
+    transportSettings: clip.transportSettings,
+  };
+  let nextContext: ActiveClipProjectState;
+
+  switch (command.type) {
+    case "UpdateClipInstrumentState":
+      nextContext = applyUpdateClipInstrumentState(context, command);
+      break;
+    case "InsertMeasure":
+      nextContext = applyInsertMeasure(context, command);
+      break;
+    case "RemoveMeasure":
+      nextContext = applyRemoveMeasure(context, command);
+      break;
+    case "AppendMeasures":
+      nextContext = applyAppendMeasures(context, command);
+      break;
+    case "AddNotes":
+      nextContext = applyAddNotes(context, command);
+      break;
+    case "MoveNotes":
+      nextContext = applyMoveNotes(context, command);
+      break;
+    case "RepositionNotes":
+      nextContext = applyRepositionNotes(context, command);
+      break;
+    case "ResizeNotes":
+      nextContext = applyResizeNotes(context, command);
+      break;
+    case "TransformNotes":
+      nextContext = applyTransformNotes(context, command);
+      break;
+    case "SliceNotes":
+      nextContext = applySliceNotes(context, command);
+      break;
+    case "DeleteNotes":
+      nextContext = applyDeleteNotes(context, command);
+      break;
+    case "SetNotesEnabled":
+      nextContext = applySetNotesEnabled(context, command);
+      break;
+    case "UpdateTimeSignature":
+      nextContext = applyUpdateTimeSignature(context, command);
+      break;
+    case "UpdateLoop":
+      nextContext = applyUpdateLoop(context, command);
+      break;
+    case "SetLoopEnabled":
+      nextContext = applySetLoopEnabled(context, command);
+      break;
+    default:
+      return assertNever(command);
+  }
+
+  if (nextContext === context) {
+    return state;
+  }
+
+  const nextClip: Clip = {
+    ...clip,
+    timeline: nextContext.timeline,
+    tracksByInstrumentId: nextContext.tracksByInstrumentId,
+    instrumentStatesById: nextContext.instrumentStatesById,
+    transportSettings: nextContext.transportSettings,
+  };
+
+  return {
+    ...state,
+    clipsById: {
+      ...state.clipsById,
+      [clip.id]: nextClip,
+    },
+  };
+}

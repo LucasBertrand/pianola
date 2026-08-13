@@ -21,7 +21,7 @@ import {
   LookaheadScheduler,
 } from "../../audio/lookahead-scheduler";
 import {
-  compilePlaybackSnapshot,
+  compilePlaybackPlan,
 } from "../../audio/playback-snapshot";
 import {
   createClipPlaybackSource,
@@ -77,7 +77,7 @@ export function useAudioPlayback(
     try {
       const state = projectStore.getState();
       const activeClip = getActiveClip(state);
-      const snapshot = compilePlaybackSnapshot(
+      const snapshot = compilePlaybackPlan(
         state,
         createClipPlaybackSource(activeClip),
       );
@@ -126,10 +126,10 @@ export function useAudioPlayback(
 
         try {
           const clipChanged =
-            state.activeClipId !== previousState.activeClipId;
+            state.workspace.activeClipId !== previousState.workspace.activeClipId;
 
           scheduler.replacePlaybackState(
-            compilePlaybackSnapshot(
+            compilePlaybackPlan(
               state,
               createClipPlaybackSource(activeClip),
             ),
@@ -267,8 +267,9 @@ function didPlaybackStateChange(
   const previousActiveClip = getActiveClip(previousState);
 
   if (
-    state.activeClipId !== previousState.activeClipId
-    || activeClip.measureCount !== previousActiveClip.measureCount
+    state.workspace.activeClipId !== previousState.workspace.activeClipId
+    || state.clock !== previousState.clock
+    || activeClip.timeline !== previousActiveClip.timeline
     || activeClip.tracksByInstrumentId !== previousActiveClip.tracksByInstrumentId
     || activeClip.transportSettings !== previousActiveClip.transportSettings
     || state.instrumentPresetsById

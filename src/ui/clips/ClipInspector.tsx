@@ -1,5 +1,7 @@
 import React from "react";
 import {
+  getClipMeasureCount,
+  getClipTimeSignature,
   MAXIMUM_CLIP_NAME_LENGTH,
   MAXIMUM_PROJECT_CLIP_COUNT,
   type ClipId,
@@ -42,12 +44,13 @@ export function ClipInspector({
           if (clip === undefined) {
             return null;
           }
+          const timeSignature = getClipTimeSignature(clip);
 
           return (
             <article
               className={
                 `project-instrument-card clip-card${
-                  clip.id === projectState.activeClipId
+                  clip.id === projectState.workspace.activeClipId
                     ? " is-selected"
                     : ""
                 }`
@@ -95,8 +98,8 @@ export function ClipInspector({
                   onRename={(name) => onRename(clip.id, name)}
                 />
                 <small>
-                  {clip.measureCount} measures {clip.transportSettings.timeSignature.numerator}/
-                  {clip.transportSettings.timeSignature.denominator}
+                  {getClipMeasureCount(projectState.clock, clip)} measures {timeSignature.numerator}/
+                  {timeSignature.denominator}
                 </small>
               </div>
               <button

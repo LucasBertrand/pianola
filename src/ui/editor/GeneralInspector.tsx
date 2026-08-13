@@ -1,7 +1,7 @@
 import React from "react";
 import type {
   UpdateProjectInstrumentChanges,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import {
   getActiveClip,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,

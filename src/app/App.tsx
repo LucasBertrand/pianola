@@ -22,7 +22,7 @@ import type {
 } from "../use-cases/notes/note-collision-resolution";
 import {
   type PianoRollCommand,
-} from "../domain/commands";
+} from "../domain/commands/command-types";
 import type {
   ClipId,
   PresetId,
@@ -33,7 +33,7 @@ import type {
 import {
   getActiveClip,
   getClipDurationTicks,
-  getActiveClipDurationTicks,
+  getClipMeasureCount,
 } from "../domain/model";
 import {
   createNoteCollisionResolutionPlan,
@@ -44,10 +44,10 @@ import type {
 } from "../editor/geometry/converter";
 import {
   type MidiImportAnalysis,
-} from "../project-io/midi/midi-importer";
+} from "../project-io/midi/midi-import-types";
 import {
   type NativeClipEditorState,
-} from "../project-io/native/native-project-file";
+} from "../project-io/native/native-project-schema";
 import {
   ApplicationDialogOverlay,
 } from "../ui/dialogs/ApplicationDialogOverlay";
@@ -191,7 +191,7 @@ export function App(): React.JSX.Element {
     useState<InstrumentId | null>(null);
   const activeClip = getActiveClip(projectState);
 
-  const totalTicks = getActiveClipDurationTicks(projectState);
+  const totalTicks = getClipDurationTicks(activeClip);
   const updatePitchSnapSettings = useCallback(
     (changes: Partial<PitchSnapSettings>): void => {
       const nextSettings: PitchSnapSettings = {
@@ -305,7 +305,7 @@ export function App(): React.JSX.Element {
 
   useEffect(
     () => runtime.projectStore.subscribe((state, previousState) => {
-      if (state.activeClipId !== previousState.activeClipId) {
+      if (state.workspace.activeClipId !== previousState.workspace.activeClipId) {
         const controller = pianoRollControllerRef.current;
 
         controller?.cancel();
@@ -386,6 +386,7 @@ export function App(): React.JSX.Element {
         const timestamp = Date.now();
         const plan = createNoteCollisionResolutionPlan(
           runtime.projectStore.getState(),
+          request.clipId,
           {
             originalNotes: request.originalNotes,
             proposedNotes: request.proposedNotes,
@@ -679,6 +680,7 @@ export function App(): React.JSX.Element {
       }
 
       return {
+        activeClipId: state.workspace.activeClipId,
         selectedInstrumentId,
         selectionMode,
         noteColorMode,
@@ -707,7 +709,7 @@ export function App(): React.JSX.Element {
       setPitchPreviewEnabled(editorState.pitchPreviewEnabled);
       setSelectedInstrumentId(editorState.selectedInstrumentId);
       const activeEditorState =
-        editorState.clipStatesById[nextProject.activeClipId];
+        editorState.clipStatesById[nextProject.workspace.activeClipId];
 
       if (activeEditorState !== undefined) {
         setPitchSnapSettings(activeEditorState.pitchSnapSettings);
@@ -784,7 +786,10 @@ export function App(): React.JSX.Element {
             inspectorSection={generalInspectorSection}
             canUndo={runtime.projectStore.canUndo()}
             canRedo={runtime.projectStore.canRedo()}
-            measureCount={activeClip.measureCount}
+            measureCount={getClipMeasureCount(
+              projectState.clock,
+              activeClip,
+            )}
             selectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}

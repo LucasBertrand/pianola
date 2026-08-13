@@ -1,5 +1,6 @@
 import type {
   AudioEngineConfig,
+  ClipId,
   NoteId,
   OscillatorWaveform,
   Tick,
@@ -9,6 +10,7 @@ import type {
 } from "../domain/model";
 
 export interface PackedInstrumentEvents {
+  readonly sourceId: ClipId;
   readonly instrumentId: InstrumentId;
   readonly noteIds: readonly NoteId[];
   readonly pitches: Uint8Array;
@@ -64,7 +66,8 @@ export interface SubtractivePlaybackInstrumentSnapshot
 export type PlaybackInstrumentSnapshot =
   SubtractivePlaybackInstrumentSnapshot;
 
-export interface PlaybackSnapshot {
+export interface PlaybackPlan {
+  readonly sourceId: ClipId;
   readonly projectRevision: number;
   readonly ppqn: number;
   readonly durationTicks: Tick;
@@ -74,6 +77,9 @@ export interface PlaybackSnapshot {
   readonly tempoMap: TempoMapSnapshot;
   readonly instruments: readonly PlaybackInstrumentSnapshot[];
 }
+
+/** Runtime name retained for scheduler snapshots compiled from a pure plan. */
+export type PlaybackSnapshot = PlaybackPlan;
 
 export type PlaybackStatus = "stopped" | "playing" | "paused";
 
@@ -102,7 +108,12 @@ export interface AudioEnginePort {
   dispose(): Promise<void>;
 }
 
-export interface AudioTransportController {
+export interface InstrumentPreviewPort {
+  auditionPitch(instrumentId: InstrumentId, pitch: number): Promise<void>;
+  previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
+}
+
+export interface AudioTransportController extends InstrumentPreviewPort {
   readonly status: PlaybackStatus;
   getPositionTick(): Tick;
   replacePlaybackState(
@@ -113,8 +124,6 @@ export interface AudioTransportController {
   pause(): void;
   stop(): void;
   seek(tick: Tick): void;
-  auditionPitch(instrumentId: InstrumentId, pitch: number): Promise<void>;
-  previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
   previewMasterGain(gain: number): void;
   pulse(): void;
   dispose(): Promise<void>;

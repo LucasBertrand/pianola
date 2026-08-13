@@ -11,10 +11,12 @@ import {
 } from "../../music/pitch-snap";
 import {
   NativeProjectFileError,
-  type NativeEditorState,
-  type NativeClipEditorState,
-  type NativeProjectFileMetadata,
-} from "../../project-io/native/native-project-file";
+} from "../../project-io/native/native-project-error";
+import type {
+  NativeEditorState,
+  NativeClipEditorState,
+  NativeProjectFileMetadata,
+} from "../../project-io/native/native-project-schema";
 import {
   DEFAULT_GRID_SETTINGS,
 } from "../../editor/model/grid-settings";
@@ -63,6 +65,7 @@ export function createDefaultNativeEditorState(
   }
 
   return {
+    activeClipId: projectState.workspace.activeClipId,
     selectedInstrumentId: projectState.instrumentOrder[0] ?? null,
     selectionMode: "replace",
     noteColorMode: EDITOR_CONSTANTS.defaultNoteColorMode,

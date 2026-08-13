@@ -2,8 +2,9 @@ import type {
   NoteDurationChange,
   NotePositionChange,
   PianoRollCommand,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import type {
+  ClipId,
   Note,
   NoteId,
   InstrumentId,
@@ -13,6 +14,7 @@ export type NoteResizeEdge = "start" | "end";
 
 /** Creates one add command per affected instrument. */
 export function buildAddNoteCommands(
+  clipId: ClipId,
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
   const notesByInstrument = groupNotesByInstrument(notes);
@@ -21,6 +23,7 @@ export function buildAddNoteCommands(
   for (const [instrumentId, instrumentNotes] of notesByInstrument) {
     commands.push({
       type: "AddNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       notes: instrumentNotes,
     });
@@ -31,6 +34,7 @@ export function buildAddNoteCommands(
 
 /** Creates one delete command per affected instrument. */
 export function buildDeleteNoteCommands(
+  clipId: ClipId,
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
   const noteIdsByInstrument = new Map<InstrumentId, NoteId[]>();
@@ -51,6 +55,7 @@ export function buildDeleteNoteCommands(
   for (const [instrumentId, noteIds] of noteIdsByInstrument) {
     commands.push({
       type: "DeleteNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       noteIds,
     });
@@ -61,6 +66,7 @@ export function buildDeleteNoteCommands(
 
 /** Creates explicit enabled-state updates grouped by instrument. */
 export function buildSetNotesEnabledCommands(
+  clipId: ClipId,
   notes: readonly Note[],
   enabled: boolean,
 ): readonly PianoRollCommand[] {
@@ -76,6 +82,7 @@ export function buildSetNotesEnabledCommands(
 
     commands.push({
       type: "SetNotesEnabled",
+      clipId,
       trackInstrumentId: instrumentId,
       noteIds,
       enabled,
@@ -87,6 +94,7 @@ export function buildSetNotesEnabledCommands(
 
 /** Creates atomic absolute-position updates grouped by instrument. */
 export function buildRepositionNoteCommands(
+  clipId: ClipId,
   notes: readonly Note[],
 ): readonly PianoRollCommand[] {
   const notesByInstrument = groupNotesByInstrument(notes);
@@ -105,6 +113,7 @@ export function buildRepositionNoteCommands(
 
     commands.push({
       type: "RepositionNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       changes,
     });
@@ -115,6 +124,7 @@ export function buildRepositionNoteCommands(
 
 /** Creates resize commands from the original notes and a shared delta. */
 export function buildResizeNoteCommands(
+  clipId: ClipId,
   notes: readonly Note[],
   deltaTicks: number,
   edge: NoteResizeEdge,
@@ -141,6 +151,7 @@ export function buildResizeNoteCommands(
 
     commands.push({
       type: "ResizeNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       changes,
     });

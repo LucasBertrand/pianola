@@ -4,7 +4,7 @@ import {
   test,
 } from "vitest";
 import {
-  compilePlaybackSnapshot,
+  compilePlaybackPlan,
 } from "../../src/audio/playback-snapshot";
 import {
   createClipPlaybackSource,
@@ -17,8 +17,8 @@ import {
 } from "../../src/app/create-app-runtime";
 import type {
   PianoRollCommand,
-  Transaction,
-} from "../../src/domain/commands";
+} from "../../src/domain/commands/command-types";
+import type { Transaction } from "../../src/domain/commands/transaction";
 import {
   createNoteCollisionResolutionPlan,
 } from "../../src/domain/note-collision";
@@ -56,11 +56,13 @@ describe("P0 critical behavior witnesses", () => {
 
     dispatch(store, {
       type: "AddNotes",
+      clipId: TEST_CLIP_ID,
       trackInstrumentId: TEST_INSTRUMENT_ID,
       notes: [drawnNote],
     }, 1);
     dispatch(store, {
       type: "RepositionNotes",
+      clipId: TEST_CLIP_ID,
       trackInstrumentId: TEST_INSTRUMENT_ID,
       changes: [{
         noteId: drawnNote.id,
@@ -85,6 +87,7 @@ describe("P0 critical behavior witnesses", () => {
     });
     const plan = createNoteCollisionResolutionPlan(
       store.getState(),
+      TEST_CLIP_ID,
       {
         originalNotes: [],
         proposedNotes: [collisionProposal],
@@ -104,7 +107,7 @@ describe("P0 critical behavior witnesses", () => {
 
   test("launches playback with the expected deterministic audio plan", async () => {
     const project = createCriticalBehaviorProject();
-    const snapshot = compilePlaybackSnapshot(
+    const snapshot = compilePlaybackPlan(
       project,
       createClipPlaybackSource(getActiveClip(project)),
     );
@@ -160,12 +163,12 @@ describe("P0 critical behavior witnesses", () => {
       return;
     }
 
-    const snapshot = compilePlaybackSnapshot(
+    const snapshot = compilePlaybackPlan(
       project,
       createClipPlaybackSource(secondClip),
     );
 
-    expect(project.activeClipId).toBe(TEST_CLIP_ID);
+    expect(project.workspace.activeClipId).toBe(TEST_CLIP_ID);
     expect(snapshot.durationTicks).toBe(7_680);
     expect(snapshot.instruments[0]?.noteIds).toEqual([]);
   });
@@ -174,23 +177,14 @@ describe("P0 critical behavior witnesses", () => {
     const runtime = createEditorRuntime(createCriticalBehaviorProject());
 
     runtime.playheadTick.set(640);
-    runtime.editorCommands.dispatch(
-      [{ type: "ActivateClip", clipId: SECOND_TEST_CLIP_ID }],
-      "Select second clip",
-    );
+    runtime.editorCommands.selectClip(SECOND_TEST_CLIP_ID);
     runtime.playheadTick.set(1_280);
-    runtime.editorCommands.dispatch(
-      [{ type: "ActivateClip", clipId: TEST_CLIP_ID }],
-      "Select first clip",
-    );
+    runtime.editorCommands.selectClip(TEST_CLIP_ID);
 
     expect(runtime.playheadTick.get()).toBe(640);
     expect(runtime.projectStore.canUndo()).toBe(false);
 
-    runtime.editorCommands.dispatch(
-      [{ type: "ActivateClip", clipId: SECOND_TEST_CLIP_ID }],
-      "Select second clip",
-    );
+    runtime.editorCommands.selectClip(SECOND_TEST_CLIP_ID);
 
     expect(runtime.playheadTick.get()).toBe(1_280);
     expect(runtime.projectStore.canUndo()).toBe(false);

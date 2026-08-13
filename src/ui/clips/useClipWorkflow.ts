@@ -7,6 +7,7 @@ import type {
 } from "../../use-cases/commands/editor-command-service";
 import {
   createDefaultTransportState,
+  createDefaultClipTimeline,
   DEFAULT_MEASURE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
   MAXIMUM_CLIP_NAME_LENGTH,
@@ -55,17 +56,14 @@ export function useClipWorkflow({
     const state = commands.getState();
 
     if (
-      clipId === state.activeClipId
+      clipId === state.workspace.activeClipId
       || state.clipsById[clipId] === undefined
     ) {
       return;
     }
 
     beginClipChange();
-    commands.dispatch(
-      [{ type: "ActivateClip", clipId }],
-      "Select clip",
-    );
+    commands.selectClip(clipId);
   }, [beginClipChange, commands]);
 
   const add = useCallback((): void => {
@@ -78,12 +76,14 @@ export function useClipWorkflow({
     clipSequenceRef.current += 1;
     const clip = createEmptyClip(
       state.instrumentOrder,
+      state.clock,
       state.clipOrder.length,
       clipSequenceRef.current,
     );
 
     beginClipChange();
     commands.dispatch([{ type: "AddClip", clip }], "Add clip");
+    commands.selectClip(clip.id);
   }, [beginClipChange, commands]);
 
   const reorder = useCallback((
@@ -140,8 +140,16 @@ export function useClipWorkflow({
       transportSettings: {
         ...sourceClip.transportSettings,
         loop: { ...sourceClip.transportSettings.loop },
-        timeSignature: {
-          ...sourceClip.transportSettings.timeSignature,
+      },
+      timeline: {
+        ...sourceClip.timeline,
+        meterMap: {
+          segments: sourceClip.timeline.meterMap.segments.map(
+            (segment) => ({
+              ...segment,
+              timeSignature: { ...segment.timeSignature },
+            }),
+          ),
         },
       },
     };
@@ -158,6 +166,7 @@ export function useClipWorkflow({
       ],
       "Duplicate clip",
     );
+    commands.selectClip(duplicatedClipId);
   }, [beginClipChange, commands, duplicateEditorState]);
 
   const remove = useCallback((clipId: ClipId): void => {
@@ -174,7 +183,7 @@ export function useClipWorkflow({
       confirmLabel: "Delete",
       tone: "danger",
       onConfirm(): void {
-        if (commands.getState().activeClipId === clipId) {
+        if (commands.getState().workspace.activeClipId === clipId) {
           beginClipChange();
         }
 
@@ -226,6 +235,7 @@ function createCopyName(name: string, maximumLength: number): string {
 
 function createEmptyClip(
   instrumentOrder: readonly InstrumentId[],
+  clock: Parameters<typeof createDefaultClipTimeline>[0],
   clipIndex: number,
   sequence: number,
 ): Clip {
@@ -243,7 +253,7 @@ function createEmptyClip(
   return {
     id: createClipId(sequence),
     name: `Clip ${clipIndex + 1}`,
-    measureCount: DEFAULT_MEASURE_COUNT,
+    timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
     instrumentStatesById,
     transportSettings: createDefaultTransportState(),

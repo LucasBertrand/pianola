@@ -4,6 +4,8 @@ import {
 } from "../../src/domain/instrument-presets";
 import {
   createDefaultMasterBusState,
+  createDefaultClipTimeline,
+  createDefaultProjectClock,
   createDefaultTransportState,
   PROJECT_SCHEMA_VERSION,
   type Clip,
@@ -96,13 +98,14 @@ export function createTestProject({
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision,
     title,
+    clock: createDefaultProjectClock(),
     projectInstrumentsById,
     instrumentOrder: [...instrumentIds],
     instrumentPresetsById: presetLibrary.instrumentPresetsById,
     instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById,
     clipOrder: clips.map((clip) => clip.id),
-    activeClipId,
+    workspace: { activeClipId },
     masterBus: createDefaultMasterBusState(),
   };
 }
@@ -140,7 +143,10 @@ function createTestClip(
   return {
     id,
     name,
-    measureCount,
+    timeline: createDefaultClipTimeline(
+      createDefaultProjectClock(),
+      measureCount,
+    ),
     tracksByInstrumentId,
     instrumentStatesById,
     transportSettings: {

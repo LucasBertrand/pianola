@@ -26,10 +26,10 @@ import {
 } from "../../use-cases/selection/selection-edit-plans";
 import {
   CommandRejectedError,
-} from "../../domain/commands";
+} from "../../domain/commands/command-errors";
 import {
   getActiveClip,
-  getActiveClipDurationTicks,
+  getClipMeasureCount,
   type Note,
   type NoteId,
   type InstrumentId,
@@ -43,9 +43,11 @@ import type {
 } from "../../domain/project-store";
 import {
   SelectionTransformationError,
-  transformNoteSelection,
   type SelectionTransformationKind,
 } from "../../domain/selection-transformations";
+import {
+  createTargetedNoteTransformationPlan,
+} from "../../domain/targeted-note-transformations";
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
@@ -172,7 +174,10 @@ export function useSelectionWorkflow({
 
     if (
       commands.dispatch(
-        buildDeleteNoteCommands(clipboard.notes),
+        buildDeleteNoteCommands(
+          getActiveClip(commands.getState()).id,
+          clipboard.notes,
+        ),
         "Cut notes",
       ) !== null
     ) {
@@ -190,7 +195,10 @@ export function useSelectionWorkflow({
 
     if (
       commands.dispatch(
-        buildDeleteNoteCommands(notes),
+        buildDeleteNoteCommands(
+          getActiveClip(commands.getState()).id,
+          notes,
+        ),
         "Delete notes",
       ) !== null
     ) {
@@ -215,8 +223,13 @@ export function useSelectionWorkflow({
       }
     }
 
+    const clipId = getActiveClip(commands.getState()).id;
     const nextState = commands.dispatch(
-      buildSetNotesEnabledCommands(notes, enableNotes),
+      buildSetNotesEnabledCommands(
+        clipId,
+        notes,
+        enableNotes,
+      ),
       enableNotes
         ? "Enable selected notes"
         : "Disable selected notes",
@@ -229,7 +242,9 @@ export function useSelectionWorkflow({
         noteIds.push(note.id);
       }
 
-      controller.replaceSelection(findNotesByIds(nextState, noteIds));
+      controller.replaceSelection(
+        findNotesByIds(nextState, clipId, noteIds),
+      );
     }
   }, [commands, getController]);
 
@@ -266,24 +281,37 @@ export function useSelectionWorkflow({
       }
 
       try {
-        const proposedNotes = transformNoteSelection(
+        const proposedNotes = createTargetedNoteTransformationPlan(
+          {
+            sourceKind: "clip",
+            sourceId: activeClip.id,
+            durationTicks: activeClip.timeline.durationTicks,
+          },
           originalNotes,
           kind,
-          getActiveClipDurationTicks(state),
-        );
+        ).notes;
         const intent = {
           originalNotes,
           proposedNotes,
         } as const;
 
-        if (hasNoteEditCollisions(state, intent)) {
+        if (hasNoteEditCollisions(state, activeClip.id, intent)) {
           resolveCollision({
+            clipId: activeClip.id,
             label,
-            collisionCount: countNoteEditCollisions(state, intent),
+            collisionCount: countNoteEditCollisions(
+              state,
+              activeClip.id,
+              intent,
+            ),
             ...intent,
             onResolved(nextState, selectedNoteIds): void {
               controller.replaceSelection(
-                findNotesByIds(nextState, selectedNoteIds),
+                findNotesByIds(
+                  nextState,
+                  activeClip.id,
+                  selectedNoteIds,
+                ),
               );
             },
           });
@@ -291,7 +319,7 @@ export function useSelectionWorkflow({
         }
 
         const nextState = commands.dispatch(
-          buildTransformCommandsForNotes(proposedNotes),
+          buildTransformCommandsForNotes(activeClip.id, proposedNotes),
           label,
         );
 
@@ -301,7 +329,9 @@ export function useSelectionWorkflow({
           for (const note of proposedNotes) {
             noteIds.push(note.id);
           }
-          controller.replaceSelection(findNotesByIds(nextState, noteIds));
+          controller.replaceSelection(
+            findNotesByIds(nextState, activeClip.id, noteIds),
+          );
         }
       } catch (error: unknown) {
         alert(
@@ -325,7 +355,9 @@ export function useSelectionWorkflow({
       return;
     }
 
+    const clipId = getActiveClip(commands.getState()).id;
     const plan = buildSliceCommandsForNotes(
+      clipId,
       selectedNotes,
       Math.round(getPlayheadTick()),
       Date.now(),
@@ -348,7 +380,7 @@ export function useSelectionWorkflow({
 
       if (nextState !== null) {
         controller.replaceSelection(
-          findNotesByIds(nextState, plan.resultingNoteIds),
+          findNotesByIds(nextState, clipId, plan.resultingNoteIds),
         );
       }
     } catch (error: unknown) {
@@ -382,16 +414,25 @@ export function useSelectionWorkflow({
     const state = commands.getState();
     const activeClip = getActiveClip(state);
     const requiredMeasureCount =
-      getRequiredMeasureCountForNotes(state, pastedNotes);
+      getRequiredMeasureCountForNotes(
+        state,
+        activeClip.id,
+        pastedNotes,
+      );
+    const currentMeasureCount = getClipMeasureCount(
+      state.clock,
+      activeClip,
+    );
     const timelineCommands =
-      requiredMeasureCount > activeClip.measureCount
+      requiredMeasureCount > currentMeasureCount
         ? [{
             type: "AppendMeasures" as const,
-            count: requiredMeasureCount - activeClip.measureCount,
+            clipId: activeClip.id,
+            count: requiredMeasureCount - currentMeasureCount,
           }]
         : [];
 
-    if (!canPlacePastedNotes(state, pastedNotes)) {
+    if (!canPlacePastedNotes(state, activeClip.id, pastedNotes)) {
       alert(
         "Paste unavailable",
         "Paste is unavailable because it exceeds the clip limit or targets an unavailable or locked instrument.",
@@ -404,15 +445,21 @@ export function useSelectionWorkflow({
       proposedNotes: pastedNotes,
     } as const;
 
-    if (hasNoteEditCollisions(state, intent)) {
+    if (hasNoteEditCollisions(state, activeClip.id, intent)) {
       resolveCollision({
+        clipId: activeClip.id,
         label: "Paste notes",
-        collisionCount: countNoteEditCollisions(state, intent),
+        collisionCount: countNoteEditCollisions(
+          state,
+          activeClip.id,
+          intent,
+        ),
         ...intent,
         prefixCommands: timelineCommands,
         onResolved(nextState, selectedNoteIds): void {
           const resolvedNotes = findNotesByIds(
             nextState,
+            activeClip.id,
             selectedNoteIds,
           );
 
@@ -426,7 +473,7 @@ export function useSelectionWorkflow({
     const nextState = commands.dispatch(
       [
         ...timelineCommands,
-        ...buildAddNoteCommands(pastedNotes),
+        ...buildAddNoteCommands(activeClip.id, pastedNotes),
       ],
       "Paste notes",
     );
@@ -471,8 +518,11 @@ export function useSelectionWorkflow({
     }
 
     const selectedNotes = controller.getSelectedNotes();
+    const state = commands.getState();
+    const activeClip = getActiveClip(state);
     const transferPlan = createInstrumentTransferPlan(
-      commands.getState(),
+      state,
+      activeClip.id,
       selectedNotes,
       targetInstrumentId,
     );
@@ -490,9 +540,7 @@ export function useSelectionWorkflow({
       originalNotes: transferPlan.originalNotes,
       proposedNotes: transferPlan.proposedNotes,
     };
-    const state = commands.getState();
-
-    if (hasNoteEditCollisions(state, intent)) {
+    if (hasNoteEditCollisions(state, activeClip.id, intent)) {
       const retainedTargetNoteIds: NoteId[] = [];
 
       for (const note of selectedNotes) {
@@ -502,13 +550,19 @@ export function useSelectionWorkflow({
       }
 
       resolveCollision({
+        clipId: activeClip.id,
         label: "Transfer notes to instrument",
-        collisionCount: countNoteEditCollisions(state, intent),
+        collisionCount: countNoteEditCollisions(
+          state,
+          activeClip.id,
+          intent,
+        ),
         ...intent,
         onResolved(nextState, selectedNoteIds): void {
           controller.replaceSelection(
             findNotesByIds(
               nextState,
+              activeClip.id,
               selectedNoteIds.concat(retainedTargetNoteIds),
             ),
           );

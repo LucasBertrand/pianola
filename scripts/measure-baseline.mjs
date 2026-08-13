@@ -35,9 +35,13 @@ try {
   } = await vite.ssrLoadModule("/src/app/demo-project.ts");
   const {
     serializeNativeProjectFile,
+  } = await vite.ssrLoadModule(
+    "/src/project-io/native/serialize-native-project.ts",
+  );
+  const {
     parseNativeProjectFile,
   } = await vite.ssrLoadModule(
-    "/src/project-io/native/native-project-file.ts",
+    "/src/project-io/native/parse-native-project.ts",
   );
   const {
     ProjectStore,

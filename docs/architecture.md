@@ -4,6 +4,8 @@ Ce document décrit l’architecture réellement présente après le chantier P1
 Le [README](../README.md) couvre l’installation et l’usage ; la
 [feuille de route](roadmap.md) ordonne les étapes suivantes. La propriété des
 états est détaillée dans [state-ownership.md](state-ownership.md).
+La tranche actuelle de découpage est suivie dans
+[`p2-migration.md`](p2-migration.md).
 
 Dernière revue complète : 13 août 2026.
 
@@ -53,8 +55,9 @@ Aucun module interne ne doit importer cette couche de composition.
 
 ### `src/domain`
 
-Le domaine possède `ProjectState`, les commandes, le reducer, les invariants,
-les collisions, les transformations et `ProjectStore`. Les modifications
+Le domaine possède `ProjectState`, les commandes par famille, le reducer racine,
+les validations par propriétaire, les collisions, les transformations et
+`ProjectStore`. Les modifications
 durables passent par `EditorCommandPort`, une `Transaction`, puis le reducer.
 
 Le mixage et la configuration sonore appartiennent à `ProjectInstrument`. Les
@@ -110,8 +113,8 @@ lit des `RenderSignal` depuis `requestAnimationFrame` et réutilise ses buffers.
 ### `src/audio`
 
 ```text
-ProjectState + PlaybackSource explicite
-  → compilePlaybackSnapshot
+ProjectDocument + PlaybackSource explicite
+  → compilePlaybackPlan
   → LookaheadScheduler
   → WebAudioEngine
   → InstrumentRenderer enregistré par kind
@@ -125,13 +128,16 @@ snapshot et enregistre un renderer sans modifier l’algorithme de scheduling.
 
 ### `src/project-io`
 
-`project-io/native/native-project-file.ts` parse et sérialise le format
-`.pianola` v1 avec validation bornée. Les contrats d’éditeur persistés viennent
-de `editor/model`, pas de l’UI.
+`project-io/native` sépare schéma JSON v1, version, métadonnées, sérialiseur,
+parseur et lecteurs spécialisés. Le schéma stocké est un arbre JSON distinct de
+`ProjectState`; les contrats d’éditeur persistés viennent de `editor/model`, pas
+de l’UI. Une future migration `v1 → v2` s’insérera après reconnaissance de la
+version et avant la construction du domaine.
 
-`project-io/midi` sépare le codec SMF, sa validation, l’import et l’export.
-L’import ne dépend plus de la palette de rendu. L’export reçoit une
-`MidiExportProjection` musicale neutre construite dans `use-cases` ; il ne
+`project-io/midi` sépare le codec SMF, sa validation, l’analyse d’import, le
+temps, les collisions, les avertissements, la fabrique de projet et l’export.
+L’import ne dépend plus de la palette de rendu. L’export reçoit un
+`MidiExportPlan` musical neutre construit dans `use-cases` ; il ne
 connaît ni store ni écran actif.
 
 ### `src/config`
@@ -175,14 +181,15 @@ une seule fois au terme du geste validé.
 ### Lecture
 
 Le hook de transport choisit explicitement le clip, crée un
-`ClipPlaybackSource`, compile un snapshot immuable puis le donne au scheduler.
+`ClipPlaybackSource`, compile un `PlaybackPlan` immuable puis le donne au
+scheduler sous forme de snapshot.
 Le scheduler manipule une horloge de lecture ; les occurrences audio et voix
 sont temporaires et ne rejoignent jamais le document.
 
 ### Sauvegarde et échange
 
 ```text
-Save  : ProjectState + NativeEditorState → validation → JSON → Blob
+Save  : ProjectDocument + WorkspaceState + NativeEditorState → validation → JSON → Blob
 Load  : File → JSON inconnu → parse borné → remplacement du runtime
 MIDI  : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ```
@@ -211,5 +218,5 @@ npm run verify
 ```
 
 Elle exécute le contrôle des frontières, TypeScript strict, le build Vite et
-82 scénarios Vitest. Les gestes DOM, Canvas, le responsive et Web Audio réel
+95 scénarios Vitest. Les gestes DOM, Canvas, le responsive et Web Audio réel
 restent complétés par la vérification manuelle décrite dans la roadmap.

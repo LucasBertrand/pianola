@@ -1,8 +1,9 @@
 import type {
   PianoRollCommand,
-  Transaction,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
+import type { Transaction } from "../../domain/commands/transaction";
 import type {
+  ClipId,
   ProjectState,
 } from "../../domain/model";
 import type {
@@ -19,6 +20,7 @@ export interface ProjectStateReader {
  * to React components or pointer-input adapters.
  */
 export interface EditorCommandPort extends ProjectStateReader {
+  selectClip(clipId: ClipId): ProjectState;
   dispatch(
     commands: readonly PianoRollCommand[],
     label: string,
@@ -39,6 +41,10 @@ export class EditorCommandService implements EditorCommandPort {
 
   public getState(): ProjectState {
     return this.projectStore.getState();
+  }
+
+  public selectClip(clipId: ClipId): ProjectState {
+    return this.projectStore.selectClip(clipId);
   }
 
   public dispatch(

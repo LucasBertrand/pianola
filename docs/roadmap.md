@@ -49,31 +49,25 @@ M4 se prépare dès M0 : un smoke test ou une mesure peut être ajouté avant la
 fin de P3. En revanche, aucune extension P5 ne doit être engagée pour justifier
 une abstraction encore sans consommateur.
 
-## Point de départ
+## État après P2
 
 Le socle est déjà robuste : TypeScript strict, modèle immuable, mutations par
 transactions, rendu haute fréquence hors React, codec MIDI borné et moteur audio
 séparé en snapshot, scheduler, moteur et renderer.
 
-Après P0 et P1, les coûts de maintenance principaux sont :
+Après P0, P1 et P2, les coûts de maintenance principaux sont :
 
-- 114 fichiers TypeScript pour environ 33 400 lignes, mais plusieurs fichiers
-  dépassent 800 lignes ;
-- `domain/commands.ts` approche 2 800 lignes et réunit types, dispatch et tous
-  les handlers métier ;
-- `native-project-file.ts` dépasse 2 000 lignes et réunit schéma, sérialisation,
-  parsing du projet, parsing de l’éditeur et primitives JSON ;
-- `midi-importer.ts` dépasse 1 500 lignes et combine analyse, regroupement,
-  conversion, résolution de collisions, création du projet et avertissements ;
+- les anciens monolithes du domaine, du format natif et de l’import MIDI sont
+  remplacés par des familles de modules testables ;
 - `useViewportControls.ts`, `usePianoRollEvents.ts` et
   `PianoRollLayers.tsx` dépassent chacun 1 000 lignes ;
 - `App.tsx` reste une racine de composition lourde, notamment pour les modales
   de collision et d’instrument ;
-- les frontières P1 sont matérialisées sous `use-cases`, `editor`, `project-io`
-  et les capacités de `ui`, mais les grands fichiers internes restent à découper ;
-- `activeClipId` reste physiquement dans le format natif v1 pour compatibilité,
-  même si audio et MIDI reçoivent désormais des sources explicites ;
-- les 82 tests exécutables sont désormais pilotés par Vitest avec des fixtures
+- les frontières sont matérialisées sous `use-cases`, `editor`, `project-io`
+  et les capacités de `ui`, mais les grands fichiers d’éditeur restent à découper ;
+- `activeClipId` appartient désormais à `WorkspaceState` et à la section
+  éditeur du format natif, hors de `ProjectDocument` et de son historique ;
+- les 95 tests exécutables sont désormais pilotés par Vitest avec des fixtures
   partagées ; les deux anciens scripts monolithiques ont été supprimés en P0 ;
 - les interactions DOM, Canvas, le responsive et Web Audio réel ne sont pas
   couverts automatiquement ;
@@ -81,7 +75,7 @@ Après P0 et P1, les coûts de maintenance principaux sont :
   Vite de 500 kB avant gzip.
 
 Le point de référence est vert : `npm run verify` passe avec le contrôle des
-frontières, trois configurations TypeScript, le build et 82 scénarios Vitest.
+frontières, trois configurations TypeScript, le build et 95 scénarios Vitest.
 
 ### Décision sur les sauvegardes pendant cette feuille de route
 
@@ -340,7 +334,7 @@ src/config/
 └── midi-config.ts
 ```
 
-Les bornes utilisées par `domain/validation.ts` ne doivent pas venir d’un groupe
+Les bornes utilisées par `domain/validation/` ne doivent pas venir d’un groupe
 nommé `EDITOR_CONSTANTS`. Les couleurs de projets créés par l’import MIDI ne
 doivent pas obliger le convertisseur MIDI à dépendre d’une configuration de
 rendu ; fournir une palette de création ou injecter une fabrique d’instruments.
@@ -564,6 +558,16 @@ source sans consulter `activeClipId`, et l’ajout d’un second `kind`
 d’instrument ne demande pas de modifier le scheduler générique.
 
 ## P2 — Découper les monolithes métier et fichiers
+
+**État au 13 août 2026 : terminé.** P2.1 à P2.5 sont implémentés et couverts
+par 95 scénarios Vitest. Les monolithes `commands.ts`, `validation.ts`,
+`native-project-file.ts` et `midi-importer.ts` ont été remplacés par des modules
+propriétaires. P2.5 livre la séparation `ProjectDocument`/`WorkspaceState`,
+`ProjectClock`, `ClipTimeline`/`MeterMap`, le ciblage explicite des commandes et
+collisions, `PlaybackSource`/`PlaybackPlan`, `MidiExportPlan`, le port de preview
+et les transformations ciblées pures. Le détail
+des modules, contrats et décisions est consigné dans
+[`p2-migration.md`](p2-migration.md).
 
 ### P2.1 Scinder les commandes du domaine
 

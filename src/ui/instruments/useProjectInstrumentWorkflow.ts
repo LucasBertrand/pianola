@@ -7,7 +7,7 @@ import type {
 } from "../../use-cases/commands/editor-command-service";
 import type {
   UpdateProjectInstrumentChanges,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import {
   getActiveClip,
   type ClipId,
@@ -100,7 +100,12 @@ export function useProjectInstrumentWorkflow({
     label: string,
   ): void => {
     commands.dispatch(
-      [{ type: "UpdateClipInstrumentState", instrumentId, changes }],
+      [{
+        type: "UpdateClipInstrumentState",
+        clipId: getActiveClip(commands.getState()).id,
+        instrumentId,
+        changes,
+      }],
       label,
     );
   }, [commands]);

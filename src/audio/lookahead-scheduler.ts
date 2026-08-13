@@ -879,9 +879,9 @@ function assertCompatiblePlaybackState(
   transport: TransportState,
 ): void {
   if (
-    snapshot.ppqn !== transport.ppqn
+    snapshot.ppqn <= 0
     || snapshot.tempoMap.bpms.length !== 1
-    || snapshot.tempoMap.bpms[0] !== transport.bpm
+    || (snapshot.tempoMap.bpms[0] ?? 0) <= 0
     || transport.loop.startTick < 0
     || transport.loop.endTick <= transport.loop.startTick
     || transport.loop.endTick > snapshot.durationTicks

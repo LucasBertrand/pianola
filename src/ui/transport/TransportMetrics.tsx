@@ -18,9 +18,10 @@ import {
 } from "../../config/domain-limits";
 import type {
   PianoRollCommand,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import {
   getActiveClip,
+  getClipTimeSignature,
   type TimeSignature,
 } from "../../domain/model";
 import type {
@@ -55,24 +56,23 @@ export function TransportMetrics(
     useRef<HTMLSelectElement | null>(null);
   const [meterValue, setMeterValue] = useState(() =>
     formatTimeSignatureValue(
-      getActiveClip(projectStore.getState()).transportSettings.timeSignature,
+      getClipTimeSignature(getActiveClip(projectStore.getState())),
     ));
 
   useEffect(() => {
     const updateTransportControls = (): void => {
-      const transport = getActiveClip(
-        projectStore.getState(),
-      ).transportSettings;
+      const state = projectStore.getState();
+      const activeClip = getActiveClip(state);
 
       if (
         tempoInputRef.current !== null
         && document.activeElement !== tempoInputRef.current
       ) {
-        tempoInputRef.current.value = transport.bpm.toFixed(1);
+        tempoInputRef.current.value = state.clock.tempoBpm.toFixed(1);
       }
 
       setMeterValue(
-        formatTimeSignatureValue(transport.timeSignature),
+        formatTimeSignatureValue(getClipTimeSignature(activeClip)),
       );
     };
     const updateGridControl = (): void => {
@@ -117,9 +117,7 @@ export function TransportMetrics(
 
       if (!Number.isFinite(requestedBpm)) {
         event.currentTarget.value =
-          getActiveClip(
-            projectStore.getState(),
-          ).transportSettings.bpm.toFixed(1);
+          projectStore.getState().clock.tempoBpm.toFixed(1);
         return;
       }
 
@@ -157,12 +155,13 @@ export function TransportMetrics(
       }
 
       setMeterValue(event.currentTarget.value);
+      const clipId = getActiveClip(projectStore.getState()).id;
       dispatchCommand(
-        { type: "UpdateTimeSignature", timeSignature },
+        { type: "UpdateTimeSignature", clipId, timeSignature },
         "Update meter",
       );
     },
-    [dispatchCommand],
+    [dispatchCommand, projectStore],
   );
   const handleGridChange = useCallback(
     (event: ChangeEvent<HTMLSelectElement>): void => {

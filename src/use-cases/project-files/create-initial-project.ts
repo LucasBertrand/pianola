@@ -17,6 +17,8 @@ import type {
 } from "../../domain/model";
 import {
   createDefaultMasterBusState,
+  createDefaultClipTimeline,
+  createDefaultProjectClock,
   createDefaultTransportState,
   DEFAULT_MEASURE_COUNT,
   PROJECT_SCHEMA_VERSION,
@@ -86,16 +88,17 @@ export function createInitialProjectState(
   }
 
   const clipId = "clip-main";
+  const clock = {
+    ...createDefaultProjectClock(),
+    tempoBpm: options.tempoBpm,
+  };
   const clip: Clip = {
     id: clipId,
     name: "Main Clip",
-    measureCount: DEFAULT_MEASURE_COUNT,
+    timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
     instrumentStatesById,
-    transportSettings: {
-      ...createDefaultTransportState(),
-      bpm: options.tempoBpm,
-    },
+    transportSettings: createDefaultTransportState(),
   };
   const presetLibrary = createDefaultInstrumentPresetLibrary();
 
@@ -103,13 +106,14 @@ export function createInitialProjectState(
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title: options.title,
+    clock,
     projectInstrumentsById,
     instrumentOrder,
     instrumentPresetsById: presetLibrary.instrumentPresetsById,
     instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById: { [clipId]: clip },
     clipOrder: [clipId],
-    activeClipId: clipId,
+    workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),
   };
 }

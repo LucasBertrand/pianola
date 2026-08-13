@@ -10,8 +10,11 @@ import {
 } from "../../config/editor-config";
 import {
   getActiveClip,
-  getActiveClipDurationTicks,
-  type TransportState,
+  getClipDurationTicks,
+  getClipTimeSignature,
+  type ProjectClock,
+  type ProjectState,
+  type TimeSignature,
 } from "../../domain/model";
 import type {
   ViewportState,
@@ -110,7 +113,7 @@ export function useViewportControls(
           viewport,
           dimensionsRef.current.width,
           dimensionsRef.current.height,
-          getActiveClipDurationTicks(
+          getWorkspaceDurationTicks(
             currentScene.projectStore.getState(),
           ),
         ),
@@ -130,7 +133,7 @@ export function useViewportControls(
       const scrollX = getPlaybackFollowScrollX(
         viewport,
         dimensionsRef.current.width,
-        getActiveClipDurationTicks(
+        getWorkspaceDurationTicks(
           currentScene.projectStore.getState(),
         ),
         currentScene.playheadTick.get(),
@@ -190,7 +193,7 @@ export function useViewportControls(
 
       if (currentScene !== null) {
         const viewport = currentScene.viewport.get();
-        const totalTicks = getActiveClipDurationTicks(
+        const totalTicks = getWorkspaceDurationTicks(
           currentScene.projectStore.getState(),
         );
         const nextViewport = constrainViewportToContent(
@@ -295,7 +298,7 @@ export function useViewportControls(
       }
 
       const state = currentScene.projectStore.getState();
-      const totalTicks = getActiveClipDurationTicks(state);
+      const totalTicks = getWorkspaceDurationTicks(state);
       const viewport = currentScene.viewport.get();
       const nextViewport = constrainViewportToContent(
         viewport,
@@ -355,21 +358,21 @@ export function useViewportControls(
       }
 
       const playheadTick = scene.playheadTick.get();
-      const transport = getActiveClip(
-        scene.projectStore.getState(),
-      ).transportSettings;
+      const state = scene.projectStore.getState();
+      const activeClip = getActiveClip(state);
 
       barLabelRef.current.value = formatMusicalPosition(
         playheadTick,
-        transport,
+        state.clock,
+        getClipTimeSignature(activeClip),
         scene.gridResolutionTicks.get(),
       );
 
       if (timeLabelRef.current !== null) {
         timeLabelRef.current.value = formatElapsedTime(
           playheadTick,
-          transport.ppqn,
-          transport.bpm,
+          state.clock.ppqn,
+          state.clock.tempoBpm,
         );
       }
     };
@@ -398,7 +401,7 @@ export function useViewportControls(
       }
 
       const viewport = currentScene.viewport.get();
-      const totalTicks = getActiveClipDurationTicks(
+      const totalTicks = getWorkspaceDurationTicks(
         currentScene.projectStore.getState(),
       );
       const playheadTick = currentScene.playheadTick.get();
@@ -435,7 +438,7 @@ export function useViewportControls(
   useEffect(() => {
     const syncViewportControls = (): void => {
       const viewport = scene.viewport.get();
-      const totalTicks = getActiveClipDurationTicks(
+      const totalTicks = getWorkspaceDurationTicks(
         scene.projectStore.getState(),
       );
       const nextViewport = constrainViewportToContent(
@@ -548,7 +551,7 @@ export function useViewportControls(
 
       const viewport = currentScene.viewport.get();
       const viewportWidth = dimensionsRef.current.width;
-      const totalTicks = getActiveClipDurationTicks(
+      const totalTicks = getWorkspaceDurationTicks(
         currentScene.projectStore.getState(),
       );
       const constrainedZoomX = clamp(
@@ -611,7 +614,7 @@ export function useViewportControls(
       const maximumScroll = getMaximumHorizontalScroll(
         viewport,
         dimensionsRef.current.width,
-        getActiveClipDurationTicks(
+        getWorkspaceDurationTicks(
           currentScene.projectStore.getState(),
         ),
       );
@@ -991,12 +994,13 @@ export function useViewportControls(
 
 function formatMusicalPosition(
   tick: number,
-  transport: TransportState,
+  clock: ProjectClock,
+  timeSignature: TimeSignature,
   gridResolutionTicks: number,
 ): string {
   const safeTick = Math.max(0, Math.round(tick));
-  const ticksPerBeat = transport.ppqn * 4 / transport.timeSignature.denominator;
-  const ticksPerBar = ticksPerBeat * transport.timeSignature.numerator;
+  const ticksPerBeat = clock.ppqn * 4 / timeSignature.denominator;
+  const ticksPerBar = ticksPerBeat * timeSignature.numerator;
   const barIndex = Math.floor(safeTick / ticksPerBar);
   const tickInBar = safeTick - barIndex * ticksPerBar;
   const beatIndex = Math.floor(tickInBar / ticksPerBeat);
@@ -1006,6 +1010,10 @@ function formatMusicalPosition(
   );
 
   return `${barIndex + 1}.${beatIndex + 1}.${subdivisionIndex + 1}`;
+}
+
+function getWorkspaceDurationTicks(state: ProjectState): number {
+  return getClipDurationTicks(getActiveClip(state));
 }
 
 function formatElapsedTime(

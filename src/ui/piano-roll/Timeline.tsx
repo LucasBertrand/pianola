@@ -11,7 +11,9 @@ import {
 } from "../../config/application-colors";
 import {
   getActiveClip,
-  getActiveClipDurationTicks,
+  getClipDurationTicks,
+  getClipMeasureCount,
+  getClipTimeSignature,
   type LoopRegion,
 } from "../../domain/model";
 import type {
@@ -360,7 +362,7 @@ function BarRulerLoopOverlay(
         1,
         gridResolutionTicks.get(),
       );
-      projectDurationTicks = getActiveClipDurationTicks(state);
+      projectDurationTicks = getClipDurationTicks(getActiveClip(state));
       layerLeft = layerBounds.left;
       pendingClickMode =
         absolutePointerTick
@@ -555,8 +557,8 @@ export function BarRuler(
       const currentViewport = viewport.get();
       const projectState = projectStore.getState();
       const activeClip = getActiveClip(projectState);
-      const transport = activeClip.transportSettings;
-      const totalTicks = getActiveClipDurationTicks(projectState);
+      const timeSignature = getClipTimeSignature(activeClip);
+      const totalTicks = getClipDurationTicks(activeClip);
       const pixelsPerTick =
         currentViewport.zoomX / currentViewport.ticksPerPixel;
       const firstVisibleTick =
@@ -568,11 +570,11 @@ export function BarRuler(
           + frame.widthCssPixels / pixelsPerTick,
         );
       const ticksPerBeat =
-        transport.ppqn
+        projectState.clock.ppqn
         * 4
-        / transport.timeSignature.denominator;
+        / timeSignature.denominator;
       const ticksPerBar =
-        ticksPerBeat * transport.timeSignature.numerator;
+        ticksPerBeat * timeSignature.numerator;
       const effectiveGridTicks = getVisibleGridResolution(
         gridResolutionTicks.get(),
         pixelsPerTick,
@@ -635,7 +637,10 @@ export function BarRuler(
       const lastBarIndex = Math.ceil(
         lastVisibleTick / ticksPerBar,
       );
-      const maximumBarIndex = activeClip.measureCount - 1;
+      const maximumBarIndex = getClipMeasureCount(
+        projectState.clock,
+        activeClip,
+      ) - 1;
 
       for (
         let barIndex = firstBarIndex;

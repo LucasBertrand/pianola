@@ -1,14 +1,16 @@
 import type {
   PianoRollCommand,
-} from "./commands";
+} from "./commands/command-types";
 import type {
   Note,
   NoteId,
-  ProjectState,
+  Clip,
+  ClipId,
+  ProjectDocument,
   InstrumentId,
 } from "./model";
 import {
-  getActiveClip,
+  getClip,
 } from "./model";
 
 export type NoteCollisionResolutionMode = "merge" | "slice";
@@ -34,10 +36,11 @@ interface NoteInterval {
 }
 
 export function countNoteEditCollisions(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   intent: NoteEditIntent,
 ): number {
-  const activeClip = getActiveClip(state);
+  const clip = getClip(state, clipId);
   const originalNoteIds = createNoteIdSet(intent.originalNotes);
   let collisionCount = 0;
 
@@ -52,7 +55,7 @@ export function countNoteEditCollisions(
       continue;
     }
 
-    const track = activeClip.tracksByInstrumentId[proposedNote.instrumentId];
+    const track = clip.tracksByInstrumentId[proposedNote.instrumentId];
 
     if (track !== undefined) {
       for (const existingNoteId in track.notesById) {
@@ -88,34 +91,36 @@ export function countNoteEditCollisions(
 }
 
 export function hasNoteEditCollisions(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   intent: NoteEditIntent,
 ): boolean {
-  return countNoteEditCollisions(state, intent) > 0;
+  return countNoteEditCollisions(state, clipId, intent) > 0;
 }
 
 export function createNoteCollisionResolutionPlan(
-  state: ProjectState,
+  state: ProjectDocument,
+  clipId: ClipId,
   intent: NoteEditIntent,
   mode: NoteCollisionResolutionMode,
   fragmentIdNamespace: string,
 ): NoteCollisionResolutionPlan {
   const originalNoteIds = createNoteIdSet(intent.originalNotes);
-  const activeClip = getActiveClip(state);
+  const clip = getClip(state, clipId);
   const groups = createAffectedNoteGroups(
-    state,
+    clip,
     intent.proposedNotes,
     originalNoteIds,
   );
   const deletedNotesByInstrument = new Map<InstrumentId, Set<NoteId>>();
   const addedNotes: Note[] = [];
   const resultingSelectionNoteIds: NoteId[] = [];
-  const reservedNoteIds = collectProjectNoteIds(state);
+  const reservedNoteIds = collectClipNoteIds(state, clip);
   let fragmentSequence = 0;
 
   for (const originalNote of intent.originalNotes) {
     const storedNote =
-      activeClip
+      clip
         .tracksByInstrumentId[originalNote.instrumentId]
         ?.notesById[originalNote.id];
 
@@ -207,6 +212,7 @@ export function createNoteCollisionResolutionPlan(
 
   return {
     commands: buildReplacementCommands(
+      clip.id,
       deletedNotesByInstrument,
       addedNotes,
     ),
@@ -215,12 +221,11 @@ export function createNoteCollisionResolutionPlan(
 }
 
 function createAffectedNoteGroups(
-  state: ProjectState,
+  clip: Clip,
   proposedNotes: readonly Note[],
   originalNoteIds: ReadonlySet<NoteId>,
 ): Map<InstrumentId, Map<number, NoteGroup>> {
   const groups = new Map<InstrumentId, Map<number, NoteGroup>>();
-  const activeClip = getActiveClip(state);
 
   for (const proposedNote of proposedNotes) {
     const group = getOrCreateNoteGroup(
@@ -233,7 +238,7 @@ function createAffectedNoteGroups(
   }
 
   for (const [instrumentId, pitchGroups] of groups) {
-    const track = activeClip.tracksByInstrumentId[instrumentId];
+    const track = clip.tracksByInstrumentId[instrumentId];
 
     if (track === undefined) {
       continue;
@@ -513,6 +518,7 @@ function subtractProposedIntervals(
 }
 
 function buildReplacementCommands(
+  clipId: string,
   deletedNotesByInstrument: ReadonlyMap<InstrumentId, ReadonlySet<NoteId>>,
   addedNotes: readonly Note[],
 ): readonly PianoRollCommand[] {
@@ -522,6 +528,7 @@ function buildReplacementCommands(
     if (noteIds.size > 0) {
       commands.push({
         type: "DeleteNotes",
+        clipId,
         trackInstrumentId: instrumentId,
         noteIds: Array.from(noteIds),
       });
@@ -544,6 +551,7 @@ function buildReplacementCommands(
   for (const [instrumentId, instrumentNotes] of addedNotesByInstrument) {
     commands.push({
       type: "AddNotes",
+      clipId,
       trackInstrumentId: instrumentId,
       notes: instrumentNotes,
     });
@@ -577,12 +585,14 @@ function createNoteIdSet(notes: readonly Note[]): Set<NoteId> {
   return noteIds;
 }
 
-function collectProjectNoteIds(state: ProjectState): Set<NoteId> {
+function collectClipNoteIds(
+  state: ProjectDocument,
+  clip: Clip,
+): Set<NoteId> {
   const noteIds = new Set<NoteId>();
-  const activeClip = getActiveClip(state);
 
   for (const instrumentId of state.instrumentOrder) {
-    const track = activeClip.tracksByInstrumentId[instrumentId];
+    const track = clip.tracksByInstrumentId[instrumentId];
 
     if (track === undefined) {
       continue;

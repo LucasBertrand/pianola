@@ -1,19 +1,20 @@
 import type {
   Clip,
-  ProjectState,
+  ProjectDocument,
 } from "../../domain/model";
 import {
+  getClipTimeSignature,
   getClipDurationTicks,
 } from "../../domain/model";
 import type {
-  MidiExportProjection,
+  MidiExportPlan,
 } from "../../project-io/midi/midi-exporter";
 
-/** Maps domain state to the neutral musical projection consumed by SMF I/O. */
-export function createMidiExportProjection(
-  state: ProjectState,
+/** Maps a named source to the neutral musical plan consumed by SMF I/O. */
+export function createMidiExportPlan(
+  state: ProjectDocument,
   clip: Clip,
-): MidiExportProjection {
+): MidiExportPlan {
   const tracks = state.instrumentOrder.flatMap((instrumentId) => {
     const instrument = state.projectInstrumentsById[instrumentId];
     const track = clip.tracksByInstrumentId[instrumentId];
@@ -25,6 +26,7 @@ export function createMidiExportProjection(
     return [{
       name: instrument.name,
       notes: Object.values(track.notesById).map((note) => ({
+        origin: { sourceId: clip.id, noteId: note.id },
         id: note.id,
         pitch: note.pitch,
         velocity: note.velocity,
@@ -36,10 +38,11 @@ export function createMidiExportProjection(
   });
 
   return {
+    sourceId: clip.id,
     title: state.title,
-    ppqn: clip.transportSettings.ppqn,
-    bpm: clip.transportSettings.bpm,
-    timeSignature: clip.transportSettings.timeSignature,
+    ppqn: state.clock.ppqn,
+    bpm: state.clock.tempoBpm,
+    timeSignature: getClipTimeSignature(clip),
     durationTicks: getClipDurationTicks(clip),
     tracks,
   };

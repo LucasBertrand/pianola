@@ -1,0 +1,444 @@
+import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
+import type {
+  Clip,
+  ClipId,
+  ClipTimeline,
+  InstrumentId,
+  LoopRegion,
+  Note,
+  NoteId,
+  ProjectClock,
+  TimeSignature,
+  Track,
+  TransportState,
+} from "../../../domain/model";
+import {
+  MAXIMUM_CLIP_NOTE_COUNT,
+  MAXIMUM_ENTITY_ID_LENGTH,
+} from "../../../domain/model";
+import { validateNoteForTrack } from "../../../domain/validation/note-validation";
+import {
+  validateClipTimeline,
+  validateTransportState,
+} from "../../../domain/validation/transport-validation";
+import { fail } from "../native-project-error";
+import {
+  assertExactRecordKeys,
+  readArray,
+  readBoolean,
+  readNonEmptyString,
+  readNonNegativeSafeInteger,
+  readPositiveSafeInteger,
+  readRecord,
+  readSafeInteger,
+} from "./json-readers";
+import { parseClipInstrumentStates } from "./parse-instruments";
+
+const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
+const MAXIMUM_NOTE_COUNT = MAXIMUM_CLIP_NOTE_COUNT;
+
+export function parseClipOrder(
+  source: unknown,
+  path: string,
+): readonly ClipId[] {
+  const values = readArray(source, path);
+
+  if (
+    values.length < 1
+    || values.length > PROJECT_CONSTANTS.maximumClipCount
+  ) {
+    fail(
+      "INVALID_DATA",
+      path,
+      `A project must contain between 1 and ${PROJECT_CONSTANTS.maximumClipCount} clips.`,
+    );
+  }
+
+  const clipOrder: ClipId[] = [];
+  const uniqueIds = new Set<ClipId>();
+
+  for (let index = 0; index < values.length; index += 1) {
+    const clipId = readNonEmptyString(
+      values[index],
+      `${path}[${index}]`,
+      MAXIMUM_ID_LENGTH,
+    );
+
+    if (uniqueIds.has(clipId)) {
+      fail(
+        "INVALID_DATA",
+        `${path}[${index}]`,
+        "Clip IDs must be unique.",
+      );
+    }
+
+    uniqueIds.add(clipId);
+    clipOrder.push(clipId);
+  }
+
+  return clipOrder;
+}
+
+export function parseClip(
+  source: unknown,
+  clipId: ClipId,
+  instrumentOrder: readonly InstrumentId[],
+  clock: ProjectClock,
+  path: string,
+): Clip {
+  const clip = readRecord(source, path);
+  const storedId = readNonEmptyString(
+    clip["id"],
+    `${path}.id`,
+    MAXIMUM_ID_LENGTH,
+  );
+
+  if (storedId !== clipId) {
+    fail("INVALID_DATA", `${path}.id`, "Clip ID must match its record key.");
+  }
+
+  const name = readNonEmptyString(
+    clip["name"],
+    `${path}.name`,
+    PROJECT_CONSTANTS.maximumClipNameLength,
+  );
+  const timeline = parseClipTimeline(clip["timeline"], clock, `${path}.timeline`);
+  const transportSettings = parseTransport(
+    clip["transportSettings"],
+    `${path}.transportSettings`,
+  );
+  const durationTicks = timeline.durationTicks;
+  const tracksByInstrumentId = parseTracks(
+    clip["tracksByInstrumentId"],
+    instrumentOrder,
+    durationTicks,
+    `${path}.tracksByInstrumentId`,
+  );
+  const instrumentStatesById = parseClipInstrumentStates(
+    clip["instrumentStatesById"],
+    instrumentOrder,
+    `${path}.instrumentStatesById`,
+  );
+  const parsedClip: Clip = {
+    id: clipId,
+    name,
+    timeline,
+    tracksByInstrumentId,
+    instrumentStatesById,
+    transportSettings,
+  };
+
+  assertTransportWithinClip(parsedClip, path);
+  return parsedClip;
+}
+
+function parseTransport(
+  source: unknown,
+  path: string,
+): TransportState {
+  const transport = readRecord(source, path);
+  assertExactRecordKeys(transport, [
+    "loop",
+    "loopEnabled",
+    "anchorTick",
+  ], path);
+  const loop = parseLoop(transport["loop"], `${path}.loop`);
+  const loopEnabled = readBoolean(
+    transport["loopEnabled"],
+    `${path}.loopEnabled`,
+  );
+
+  const parsedTransport: TransportState = {
+    loop,
+    loopEnabled,
+    anchorTick: readNonNegativeSafeInteger(
+      transport["anchorTick"],
+      `${path}.anchorTick`,
+    ),
+  };
+  const validation = validateTransportState(parsedTransport);
+
+  if (!validation.valid) {
+    fail(
+      "INVALID_DATA",
+      path,
+      validation.issues[0]?.message
+        ?? "Transport settings are invalid.",
+    );
+  }
+
+  return parsedTransport;
+}
+
+function parseClipTimeline(
+  source: unknown,
+  clock: ProjectClock,
+  path: string,
+): ClipTimeline {
+  const stored = readRecord(source, path);
+  assertExactRecordKeys(stored, ["durationTicks", "meterMap"], path);
+  const meterMap = readRecord(stored["meterMap"], `${path}.meterMap`);
+  assertExactRecordKeys(meterMap, ["segments"], `${path}.meterMap`);
+  const sourceSegments = readArray(
+    meterMap["segments"],
+    `${path}.meterMap.segments`,
+  );
+  const segments = sourceSegments.map((sourceSegment, index) => {
+    const segmentPath = `${path}.meterMap.segments[${String(index)}]`;
+    const segment = readRecord(sourceSegment, segmentPath);
+    assertExactRecordKeys(segment, ["startTick", "timeSignature"], segmentPath);
+
+    return {
+      startTick: readNonNegativeSafeInteger(
+        segment["startTick"],
+        `${segmentPath}.startTick`,
+      ),
+      timeSignature: parseTimeSignature(
+        segment["timeSignature"],
+        `${segmentPath}.timeSignature`,
+      ),
+    };
+  });
+  const timeline: ClipTimeline = {
+    durationTicks: readPositiveSafeInteger(
+      stored["durationTicks"],
+      `${path}.durationTicks`,
+    ),
+    meterMap: { segments },
+  };
+  const validation = validateClipTimeline(timeline, clock);
+
+  if (!validation.valid) {
+    const issue = validation.issues[0];
+    fail(
+      "INVALID_DATA",
+      issue === undefined ? path : `${path}.${issue.path}`,
+      issue?.message ?? "Clip timeline is invalid.",
+    );
+  }
+
+  return timeline;
+}
+
+function parseTimeSignature(source: unknown, path: string): TimeSignature {
+  const stored = readRecord(source, path);
+  assertExactRecordKeys(stored, ["numerator", "denominator"], path);
+  const denominator = readSafeInteger(stored["denominator"], `${path}.denominator`);
+
+  if (![1, 2, 4, 8, 16, 32].includes(denominator)) {
+    fail("INVALID_DATA", `${path}.denominator`, "Time signature denominator is not supported.");
+  }
+
+  return {
+    numerator: readPositiveSafeInteger(stored["numerator"], `${path}.numerator`),
+    denominator: denominator as TimeSignature["denominator"],
+  };
+}
+
+function parseLoop(
+  source: unknown,
+  path: string,
+): LoopRegion {
+  const loop = readRecord(source, path);
+
+  return {
+    startTick: readNonNegativeSafeInteger(
+      loop["startTick"],
+      `${path}.startTick`,
+    ),
+    endTick: readNonNegativeSafeInteger(
+      loop["endTick"],
+      `${path}.endTick`,
+    ),
+  };
+}
+
+function parseTracks(
+  source: unknown,
+  instrumentOrder: readonly InstrumentId[],
+  projectDurationTicks: number,
+  path: string,
+): Readonly<Record<InstrumentId, Track>> {
+  const sourceTracks = readRecord(source, path);
+
+  assertExactRecordKeys(sourceTracks, instrumentOrder, path);
+  const tracksByInstrumentId =
+    Object.create(null) as Record<InstrumentId, Track>;
+  const globalNoteIds = new Set<NoteId>();
+  let totalNoteCount = 0;
+
+  for (
+    let instrumentIndex = 0;
+    instrumentIndex < instrumentOrder.length;
+    instrumentIndex += 1
+  ) {
+    const instrumentId = instrumentOrder[instrumentIndex];
+
+    if (instrumentId === undefined) {
+      continue;
+    }
+
+    const trackPath = `${path}.${instrumentId}`;
+    const track = readRecord(sourceTracks[instrumentId], trackPath);
+    const trackInstrumentId = readNonEmptyString(
+      track["instrumentId"],
+      `${trackPath}.instrumentId`,
+      MAXIMUM_ID_LENGTH,
+    );
+
+    if (trackInstrumentId !== instrumentId) {
+      fail(
+        "INVALID_DATA",
+        `${trackPath}.instrumentId`,
+        `Track instrument ID "${trackInstrumentId}" must match "${instrumentId}".`,
+      );
+    }
+
+    const notesById = parseNotes(
+      track["notesById"],
+      instrumentId,
+      projectDurationTicks,
+      globalNoteIds,
+      trackPath,
+    );
+
+    totalNoteCount += Object.keys(notesById).length;
+
+    if (totalNoteCount > MAXIMUM_NOTE_COUNT) {
+      fail(
+        "INVALID_DATA",
+        path,
+        `A project cannot contain more than ${MAXIMUM_NOTE_COUNT} notes.`,
+      );
+    }
+
+    tracksByInstrumentId[instrumentId] = {
+      instrumentId,
+      notesById,
+    };
+  }
+
+  return tracksByInstrumentId;
+}
+
+function parseNotes(
+  source: unknown,
+  instrumentId: InstrumentId,
+  projectDurationTicks: number,
+  globalNoteIds: Set<NoteId>,
+  trackPath: string,
+): Readonly<Record<NoteId, Note>> {
+  const sourceNotes = readRecord(
+    source,
+    `${trackPath}.notesById`,
+  );
+  const notesById =
+    Object.create(null) as Record<NoteId, Note>;
+  for (const [noteKey, sourceNote] of Object.entries(sourceNotes)) {
+    const notePath = `${trackPath}.notesById.${noteKey}`;
+    const noteRecord = readRecord(sourceNote, notePath);
+    const note: Note = {
+      id: readNonEmptyString(
+        noteRecord["id"],
+        `${notePath}.id`,
+        MAXIMUM_ID_LENGTH,
+      ),
+      pitch: readSafeInteger(
+        noteRecord["pitch"],
+        `${notePath}.pitch`,
+      ),
+      startTick: readNonNegativeSafeInteger(
+        noteRecord["startTick"],
+        `${notePath}.startTick`,
+      ),
+      durationTicks: readPositiveSafeInteger(
+        noteRecord["durationTicks"],
+        `${notePath}.durationTicks`,
+      ),
+      velocity: readSafeInteger(
+        noteRecord["velocity"],
+        `${notePath}.velocity`,
+      ),
+      enabled: readBoolean(
+        noteRecord["enabled"],
+        `${notePath}.enabled`,
+      ),
+      instrumentId: readNonEmptyString(
+        noteRecord["instrumentId"],
+        `${notePath}.instrumentId`,
+        MAXIMUM_ID_LENGTH,
+      ),
+    };
+
+    if (note.id !== noteKey) {
+      fail(
+        "INVALID_DATA",
+        `${notePath}.id`,
+        `Note ID "${note.id}" must match its record key "${noteKey}".`,
+      );
+    }
+
+    if (globalNoteIds.has(note.id)) {
+      fail(
+        "INVALID_DATA",
+        `${notePath}.id`,
+        `Note ID "${note.id}" must be unique within its clip.`,
+      );
+    }
+
+    const validation = validateNoteForTrack(note, instrumentId);
+
+    if (!validation.valid) {
+      fail(
+        "INVALID_DATA",
+        notePath,
+        validation.issues[0]?.message ?? "Note data is invalid.",
+      );
+    }
+
+    const endTick = note.startTick + note.durationTicks;
+
+    if (
+      !Number.isSafeInteger(endTick)
+      || endTick > projectDurationTicks
+    ) {
+      fail(
+        "INVALID_DATA",
+        notePath,
+        `Note "${note.id}" exceeds the clip duration.`,
+      );
+    }
+
+    globalNoteIds.add(note.id);
+    notesById[note.id] = note;
+  }
+
+  return notesById;
+}
+
+function assertTransportWithinClip(
+  clip: Clip,
+  clipPath: string,
+): void {
+  const durationTicks =
+    clip.timeline.durationTicks;
+  const transport = clip.transportSettings;
+
+  if (transport.anchorTick > durationTicks) {
+    fail(
+      "INVALID_DATA",
+      `${clipPath}.transportSettings.anchorTick`,
+      "Transport anchor exceeds the clip duration.",
+    );
+  }
+
+  if (
+    transport.loop.endTick > durationTicks
+  ) {
+    fail(
+      "INVALID_DATA",
+      `${clipPath}.transportSettings.loop`,
+      "Loop region exceeds the clip duration.",
+    );
+  }
+}

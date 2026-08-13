@@ -1,7 +1,8 @@
 import type {
   PianoRollCommand,
-} from "../../domain/commands";
+} from "../../domain/commands/command-types";
 import type {
+  ClipId,
   NoteId,
   ProjectState,
 } from "../../domain/model";
@@ -16,6 +17,7 @@ import type {
  */
 export interface NoteCollisionResolutionRequest
   extends NoteEditIntent {
+  readonly clipId: ClipId;
   readonly label: string;
   readonly collisionCount: number;
   readonly prefixCommands?: readonly PianoRollCommand[];

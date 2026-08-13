@@ -9,8 +9,8 @@ import {
   VIEWPORT_CONSTANTS,
 } from "../config/editor-config";
 import {
-  getActiveClipDurationTicks,
   getActiveClip,
+  getClipDurationTicks,
   type ClipId,
   type Note,
   type ProjectState,
@@ -87,14 +87,14 @@ export function createEditorRuntime(
     const nextClip = getActiveClip(state);
     const previousClip = getActiveClip(previousState);
 
-    if (state.activeClipId !== previousState.activeClipId) {
-      clipEditorStates.set(previousState.activeClipId, {
+    if (state.workspace.activeClipId !== previousState.workspace.activeClipId) {
+      clipEditorStates.set(previousState.workspace.activeClipId, {
         playheadTick: playheadTick.get(),
         viewport: viewport.get(),
         pitchSnapSettings: pitchSnapSettings.get(),
         gridSettings: gridSettings.get(),
       });
-      const restored = clipEditorStates.get(state.activeClipId)
+      const restored = clipEditorStates.get(state.workspace.activeClipId)
         ?? createDefaultClipEditorRuntimeState(nextClip);
 
       playheadTick.set(restored.playheadTick);
@@ -105,7 +105,7 @@ export function createEditorRuntime(
 
     if (
       nextClip.tracksByInstrumentId !== previousClip.tracksByInstrumentId
-      || state.activeClipId !== previousState.activeClipId
+      || state.workspace.activeClipId !== previousState.workspace.activeClipId
     ) {
       rebuildSpatialIndex(state, spatialIndex, indexedNotesBuffer);
     }
@@ -113,7 +113,7 @@ export function createEditorRuntime(
     if (
       state.projectInstrumentsById !== previousState.projectInstrumentsById
       || nextClip.instrumentStatesById !== previousClip.instrumentStatesById
-      || state.activeClipId !== previousState.activeClipId
+      || state.workspace.activeClipId !== previousState.workspace.activeClipId
     ) {
       instrumentStyles.set(createInstrumentRenderStyles(state));
     }
@@ -130,7 +130,7 @@ export function createEditorRuntime(
         viewportState,
         VIEWPORT_CONSTANTS.initialWidthCssPixels,
         VIEWPORT_CONSTANTS.initialHeightCssPixels,
-        getActiveClipDurationTicks(initialProjectState),
+        getClipDurationTicks(activeClip),
       ),
     ),
     instrumentStyles,
@@ -148,7 +148,7 @@ export function createEditorRuntime(
     captureClipEditorStates(): Readonly<Record<ClipId, ClipEditorRuntimeState>> {
       const state = projectStore.getState();
 
-      clipEditorStates.set(state.activeClipId, {
+      clipEditorStates.set(state.workspace.activeClipId, {
         playheadTick: playheadTick.get(),
         viewport: viewport.get(),
         pitchSnapSettings: pitchSnapSettings.get(),
@@ -179,7 +179,7 @@ export function createEditorRuntime(
 
       const currentState = projectStore.getState();
       const currentClip = getActiveClip(currentState);
-      const restored = clipEditorStates.get(currentState.activeClipId)
+      const restored = clipEditorStates.get(currentState.workspace.activeClipId)
         ?? createDefaultClipEditorRuntimeState(currentClip);
 
       playheadTick.set(restored.playheadTick);
@@ -198,7 +198,7 @@ export function createEditorRuntime(
         return;
       }
 
-      if (sourceClipId === state.activeClipId) {
+      if (sourceClipId === state.workspace.activeClipId) {
         clipEditorStates.set(sourceClipId, {
           playheadTick: playheadTick.get(),
           viewport: viewport.get(),

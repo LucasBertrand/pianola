@@ -159,19 +159,35 @@ export interface TimeSignature {
   readonly denominator: 1 | 2 | 4 | 8 | 16 | 32;
 }
 
+export interface ProjectClock {
+  readonly tempoBpm: number;
+  readonly ppqn: number;
+  readonly launchGridTicks: Tick;
+}
+
+export interface MeterMapSegment {
+  readonly startTick: Tick;
+  readonly timeSignature: TimeSignature;
+}
+
+export interface MeterMap {
+  readonly segments: readonly MeterMapSegment[];
+}
+
+export interface ClipTimeline {
+  readonly durationTicks: Tick;
+  readonly meterMap: MeterMap;
+}
+
 export interface LoopRegion {
   readonly startTick: Tick;
   readonly endTick: Tick;
 }
 
 export interface TransportState {
-  readonly bpm: number;
-  readonly timeSignature: TimeSignature;
   readonly loop: LoopRegion;
   readonly loopEnabled: boolean;
-  readonly ppqn: number;
   readonly anchorTick: Tick;
-  readonly anchorAudioTimeSeconds: number | null;
 }
 
 export interface MasterBusState {
@@ -184,31 +200,33 @@ export interface MasterBusState {
 export interface Clip {
   readonly id: ClipId;
   readonly name: string;
-  readonly measureCount: number;
+  readonly timeline: ClipTimeline;
   readonly tracksByInstrumentId: Readonly<Record<InstrumentId, Track>>;
   readonly instrumentStatesById: Readonly<Record<InstrumentId, ClipInstrumentState>>;
   readonly transportSettings: TransportState;
 }
 
-export function getActiveClipInstrumentState(
-  state: ProjectState,
-  instrumentId: InstrumentId,
-): ClipInstrumentState | undefined {
-  return getActiveClip(state).instrumentStatesById[instrumentId];
-}
-
-export interface ProjectState {
+export interface ProjectDocument {
   readonly schemaVersion: number;
   readonly revision: number;
   readonly title: string;
+  readonly clock: ProjectClock;
   readonly projectInstrumentsById: Readonly<Record<InstrumentId, ProjectInstrument>>;
   readonly instrumentOrder: readonly InstrumentId[];
   readonly instrumentPresetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly instrumentPresetOrder: readonly PresetId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipOrder: readonly ClipId[];
-  readonly activeClipId: ClipId;
   readonly masterBus: MasterBusState;
+}
+
+export interface WorkspaceState {
+  readonly activeClipId: ClipId;
+}
+
+/** Runtime aggregate. Only `document` participates in musical history. */
+export interface ProjectState extends ProjectDocument {
+  readonly workspace: WorkspaceState;
 }
 
 export type AudioLatencyHint = "interactive" | "balanced" | "playback" | number;
@@ -226,13 +244,6 @@ export interface AudioEngineConfig {
 
 export function createDefaultTransportState(): TransportState {
   return {
-    bpm: PROJECT_CONSTANTS.defaultTempoBpm,
-    timeSignature: {
-      numerator:
-        PROJECT_CONSTANTS.defaultTimeSignatureNumerator,
-      denominator:
-        PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
-    },
     loop: {
       startTick: 0,
       endTick:
@@ -242,9 +253,32 @@ export function createDefaultTransportState(): TransportState {
         / PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
     },
     loopEnabled: PROJECT_CONSTANTS.defaultLoopEnabled,
-    ppqn: DEFAULT_PPQN,
     anchorTick: 0,
-    anchorAudioTimeSeconds: null,
+  };
+}
+
+export function createDefaultProjectClock(): ProjectClock {
+  return {
+    tempoBpm: PROJECT_CONSTANTS.defaultTempoBpm,
+    ppqn: DEFAULT_PPQN,
+    launchGridTicks: DEFAULT_PPQN,
+  };
+}
+
+export function createDefaultClipTimeline(
+  clock: ProjectClock = createDefaultProjectClock(),
+  measureCount: number = DEFAULT_MEASURE_COUNT,
+): ClipTimeline {
+  const timeSignature: TimeSignature = {
+    numerator: PROJECT_CONSTANTS.defaultTimeSignatureNumerator,
+    denominator: PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
+  };
+
+  return {
+    durationTicks: measureCount * getTicksPerMeasure(clock, timeSignature),
+    meterMap: {
+      segments: [{ startTick: 0, timeSignature }],
+    },
   };
 }
 
@@ -256,27 +290,25 @@ export function createDefaultMasterBusState(): MasterBusState {
   };
 }
 
-export function getActiveClipDurationTicks(
-  state: ProjectState,
-): number {
-  return getClipDurationTicks(getActiveClip(state));
-}
-
 export function getClipDurationTicks(
-  clip: Pick<Clip, "measureCount" | "transportSettings">,
+  clip: Pick<Clip, "timeline">,
 ): number {
-  return (
-    clip.measureCount
-    * getTicksPerMeasure(clip.transportSettings)
-  );
+  return clip.timeline.durationTicks;
 }
 
 export function getActiveClip(state: ProjectState): Clip {
-  const clip = state.clipsById[state.activeClipId];
+  return getClip(state, state.workspace.activeClipId);
+}
+
+export function getClip(
+  state: Pick<ProjectDocument, "clipsById">,
+  clipId: ClipId,
+): Clip {
+  const clip = state.clipsById[clipId];
 
   if (clip === undefined) {
     throw new Error(
-      `Active clip "${state.activeClipId}" does not exist.`,
+      `Clip "${clipId}" does not exist.`,
     );
   }
 
@@ -284,12 +316,47 @@ export function getActiveClip(state: ProjectState): Clip {
 }
 
 export function getTicksPerMeasure(
-  transport: TransportState,
+  clock: ProjectClock,
+  timeSignature: TimeSignature,
 ): number {
   return (
-    transport.ppqn
+    clock.ppqn
     * 4
-    * transport.timeSignature.numerator
-    / transport.timeSignature.denominator
+    * timeSignature.numerator
+    / timeSignature.denominator
   );
+}
+
+export function getClipTimeSignature(
+  clip: Pick<Clip, "timeline">,
+  tick: Tick = 0,
+): TimeSignature {
+  const segments = clip.timeline.meterMap.segments;
+  let selected = segments[0];
+
+  for (const segment of segments) {
+    if (segment.startTick > tick) {
+      break;
+    }
+
+    selected = segment;
+  }
+
+  if (selected === undefined) {
+    throw new Error("A clip meter map must start at tick 0.");
+  }
+
+  return selected.timeSignature;
+}
+
+export function getClipMeasureCount(
+  clock: ProjectClock,
+  clip: Pick<Clip, "timeline">,
+): number {
+  const measureTicks = getTicksPerMeasure(
+    clock,
+    getClipTimeSignature(clip),
+  );
+
+  return clip.timeline.durationTicks / measureTicks;
 }

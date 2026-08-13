@@ -3,7 +3,9 @@ import {
 } from "react";
 import {
   getActiveClip,
-  getActiveClipDurationTicks,
+  getClipDurationTicks,
+  getClipMeasureCount,
+  getClipTimeSignature,
   getTicksPerMeasure,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
@@ -48,14 +50,15 @@ export function useTransportWorkflow({
   const insertMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
+    const measureCount = getClipMeasureCount(state.clock, activeClip);
 
-    if (activeClip.measureCount >= MAXIMUM_MEASURE_COUNT) {
+    if (measureCount >= MAXIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureTicks = getTicksPerMeasure(activeClip.transportSettings);
+    const measureTicks = getTicksPerMeasure(state.clock, getClipTimeSignature(activeClip));
     const measureIndex = Math.min(
-      activeClip.measureCount - 1,
+      measureCount - 1,
       Math.floor(runtime.playheadTick.get() / measureTicks),
     );
 
@@ -63,6 +66,7 @@ export function useTransportWorkflow({
     runtime.editorCommands.dispatch(
       [{
         type: "InsertMeasure",
+        clipId: activeClip.id,
         measureIndex,
       }],
       `Insert measure before ${measureIndex + 1}`,
@@ -72,14 +76,15 @@ export function useTransportWorkflow({
   const removeMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
+    const measureCount = getClipMeasureCount(state.clock, activeClip);
 
-    if (activeClip.measureCount <= MINIMUM_MEASURE_COUNT) {
+    if (measureCount <= MINIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureTicks = getTicksPerMeasure(activeClip.transportSettings);
+    const measureTicks = getTicksPerMeasure(state.clock, getClipTimeSignature(activeClip));
     const measureIndex = Math.min(
-      activeClip.measureCount - 1,
+      measureCount - 1,
       Math.floor(runtime.playheadTick.get() / measureTicks),
     );
     const currentPlayheadTick = runtime.playheadTick.get();
@@ -88,6 +93,7 @@ export function useTransportWorkflow({
     const nextState = runtime.editorCommands.dispatch(
       [{
         type: "RemoveMeasure",
+        clipId: activeClip.id,
         measureIndex,
       }],
       `Remove measure ${measureIndex + 1}`,
@@ -96,7 +102,7 @@ export function useTransportWorkflow({
     if (nextState !== null) {
       const boundedPlayheadTick = Math.min(
         currentPlayheadTick,
-        getActiveClipDurationTicks(nextState),
+        getClipDurationTicks(getActiveClip(nextState)),
       );
 
       if (boundedPlayheadTick !== currentPlayheadTick) {
@@ -164,21 +170,24 @@ export function useTransportWorkflow({
   );
 
   const toggleLoop = useCallback((): void => {
+    const state = runtime.projectStore.getState();
+    const activeClip = getActiveClip(state);
     runtime.editorCommands.dispatch(
       [{
         type: "SetLoopEnabled",
-        enabled:
-          !getActiveClip(runtime.projectStore.getState())
-            .transportSettings.loopEnabled,
+        clipId: activeClip.id,
+        enabled: !activeClip.transportSettings.loopEnabled,
       }],
       "Toggle loop",
     );
   }, [runtime]);
 
   const commitLoopRegion = useCallback((loop: LoopRegion): void => {
+    const activeClip = getActiveClip(runtime.projectStore.getState());
     runtime.editorCommands.dispatch(
       [{
         type: "UpdateLoop",
+        clipId: activeClip.id,
         loop,
       }],
       "Update loop region",
