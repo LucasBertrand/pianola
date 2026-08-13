@@ -36,6 +36,14 @@ import {
 import type {
   MutableRenderSignal,
 } from "../../editor/model/render-signal";
+import type {
+  InstrumentConfig,
+} from "../../domain/instruments/instrument";
+import {
+  clearInstrumentSettingsPreview,
+  EMPTY_INSTRUMENT_SETTINGS_PREVIEW,
+  setInstrumentSettingsPreview,
+} from "../../audio/instrument-settings-preview";
 
 export interface UseAudioPlaybackOptions {
   readonly projectStore: ProjectStorePort;
@@ -57,6 +65,10 @@ export interface AudioPlaybackActions {
     instrumentId: InstrumentId,
     gain: number,
   ) => void;
+  readonly previewInstrumentSettings: (
+    instrumentId: InstrumentId,
+    config: InstrumentConfig | null,
+  ) => void;
   readonly previewMasterGain: (gain: number) => void;
 }
 
@@ -72,6 +84,11 @@ export function useAudioPlayback(
   const [status, setStatus] =
     useState<PlaybackStatus>("stopped");
   const schedulerRef = useRef<LookaheadScheduler | null>(null);
+  const instrumentSettingsPreviewRef = useRef(
+    EMPTY_INSTRUMENT_SETTINGS_PREVIEW,
+  );
+  const pendingInstrumentPreviewIdRef = useRef<InstrumentId | null>(null);
+  const instrumentPreviewFrameRef = useRef<number | null>(null);
 
   onErrorRef.current = onError;
 
@@ -84,6 +101,7 @@ export function useAudioPlayback(
       const snapshot = compilePlaybackPlan(
         state,
         createClipPlaybackSource(activeClip),
+        instrumentSettingsPreviewRef.current,
       );
       const engine = new WebAudioEngine(
         DEFAULT_AUDIO_ENGINE_CONFIG,
@@ -136,6 +154,7 @@ export function useAudioPlayback(
             compilePlaybackPlan(
               state,
               createClipPlaybackSource(activeClip),
+              instrumentSettingsPreviewRef.current,
             ),
             activeClip.transportSettings,
             clipChanged ? playheadTick.get() : undefined,
@@ -161,6 +180,13 @@ export function useAudioPlayback(
     playheadTick,
     projectStore,
   ]);
+
+  useEffect(() => (): void => {
+    if (instrumentPreviewFrameRef.current !== null) {
+      cancelAnimationFrame(instrumentPreviewFrameRef.current);
+      instrumentPreviewFrameRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const scheduler = schedulerRef.current;
@@ -247,6 +273,57 @@ export function useAudioPlayback(
     }
   }, []);
 
+  const previewInstrumentSettings = useCallback((
+    instrumentId: InstrumentId,
+    config: InstrumentConfig | null,
+  ): void => {
+    instrumentSettingsPreviewRef.current = config === null
+      ? clearInstrumentSettingsPreview(
+          instrumentSettingsPreviewRef.current,
+          instrumentId,
+        )
+      : setInstrumentSettingsPreview(
+          instrumentSettingsPreviewRef.current,
+          instrumentId,
+          config,
+        );
+
+    pendingInstrumentPreviewIdRef.current = instrumentId;
+
+    if (instrumentPreviewFrameRef.current !== null) {
+      return;
+    }
+
+    instrumentPreviewFrameRef.current = requestAnimationFrame(() => {
+      instrumentPreviewFrameRef.current = null;
+      const pendingInstrumentId = pendingInstrumentPreviewIdRef.current;
+      const scheduler = schedulerRef.current;
+
+      pendingInstrumentPreviewIdRef.current = null;
+
+      if (scheduler === null || pendingInstrumentId === null) {
+        return;
+      }
+
+      try {
+        const state = projectStore.getState();
+        const activeClip = getActiveClip(state);
+
+        scheduler.replaceInstrumentPreview(
+          compilePlaybackPlan(
+            state,
+            createClipPlaybackSource(activeClip),
+            instrumentSettingsPreviewRef.current,
+          ),
+          activeClip.transportSettings,
+          pendingInstrumentId,
+        );
+      } catch (error: unknown) {
+        onErrorRef.current(error);
+      }
+    });
+  }, [projectStore]);
+
   const previewMasterGain = useCallback((gain: number): void => {
     schedulerRef.current?.previewMasterGain(gain);
   }, []);
@@ -259,6 +336,7 @@ export function useAudioPlayback(
     seek,
     auditionPitch,
     previewInstrumentGain,
+    previewInstrumentSettings,
     previewMasterGain,
   };
 }

@@ -145,6 +145,25 @@ export class LookaheadScheduler implements AudioTransportController {
     }
   }
 
+  /** Applies one transient sound override without publishing a document edit. */
+  public replaceInstrumentPreview(
+    snapshot: PlaybackSnapshot,
+    transport: TransportState,
+    instrumentId: InstrumentId,
+  ): void {
+    this.assertUsable();
+    assertCompatiblePlaybackState(snapshot, transport);
+    this.snapshot = snapshot;
+    this.transport = transport;
+    const instrument = snapshot.instruments.find(
+      (candidate) => candidate.instrumentId === instrumentId,
+    );
+
+    if (instrument !== undefined) {
+      this.engine.previewInstrumentSettings(instrument);
+    }
+  }
+
   public async play(startTick: Tick = this.positionTick): Promise<void> {
     this.assertUsable();
 

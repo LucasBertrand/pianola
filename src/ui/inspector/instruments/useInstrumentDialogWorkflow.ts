@@ -30,6 +30,10 @@ export interface InstrumentDialogWorkflowOptions {
   readonly runtime: EditorRuntime;
   readonly addInstrument: ProjectInstrumentWorkflow["add"];
   readonly updateInstrument: ProjectInstrumentWorkflow["update"];
+  readonly previewInstrumentSettings: (
+    instrumentId: InstrumentId,
+    config: SubtractiveSynthConfig | null,
+  ) => void;
   readonly dismissApplicationDialog: () => void;
 }
 
@@ -55,6 +59,7 @@ export function useInstrumentDialogWorkflow({
   runtime,
   addInstrument,
   updateInstrument,
+  previewInstrumentSettings,
   dismissApplicationDialog,
 }: InstrumentDialogWorkflowOptions): InstrumentDialogWorkflow {
   const [selectedPresetId, setSelectedPresetId] =
@@ -67,11 +72,15 @@ export function useInstrumentDialogWorkflow({
   const [editedInstrumentId, setEditedInstrumentId] =
     useState<InstrumentId | null>(null);
   const cancel = useCallback((): void => {
+    if (editedInstrumentId !== null) {
+      previewInstrumentSettings(editedInstrumentId, null);
+    }
+
     setSelectedPresetId(null);
     setConfig(null);
     setEditedInstrumentId(null);
     setName("");
-  }, []);
+  }, [editedInstrumentId, previewInstrumentSettings]);
   const openCreate = useCallback((): void => {
     const state = runtime.projectStore.getState();
     const presetId = selectInstrumentPresetId(
@@ -122,10 +131,25 @@ export function useInstrumentDialogWorkflow({
     const preset = runtime.projectStore.getState().instrumentPresetsById[presetId];
 
     if (preset !== undefined) {
+      const nextConfig = createInstrumentConfigFromPreset(preset);
+
       setSelectedPresetId(presetId);
-      setConfig(createInstrumentConfigFromPreset(preset));
+      setConfig(nextConfig);
+
+      if (editedInstrumentId !== null) {
+        previewInstrumentSettings(editedInstrumentId, nextConfig);
+      }
     }
-  }, [runtime]);
+  }, [editedInstrumentId, previewInstrumentSettings, runtime]);
+  const updateConfig = useCallback((
+    nextConfig: SubtractiveSynthConfig,
+  ): void => {
+    setConfig(nextConfig);
+
+    if (editedInstrumentId !== null) {
+      previewInstrumentSettings(editedInstrumentId, nextConfig);
+    }
+  }, [editedInstrumentId, previewInstrumentSettings]);
   const confirm = useCallback((): void => {
     if (
       selectedPresetId === null
@@ -173,7 +197,7 @@ export function useInstrumentDialogWorkflow({
     selectPreset,
     setName,
     setColor,
-    setConfig,
+    setConfig: updateConfig,
     confirm,
     cancel,
   };

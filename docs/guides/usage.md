@@ -28,6 +28,12 @@ globaux. Gain, mute, solo et verrouillage s’appliquent selon leur propriétair
 Une note appartient toujours à un instrument ; une sélection peut être
 transférée vers un instrument déverrouillé.
 
+Quand un instrument est édité pendant la lecture, les changements de synthèse
+sont prévisualisés sans interrompre le transport. Les paramètres continus sont
+lissés sur une note tenue ; les paramètres structurels s’appliquent dès la note
+suivante. Cancel restaure les réglages précédents sans toucher à l’historique ;
+Save changes crée une seule étape Undo/Redo avec le résultat final.
+
 ## Clips
 
 Chaque clip possède ses notes, sa timeline, sa boucle et ses verrouillages par

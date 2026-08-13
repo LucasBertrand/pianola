@@ -17,6 +17,10 @@ export interface ActiveInstrumentVoice extends VoiceAllocationWindow {
   readonly occurrenceId: string;
   readonly instrumentId: InstrumentId;
   readonly ended: boolean;
+  previewInstrumentSettings(
+    instrument: PlaybackInstrumentSnapshot,
+    atAudioTimeSeconds: number,
+  ): void;
   stop(atAudioTimeSeconds: number): void;
   cancelBeforeStart(atAudioTimeSeconds: number): void;
 }

@@ -27,6 +27,9 @@ export class FakeAudioEngine implements AudioEnginePort {
     readonly instrumentId: InstrumentId;
     readonly gain: number;
   }> = [];
+  public readonly instrumentSettingsPreviews: Array<
+    PlaybackSnapshot["instruments"][number]
+  > = [];
   public readonly snapshots: PlaybackSnapshot[] = [];
   public resumeGate: Promise<void> | null = null;
   public resumeCount = 0;
@@ -71,6 +74,12 @@ export class FakeAudioEngine implements AudioEnginePort {
 
   public previewInstrumentGain(instrumentId: InstrumentId, gain: number): void {
     this.instrumentGainPreviews.push({ instrumentId, gain });
+  }
+
+  public previewInstrumentSettings(
+    instrument: PlaybackSnapshot["instruments"][number],
+  ): void {
+    this.instrumentSettingsPreviews.push(instrument);
   }
 
   public cancelScheduledAfter(atAudioTimeSeconds: number): void {

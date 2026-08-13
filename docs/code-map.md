@@ -10,7 +10,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | composition | `src/app/App.tsx` puis `src/ui/piano-roll/PianoRollWorkspace.tsx` | `EditorRuntime` et hooks de capacité | `tests/integration/critical-behavior.test.ts` |
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
-| instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument` et brouillon du dialogue | suite centrale de régression |
+| instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et couche de prévisualisation audio | `src/audio/__tests__/playback-plan.test.ts` et suite centrale |
 | clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document et `WorkspaceState.activeClipId` | suite centrale de régression |
 | transport | `src/ui/transport/TransportControls.tsx` | document pour boucle/tempo, scheduler pour statut | `src/audio/__tests__/playback-plan.test.ts` et suite centrale |
 | fichiers natifs | `src/ui/project-files/useProjectFileWorkflow.ts` | document + état natif d’éditeur | tests sous `src/project-io/native/__tests__/` |
@@ -105,13 +105,15 @@ L’export suit `midi-export-plan` puis `midi-exporter` et `smf-writer`.
 ProjectInstrumentControls
   → useInstrumentDialogWorkflow (brouillon)
   → InstrumentPresetDialog
+  → InstrumentSettingsPreviewLayer → PlaybackSnapshot (retour immédiat)
   → useProjectInstrumentWorkflow
   → commandes instrument
   → ProjectStore
   → PlaybackSnapshot et styles dérivés
 ```
 
-Le brouillon n’est pas persistant. La confirmation produit une transaction.
+Le brouillon et sa projection audio ne sont pas persistants. La prévisualisation
+est retirée à l’annulation ; la confirmation produit une seule transaction.
 
 ## Flux : changement de clip
 

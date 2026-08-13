@@ -283,6 +283,42 @@ export class WebAudioEngine implements AudioEnginePort {
     );
   }
 
+  public previewInstrumentSettings(
+    instrument: PlaybackInstrumentSnapshot,
+  ): void {
+    this.currentSnapshot = Object.freeze({
+      ...this.currentSnapshot,
+      instruments: Object.freeze(
+        this.currentSnapshot.instruments.map((candidate) => (
+          candidate.instrumentId === instrument.instrumentId
+            ? instrument
+            : candidate
+        )),
+      ),
+    });
+    const context = this.audioContext;
+
+    if (context === null) {
+      return;
+    }
+
+    const activeVoices =
+      this.activeVoicesByInstrumentId.get(instrument.instrumentId);
+
+    if (activeVoices === undefined) {
+      return;
+    }
+
+    for (const activeVoice of activeVoices) {
+      if (!activeVoice.ended) {
+        activeVoice.previewInstrumentSettings(
+          instrument,
+          context.currentTime,
+        );
+      }
+    }
+  }
+
   public cancelScheduledAfter(
     atAudioTimeSeconds: number,
   ): void {

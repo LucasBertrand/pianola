@@ -109,6 +109,9 @@ export interface AudioEnginePort {
   resume(): Promise<void>;
   scheduleNote(event: ScheduledNoteEvent): void;
   previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
+  previewInstrumentSettings(
+    instrument: PlaybackInstrumentSnapshot,
+  ): void;
   cancelScheduledAfter(atAudioTimeSeconds: number): void;
   cancelAll(atAudioTimeSeconds: number): void;
   dispose(): Promise<void>;
@@ -125,6 +128,11 @@ export interface AudioTransportController extends InstrumentPreviewPort {
   replacePlaybackState(
     snapshot: PlaybackSnapshot,
     transport: TransportState,
+  ): void;
+  replaceInstrumentPreview(
+    snapshot: PlaybackSnapshot,
+    transport: TransportState,
+    instrumentId: InstrumentId,
   ): void;
   play(startTick?: Tick): Promise<void>;
   pause(): void;

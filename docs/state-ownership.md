@@ -11,6 +11,7 @@ Dernière mise à jour : 13 août 2026.
 | document projet | horloge globale, clips, timelines, pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `ProjectStore` | ouverture du projet | oui, section `project` du format `.pianola` v1 | oui, par transaction métier | faible à moyenne |
 | espace de travail | clip affiché, viewport, grille, snap tonal, mode de sélection, couleur des notes, panneaux | `WorkspaceState`, `EditorRuntime` et état React de composition | onglet d’éditeur | préférences utiles dans `NativeEditorState` | non | moyenne |
 | session d’édition | sélection de notes, presse-papier, draft de geste, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | non ; seule la transaction validée entre dans l’historique | élevée |
+| prévisualisation audio | réglages d’instrument en cours d’édition | `InstrumentSettingsPreviewLayer`, alimenté par le brouillon du dialogue | ouverture du dialogue d’instrument | non | non ; la validation seule crée une transaction | élevée pendant l’interaction |
 | temps réel | statut de lecture, horloge, événements planifiés, voix Web Audio, buffers Canvas | scheduler, moteur audio et `RenderSignal` | lecture ou frame courante | non | non | frame, pulse ou audio-rate |
 
 ## Règles
@@ -22,6 +23,9 @@ Dernière mise à jour : 13 août 2026.
   capturé ou une sélection ne deviennent jamais des commandes métier.
 - Une intention validée produit au plus une transaction Undo/Redo. Les mouvements
   intermédiaires restent dans la session d’interaction.
+- Pendant l’édition d’un instrument, chaque réglage est copié dans une couche de
+  prévisualisation audio immuable. Le compilateur la superpose au document sans
+  le muter ; annuler la retire, confirmer publie le brouillon par une transaction.
 - Le compilateur audio reçoit un `PlaybackSource` explicite. Il ne choisit pas le
   clip à partir de l’écran actif.
 - L’export MIDI reçoit un `MidiExportPlan` neutre. Le codec ne connaît ni

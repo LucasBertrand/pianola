@@ -26,5 +26,4 @@ pnpm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
-todo.txt
-sampler.txt
+meter-marker-feature.md

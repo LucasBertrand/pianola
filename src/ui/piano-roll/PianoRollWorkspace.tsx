@@ -195,6 +195,7 @@ export function PianoRollWorkspace({
     seek: seekPlayback,
     auditionPitch,
     previewInstrumentGain,
+    previewInstrumentSettings,
     previewMasterGain,
   } = useAudioPlayback({
     projectStore: runtime.projectStore,
@@ -282,6 +283,7 @@ export function PianoRollWorkspace({
     runtime,
     addInstrument: addProjectInstrument,
     updateInstrument: handleUpdateProjectInstrument,
+    previewInstrumentSettings,
     dismissApplicationDialog(): void {
       setApplicationDialog(null);
     },

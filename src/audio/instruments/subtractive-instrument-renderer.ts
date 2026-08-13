@@ -4,6 +4,9 @@ import {
 import type {
   SubtractivePlaybackInstrumentSnapshot,
 } from "../playback-model";
+import type {
+  PlaybackInstrumentSnapshot,
+} from "../playback-model";
 import {
   type AudioEngineConfig,
 } from "../audio-engine-config";
@@ -13,6 +16,9 @@ import {
 import {
   resolveNoteEnvelopePeakLevel,
 } from "../note-dynamics";
+import {
+  setAudioParamSmoothly,
+} from "../audio-param-automation";
 import type {
   ActiveInstrumentVoice,
   InstrumentRenderer,
@@ -59,6 +65,9 @@ export class SubtractiveInstrumentRenderer
     );
     const stopAudioTimeSeconds =
       noteEndAudioTimeSeconds + releaseSeconds;
+    const amplitudePeakLevel = resolveNoteEnvelopePeakLevel(
+      event.velocity,
+    );
     const activeVoice = new SubtractiveActiveVoice(
       event.occurrenceId,
       event.instrument.instrumentId,
@@ -66,7 +75,9 @@ export class SubtractiveInstrumentRenderer
       filter,
       envelopeGain,
       startAudioTimeSeconds,
+      noteEndAudioTimeSeconds,
       stopAudioTimeSeconds,
+      context.sampleRate,
       onEnded,
     );
 
@@ -108,10 +119,6 @@ export class SubtractiveInstrumentRenderer
         ),
       context.sampleRate,
     );
-    const amplitudePeakLevel = resolveNoteEnvelopePeakLevel(
-      event.velocity,
-    );
-
     scheduleAdsrParameter(
       filter.frequency,
       baseFilterFrequency,
@@ -192,12 +199,52 @@ class SubtractiveActiveVoice implements ActiveInstrumentVoice {
     private readonly filter: BiquadFilterNode,
     private readonly envelopeGain: GainNode,
     public readonly startAudioTimeSeconds: number,
+    private readonly noteEndAudioTimeSeconds: number,
     public stopAudioTimeSeconds: number,
+    private readonly sampleRate: number,
     private readonly onEnded: (occurrenceId: string) => void,
   ) {
     oscillator.onended = (): void => {
       this.finish();
     };
+  }
+
+  public previewInstrumentSettings(
+    instrumentSnapshot: PlaybackInstrumentSnapshot,
+    atAudioTimeSeconds: number,
+  ): void {
+    if (
+      this.ended
+      || atAudioTimeSeconds < this.startAudioTimeSeconds
+      || atAudioTimeSeconds >= this.noteEndAudioTimeSeconds
+    ) {
+      return;
+    }
+
+    const instrument = instrumentSnapshot.instrument;
+
+    setAudioParamSmoothly(
+      this.oscillator.detune,
+      instrument.oscillatorDetuneCents,
+      atAudioTimeSeconds,
+    );
+    setAudioParamSmoothly(
+      this.filter.Q,
+      instrument.filterResonance,
+      atAudioTimeSeconds,
+    );
+    setAudioParamSmoothly(
+      this.filter.frequency,
+      clampFilterFrequency(
+        instrument.filterCutoffHz
+          * 2 ** (
+            instrument.filterEnvelopeAmountOctaves
+            * instrument.filterEnvelope.sustainLevel
+          ),
+        this.sampleRate,
+      ),
+      atAudioTimeSeconds,
+    );
   }
 
   public stop(atAudioTimeSeconds: number): void {
