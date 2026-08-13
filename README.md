@@ -9,8 +9,8 @@ Ce README est le point d’entrée pour installer, utiliser et dépanner le proj
 La représentation technique détaillée se trouve dans
 [`docs/architecture.md`](docs/architecture.md) et les améliorations de
 maintenabilité sont ordonnées dans [`docs/roadmap.md`](docs/roadmap.md). Une
-[feuille de route distincte](docs/rewrite-roadmap.md) décrit l’option d’une
-réécriture globale compatible avec l’expérience actuelle.
+[ancienne hypothèse de réécriture](docs/old-hypothetical-rewrite-roadmap.md) est
+conservée uniquement comme archive de décision.
 
 ## Sommaire
 
@@ -37,7 +37,7 @@ réécriture globale compatible avec l’expérience actuelle.
 | [`README.md`](README.md) | installer, lancer, utiliser, déployer et dépanner Pianola |
 | [`docs/architecture.md`](docs/architecture.md) | comprendre les modules, propriétaires d’état, flux et règles de dépendances |
 | [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
-| [`docs/rewrite-roadmap.md`](docs/rewrite-roadmap.md) | préparer une réécriture v2, ses choix de stack, ses preuves et sa bascule |
+| [`docs/old-hypothetical-rewrite-roadmap.md`](docs/old-hypothetical-rewrite-roadmap.md) | consulter l’hypothèse de réécriture v2 archivée et non planifiée |
 | [`src/ui/rendering/README.md`](src/ui/rendering/README.md) | modifier le pipeline Canvas et ses contraintes de performance |
 | [`src/geometry/__tests__/TEST_PLAN.md`](src/geometry/__tests__/TEST_PLAN.md) | implémenter les tests de propriétés et benchmarks géométriques |
 

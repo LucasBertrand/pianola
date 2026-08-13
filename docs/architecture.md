@@ -4,7 +4,9 @@ Ce document décrit l’architecture observée dans le code, les responsabilité
 chaque module et les règles à préserver. Il complète le [README](../README.md),
 orienté installation et utilisation, et la [feuille de route](roadmap.md), qui
 ordonne les améliorations incrémentales. L’option d’une reconstruction complète
-est décrite séparément dans la [feuille de route v2](rewrite-roadmap.md).
+est conservée comme ancienne hypothèse dans la
+[feuille de route v2 archivée](old-hypothetical-rewrite-roadmap.md) ; elle ne
+constitue plus la trajectoire active.
 
 Dernière revue complète du dépôt : 13 août 2026.
 

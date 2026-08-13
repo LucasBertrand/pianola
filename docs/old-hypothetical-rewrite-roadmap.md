@@ -1,5 +1,10 @@
 # Feuille de route de réécriture — Pianola v2
 
+> **Statut : archive.** Cette hypothèse de reconstruction n’est plus la
+> trajectoire active. Les travaux sont désormais pilotés par la
+> [feuille de route incrémentale](roadmap.md). Ce document est conservé pour
+> expliquer les options et arbitrages étudiés.
+
 Ce document décrit une réécriture globale de Pianola. Il ne remplace pas la
 [feuille de route de maintenance](roadmap.md), qui reste pertinente si le choix
 est d’améliorer l’application actuelle par étapes. Ici, l’hypothèse est
@@ -61,16 +66,6 @@ La réécriture sera considérée réussie lorsque :
 
 ### Ce qui reste soumis à une preuve
 
-PixiJS v8 est le moteur de rendu privilégié, car il apporte un pipeline WebGL
-structuré et des primitives de batching. Son adoption n’est toutefois pas
-automatique : la v1 cible aussi des tablettes et Firefox Android, et PixiJS v8
-ne fournit pas actuellement de renderer Canvas de repli. Un prototype doit donc
-prouver la netteté, la stabilité et le coût mémoire avant l’ADR définitif.
-
-Si le prototype échoue, la même API de rendu recevra un backend Canvas 2D
-modulaire. La réécriture ne doit pas entretenir deux renderers complets sur le
-long terme : un seul backend sera retenu après le jalon de preuve.
-
 L’historique `redux-undo` est lui aussi conditionné à un test mémoire sur de gros
 projets. Grâce au partage structurel d’Immer, il est le choix le plus simple.
 S’il dépasse le budget défini au jalon 0, il sera remplacé derrière la même API
@@ -89,7 +84,7 @@ par un journal de patches directs et inverses produit par Immer.
 | Audio | Tone.js | contexte, transport, voix et effets derrière `AudioSession` |
 | MIDI | `@tonejs/midi` | lecture/écriture SMF derrière l’adaptateur Pianola |
 | Travail hors thread UI | Web Worker + Comlink | parsing, migrations et export des fichiers |
-| Rendu | PixiJS v8, sous benchmark | rendu WebGL des couches du piano roll |
+| Rendu | PixiJS v8 | rendu WebGL des couches du piano roll |
 | UI accessible | Radix Primitives | dialogue, menu, tooltip, slider, tabs et toolbar |
 | Styles | CSS Modules + custom properties | portée locale et tokens partagés, sans runtime CSS |
 | Tests | Vitest | unités, contrats et intégrations déterministes |
@@ -112,8 +107,6 @@ pas franchir l’API publique du paquet qui les adapte.
 - Pas de bibliothèque générique de collision avant benchmark : les 128 hauteurs
   MIDI et les intervalles temporels forment un index spécialisé simple et
   prévisible.
-- Pas de WebGPU uniquement : sa disponibilité ne correspond pas encore à la
-  matrice navigateur de Pianola.
 - Pas de microservices, Electron, CRDT ou AudioWorklet sans fonctionnalité ou
   profil de performance qui les justifie.
 
@@ -159,7 +152,7 @@ PianoRoll/
 ├── docs/
 │   ├── adr/                           # décisions et preuves mesurées
 │   ├── architecture.md                # architecture effective après bascule
-│   └── rewrite-roadmap.md
+│   └── old-hypothetical-rewrite-roadmap.md
 ├── package.json
 └── tsconfig.json
 ```
