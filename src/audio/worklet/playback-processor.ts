@@ -2,7 +2,7 @@ import type {
   MainToAudioWorkletMessage,
 } from "./audio-worklet-protocol";
 import {
-  PIANOLA_AUDIO_PROCESSOR_NAME,
+  PLAYBACK_PROCESSOR_NAME,
 } from "./audio-worklet-protocol";
 import {
   WorkletTimelineEngine,
@@ -30,7 +30,7 @@ declare function registerProcessor(
 
 const POSITION_REPORT_INTERVAL_FRAMES = 1_024;
 
-class PianolaAudioProcessor extends AudioWorkletProcessor {
+class PlaybackProcessor extends AudioWorkletProcessor {
   private readonly engine = new WorkletTimelineEngine(sampleRate);
   private lastReportedStateRevision = -1;
   private nextPositionReportFrame = 0;
@@ -157,4 +157,4 @@ class PianolaAudioProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor(PIANOLA_AUDIO_PROCESSOR_NAME, PianolaAudioProcessor);
+registerProcessor(PLAYBACK_PROCESSOR_NAME, PlaybackProcessor);

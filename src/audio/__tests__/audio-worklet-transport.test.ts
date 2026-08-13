@@ -58,7 +58,7 @@ describe("AudioWorklet browser transport", () => {
     await transport.play(0);
 
     expect(fakeContext.loadedModuleUrl).toContain(
-      "pianola-audio-processor",
+      "playback-processor",
     );
     expect(fakePort.messages.map((message) => message.type)).toEqual([
       "load-timeline",

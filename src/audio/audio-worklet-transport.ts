@@ -24,13 +24,13 @@ import {
 import type {
   AudioTransportCallbacks,
 } from "./audio-transport-callbacks";
-import processorModuleUrl from "./worklet/pianola-audio-processor.ts?worker&url";
+import processorModuleUrl from "./worklet/playback-processor.ts?worker&url";
 import type {
   AudioWorkletToMainMessage,
   MainToAudioWorkletMessage,
 } from "./worklet/audio-worklet-protocol";
 import {
-  PIANOLA_AUDIO_PROCESSOR_NAME,
+  PLAYBACK_PROCESSOR_NAME,
 } from "./worklet/audio-worklet-protocol";
 import {
   createTransferableAudioWorkletTimeline,
@@ -430,7 +430,7 @@ function createBrowserAudioContext(): AudioContext {
 function createBrowserAudioWorkletNode(
   context: AudioContext,
 ): AudioWorkletNode {
-  return new AudioWorkletNode(context, PIANOLA_AUDIO_PROCESSOR_NAME, {
+  return new AudioWorkletNode(context, PLAYBACK_PROCESSOR_NAME, {
     numberOfInputs: 0,
     numberOfOutputs: 1,
     outputChannelCount: [2],

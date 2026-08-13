@@ -8,7 +8,7 @@ import {
 
 const assetsDirectory = path.resolve("dist", "assets");
 const workletAssetName = (await readdir(assetsDirectory)).find((fileName) => (
-  fileName.startsWith("pianola-audio-processor-")
+  fileName.startsWith("playback-processor-")
   && fileName.endsWith(".js")
 ));
 
@@ -43,7 +43,7 @@ await import(pathToFileURL(
   path.join(assetsDirectory, workletAssetName),
 ).href);
 
-if (registeredName !== "pianola-audio-engine" || Processor === null) {
+if (registeredName !== "playback-processor" || Processor === null) {
   throw new Error("The production audio processor did not register.");
 }
 

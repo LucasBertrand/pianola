@@ -9,7 +9,7 @@ boucles, les voix soustractives, les enveloppes et le protocole AudioWorklet.
 
 La façade navigateur est `audio-worklet-transport.ts`. Le cœur temps réel est
 `worklet/worklet-timeline-engine.ts`; il est indépendant du DOM et testable sans
-navigateur. `worklet/pianola-audio-processor.ts` ne fait que relier ce cœur à
+navigateur. `worklet/playback-processor.ts` ne fait que relier ce cœur à
 `AudioWorkletProcessor`.
 
 ```text

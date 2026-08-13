@@ -13,7 +13,7 @@ import type {
   SubtractivePlaybackPresetSnapshot,
 } from "../playback-model";
 
-export const PIANOLA_AUDIO_PROCESSOR_NAME = "pianola-audio-engine";
+export const PLAYBACK_PROCESSOR_NAME = "playback-processor";
 
 export interface AudioWorkletTimelineInstrument {
   readonly instrumentId: InstrumentId;
