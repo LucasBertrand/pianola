@@ -127,8 +127,15 @@ export class SubtractiveWorkletVoice {
   public preview(config: SubtractivePlaybackPresetSnapshot): void {
     this.targetFrequencyHz = this.baseFrequencyHz
       * 2 ** (config.oscillatorDetuneCents / 1_200);
+    this.pulseWidth = config.pulseWidth;
+    this.amplitudeEnvelope.previewSustainLevel(
+      config.envelope.sustainLevel,
+    );
     this.targetFilterCutoffHz = config.filterCutoffHz;
     this.targetFilterResonance = config.filterResonance;
+    this.filterEnvelope.previewSustainLevel(
+      config.filterEnvelope.sustainLevel,
+    );
   }
 
   public configureMix(gain: number, pan: number, audible: boolean): void {

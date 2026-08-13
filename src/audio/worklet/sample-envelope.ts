@@ -53,6 +53,10 @@ export class SampleEnvelope {
     return this.value;
   }
 
+  public previewSustainLevel(sustainLevel: number): void {
+    this.sustainLevel = sustainLevel;
+  }
+
   public release(releaseSeconds?: number, sampleRate?: number): void {
     if (this.stage === "release" || this.stage === "ended") {
       return;

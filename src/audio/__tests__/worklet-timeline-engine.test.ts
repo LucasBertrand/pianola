@@ -256,6 +256,172 @@ describe("AudioWorklet timeline engine", () => {
     expect(engine.status).toBe("playing");
   });
 
+  test("applies pulse width previews to an active voice", () => {
+    const snapshot = createSnapshotWithNotes([]);
+    const instrument = snapshot.instruments[0];
+
+    expect(instrument).toBeDefined();
+
+    if (instrument === undefined) {
+      return;
+    }
+
+    const config = {
+      ...instrument.instrument,
+      oscillatorWaveform: "square" as const,
+      pulseWidth: 0.5,
+      filterCutoffHz: 20_000,
+      filterEnvelopeAmountOctaves: 0,
+    };
+    const previewedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const unchangedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+
+    for (const voice of [previewedVoice, unchangedVoice]) {
+      voice.start(
+        instrument.instrumentId,
+        60,
+        config,
+        440,
+        1,
+        null,
+        null,
+      );
+    }
+
+    for (let sampleIndex = 0; sampleIndex < 128; sampleIndex += 1) {
+      expect(previewedVoice.render()).toBe(unchangedVoice.render());
+    }
+
+    previewedVoice.preview({ ...config, pulseWidth: 0.2 });
+
+    const previewedSamples = Array.from(
+      { length: 128 },
+      () => previewedVoice.render(),
+    );
+    const unchangedSamples = Array.from(
+      { length: 128 },
+      () => unchangedVoice.render(),
+    );
+
+    expect(previewedSamples).not.toEqual(unchangedSamples);
+  });
+
+  test("applies envelope sustain previews to an active voice", () => {
+    const snapshot = createSnapshotWithNotes([]);
+    const instrument = snapshot.instruments[0];
+
+    expect(instrument).toBeDefined();
+
+    if (instrument === undefined) {
+      return;
+    }
+
+    const config = {
+      ...instrument.instrument,
+      oscillatorWaveform: "sine" as const,
+      envelope: {
+        attackSeconds: 0.001,
+        decaySeconds: 0,
+        sustainLevel: 1,
+        releaseSeconds: 0.1,
+      },
+      filterCutoffHz: 20_000,
+      filterEnvelopeAmountOctaves: 0,
+    };
+    const voice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+
+    voice.start(
+      instrument.instrumentId,
+      60,
+      config,
+      440,
+      1,
+      null,
+      null,
+    );
+    for (let sampleIndex = 0; sampleIndex < 128; sampleIndex += 1) {
+      voice.render();
+    }
+
+    voice.preview({
+      ...config,
+      envelope: { ...config.envelope, sustainLevel: 0 },
+      filterEnvelope: {
+        ...config.filterEnvelope,
+        sustainLevel: 0,
+      },
+    });
+
+    expect(Math.abs(voice.render())).toBe(0);
+    expect(voice.ended).toBe(false);
+  });
+
+  test("applies filter envelope sustain previews to an active voice", () => {
+    const snapshot = createSnapshotWithNotes([]);
+    const instrument = snapshot.instruments[0];
+
+    expect(instrument).toBeDefined();
+
+    if (instrument === undefined) {
+      return;
+    }
+
+    const config = {
+      ...instrument.instrument,
+      oscillatorWaveform: "square" as const,
+      envelope: {
+        attackSeconds: 0.001,
+        decaySeconds: 0,
+        sustainLevel: 1,
+        releaseSeconds: 0.1,
+      },
+      filterCutoffHz: 200,
+      filterEnvelopeAmountOctaves: 6,
+      filterEnvelope: {
+        attackSeconds: 0.001,
+        decaySeconds: 0,
+        sustainLevel: 1,
+        releaseSeconds: 0.1,
+      },
+    };
+    const previewedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const unchangedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+
+    for (const voice of [previewedVoice, unchangedVoice]) {
+      voice.start(
+        instrument.instrumentId,
+        60,
+        config,
+        440,
+        1,
+        null,
+        null,
+      );
+      for (let sampleIndex = 0; sampleIndex < 128; sampleIndex += 1) {
+        voice.render();
+      }
+    }
+
+    previewedVoice.preview({
+      ...config,
+      filterEnvelope: {
+        ...config.filterEnvelope,
+        sustainLevel: 0,
+      },
+    });
+
+    const previewedSamples = Array.from(
+      { length: 128 },
+      () => previewedVoice.render(),
+    );
+    const unchangedSamples = Array.from(
+      { length: 128 },
+      () => unchangedVoice.render(),
+    );
+
+    expect(previewedSamples).not.toEqual(unchangedSamples);
+  });
+
   test("finds held notes on seek through the bounded interval index", () => {
     const diagnostics: TimelineEngineDiagnostic[] = [];
     const snapshot = createSnapshotWithNotes([
