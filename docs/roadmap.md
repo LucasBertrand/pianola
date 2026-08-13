@@ -18,10 +18,6 @@ jouable du matériau musical, et une scene organise des clips à haut niveau. Le
 code emploie ces termes anglais de façon canonique dans les types, les API et
 la documentation technique.
 
-Cette feuille de route est la trajectoire active. L’ancienne hypothèse d’une
-[réécriture globale](old-hypothetical-rewrite-roadmap.md) est conservée comme
-archive de décision, mais ne doit pas être utilisée pour planifier les travaux.
-
 ## Mode de pilotage
 
 Les niveaux P0 à P5 expriment un ordre de dépendance, pas des lots à livrer en
