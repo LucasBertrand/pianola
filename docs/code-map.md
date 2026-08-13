@@ -18,7 +18,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
 
 La « suite centrale » désigne
-`tests/integration/audio-domain-regression.test.mjs`. Ses 102 scénarios globaux
+`tests/integration/audio-domain-regression.test.mjs`. Ses scénarios globaux
 restent le garde-fou de parité des flux transversaux.
 
 ## Besoin → fichier de départ

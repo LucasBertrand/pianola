@@ -45,11 +45,9 @@ import type {
 } from "../../domain/project-store";
 import {
   SelectionTransformationError,
+  transformNoteSelection,
   type SelectionTransformationKind,
 } from "../../domain/selection-transformations";
-import {
-  createTargetedNoteTransformationPlan,
-} from "../../domain/targeted-note-transformations";
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
@@ -190,15 +188,11 @@ export function usePianoRollSelectionWorkflow({
       }
 
       try {
-        const proposedNotes = createTargetedNoteTransformationPlan(
-          {
-            sourceKind: "clip",
-            sourceId: activeClip.id,
-            durationTicks: activeClip.timeline.durationTicks,
-          },
+        const proposedNotes = transformNoteSelection(
           originalNotes,
           kind,
-        ).notes;
+          activeClip.timeline.durationTicks,
+        );
         const intent = {
           originalNotes,
           proposedNotes,
