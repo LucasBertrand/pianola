@@ -7,11 +7,14 @@ import {
   compilePlaybackSnapshot,
 } from "../../src/audio/playback-snapshot";
 import {
+  createClipPlaybackSource,
+} from "../../src/audio/playback-source";
+import {
   LookaheadScheduler,
 } from "../../src/audio/lookahead-scheduler";
 import {
   createEditorRuntime,
-} from "../../src/app/editor-runtime";
+} from "../../src/app/create-app-runtime";
 import type {
   PianoRollCommand,
   Transaction,
@@ -101,7 +104,10 @@ describe("P0 critical behavior witnesses", () => {
 
   test("launches playback with the expected deterministic audio plan", async () => {
     const project = createCriticalBehaviorProject();
-    const snapshot = compilePlaybackSnapshot(project);
+    const snapshot = compilePlaybackSnapshot(
+      project,
+      createClipPlaybackSource(getActiveClip(project)),
+    );
     const engine = new FakeAudioEngine({
       scheduleAheadSeconds: 0.6,
     });
@@ -142,6 +148,26 @@ describe("P0 critical behavior witnesses", () => {
 
     await scheduler.dispose();
     expect(engine.disposed).toBe(true);
+  });
+
+  test("compiles the explicit playback source instead of the active clip", () => {
+    const project = createCriticalBehaviorProject();
+    const secondClip = project.clipsById[SECOND_TEST_CLIP_ID];
+
+    expect(secondClip).toBeDefined();
+
+    if (secondClip === undefined) {
+      return;
+    }
+
+    const snapshot = compilePlaybackSnapshot(
+      project,
+      createClipPlaybackSource(secondClip),
+    );
+
+    expect(project.activeClipId).toBe(TEST_CLIP_ID);
+    expect(snapshot.durationTicks).toBe(7_680);
+    expect(snapshot.instruments[0]?.noteIds).toEqual([]);
   });
 
   test("restores each clip playhead while navigation stays outside undo", () => {

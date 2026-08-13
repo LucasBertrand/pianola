@@ -1,9 +1,9 @@
 import {
   AUDIO_CONSTANTS,
-} from "../../config/program-constants";
+} from "../../config/audio-config";
 import type {
   SubtractivePlaybackInstrumentSnapshot,
-} from "../contracts";
+} from "../playback-model";
 import type {
   AudioEngineConfig,
   InstrumentId,
@@ -15,7 +15,7 @@ import type {
   ActiveInstrumentVoice,
   InstrumentRenderer,
   InstrumentScheduleRequest,
-} from "./contracts";
+} from "./instrument-renderer";
 
 /** Builds and owns oscillator-based voices for subtractive instruments. */
 export class SubtractiveInstrumentRenderer

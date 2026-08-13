@@ -4,13 +4,13 @@ import type {
 } from "../domain/model";
 import {
   AUDIO_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/audio-config";
 import type {
   AudioEnginePort,
   PlaybackSnapshot,
   PlaybackInstrumentSnapshot,
   ScheduledNoteEvent,
-} from "./contracts";
+} from "./playback-model";
 import {
   countOverlappingVoiceWindows,
   findOldestOverlappingVoiceIndex,
@@ -18,7 +18,7 @@ import {
 import type {
   ActiveInstrumentVoice,
   InstrumentRenderer,
-} from "./instruments/contracts";
+} from "./instruments/instrument-renderer";
 import {
   SubtractiveInstrumentRenderer,
 } from "./instruments/subtractive-instrument-renderer";

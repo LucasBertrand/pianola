@@ -1,7 +1,9 @@
 import {
   PROJECT_CONSTANTS,
+} from "../config/domain-limits";
+import {
   TONAL_SNAP_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/music-config";
 
 export type TonalPatternDefinition =
   (typeof TONAL_SNAP_CONSTANTS.patterns)[number];

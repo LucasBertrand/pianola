@@ -2,7 +2,7 @@ import type {
   AudioEnginePort,
   PlaybackSnapshot,
   ScheduledNoteEvent,
-} from "../../src/audio/contracts";
+} from "../../src/audio/playback-model";
 import {
   DEFAULT_AUDIO_ENGINE_CONFIG,
   type SchedulerTimerPort,

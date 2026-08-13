@@ -7,7 +7,7 @@ import {
 } from "./app/App";
 import {
   APPLICATION_CONSTANTS,
-} from "./config/program-constants";
+} from "./config/product-config";
 import {
   APPLICATION_CSS_COLOR_VARIABLES,
 } from "./config/application-colors";

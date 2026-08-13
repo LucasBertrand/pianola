@@ -13,8 +13,10 @@ import type {
 } from "./model";
 import {
   EDITOR_CONSTANTS,
+} from "../config/editor-config";
+import {
   INSTRUMENT_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/domain-limits";
 import {
   getTicksPerMeasure,
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,

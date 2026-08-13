@@ -4,7 +4,7 @@ import {
 } from "./commands";
 import {
   PROJECT_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/domain-limits";
 import type {
   ProjectState,
 } from "./model";

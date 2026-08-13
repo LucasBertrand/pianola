@@ -55,9 +55,9 @@ Le socle est déjà robuste : TypeScript strict, modèle immuable, mutations par
 transactions, rendu haute fréquence hors React, codec MIDI borné et moteur audio
 séparé en snapshot, scheduler, moteur et renderer.
 
-L’audit relève toutefois plusieurs coûts de maintenance :
+Après P0 et le socle P1, les coûts de maintenance principaux sont :
 
-- 99 fichiers TypeScript pour environ 33 000 lignes, mais plusieurs fichiers
+- 114 fichiers TypeScript pour environ 33 400 lignes, mais plusieurs fichiers
   dépassent 800 lignes ;
 - `domain/commands.ts` approche 2 800 lignes et réunit types, dispatch et tous
   les handlers métier ;
@@ -69,11 +69,11 @@ L’audit relève toutefois plusieurs coûts de maintenance :
   `PianoRollLayers.tsx` dépassent chacun 1 000 lignes ;
 - `App.tsx` reste une racine de composition lourde, notamment pour les modales
   de collision et d’instrument ;
-- `app`, `application`, `interaction/core` et `ui` ont des frontières difficiles
-  à deviner sans lire les imports ; une même fonctionnalité est souvent répartie
-  entre plusieurs de ces dossiers ;
-- la persistance dépend encore de types situés sous `ui/rendering` ;
-- les 81 tests exécutables sont désormais pilotés par Vitest avec des fixtures
+- les frontières P1 sont matérialisées sous `use-cases`, `editor`, `project-io`
+  et les capacités de `ui`, mais les grands fichiers internes restent à découper ;
+- `activeClipId` reste physiquement dans le format natif v1 pour compatibilité,
+  même si audio et MIDI reçoivent désormais des sources explicites ;
+- les 82 tests exécutables sont désormais pilotés par Vitest avec des fixtures
   partagées ; les deux anciens scripts monolithiques ont été supprimés en P0 ;
 - les interactions DOM, Canvas, le responsive et Web Audio réel ne sont pas
   couverts automatiquement ;
@@ -81,7 +81,7 @@ L’audit relève toutefois plusieurs coûts de maintenance :
   Vite de 500 kB avant gzip.
 
 Le point de référence est vert : `npm run verify` passe avec le contrôle des
-frontières, trois configurations TypeScript, le build et 81 scénarios Vitest.
+frontières, trois configurations TypeScript, le build et 82 scénarios Vitest.
 
 ### Décision sur les sauvegardes pendant cette feuille de route
 
@@ -169,12 +169,10 @@ Critères de sortie :
 
 Ajouter un contrôle d’imports dans la CI. Une règle simple suffit au départ :
 
-- `domain`, `music` et `geometry` n’importent jamais `app`, `ui`, React ou une
+- `domain`, `music` et `editor` n’importent jamais `app`, `ui`, React ou une
   API navigateur ;
-- `use-cases` — et `application` pendant la migration — n’importe pas `app` ou
-  `ui` ;
-- `audio` et `project-io` — ainsi que `midi` et `persistence` pendant la
-  migration — n’importent pas `app` ou un composant React ;
+- `use-cases` n’importe pas `app` ou `ui` ;
+- `audio` et `project-io` n’importent pas `app` ou un composant React ;
 - seul `app` assemble les implémentations concrètes.
 
 Le contrôle peut être un petit script TypeScript versionné ou un outil de graphe
@@ -240,6 +238,14 @@ Critères de sortie :
   préférence de stack.
 
 ## P1 — Clarifier les frontières et l’arborescence
+
+**État au 13 août 2026 : socle livré sur `migration/p1-boundaries`.** Les
+déplacements P1.1 à P1.7, la configuration propriétaire, les gardes de structure,
+`PlaybackSource` et la projection MIDI neutre sont implémentés. Le détail des
+chemins et des compatibilités est consigné dans
+[`p1-migration.md`](p1-migration.md) et la propriété des états dans
+[`state-ownership.md`](state-ownership.md). Le miroir `activeClipId` du format
+natif v1 est conservé jusqu’à une migration de schéma versionnée.
 
 ### P1.1 Rendre les types d’éditeur indépendants de l’UI
 

@@ -6,8 +6,10 @@ import type {
 } from "../domain/model";
 import {
   AUDIO_CONSTANTS,
+} from "../config/audio-config";
+import {
   PROJECT_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/domain-limits";
 import {
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
 } from "../domain/model";
@@ -17,7 +19,7 @@ import type {
   PlaybackSnapshot,
   PlaybackStatus,
   PlaybackInstrumentSnapshot,
-} from "./contracts";
+} from "./playback-model";
 import {
   projectTickIntoLoop,
   secondsToTickDelta,

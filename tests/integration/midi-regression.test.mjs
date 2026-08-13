@@ -15,20 +15,23 @@ import {
 } from "../../src/domain/project-instrument-factory";
 import {
   MidiCodecError,
-} from "../../src/midi/errors";
+} from "../../src/project-io/midi/midi-codec-error";
 import {
-  createMidiExport,
-} from "../../src/midi/midi-exporter";
+  createMidiExport as createProjectedMidiExport,
+} from "../../src/project-io/midi/midi-exporter";
+import {
+  createMidiExportProjection,
+} from "../../src/use-cases/project-files/midi-export-projection";
 import {
   analyzeMidiImport,
   createProjectFromMidiImport,
-} from "../../src/midi/midi-importer";
+} from "../../src/project-io/midi/midi-importer";
 import {
   readStandardMidiFile,
-} from "../../src/midi/smf-reader";
+} from "../../src/project-io/midi/smf-reader";
 import {
   writeStandardMidiFile,
-} from "../../src/midi/smf-writer";
+} from "../../src/project-io/midi/smf-writer";
 import {
   createMidiImportAnalysisFixture as createImportAnalysis,
   createRawFormatZeroMidiFile as createRawFormatZeroFile,
@@ -36,6 +39,13 @@ import {
   getProjectNotes,
   normalizeProjectInstruments,
 } from "../support/midi-fixtures";
+
+function createActiveClipMidiExport(project) {
+  return createProjectedMidiExport(
+    createMidiExportProjection(project, getActiveTestClip(project)),
+  );
+}
+
   function parseWrittenFile(file) {
     return readStandardMidiFile(
       writeStandardMidiFile(file),
@@ -729,7 +739,7 @@ import {
       activeClipId: sourceClipId,
       masterBus: createDefaultMasterBusState(),
     };
-    const exported = createMidiExport(sourceProject);
+    const exported = createActiveClipMidiExport(sourceProject);
     const exportedNoteEvents = exported.file.tracks[1].events
       .filter((event) =>
         event.kind === "note-on"
@@ -843,7 +853,7 @@ import {
       activeClipId: sourceClipId,
       masterBus: createDefaultMasterBusState(),
     };
-    const exported = createMidiExport(sourceProject);
+    const exported = createActiveClipMidiExport(sourceProject);
     const parsed = parseWrittenFile(exported.file);
     const analysis = analyzeMidiImport(
       parsed,
@@ -904,7 +914,7 @@ import {
         },
       },
     };
-    const disabledNoteExport = createMidiExport(
+    const disabledNoteExport = createActiveClipMidiExport(
       disabledNoteProject,
     );
 
@@ -929,7 +939,7 @@ import {
       },
     };
     const alternatePpqnExport =
-      createMidiExport(alternatePpqnProject);
+      createActiveClipMidiExport(alternatePpqnProject);
 
     assert.equal(
       alternatePpqnExport.file.ticksPerQuarterNote,

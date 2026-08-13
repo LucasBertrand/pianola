@@ -10,7 +10,7 @@ import {
 } from "../../src/domain/model";
 import type {
   MidiImportAnalysis,
-} from "../../src/midi/midi-importer";
+} from "../../src/project-io/midi/midi-importer";
 
 export function createRawFormatZeroMidiFile(
   trackBytes: Uint8Array,

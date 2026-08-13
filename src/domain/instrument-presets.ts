@@ -1,7 +1,7 @@
 import {
   INSTRUMENT_CONSTANTS,
   PROJECT_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/domain-limits";
 import type {
   InstrumentPreset,
   PresetId,

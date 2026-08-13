@@ -4,21 +4,21 @@ import {
 } from "vitest";
 import {
   EditorCommandService,
-} from "../../src/application/editor-command-service";
+} from "../../src/use-cases/commands/editor-command-service";
 import {
   EditorSelectionRequests,
-} from "../../src/application/editor-selection-requests";
+} from "../../src/editor/selection/editor-selection-requests";
 import {
   EditorSelection,
-} from "../../src/application/editor-selection";
+} from "../../src/editor/selection/editor-selection";
 import {
   buildDeleteNoteCommands,
   buildRepositionNoteCommands,
   buildSetNotesEnabledCommands,
-} from "../../src/application/note-edit-commands";
+} from "../../src/use-cases/notes/note-edit-commands";
 import {
   NoteGestureWorkflow,
-} from "../../src/application/note-gesture-workflow";
+} from "../../src/use-cases/notes/note-gesture-workflow";
 import {
   buildSliceCommandsForNotes,
   canPlacePastedNotes,
@@ -26,10 +26,10 @@ import {
   createPastedNotes,
   findNotesByIds,
   getRequiredMeasureCountForNotes,
-} from "../../src/application/selection-edit-plans";
+} from "../../src/use-cases/selection/selection-edit-plans";
 import {
   createEditorRuntime,
-} from "../../src/app/editor-runtime";
+} from "../../src/app/create-app-runtime";
 import {
   SubtractiveInstrumentRenderer,
 } from "../../src/audio/instruments/subtractive-instrument-renderer";
@@ -41,8 +41,11 @@ import {
   resolveNoteEnvelopePeakLevel,
 } from "../../src/audio/note-dynamics";
 import {
-  compilePlaybackSnapshot,
+  compilePlaybackSnapshot as compileExplicitPlaybackSnapshot,
 } from "../../src/audio/playback-snapshot";
+import {
+  createClipPlaybackSource,
+} from "../../src/audio/playback-source";
 import {
   projectTickIntoLoop,
   secondsToTick,
@@ -89,33 +92,33 @@ import {
   getPagedScrollXForTick,
   getPlaybackFollowScrollX,
   getScrollXToRevealTick,
-} from "../../src/geometry/viewport-bounds";
+} from "../../src/editor/geometry/viewport-bounds";
 import {
   EditingNoteMask,
-} from "../../src/interaction/core/editing-note-mask";
+} from "../../src/editor/interactions/editing-note-mask";
 import {
   PianoRollGestureStateMachine,
-} from "../../src/interaction/core/gesture-state-machine";
+} from "../../src/editor/interactions/gestures/gesture-state-machine";
 import {
   buildRepositionedNotes as buildGestureRepositionedNotes,
   calculateResizeDeltaBounds,
   measureNoteSelection,
   quantizeTick,
   snapTickToCellStart,
-} from "../../src/interaction/core/note-gesture-math";
+} from "../../src/editor/interactions/gestures/note-gesture-math";
 import {
   classifyPinchZoomAxis,
   PinchViewportGesture,
-} from "../../src/interaction/core/pinch-viewport-gesture";
+} from "../../src/editor/interactions/gestures/pinch-viewport-gesture";
 import {
   createInteractionDraft,
-} from "../../src/interaction/core/state";
+} from "../../src/editor/interactions/gestures/gesture-draft";
 import {
   TwoPointerDoubleTapGesture,
-} from "../../src/interaction/core/two-pointer-double-tap";
+} from "../../src/editor/interactions/gestures/two-pointer-double-tap";
 import {
   PianoRollInteractionSession,
-} from "../../src/interaction/piano-roll-interaction-session";
+} from "../../src/editor/interactions/piano-roll-interaction-session";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   getPitchScaleDegreeColorIndex,
@@ -128,12 +131,12 @@ import {
 import {
   parseNativeProjectFile,
   serializeNativeProjectFile,
-} from "../../src/persistence/native-project-file";
+} from "../../src/project-io/native/native-project-file";
 import {
   getMidiNoteLabel,
   getPreferredTonicLabel,
   getScaleDegreeLabel,
-} from "../../src/ui/rendering/pitch-label";
+} from "../../src/ui/piano-roll/rendering/pitch-label";
 import {
   FakeAudioEngine,
   FakeSchedulerTimer,
@@ -145,6 +148,13 @@ import {
   createAudioTestProjectInstrument as createProjectInstrument,
   getAudioTestActiveClip as getActiveTestClip,
 } from "../support/project-fixtures";
+
+function compileActiveClipPlaybackSnapshot(state) {
+  return compileExplicitPlaybackSnapshot(
+    state,
+    createClipPlaybackSource(getActiveTestClip(state)),
+  );
+}
 
   let transactionSequence = 0;
 
@@ -953,7 +963,7 @@ import {
 
     assert.equal(disabledNote.enabled, false);
     assert.deepEqual(
-      compilePlaybackSnapshot(store.getState()).instruments[0].noteIds,
+      compileActiveClipPlaybackSnapshot(store.getState()).instruments[0].noteIds,
       [],
     );
 
@@ -992,7 +1002,7 @@ import {
         ],
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
 
     assert.equal(snapshot.projectRevision, 7);
     assert.equal(snapshot.ppqn, 960);
@@ -1027,7 +1037,7 @@ import {
   });
 
   test("renders pulse width and filter modulation from the subtractive snapshot", () => {
-    const baseSnapshot = compilePlaybackSnapshot(createProject());
+    const baseSnapshot = compileActiveClipPlaybackSnapshot(createProject());
     const baseInstrument = baseSnapshot.instruments[0];
     const parameterEvents = [];
     const oscillators = [];
@@ -1135,7 +1145,7 @@ import {
   });
 
   test("keeps a zero-sustain envelope silent until note-off", () => {
-    const baseSnapshot = compilePlaybackSnapshot(createProject());
+    const baseSnapshot = compileActiveClipPlaybackSnapshot(createProject());
     const baseInstrument = baseSnapshot.instruments[0];
     const amplitudeEvents = [];
     const createAudioParam = (value, events = undefined) => ({
@@ -1232,7 +1242,7 @@ import {
   });
 
   test("delegates instrument rendering while retaining shared audio buses", async () => {
-    const snapshot = compilePlaybackSnapshot(createProject());
+    const snapshot = compileActiveClipPlaybackSnapshot(createProject());
     const gainNodes = [];
     const panNodes = [];
     const createAudioParam = (value) => ({
@@ -1363,7 +1373,7 @@ import {
     });
     assert.equal(tunedState.masterBus.tuningFrequencyHz, 442);
     assert.equal(
-      compilePlaybackSnapshot(tunedState)
+      compileActiveClipPlaybackSnapshot(tunedState)
         .masterTuningFrequencyHz,
       442,
     );
@@ -2451,7 +2461,7 @@ import {
         ],
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine({
       scheduleAheadSeconds: 0.12,
     });
@@ -2486,7 +2496,7 @@ import {
     const state = createProject({
       instrumentOrder: ["voice-a", "voice-b"],
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine();
     const scheduler = new LookaheadScheduler(
       engine,
@@ -2533,7 +2543,7 @@ import {
       },
       revision: 1,
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine({
       scheduleAheadSeconds: 0.4,
     });
@@ -2559,7 +2569,7 @@ import {
       revision: 2,
     };
     scheduler.replacePlaybackState(
-      compilePlaybackSnapshot(refreshedState),
+      compileActiveClipPlaybackSnapshot(refreshedState),
       getActiveTestClip(refreshedState).transportSettings,
     );
 
@@ -2602,7 +2612,7 @@ import {
       },
     });
     const soloState = state;
-    const snapshot = compilePlaybackSnapshot(soloState);
+    const snapshot = compileActiveClipPlaybackSnapshot(soloState);
     const engine = new FakeAudioEngine();
     const scheduler = new LookaheadScheduler(
       engine,
@@ -2629,7 +2639,7 @@ import {
         ],
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine();
     const timer = new FakeSchedulerTimer();
     let releaseResume;
@@ -2671,7 +2681,7 @@ import {
         ],
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine();
     const timer = new FakeSchedulerTimer();
     const reportedErrors = [];
@@ -2718,7 +2728,7 @@ import {
         loopEnabled: true,
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine({
       scheduleAheadSeconds: 0.8,
     });
@@ -2777,7 +2787,7 @@ import {
         loopEnabled: true,
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine();
     const timer = new FakeSchedulerTimer();
     const scheduler = new LookaheadScheduler(
@@ -2811,7 +2821,7 @@ import {
         ],
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine({
       scheduleAheadSeconds: 0.2,
     });
@@ -2853,7 +2863,7 @@ import {
         ],
       },
     });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine({
       scheduleAheadSeconds: 0.25,
     });
@@ -3010,7 +3020,7 @@ import {
       { gain: 0.35, muted: true, solo: true },
     );
     assert.equal(
-      compilePlaybackSnapshot(store.getState())
+      compileActiveClipPlaybackSnapshot(store.getState())
         .instruments[0].instrument.oscillatorWaveform,
       "sawtooth",
     );
@@ -3241,7 +3251,7 @@ import {
 
   test("replaces an audio snapshot at a restored clip position", () => {
     const state = createProject({ measureCount: 1 });
-    const snapshot = compilePlaybackSnapshot(state);
+    const snapshot = compileActiveClipPlaybackSnapshot(state);
     const engine = new FakeAudioEngine();
     const scheduler = new LookaheadScheduler(
       engine,

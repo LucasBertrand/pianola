@@ -17,7 +17,7 @@ import {
 } from "../../src/domain/model";
 import type {
   NativeEditorState,
-} from "../../src/persistence/native-project-file";
+} from "../../src/project-io/native/native-project-file";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../src/music/pitch-snap";

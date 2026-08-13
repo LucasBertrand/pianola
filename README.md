@@ -36,11 +36,13 @@ conservée uniquement comme archive de décision.
 | --- | --- |
 | [`README.md`](README.md) | installer, lancer, utiliser, déployer et dépanner Pianola |
 | [`docs/architecture.md`](docs/architecture.md) | comprendre les modules, propriétaires d’état, flux et règles de dépendances |
+| [`docs/state-ownership.md`](docs/state-ownership.md) | décider où vit un état, sa durée, sa persistance et son rapport à Undo/Redo |
+| [`docs/p1-migration.md`](docs/p1-migration.md) | consulter les déplacements, frontières et compatibilités du chantier P1 |
 | [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
 | [`docs/p0-baseline.md`](docs/p0-baseline.md) | consulter les garde-fous, témoins critiques et mesures de référence de P0 |
 | [`docs/old-hypothetical-rewrite-roadmap.md`](docs/old-hypothetical-rewrite-roadmap.md) | consulter l’hypothèse de réécriture v2 archivée et non planifiée |
-| [`src/ui/rendering/README.md`](src/ui/rendering/README.md) | modifier le pipeline Canvas et ses contraintes de performance |
-| [`src/geometry/__tests__/TEST_PLAN.md`](src/geometry/__tests__/TEST_PLAN.md) | implémenter les tests de propriétés et benchmarks géométriques |
+| [`src/ui/piano-roll/rendering/README.md`](src/ui/piano-roll/rendering/README.md) | modifier le pipeline Canvas et ses contraintes de performance |
+| [`src/editor/geometry/__tests__/TEST_PLAN.md`](src/editor/geometry/__tests__/TEST_PLAN.md) | implémenter les tests de propriétés et benchmarks géométriques |
 
 ## État du projet
 
@@ -115,17 +117,15 @@ de panne et simplifie les mises à jour.
 ├── scripts/                   Contrôles de frontières et mesures de baseline
 ├── tests/                     Suites Vitest et supports de test partagés
 ├── src/
-│   ├── app/                   Composition, runtime et workflows navigateur
-│   ├── application/           Cas d'usage, sélection et plans de commandes
+│   ├── app/                   Composition, fabrique du runtime et projet démo
 │   ├── audio/                 Snapshot, scheduler et moteur Web Audio
-│   ├── config/                Constantes produit et réglages centralisés
+│   ├── config/                Configuration séparée par propriétaire
 │   ├── domain/                Modèle, validation, commandes, reducer et store
-│   ├── geometry/              Conversion de coordonnées et index spatial
-│   ├── interaction/           Session et calculs de gestes sans React
-│   ├── midi/                  Lecture, écriture, import et export SMF
+│   ├── editor/                Modèle d’édition, géométrie et interactions
 │   ├── music/                 Théorie musicale et magnétisme tonal
-│   ├── persistence/           Sérialisation du format natif Pianola
-│   ├── ui/                    Canvas, hooks, interactions et signaux de rendu
+│   ├── project-io/            Format natif et lecture/écriture MIDI SMF
+│   ├── ui/                    React, Canvas et adaptateurs par capacité
+│   ├── use-cases/             Orchestration, plans et ports sans React
 │   ├── main.tsx               Point d’entrée React
 │   └── styles.css             Styles globaux et responsive
 ├── index.html                 Document HTML et métadonnées de Pianola
@@ -187,18 +187,18 @@ pas des composants React individuels :
   `requestAnimationFrame` ;
 - `spatial-index.ts` classe les notes dans 128 buckets MIDI et limite le rendu
   aux notes visibles ;
-- `interaction/core` calcule quantification, bornes et pinch/pan sans DOM ;
+- `editor/interactions/gestures` calcule quantification, bornes et pinch/pan sans DOM ;
 - `PianoRollInteractionSession` possède le draft, la sélection et les buffers ;
 - `usePianoRollEvents.ts` adapte les transitions vers les commandes ;
 - `DomInteractionVisualController` affiche les ghosts et poignées temporaires ;
 - `InteractionOverlay.tsx` monte les couches DOM et branche les adaptateurs ;
-- `render-signal.ts` permet de redessiner sans re-render React.
+- `editor/model/render-signal.ts` permet de redessiner sans re-render React.
 
-Les grandes surfaces React sont séparées dans `src/ui/components` (timeline,
-clavier, transport, toolbar et inspecteur général). Les workflows
-qui coordonnent le runtime avec les dialogues ou les fichiers du navigateur
-sont dans `src/app/workflows`. `App.tsx` sert de point de câblage entre ces
-modules et ne doit pas redevenir le lieu d'implémentation des cas d'usage.
+Les surfaces React et leurs hooks sont regroupés par capacité dans `src/ui` :
+`clips`, `editor`, `instruments`, `piano-roll`, `project-files` et `transport`.
+La logique indépendante de React vit dans `src/use-cases`. `App.tsx` sert de
+point de câblage et ne doit pas redevenir le lieu d’implémentation des cas
+d’usage.
 
 La synchronisation haute fréquence des quatre sliders de déplacement/zoom est
 centralisée dans `useViewportControls.ts`. Ce hook écrit directement dans les
@@ -218,7 +218,8 @@ frontières actuelles et la structure cible sont priorisés dans
 
 `useAudioPlayback.ts` relie le store au moteur. Un `AudioContext` est créé de
 façon paresseuse après une action utilisateur. `playback-snapshot.ts` compile
-un état immuable et `lookahead-scheduler.ts` programme les événements à
+un état immuable depuis un `PlaybackSource` choisi explicitement et
+`lookahead-scheduler.ts` programme les événements à
 l’avance. `web-audio-engine.ts` possède le contexte, le master et les bus de
 instruments. Les renderers de `src/audio/instruments/` construisent les graphes propres
 à chaque type d’instrument ; le renderer soustractif est le seul disponible.
@@ -305,14 +306,14 @@ utiliser le déploiement Vercel en HTTPS.
 | --- | --- |
 | `npm run dev` | Lance Vite sur toutes les interfaces, port 5173 |
 | `npm run typecheck` | Vérifie tout le TypeScript strict |
-| `npm run typecheck:core` | Vérifie domaine, géométrie, MIDI et persistance |
+| `npm run typecheck:core` | Vérifie domaine, éditeur, cas d’usage et formats sans React |
 | `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
 | `npm run typecheck:test` | Vérifie les tests TypeScript et leurs supports partagés |
-| `npm test` | Lance les 81 scénarios avec Vitest |
+| `npm test` | Lance les 82 scénarios avec Vitest |
 | `npm run test:vitest:watch` | Relance les tests concernés pendant le développement |
 | `npm run build` | Typecheck puis produit le bundle `dist/` |
 | `npm run preview` | Sert localement le dernier build de production |
-| `npm run verify` | Build complet puis toutes les suites de tests |
+| `npm run verify` | Frontières P1, TypeScript, build et toutes les suites Vitest |
 
 La commande de référence avant un commit ou une release est :
 
@@ -382,7 +383,7 @@ les fichiers de production.
 
 ### Couverture actuelle
 
-Les 81 scénarios Vitest couvrent les invariants du domaine, les commandes,
+Les 82 scénarios Vitest couvrent les invariants du domaine, les commandes,
 l’historique, les collisions, la persistance, le timing audio, le scheduler,
 la polyphonie, le solo, les boucles, les conversions MIDI, la géométrie et les
 frontières d’import. Chaque scénario est exécutable par fichier ou par nom.
@@ -390,7 +391,7 @@ frontières d’import. Chaque scénario est exécutable par fichier ou par nom.
 Les gestes tactiles, le layout responsive, le rendu Canvas et le comportement
 réel de Web Audio doivent encore être validés manuellement. Le plan des tests
 géométriques complémentaires se trouve dans
-`src/geometry/__tests__/TEST_PLAN.md`. Les parcours navigateur prioritaires sont détaillés dans
+`src/editor/geometry/__tests__/TEST_PLAN.md`. Les parcours navigateur prioritaires sont détaillés dans
 [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Déploiement continu GitHub vers Vercel
@@ -577,8 +578,8 @@ sélection et coloration — sont enregistrées une seule fois. Les états
 temporaires comme une sélection de notes ou une modale ouverte ne le sont pas.
 
 Son identité et sa version sont définies dans
-`src/config/program-constants.ts`, puis validées dans
-`src/persistence/native-project-file.ts`.
+`src/config/native-file-config.ts`, puis validées dans
+`src/project-io/native/native-project-file.ts`.
 
 Le passage officiel à Pianola a créé le format
 `app.pianola.native-project` et l’extension `.pianola`. Les anciens fichiers
@@ -614,7 +615,8 @@ par instrument. MIDI ne conserve pas les couleurs, mute/solo/lock, paramètres d
 synthétiseur, master bus, boucle ou réglages spécifiques à Pianola.
 
 Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
-`src/config/program-constants.ts`.
+`src/config/midi-config.ts`. L’exporteur reçoit une projection musicale neutre
+et ne choisit pas lui-même le clip affiché.
 
 ## Guide de maintenance
 
@@ -622,31 +624,31 @@ Les limites de sécurité et extensions sont dans `MIDI_CONSTANTS`, dans
 
 | Besoin | Fichier principal |
 | --- | --- |
-| Nom, description et titres par défaut | `src/config/program-constants.ts` |
+| Nom, description et titres par défaut | `src/config/product-config.ts` |
 | Métadonnées navigateur | `index.html` et `public/manifest.webmanifest` |
 | Version npm | `package.json` et `package-lock.json` |
 | Toutes les couleurs de l'application | `src/config/application-colors.ts` |
 | Layout et règles visuelles DOM | `src/styles.css` |
-| Valeurs par défaut et limites | `src/config/program-constants.ts` |
+| Valeurs par défaut et limites | `src/config/domain-limits.ts` et les fichiers propriétaires de `src/config` |
 | Structure principale de l’UI | `src/app/App.tsx` |
-| État initial et projet vierge | `src/app/demo-scene.ts` |
+| État initial et projet vierge | `src/app/demo-project.ts` et `src/use-cases/project-files/create-initial-project.ts` |
 | Clips, notes, instruments, transport | `src/domain/model.ts` |
 | Catalogue et paramètres des presets | `src/domain/instrument-presets.ts` |
-| Cycle de vie des clips | `src/app/workflows/useClipWorkflow.ts` |
-| Liste des clips | `src/ui/components/ClipInspector.tsx` |
-| Modale de création d’instrument | `src/ui/components/InstrumentPresetDialog.tsx` |
+| Cycle de vie des clips | `src/ui/clips/useClipWorkflow.ts` |
+| Liste des clips | `src/ui/clips/ClipInspector.tsx` |
+| Modale de création d’instrument | `src/ui/instruments/InstrumentPresetDialog.tsx` |
 | Actions mutantes | `src/domain/commands.ts` |
-| Cas d'usage et plans de commandes | `src/application/` |
+| Cas d'usage et plans de commandes | `src/use-cases/` |
 | Collisions | `src/domain/note-collision.ts` |
-| État et calculs des gestes | `src/interaction/` |
-| Adaptateur des gestes au navigateur | `src/ui/hooks/usePianoRollEvents.ts` |
-| Capture et multi-touch | `src/ui/hooks/useInteractionManager.ts` |
-| Ghosts, poignées et lasso | `src/ui/interactions/dom-interaction-visual-controller.ts` |
-| Rendu des notes et grille | `src/ui/components/PianoRollLayers.tsx` |
-| Audio | `src/audio/` et `src/ui/hooks/useAudioPlayback.ts` |
-| Format natif | `src/persistence/native-project-file.ts` |
-| MIDI | `src/midi/` |
-| Frontières et propriétaires d’état | `docs/architecture.md` |
+| État et calculs des gestes | `src/editor/interactions/` |
+| Adaptateur des gestes au navigateur | `src/ui/piano-roll/interactions/usePianoRollEvents.ts` |
+| Capture et multi-touch | `src/ui/piano-roll/interactions/useInteractionManager.ts` |
+| Ghosts, poignées et lasso | `src/ui/piano-roll/interactions/dom-interaction-visual-controller.ts` |
+| Rendu des notes et grille | `src/ui/piano-roll/PianoRollLayers.tsx` |
+| Audio | `src/audio/` et `src/ui/transport/useAudioPlayback.ts` |
+| Format natif | `src/project-io/native/native-project-file.ts` |
+| MIDI | `src/project-io/midi/` |
+| Frontières et propriétaires d’état | `docs/architecture.md` et `docs/state-ownership.md` |
 | Priorités de refactoring | `docs/roadmap.md` |
 
 Conventions de navigation actuelles :
@@ -676,28 +678,22 @@ rg -n -i "pianola" .
 
 ### Modifier les constantes
 
-Les réglages sont actuellement centralisés dans
-`src/config/program-constants.ts`. Les groupes sont commentés en anglais :
+Les réglages sont séparés par propriétaire dans `src/config` :
 
-- `APPLICATION_CONSTANTS` : identité produit ;
-- `PROJECT_CONSTANTS` : limites et valeurs persistantes ;
-- `INSTRUMENT_CONSTANTS` : instrument et configuration par défaut ;
-- `AUDIO_CONSTANTS` : scheduler et enveloppes ;
-- `VIEWPORT_CONSTANTS` : zoom, dimensions et HiDPI ;
-- `INTERACTION_CONSTANTS` : délais et zones tactiles ;
-- `TONAL_SNAP_CONSTANTS` : toniques, modes et degrés ;
-- `EDITOR_CONSTANTS` : transport, grille et sliders ;
-- `RENDERING_CONSTANTS` : budgets et dimensions de rendu ;
-- `FILE_CONSTANTS` : format natif ;
-- `MIDI_CONSTANTS` : limites MIDI.
+- `product-config.ts` : identité produit et démonstration ;
+- `domain-limits.ts` : limites et valeurs persistantes ;
+- `audio-config.ts` : scheduler et moteur ;
+- `editor-config.ts` : viewport, transport, grille et contrôles ;
+- `interaction-config.ts` : délais et zones tactiles ;
+- `music-config.ts` : toniques, modes et degrés ;
+- `rendering-config.ts` : budgets et couleurs de rendu ;
+- `native-file-config.ts` et `midi-config.ts` : frontières de fichiers.
 
 Après toute modification, exécuter `npm run verify` et tester la valeur sur
 tablette si elle touche au rendu ou aux interactions.
 
-Cette centralisation est pratique mais mélange plusieurs propriétaires. Sa
-séparation progressive en configuration produit, domaine, audio, éditeur,
-interaction, rendu, fichiers et MIDI est un chantier P1 de la
-[feuille de route](docs/roadmap.md#p14-séparer-les-constantes-par-propriétaire).
+Ne pas recréer de fichier d’agrégation global : importer directement la
+configuration de son propriétaire.
 
 ### Ajouter une commande métier
 

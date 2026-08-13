@@ -7,8 +7,7 @@ import type {
   InstrumentId,
 } from "../domain/model";
 import {
-  getActiveClip,
-  getActiveClipDurationTicks,
+  getClipDurationTicks,
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
@@ -25,7 +24,10 @@ import type {
   PlaybackInstrumentSnapshot,
   SubtractivePlaybackPresetSnapshot,
   TempoMapSnapshot,
-} from "./contracts";
+} from "./playback-model";
+import type {
+  PlaybackSource,
+} from "./playback-source";
 
 export class PlaybackSnapshotCompilationError extends Error {
   public constructor(message: string) {
@@ -36,14 +38,15 @@ export class PlaybackSnapshotCompilationError extends Error {
 
 export function compilePlaybackSnapshot(
   projectState: ProjectState,
+  source: PlaybackSource,
 ): PlaybackSnapshot {
-  const activeClip = getActiveClip(projectState);
-  const transport = activeClip.transportSettings;
+  const clip = source.clip;
+  const transport = clip.transportSettings;
 
   assertPositiveSafeInteger(transport.ppqn, "Project PPQN");
   assertPositiveFiniteNumber(transport.bpm, "Project BPM");
 
-  const durationTicks = getActiveClipDurationTicks(projectState);
+  const durationTicks = getClipDurationTicks(clip);
 
   if (
     !Number.isFinite(projectState.masterBus.gain)
@@ -100,8 +103,8 @@ export function compilePlaybackSnapshot(
     }
 
     const projectInstrument = projectState.projectInstrumentsById[instrumentId];
-    const track = activeClip.tracksByInstrumentId[instrumentId];
-    const instrumentState = activeClip.instrumentStatesById[instrumentId];
+    const track = clip.tracksByInstrumentId[instrumentId];
+    const instrumentState = clip.instrumentStatesById[instrumentId];
 
     if (projectInstrument === undefined) {
       throw new PlaybackSnapshotCompilationError(
@@ -117,7 +120,7 @@ export function compilePlaybackSnapshot(
 
     if (instrumentState === undefined) {
       throw new PlaybackSnapshotCompilationError(
-        `Project instrument state "${instrumentId}" is missing from the active clip.`,
+        `Project instrument state "${instrumentId}" is missing from playback source "${source.sourceId}".`,
       );
     }
 

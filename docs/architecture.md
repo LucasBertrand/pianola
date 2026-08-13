@@ -1,335 +1,206 @@
 # Architecture de Pianola
 
-Ce document décrit l’architecture observée dans le code, les responsabilités de
-chaque module et les règles à préserver. Il complète le [README](../README.md),
-orienté installation et utilisation, et la [feuille de route](roadmap.md), qui
-ordonne les améliorations incrémentales. L’option d’une reconstruction complète
-est conservée comme ancienne hypothèse dans la
-[feuille de route v2 archivée](old-hypothetical-rewrite-roadmap.md) ; elle ne
-constitue plus la trajectoire active.
+Ce document décrit l’architecture réellement présente après le chantier P1.
+Le [README](../README.md) couvre l’installation et l’usage ; la
+[feuille de route](roadmap.md) ordonne les étapes suivantes. La propriété des
+états est détaillée dans [state-ownership.md](state-ownership.md).
 
-Dernière revue complète du dépôt : 13 août 2026.
+Dernière revue complète : 13 août 2026.
 
 ## Vue d’ensemble
 
-Pianola est une application web statique. Le projet musical, l’historique,
-l’état d’édition et le moteur audio vivent dans l’onglet du navigateur. Il n’y
-a ni serveur applicatif, ni base de données, ni synchronisation distante.
-
-L’architecture protège trois propriétés essentielles :
-
-1. les règles musicales et les commandes sont testables sans navigateur ;
-2. les gestes, le playhead et le rendu Canvas à haute fréquence ne déclenchent
-   pas de rendu React à chaque frame ;
-3. une intention utilisateur validée produit une transaction unique dans
-   l’historique Undo/Redo.
-
-Le système peut être lu comme six ensembles :
+Pianola est une application web statique. Le document musical, l’historique,
+l’espace de travail et le moteur audio vivent dans l’onglet du navigateur. Il
+n’existe ni serveur applicatif, ni base distante, ni synchronisation implicite.
 
 ```text
 main.tsx
-  └─ app : composition React et création du runtime
-      ├─ ui : composants, Canvas et adaptateurs du navigateur
-      ├─ application : cas d’usage et ports de mutation
-      ├─ interaction : état et calcul des gestes
-      ├─ audio : compilation, planification et Web Audio
-      ├─ midi : codec SMF et conversion de projets
-      └─ persistence : format natif .pianola
+  └─ app                    composition et création du runtime
+      ├─ ui                 React, DOM, Canvas et adaptateurs navigateur
+      ├─ use-cases          orchestration indépendante de React
+      ├─ editor             modèle d’édition, géométrie et interactions
+      ├─ audio              compilation, scheduling et Web Audio
+      └─ project-io         format natif et Standard MIDI File
 
-domain : modèle persistant, invariants, commandes et historique
-music / geometry / config : briques partagées et déterministes
+domain                     document musical, invariants et historique
+music                      vocabulaire tonal déterministe
+config                     configuration divisée par propriétaire
 ```
 
-`src/app/App.tsx` est la racine de composition : il est normal qu’elle connaisse
-les adaptateurs concrets. À l’inverse, `domain`, `music`, `geometry` et les
-calculs purs d’`interaction` ne doivent connaître ni React, ni le DOM, ni Canvas,
-ni Web Audio.
+Les règles centrales sont les suivantes :
 
-## Vocabulaire canonique
+1. `app` assemble mais n’héberge pas de protocole métier complet ;
+2. `domain`, `editor` et `music` ne connaissent ni React ni le navigateur ;
+3. `use-cases` ne dépend pas de composants UI ;
+4. `audio` et `project-io` ne dépendent pas de la composition `app` ;
+5. un geste validé produit une transaction unique dans l’historique.
 
-Le même vocabulaire doit être utilisé dans le modèle, les variables, les noms de
-fichiers et la documentation :
+Le script `scripts/check-import-boundaries.mjs` vérifie ces frontières ainsi que
+la liste fermée des fichiers autorisés dans `src/app` et l’absence de noms de
+fichiers génériques.
 
-| Terme | Sens |
-| --- | --- |
-| projet | document complet et source persistante de vérité |
-| clip | séquence musicale locale avec notes, durée et transport |
-| instrument de projet | son, mixage et identité partagés par tous les clips |
-| état d’instrument du clip | verrouillage d’édition local au clip |
-| piste | notes d’un instrument dans un clip |
-| preset | modèle utilisé pour initialiser une configuration ; il n’est pas le son actif |
-| runtime d’éditeur | services et signaux transitoires d’une instance d’éditeur |
-| voix audio | occurrence sonore active dans le moteur ; ce terme ne désigne pas un instrument de projet |
-
-Dans le code, les identifiants se terminent par `Id`, les dictionnaires par
-`ById`, les ordres explicites par `Order` et les valeurs physiques par leur unité
-(`Ticks`, `Seconds`, `Hz`, `CssPixels`).
-
-## État et propriétaires
-
-| État | Propriétaire | Persisté | Fréquence |
-| --- | --- | --- | --- |
-| projet, clips, instruments, notes, transport | `ProjectState` | oui | faible |
-| historique Undo/Redo | `ProjectStore` | non | par transaction |
-| playhead, viewport, grille et snap tonal par clip | `EditorRuntime` | oui dans `editor.clipStatesById` | élevée |
-| sélection de notes | `EditorSelection` | non | pendant l’édition |
-| draft de geste et notes masquées | session d’interaction | non | très élevée |
-| statut et événements audio planifiés | scheduler et moteur audio | non | temps réel |
-| modales et formulaires ouverts | React | non | faible |
-
-Il ne doit exister qu’un propriétaire canonique par donnée. Un signal de rendu
-publie une valeur graphique ; il ne remplace pas un bus de commandes. Une
-requête ponctuelle, comme « vider la sélection », passe par
-`EditorSelectionRequests` et non par un faux état persistant.
-
-## Modules actuels
-
-### `src/domain`
-
-Contient le noyau métier :
-
-- `model.ts` définit `ProjectState`, `Clip`, `ProjectInstrument`, `Track` et
-  `Note` ;
-- `commands.ts` définit les commandes, le reducer pur et les invariants de
-  transaction ;
-- `project-store.ts` possède l’historique borné et les abonnements ;
-- `validation.ts` valide les valeurs entrantes ;
-- `note-collision.ts` construit les plans de fusion ou de découpe ;
-- `selection-transformations.ts` calcule les transformations de notes ;
-- `instrument-presets.ts` fournit le catalogue intégré immuable.
-
-Une modification persistante passe normalement par `EditorCommandService`, une
-`Transaction`, puis `projectReducer`. Les commandes de notes et de transport
-ciblent le clip actif. L’ajout ou la suppression d’un instrument propage la
-piste et l’état d’édition correspondants à tous les clips.
-
-Le mixage (`gain`, `pan`, `muted`, `solo`) et la configuration sonore sont
-globaux dans `ProjectInstrument`. Seul `ClipInstrumentState.locked` est local au
-clip.
-
-### `src/application`
-
-Contient les intentions utilisateur indépendantes de leur représentation :
-
-- `EditorCommandService` est le port unique de mutation de l’éditeur ;
-- `EditorSelection` possède la sélection transitoire canonique ;
-- `NoteGestureWorkflow` valide un geste terminé, gère le protocole de collision
-  et réconcilie la sélection ;
-- `note-edit-commands.ts` et `selection-edit-plans.ts` construisent des lots de
-  commandes atomiques ;
-- `note-collision-resolution.ts` définit la demande applicative à laquelle la
-  modale UI répond.
-
-Une fonction de cette couche doit pouvoir être testée avec des objets TypeScript
-et des ports factices, sans React ni API du navigateur.
-
-### `src/interaction`
-
-Contient la stratégie pointeur, la session longue durée et les calculs de geste.
-Le sous-dossier `core` regroupe actuellement l’échantillon pointeur normalisé,
-le draft mutable, la machine à états, le pinch/pan, le double tap à deux doigts
-et le masque des notes en cours d’édition.
-
-`PianoRollInteractionSession` conserve une identité stable pendant le montage du
-piano roll. Elle possède les buffers réutilisables, le convertisseur, la
-sélection et le snapshot nécessaire au passage d’un à deux doigts.
-
-Les événements DOM sont convertis en `PointerSample` dans `src/ui/interactions`.
-
-### `src/geometry` et `src/music`
-
-`geometry` possède les conversions ticks/pixels, les bornes du viewport, les
-rectangles visibles et l’index spatial réparti sur 128 hauteurs MIDI. `music`
-possède le snap tonal, les modes, les accords et leur orthographe. Ces modules
-sont déterministes et ne dépendent pas de React.
-
-### `src/audio`
-
-Le pipeline audio est séparé en quatre responsabilités :
-
-```text
-ProjectState
-  → compilePlaybackSnapshot
-  → LookaheadScheduler
-  → WebAudioEngine
-  → InstrumentRenderer
-  → sources Web Audio
-```
-
-- `playback-snapshot.ts` valide et compacte le clip actif en tableaux immuables ;
-- `lookahead-scheduler.ts` convertit transport, boucle et tempo en événements
-  horodatés sans créer de nœud Web Audio ;
-- `web-audio-engine.ts` possède l’`AudioContext`, le master, les bus
-  d’instruments, les annulations et l’allocation de polyphonie ;
-- `audio/instruments` contient les renderers spécifiques. Le renderer
-  soustractif est actuellement le seul disponible ;
-- `useAudioPlayback.ts` relie ce pipeline au cycle de vie React.
-
-Un futur instrument ajoute une variante discriminée de snapshot et un renderer.
-Le scheduler commun ne doit pas contenir de branche propre à cet instrument.
-
-### `src/midi` et `src/persistence`
-
-`midi` sépare le codec Standard MIDI File (`smf-reader`, `smf-writer`) de la
-conversion vers et depuis le domaine (`midi-importer`, `midi-exporter`). L’import
-accepte les formats 0 et 1 en PPQN et applique des limites de sécurité.
-
-`persistence/native-project-file.ts` sérialise et parse le JSON `.pianola`. Le
-parseur traite toute entrée comme inconnue, impose des bornes, contrôle les clés
-et reconstruit un `ProjectState` validé. Le format natif conserve également les
-états d’éditeur durables par clip.
-
-### `src/ui`
-
-La couche UI contient :
-
-- les composants React et les formulaires à basse fréquence ;
-- les peintres Canvas de grille et de notes ;
-- les contrôleurs visuels DOM des ghosts, poignées et lasso ;
-- les hooks qui adaptent Pointer Events, ResizeObserver et Web Audio ;
-- les contrats étroits consommés par le piano roll.
-
-React monte les couches et publie les changements structurels. Les notes ne sont
-jamais une liste de composants React. Les chemins à haute fréquence réutilisent
-leurs buffers et lisent les `RenderSignal` depuis `requestAnimationFrame`.
+## Carte des capacités
 
 ### `src/app`
 
-`App.tsx` assemble l’interface, les workflows et les dialogues.
-`editor-runtime.ts` crée le store, les services et les signaux d’une instance
-d’éditeur. `demo-scene.ts` crée le projet de démonstration et le projet vierge.
+Le dossier est volontairement limité à trois fichiers :
 
-Les hooks de `app/workflows` orchestrent actuellement clips, instruments,
-sélection, transport, fichiers, MIDI et viewport. Cette localisation est
-historique : la cible est de réserver `app` à la composition et de rapprocher
-les adaptateurs React de `ui`, comme détaillé dans la feuille de route.
+- `App.tsx` compose contrôleurs, hooks de capacité et dialogues ;
+- `create-app-runtime.ts` construit les services et signaux d’un onglet ;
+- `demo-project.ts` produit les seules données de démonstration.
+
+Aucun module interne ne doit importer cette couche de composition.
+
+### `src/domain`
+
+Le domaine possède `ProjectState`, les commandes, le reducer, les invariants,
+les collisions, les transformations et `ProjectStore`. Les modifications
+durables passent par `EditorCommandPort`, une `Transaction`, puis le reducer.
+
+Le mixage et la configuration sonore appartiennent à `ProjectInstrument`. Les
+notes sont stockées dans les pistes d’un clip. Le changement de clip reste une
+navigation et ne consomme pas d’entrée Undo/Redo.
+
+### `src/use-cases`
+
+Cette couche contient les intentions et projections indépendantes de React :
+
+- `commands` : façade de mutation de l’éditeur ;
+- `notes` et `selection` : plans atomiques et protocole de collision ;
+- `dialogs` : port de dialogue consommé par les workflows ;
+- `project-files` : création initiale, état natif d’éditeur et projection MIDI.
+
+Les hooks React qui déclenchent ces intentions vivent auprès de leur capacité
+dans `ui`, jamais dans `app/workflows`.
+
+### `src/editor`
+
+`editor/model` porte les contrats neutres de grille, couleur, signaux et styles
+dérivés. `editor/runtime` décrit les services d’un onglet. `editor/selection`
+possède la sélection transitoire.
+
+`editor/geometry` regroupe conversions ticks/pixels, bornes du viewport, région
+visible et index spatial. `editor/interactions` regroupe la session du piano
+roll, le masque de notes et deux sous-capacités :
+
+```text
+editor/interactions/
+├─ gestures/                draft, machine à états et calculs déterministes
+├─ pointer/                 PointerSample et stratégie indépendante du DOM
+├─ editing-note-mask.ts
+├─ piano-roll-controller-port.ts
+└─ piano-roll-interaction-session.ts
+```
+
+Les `PointerEvent` natifs ne franchissent pas cette frontière : l’adaptateur UI
+les transforme d’abord en `PointerSample` immuable.
+
+### `src/ui`
+
+Les composants et hooks sont rangés par capacité : `clips`, `dialogs`, `editor`,
+`instruments`, `piano-roll`, `project-files`, `shared` et `transport`. Il
+n’existe plus de dossiers globaux `components`, `hooks`, `browser` ou
+`interactions`.
+
+Le piano roll conserve ses adaptations DOM sous
+`ui/piano-roll/interactions` et ses peintres sous
+`ui/piano-roll/rendering`. Les notes ne sont pas des composants React ; Canvas
+lit des `RenderSignal` depuis `requestAnimationFrame` et réutilise ses buffers.
+
+### `src/audio`
+
+```text
+ProjectState + PlaybackSource explicite
+  → compilePlaybackSnapshot
+  → LookaheadScheduler
+  → WebAudioEngine
+  → InstrumentRenderer enregistré par kind
+  → sources Web Audio
+```
+
+Le compilateur ne consulte pas `activeClipId`. Le scheduler ne contient aucune
+branche propre au synthé soustractif : le moteur choisit un renderer dans son
+registre par `instrument.kind`. Ajouter un second kind étend la variante de
+snapshot et enregistre un renderer sans modifier l’algorithme de scheduling.
+
+### `src/project-io`
+
+`project-io/native/native-project-file.ts` parse et sérialise le format
+`.pianola` v1 avec validation bornée. Les contrats d’éditeur persistés viennent
+de `editor/model`, pas de l’UI.
+
+`project-io/midi` sépare le codec SMF, sa validation, l’import et l’export.
+L’import ne dépend plus de la palette de rendu. L’export reçoit une
+`MidiExportProjection` musicale neutre construite dans `use-cases` ; il ne
+connaît ni store ni écran actif.
+
+### `src/config`
+
+Chaque groupe possède un propriétaire explicite :
+
+| Fichier | Propriétaire |
+| --- | --- |
+| `product-config.ts` | identité et données de démonstration |
+| `domain-limits.ts` | valeurs durables et limites métier |
+| `audio-config.ts` | moteur et lookahead |
+| `editor-config.ts` | viewport et contrôles d’édition |
+| `interaction-config.ts` | gestes et seuils pointeur |
+| `music-config.ts` | snap tonal |
+| `rendering-config.ts` | budgets et couleurs de rendu |
+| `native-file-config.ts` | format `.pianola` |
+| `midi-config.ts` | limites et valeurs SMF |
+
+Le fichier fourre-tout `program-constants.ts` n’existe plus. Le domaine
+n’importe pas les paramètres d’éditeur et le MIDI n’importe pas la configuration
+de rendu.
 
 ## Flux principaux
 
-### Validation d’un geste de note
+### Validation d’un geste
 
 ```text
-PointerEvent natif
-  → PointerSample
-  → useInteractionManager (capture, timers, multi-touch)
-  → stratégie de usePianoRollEvents
-  → PianoRollInteractionSession + draft mutable
-  → DomInteractionVisualController (feedback immédiat)
-  → NoteGestureWorkflow au pointerup
-  → plan de commandes ou demande de résolution de collision
-  → EditorCommandService
-  → ProjectStore / projectReducer / Undo-Redo
+PointerEvent
+  → adaptateur DOM / PointerSample
+  → PianoRollInteractionSession + GestureStateMachine
+  → feedback visuel immédiat
+  → NoteGestureWorkflow
+  → plan de commandes ou demande de collision
+  → EditorCommandPort
+  → ProjectStore / reducer / Undo-Redo
 ```
 
-Pendant `pointermove`, `ProjectState` n’est pas modifié. Le store reçoit une
-seule transaction après validation. Une note désactivée reste indexée et
-éditable, mais la compilation audio et l’export MIDI l’ignorent.
+Pendant `pointermove`, `ProjectState` ne change pas. La transaction est publiée
+une seule fois au terme du geste validé.
 
-### Réaction à une transaction
+### Lecture
 
-```text
-ProjectStore publie (nouvel état, ancien état, transaction)
-  ├─ App actualise les contrôles React
-  ├─ EditorRuntime reconstruit l’index spatial si les pistes changent
-  ├─ EditorRuntime actualise les styles si mixage/verrouillage changent
-  └─ useAudioPlayback recompile le snapshot si le playback est affecté
-```
+Le hook de transport choisit explicitement le clip, crée un
+`ClipPlaybackSource`, compile un snapshot immuable puis le donne au scheduler.
+Le scheduler manipule une horloge de lecture ; les occurrences audio et voix
+sont temporaires et ne rejoignent jamais le document.
 
-Changer de clip est une navigation, pas une entrée Undo/Redo. Le runtime capture
-l’état d’éditeur du clip quitté puis restaure celui du clip choisi.
-
-### Sauvegarde et import
+### Sauvegarde et échange
 
 ```text
-Save : ProjectState + états du runtime → validation → JSON → Blob → téléchargement
-Load : File → JSON inconnu → parsing borné → ProjectState → remplacement du runtime
-MIDI : File → SMF → analyse → confirmation → projet importé → remplacement du runtime
+Save  : ProjectState + NativeEditorState → validation → JSON → Blob
+Load  : File → JSON inconnu → parse borné → remplacement du runtime
+MIDI  : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ```
 
 Le chargement et l’import arrêtent la lecture, annulent le geste, vident la
-sélection et le presse-papier, remplacent le store puis restaurent l’état
-d’éditeur.
+sélection et le presse-papier, puis remplacent le projet et restaurent l’espace
+de travail.
 
-## Direction des dépendances
+## Nommage
 
-La règle cible est la suivante :
-
-```text
-app (composition)
-  └─→ ui et adaptateurs navigateur
-        ├─→ application ─→ domain
-        ├─→ interaction ─→ domain + music + geometry
-        ├─→ audio ───────→ domain
-        ├─→ midi ────────→ domain
-        └─→ persistence ─→ domain + modèle d’éditeur neutre
-
-config : chaque groupe est importé uniquement par son propriétaire
-```
-
-Cette vue exprime une direction de connaissance, pas l’ordre d’exécution.
-`app` peut tout assembler ; les modules internes ne remontent pas vers `app`.
-
-Les écarts actuels connus sont explicites :
-
-- `persistence/native-project-file.ts` importe `GridSettings` et
-  `NoteColorMode` depuis `ui/rendering` ; ces contrats persistés doivent devenir
-  des types d’éditeur indépendants de l’UI ;
-- `interaction/piano-roll-interaction-session.ts` possède directement une
-  `EditorSelection` de la couche application ; une interface étroite ou un
-  déplacement de la session doit clarifier cette frontière ;
-- `app/workflows/dialog-types.ts` dépend d’un type de composant UI ; le port de
-  dialogue doit appartenir à l’orchestration, puis être adapté par l’UI ;
-- `program-constants.ts` mélange limites métier, paramètres audio, interaction
-  et rendu, ce qui crée des dépendances transversales inutiles.
-
-Ces écarts ne justifient pas une réécriture. Ils définissent les premières
-extractions de la [feuille de route](roadmap.md).
-
-## Conventions de modules
-
-- Un fichier non React utilise `kebab-case.ts` ; un composant utilise
-  `PascalCase.tsx` ; un hook utilise `useCamelCase.ts`.
-- Les dossiers utilisent `kebab-case` et décrivent une responsabilité, pas un
-  type générique comme `utils` ou `helpers`.
-- Les types et classes exportés utilisent `PascalCase`, les fonctions et
-  variables `camelCase`, les constantes de configuration partagées
-  `UPPER_SNAKE_CASE`.
-- Le code et les identifiants restent en anglais ; la documentation utilisateur
-  reste en français.
-- Une dépendance navigateur se reconnaît à sa localisation dans `ui` ou dans un
-  adaptateur explicitement nommé.
-- Les fonctions pures reçoivent l’horloge, les identifiants ou les ressources
-  dont elles ont besoin ; elles ne lisent pas implicitement le DOM.
-- Les fichiers d’agrégation ne doivent pas masquer une dépendance circulaire.
-  Préférer un import explicite vers le module propriétaire.
-
-## Ajouter une fonctionnalité
-
-### Commande métier
-
-1. Définir l’intention et ses données dans le domaine.
-2. Implémenter le reducer sans mutation de l’état reçu.
-3. Valider toutes les entités avant de publier le nouvel état.
-4. Construire la commande dans `application`, jamais dans le JSX.
-5. Envoyer une transaction unique depuis `EditorCommandService`.
-6. Tester le succès, le rejet, Undo et Redo.
-
-### Interaction
-
-1. Extraire les calculs déterministes dans `interaction`.
-2. Ajouter les transitions de la machine à états.
-3. Adapter seulement les événements natifs dans `ui`.
-4. Garder le feedback visuel dans `DomInteractionVisualController`.
-5. Tester souris, tactile, annulation, passage à deux doigts et instrument
-   verrouillé.
-
-### Instrument audio
-
-1. Ajouter une variante de configuration au domaine.
-2. Ajouter une variante discriminée de snapshot de playback.
-3. Implémenter `InstrumentRenderer` dans `audio/instruments`.
-4. Enregistrer le renderer dans le moteur commun.
-5. Tester scheduling, annulation, mute/solo et sa politique de polyphonie.
+- fichiers TypeScript : `kebab-case.ts` ;
+- composants React : `PascalCase.tsx` ;
+- hooks : `useCamelCase.ts` ;
+- tests modernes : `*.test.ts[x]` ; les deux témoins historiques `.test.mjs`
+  restent des suites Vitest identifiées dans le journal P1 ;
+- ports : suffixe `-port.ts` ; adaptateurs : technologie explicite ;
+- aucun fichier nommé seulement `types`, `contracts`, `state`, `input`,
+  `helpers`, `utils` ou `common`.
 
 ## Vérification
 
@@ -339,7 +210,6 @@ La commande de référence est :
 npm run verify
 ```
 
-Au 13 août 2026, elle exécute le TypeScript strict, le contrôle des frontières,
-le build Vite et 81 scénarios Vitest isolables. Les
-gestes DOM, Canvas, le responsive et Web Audio réel restent principalement
-manuels ; leur automatisation est priorisée dans la feuille de route.
+Elle exécute le contrôle des frontières, TypeScript strict, le build Vite et
+82 scénarios Vitest. Les gestes DOM, Canvas, le responsive et Web Audio réel
+restent complétés par la vérification manuelle décrite dans la roadmap.

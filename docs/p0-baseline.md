@@ -16,7 +16,7 @@ Date de référence : 13 août 2026.
 | Frontières touchées | scripts npm, CI via `npm run verify`, tests de géométrie et d’intégration, noms du runtime et du port piano-roll |
 | Hors périmètre | P1 et suivants, refonte du format natif v1, compatibilité des anciennes sauvegardes, automatisation navigateur exhaustive et budgets de performance |
 | Critère de sortie | P0.1 à P0.4 satisfaits et `npm run verify` vert |
-| Prochain chantier débloqué | P1.1, déplacement des contrats d’éditeur persistés hors de `ui/rendering` |
+| Chantier débloqué | P1, désormais suivi dans [`p1-migration.md`](p1-migration.md) |
 
 ## Baseline fonctionnelle
 

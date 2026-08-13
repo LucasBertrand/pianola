@@ -1,7 +1,7 @@
 import {
   PROJECT_CONSTANTS,
   INSTRUMENT_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/domain-limits";
 import type {
   ClipInstrumentState,
   InstrumentConfig,

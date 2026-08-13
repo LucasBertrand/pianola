@@ -8,18 +8,29 @@ import ts from "typescript";
 
 const PROTECTED_SOURCE_ZONES = new Set([
   "domain",
+  "editor",
   "music",
-  "geometry",
 ]);
 const USE_CASE_SOURCE_ZONES = new Set([
-  "application",
   "use-cases",
 ]);
 const ADAPTER_SOURCE_ZONES = new Set([
   "audio",
-  "midi",
-  "persistence",
   "project-io",
+]);
+const ALLOWED_APP_FILES = new Set([
+  "App.tsx",
+  "create-app-runtime.ts",
+  "demo-project.ts",
+]);
+const GENERIC_SOURCE_FILE_NAMES = new Set([
+  "common.ts",
+  "contracts.ts",
+  "helpers.ts",
+  "input.ts",
+  "state.ts",
+  "types.ts",
+  "utils.ts",
 ]);
 const REACT_PACKAGES = new Set([
   "react",
@@ -46,6 +57,7 @@ const sourceFiles = await collectSourceFiles(sourceRoot);
 const violations = [];
 
 for (const sourceFile of sourceFiles) {
+  violations.push(...evaluateSourceLayout(sourceRoot, sourceFile));
   const sourceText = await readFile(sourceFile, "utf8");
   const parsedSource = ts.createSourceFile(
     sourceFile,
@@ -229,6 +241,19 @@ function evaluateImport(sourceRootPath, sourceFile, specifier) {
     sourceFile,
   ));
 
+  if (
+    targetZone === "app"
+    && sourceZone !== "app"
+    && relativeSourceFile !== "src/main.tsx"
+  ) {
+    return createViolation(
+      relativeSourceFile,
+      specifier,
+      "composition-isolation",
+      `${sourceZone} must not depend on app composition.`,
+    );
+  }
+
   if (PROTECTED_SOURCE_ZONES.has(sourceZone)) {
     if (targetZone === "app" || targetZone === "ui") {
       return createViolation(
@@ -285,6 +310,36 @@ function evaluateImport(sourceRootPath, sourceFile, specifier) {
   }
 
   return null;
+}
+
+function evaluateSourceLayout(sourceRootPath, sourceFile) {
+  const relativeSourceFile = toPosixPath(path.relative(
+    path.dirname(sourceRootPath),
+    sourceFile,
+  ));
+  const sourceZone = getSourceZone(sourceRootPath, sourceFile);
+  const fileName = path.basename(sourceFile);
+  const layoutViolations = [];
+
+  if (sourceZone === "app" && !ALLOWED_APP_FILES.has(fileName)) {
+    layoutViolations.push(createViolation(
+      relativeSourceFile,
+      "<source-layout>",
+      "app-composition-layout",
+      `app may only contain ${[...ALLOWED_APP_FILES].join(", ")}.`,
+    ));
+  }
+
+  if (GENERIC_SOURCE_FILE_NAMES.has(fileName)) {
+    layoutViolations.push(createViolation(
+      relativeSourceFile,
+      "<source-layout>",
+      "generic-file-name",
+      `${fileName} does not expose its functional responsibility.`,
+    ));
+  }
+
+  return layoutViolations;
 }
 
 function getSourceZone(sourceRootPath, sourceFile) {

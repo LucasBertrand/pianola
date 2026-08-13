@@ -4,7 +4,7 @@ import type {
 } from "../domain/model";
 import type {
   TempoMapSnapshot,
-} from "./contracts";
+} from "./playback-model";
 
 export interface LoopTickProjection {
   readonly tick: Tick;

@@ -9,13 +9,17 @@ import {
 } from "react-dom";
 import {
   APPLICATION_CONSTANTS,
+} from "../config/product-config";
+import {
   EDITOR_CONSTANTS,
+} from "../config/editor-config";
+import {
   RENDERING_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/rendering-config";
 import { APPLICATION_COLORS } from "../config/application-colors";
 import type {
   NoteCollisionResolutionRequest,
-} from "../application/note-collision-resolution";
+} from "../use-cases/notes/note-collision-resolution";
 import {
   type PianoRollCommand,
 } from "../domain/commands";
@@ -37,89 +41,91 @@ import {
 } from "../domain/note-collision";
 import type {
   ViewportState,
-} from "../geometry/converter";
+} from "../editor/geometry/converter";
 import {
   type MidiImportAnalysis,
-} from "../midi/midi-importer";
+} from "../project-io/midi/midi-importer";
 import {
   type NativeClipEditorState,
-} from "../persistence/native-project-file";
+} from "../project-io/native/native-project-file";
 import {
   ApplicationDialogOverlay,
-  type ApplicationDialogState,
-  type ApplicationDialogTone,
-} from "../ui/components/ApplicationDialogOverlay";
+} from "../ui/dialogs/ApplicationDialogOverlay";
+import type {
+  ApplicationConfirmationOptions,
+  ApplicationDialogState,
+  ApplicationDialogTone,
+} from "../use-cases/dialogs/application-dialog-port";
 import {
   PianoRollLayers,
-} from "../ui/components/PianoRollLayers";
+} from "../ui/piano-roll/PianoRollLayers";
 import {
   ViewControls,
-} from "../ui/components/ViewControls";
+} from "../ui/editor/ViewControls";
 import {
   BarRuler,
   RollPlayhead,
-} from "../ui/components/Timeline";
+} from "../ui/piano-roll/Timeline";
 import {
   PianoKeyboard,
-} from "../ui/components/PianoKeyboard";
+} from "../ui/piano-roll/PianoKeyboard";
 import {
   EditorToolbar,
-} from "../ui/components/EditorToolbar";
+} from "../ui/editor/EditorToolbar";
 import {
   GeneralInspector,
-} from "../ui/components/GeneralInspector";
+} from "../ui/editor/GeneralInspector";
 import {
   InstrumentPresetDialog,
-} from "../ui/components/InstrumentPresetDialog";
+} from "../ui/instruments/InstrumentPresetDialog";
 import {
   EditorHeader,
-} from "../ui/components/EditorHeader";
+} from "../ui/editor/EditorHeader";
 import {
   useAudioPlayback,
-} from "../ui/hooks/useAudioPlayback";
+} from "../ui/transport/useAudioPlayback";
 import type {
   PianoRollControllerPort,
-} from "../interaction/piano-roll-controller-port";
+} from "../editor/interactions/piano-roll-controller-port";
 import {
   type PitchSnapSettings,
 } from "../music/pitch-snap";
 import type {
   SelectionMode,
-} from "../interaction/core/state";
+} from "../editor/interactions/gestures/gesture-draft";
 import type {
   NoteColorMode,
-} from "../ui/rendering/note-style";
+} from "../editor/model/note-color-mode";
 import {
   createDemoProjectState,
-} from "./demo-scene";
+} from "./demo-project";
 import {
   createEditorRuntime,
-  type EditorRuntime,
-} from "./editor-runtime";
+} from "./create-app-runtime";
+import type {
+  EditorRuntime,
+} from "../editor/runtime/editor-runtime";
 import {
   useClipWorkflow,
-} from "./workflows/useClipWorkflow";
+} from "../ui/clips/useClipWorkflow";
 import {
   useProjectInstrumentWorkflow,
-} from "./workflows/useProjectInstrumentWorkflow";
+} from "../ui/instruments/useProjectInstrumentWorkflow";
 import {
   useSelectionWorkflow,
-} from "./workflows/useSelectionWorkflow";
+} from "../ui/piano-roll/useSelectionWorkflow";
 import {
   useProjectFileWorkflow,
-} from "./workflows/useProjectFileWorkflow";
+} from "../ui/project-files/useProjectFileWorkflow";
 import {
   useMidiFileWorkflow,
-} from "./workflows/useMidiFileWorkflow";
+} from "../ui/project-files/useMidiFileWorkflow";
 import {
   useTransportWorkflow,
-} from "./workflows/useTransportWorkflow";
+} from "../ui/transport/useTransportWorkflow";
 import {
   useViewportControls,
-} from "./workflows/useViewportControls";
-import type {
-  ApplicationConfirmationOptions,
-} from "./workflows/dialog-types";
+} from "../ui/piano-roll/useViewportControls";
 import {
   selectInstrumentPresetId,
   createInstrumentConfigFromPreset,

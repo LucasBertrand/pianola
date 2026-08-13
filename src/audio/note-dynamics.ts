@@ -1,6 +1,6 @@
 import {
   AUDIO_CONSTANTS,
-} from "../config/program-constants";
+} from "../config/audio-config";
 
 /**
  * Resolves the audible note level while velocity-sensitive playback is
