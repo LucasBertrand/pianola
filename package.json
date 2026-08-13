@@ -18,10 +18,11 @@
     "test": "npm run test:vitest",
     "test:vitest": "vitest run",
     "test:vitest:watch": "vitest",
+    "test:worklet-build": "node scripts/smoke-built-worklet.mjs",
     "check:docs": "node scripts/check-docs.mjs",
     "check:structure": "node scripts/check-structure.mjs",
     "check:boundaries": "node scripts/check-import-boundaries.mjs",
-    "verify": "npm run check:structure && npm run check:boundaries && npm run build && npm test"
+    "verify": "npm run check:structure && npm run check:boundaries && npm run build && npm run test:worklet-build && npm test"
   },
   "dependencies": {
     "react": "^19.0.0",

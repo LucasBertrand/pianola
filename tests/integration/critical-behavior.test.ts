@@ -10,8 +10,12 @@ import {
   createClipPlaybackSource,
 } from "../../src/audio/playback-source";
 import {
-  LookaheadScheduler,
-} from "../../src/audio/lookahead-scheduler";
+  WorkletTimelineEngine,
+  type TimelineEngineDiagnostic,
+} from "../../src/audio/worklet/worklet-timeline-engine";
+import {
+  createTransferableAudioWorkletTimeline,
+} from "../../src/audio/worklet/create-audio-worklet-timeline";
 import {
   createEditorRuntime,
 } from "../../src/app/create-app-runtime";
@@ -33,10 +37,6 @@ import {
   createCriticalBehaviorProject,
   SECOND_TEST_CLIP_ID,
 } from "../support/project-fixtures";
-import {
-  FakeAudioEngine,
-  FakeSchedulerTimer,
-} from "../support/fake-audio-engine";
 import {
   createTestNote,
   TEST_CLIP_ID,
@@ -105,52 +105,45 @@ describe("P0 critical behavior witnesses", () => {
     expect(plan.resultingSelectionNoteIds).toEqual([collisionProposal.id]);
   });
 
-  test("launches playback with the expected deterministic audio plan", async () => {
+  test("launches playback on the deterministic sample clock", () => {
     const project = createCriticalBehaviorProject();
     const snapshot = compilePlaybackPlan(
       project,
       createClipPlaybackSource(getActiveClip(project)),
     );
-    const engine = new FakeAudioEngine({
-      scheduleAheadSeconds: 0.6,
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const engine = new WorkletTimelineEngine(48_000, {
+      onDiagnostic: (event) => diagnostics.push(event),
     });
-    const timer = new FakeSchedulerTimer();
-    const scheduler = new LookaheadScheduler(
-      engine,
-      snapshot,
-      getActiveClip(project).transportSettings,
-      {},
-      timer,
-      0,
+    const clip = getActiveClip(project);
+
+    engine.loadTimeline(
+      createTransferableAudioWorkletTimeline(snapshot).timeline,
+      clip.transportSettings,
+    );
+    engine.play(0);
+    engine.process(
+      new Float32Array(13_000),
+      new Float32Array(13_000),
     );
 
-    await scheduler.play();
-
-    expect(engine.resumeCount).toBe(1);
-    expect(engine.events.map((event) => ({
-      noteId: event.instrument.noteIds.find((noteId) =>
-        event.occurrenceId.endsWith(`:${noteId}`)),
-      pitch: event.pitch,
-      startAudioTimeSeconds: event.startAudioTimeSeconds,
-      endAudioTimeSeconds: event.endAudioTimeSeconds,
-    }))).toEqual([
+    expect(diagnostics.filter((event) => event.type === "note-start"))
+      .toEqual([
       {
-        noteId: "existing-note",
+        type: "note-start",
+        frame: 0,
+        tick: 0,
+        instrumentId: TEST_INSTRUMENT_ID,
         pitch: 60,
-        startAudioTimeSeconds: 0.012,
-        endAudioTimeSeconds: 0.0745,
       },
       {
-        noteId: "scheduled-note",
+        type: "note-start",
+        frame: 12_000,
+        tick: 480,
+        instrumentId: TEST_INSTRUMENT_ID,
         pitch: 67,
-        startAudioTimeSeconds: 0.262,
-        endAudioTimeSeconds: 0.387,
       },
     ]);
-    expect(timer.pendingCount).toBe(1);
-
-    await scheduler.dispose();
-    expect(engine.disposed).toBe(true);
   });
 
   test("compiles the explicit playback source instead of the active clip", () => {

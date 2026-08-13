@@ -119,27 +119,30 @@ ciblage/stratégie, contrôleur de sélection et contrôleur visuel.
 
 ```text
 ClipPlaybackSource
-  + InstrumentSettingsPreviewLayer (optionnelle, transitoire)
   → compilePlaybackPlan
   → PlaybackSnapshot
-  → LookaheadScheduler (horloge et fenêtre)
-  → playback-occurrence-scheduler (occurrences et notes tenues)
-  → WebAudioEngine (cycle de vie navigateur)
-  → web-audio-routing + voice-allocation
-  → InstrumentRenderer
+  → createTransferableAudioWorkletTimeline (données audio minimales)
+  → AudioWorkletTransport (cycle de vie navigateur et commandes)
+  → MessagePort
+  → WorkletTimelineEngine (horloge, boucles, occurrences et polyphonie)
+  → SubtractiveWorkletVoice (oscillateur, enveloppes et filtre par échantillon)
 ```
 
-Le dialogue d’instrument reste propriétaire de son brouillon. À chaque réglage,
-`useAudioPlayback` construit une couche de prévisualisation indépendante du
-document et recompile un snapshot dérivé. Les changements sont regroupés par
-frame ; si le transport joue, le snapshot et les paramètres continus des voix
-actives sont mis à jour sans redémarrer l’horloge ni annuler les occurrences.
-À l’annulation la couche est retirée ; à la confirmation, une unique commande
-publie le brouillon dans `ProjectStore` et donc dans Undo/Redo.
+Le worklet possède le transport et déclenche les occurrences depuis le nombre
+d’échantillons réellement rendus. Le thread principal ne possède aucun timer
+audio et n’envoie aucun événement par note. Une charge React ou Canvas peut
+retarder l’affichage du playhead, jamais la lecture.
 
-Les façades publiques restent `src/audio/lookahead-scheduler.ts` et
-`src/audio/web-audio-engine.ts`. Le scheduler ne connaît aucun synthé concret ;
-le moteur choisit un renderer selon `instrument.kind`.
+Le dialogue d’instrument reste propriétaire de son brouillon. Chaque réglage
+est envoyé au worklet comme un message léger ; les paramètres continus des voix
+actives sont lissés et les paramètres structurels s’appliquent aux voix
+suivantes. Aucune note n’est recompilée pendant cette interaction. Annuler retire
+le paramètre transitoire ; confirmer publie une unique transaction dans
+`ProjectStore`.
+
+La façade publique est `src/audio/audio-worklet-transport.ts`. Le protocole et
+le DSP sont sous `src/audio/worklet/`. L’adaptateur navigateur peut être remplacé
+sans modifier le moteur temps réel pur.
 
 ## Fichiers projet
 
@@ -157,15 +160,16 @@ MIDI  : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ## Exceptions au seuil de 500 lignes
 
 Le seuil déclenche une revue, pas un échec de CI. Les exceptions restantes ont
-une responsabilité unique documentée dans leur guide local : façades scheduler
-et moteur audio, données de palette, composition du workspace, résolution de
+une responsabilité unique documentée dans leur guide local : données de
+palette, composition du workspace, résolution de
 collisions et parseurs MIDI/natif. Le contrôle structurel affiche la liste
 courante à chaque vérification.
 
 ## Vérification
 
 `npm run verify` exécute documentation, structure, frontières, TypeScript,
-build et les 103 tests. Les règles structurelles sont dans
+build, smoke test du module worklet produit et les 98 tests. Les règles
+structurelles sont dans
 `scripts/check-structure.mjs`; les frontières techniques restent dans
 `scripts/check-import-boundaries.mjs`.
 

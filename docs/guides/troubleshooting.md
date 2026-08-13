@@ -24,11 +24,14 @@ Lancer le témoin audio et le contrôle complet :
 
 ```bash
 npm test -- src/audio/__tests__/playback-plan.test.ts
+npm test -- src/audio/__tests__/worklet-timeline-engine.test.ts
 npm run verify
 ```
 
-Rechercher ensuite dans `src/audio/lookahead-scheduler.ts` pour l’horloge et
-dans `src/audio/web-audio-engine.ts` pour le graphe navigateur.
+Rechercher ensuite dans `src/audio/worklet/worklet-timeline-engine.ts` pour
+l’horloge/DSP et dans `src/audio/audio-worklet-transport.ts` pour le cycle de
+vie navigateur. Le site doit être servi depuis HTTPS ou `localhost`, condition
+nécessaire à `AudioWorklet`.
 
 ## Canvas flou, absent ou désaligné
 

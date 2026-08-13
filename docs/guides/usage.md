@@ -43,7 +43,8 @@ notes.
 
 ## Transport et viewport
 
-Lecture/Pause démarre ou suspend le scheduler. Stop annule les voix planifiées.
+Lecture/Pause démarre ou suspend le transport du processeur audio. Stop libère
+les voix actives avec une transition courte.
 Le bouton de retour replace le playhead et le scroll horizontal au début.
 Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
 Undo/Redo.

@@ -41,10 +41,6 @@ import type {
 import type {
   PlaybackSource,
 } from "./playback-source";
-import {
-  EMPTY_INSTRUMENT_SETTINGS_PREVIEW,
-  type InstrumentSettingsPreviewLayer,
-} from "./instrument-settings-preview";
 
 export class PlaybackSnapshotCompilationError extends Error {
   public constructor(message: string) {
@@ -56,8 +52,6 @@ export class PlaybackSnapshotCompilationError extends Error {
 export function compilePlaybackPlan(
   projectState: ProjectDocument,
   source: PlaybackSource,
-  previewLayer: InstrumentSettingsPreviewLayer =
-    EMPTY_INSTRUMENT_SETTINGS_PREVIEW,
 ): PlaybackPlan {
   const clip = source.clip;
 
@@ -143,20 +137,11 @@ export function compilePlaybackPlan(
     }
 
     compiledInstrumentIds.add(instrumentId);
-    const previewConfig =
-      previewLayer.configsByInstrumentId[instrumentId];
-    const playbackProjectInstrument = previewConfig === undefined
-      ? projectInstrument
-      : {
-          ...projectInstrument,
-          instrument: previewConfig,
-        };
-
     instruments.push(
       compileInstrumentSnapshot(
         source.sourceId,
-        playbackProjectInstrument,
-        playbackProjectInstrument.instrument,
+        projectInstrument,
+        projectInstrument.instrument,
         track.notesById,
         durationTicks,
       ),

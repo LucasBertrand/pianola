@@ -19,31 +19,20 @@ import type {
   PlaybackStatus,
 } from "../../audio/playback-model";
 import {
-  LookaheadScheduler,
-} from "../../audio/lookahead-scheduler";
-import {
-  DEFAULT_AUDIO_ENGINE_CONFIG,
-} from "../../audio/default-audio-engine-config";
+  AudioWorkletTransport,
+} from "../../audio/audio-worklet-transport";
 import {
   compilePlaybackPlan,
 } from "../../audio/playback-snapshot";
 import {
   createClipPlaybackSource,
 } from "../../audio/playback-source";
-import {
-  WebAudioEngine,
-} from "../../audio/web-audio-engine";
 import type {
   MutableRenderSignal,
 } from "../../editor/model/render-signal";
 import type {
   InstrumentConfig,
 } from "../../domain/instruments/instrument";
-import {
-  clearInstrumentSettingsPreview,
-  EMPTY_INSTRUMENT_SETTINGS_PREVIEW,
-  setInstrumentSettingsPreview,
-} from "../../audio/instrument-settings-preview";
 
 export interface UseAudioPlaybackOptions {
   readonly projectStore: ProjectStorePort;
@@ -83,17 +72,12 @@ export function useAudioPlayback(
   const onErrorRef = useRef(onError);
   const [status, setStatus] =
     useState<PlaybackStatus>("stopped");
-  const schedulerRef = useRef<LookaheadScheduler | null>(null);
-  const instrumentSettingsPreviewRef = useRef(
-    EMPTY_INSTRUMENT_SETTINGS_PREVIEW,
-  );
-  const pendingInstrumentPreviewIdRef = useRef<InstrumentId | null>(null);
-  const instrumentPreviewFrameRef = useRef<number | null>(null);
+  const transportRef = useRef<AudioWorkletTransport | null>(null);
 
   onErrorRef.current = onError;
 
   useEffect(() => {
-    let scheduler: LookaheadScheduler;
+    let transport: AudioWorkletTransport;
 
     try {
       const state = projectStore.getState();
@@ -101,15 +85,9 @@ export function useAudioPlayback(
       const snapshot = compilePlaybackPlan(
         state,
         createClipPlaybackSource(activeClip),
-        instrumentSettingsPreviewRef.current,
-      );
-      const engine = new WebAudioEngine(
-        DEFAULT_AUDIO_ENGINE_CONFIG,
-        snapshot,
       );
 
-      scheduler = new LookaheadScheduler(
-        engine,
+      transport = new AudioWorkletTransport(
         snapshot,
         activeClip.transportSettings,
         {
@@ -121,10 +99,9 @@ export function useAudioPlayback(
             onErrorRef.current(error);
           },
         },
-        undefined,
         playheadTick.get(),
       );
-      schedulerRef.current = scheduler;
+      transportRef.current = transport;
       setStatus("stopped");
     } catch (error: unknown) {
       onErrorRef.current(error);
@@ -139,7 +116,7 @@ export function useAudioPlayback(
           state.masterBus.gain
           !== previousState.masterBus.gain
         ) {
-          scheduler.previewMasterGain(state.masterBus.gain);
+          transport.previewMasterGain(state.masterBus.gain);
         }
 
         if (!didPlaybackStateChange(state, previousState)) {
@@ -150,17 +127,16 @@ export function useAudioPlayback(
           const clipChanged =
             state.workspace.activeClipId !== previousState.workspace.activeClipId;
 
-          scheduler.replacePlaybackState(
+          transport.replacePlaybackState(
             compilePlaybackPlan(
               state,
               createClipPlaybackSource(activeClip),
-              instrumentSettingsPreviewRef.current,
             ),
             activeClip.transportSettings,
             clipChanged ? playheadTick.get() : undefined,
           );
         } catch (error: unknown) {
-          scheduler.stop();
+          transport.stop();
           onErrorRef.current(error);
         }
       },
@@ -168,12 +144,12 @@ export function useAudioPlayback(
 
     return (): void => {
       unsubscribe();
-      void scheduler.dispose().catch(() => {
+      void transport.dispose().catch(() => {
         // Teardown errors cannot be surfaced after the UI has unmounted.
       });
 
-      if (schedulerRef.current === scheduler) {
-        schedulerRef.current = null;
+      if (transportRef.current === transport) {
+        transportRef.current = null;
       }
     };
   }, [
@@ -181,28 +157,21 @@ export function useAudioPlayback(
     projectStore,
   ]);
 
-  useEffect(() => (): void => {
-    if (instrumentPreviewFrameRef.current !== null) {
-      cancelAnimationFrame(instrumentPreviewFrameRef.current);
-      instrumentPreviewFrameRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
-    const scheduler = schedulerRef.current;
+    const transport = transportRef.current;
 
-    if (scheduler === null || status !== "playing") {
+    if (transport === null || status !== "playing") {
       return undefined;
     }
 
     let animationFrame = 0;
 
     const publishPosition = (): void => {
-      if (scheduler.status !== "playing") {
+      if (transport.status !== "playing") {
         return;
       }
 
-      playheadTick.set(scheduler.getPositionTick());
+      playheadTick.set(transport.getPositionTick());
       animationFrame = requestAnimationFrame(publishPosition);
     };
 
@@ -217,47 +186,47 @@ export function useAudioPlayback(
   ]);
 
   const togglePlayback = useCallback((): void => {
-    const scheduler = schedulerRef.current;
+    const transport = transportRef.current;
 
-    if (scheduler === null) {
+    if (transport === null) {
       return;
     }
 
-    if (scheduler.status === "playing") {
-      scheduler.pause();
+    if (transport.status === "playing") {
+      transport.pause();
       return;
     }
 
-    void scheduler.play(playheadTick.get()).catch(() => {
-      // The scheduler reports initialization errors through onError.
+    void transport.play(playheadTick.get()).catch(() => {
+      // The transport reports initialization errors through onError.
     });
   }, [
     playheadTick,
   ]);
 
   const stopPlayback = useCallback((): void => {
-    schedulerRef.current?.stop();
+    transportRef.current?.stop();
   }, []);
 
   const returnToStart = useCallback((): void => {
-    schedulerRef.current?.seek(0);
+    transportRef.current?.seek(0);
   }, []);
 
   const seek = useCallback((tick: Tick): void => {
-    schedulerRef.current?.seek(tick);
+    transportRef.current?.seek(tick);
   }, []);
 
   const auditionPitch = useCallback((
     instrumentId: InstrumentId,
     pitch: number,
   ): void => {
-    const scheduler = schedulerRef.current;
+    const transport = transportRef.current;
 
-    if (scheduler === null) {
+    if (transport === null) {
       return;
     }
 
-    void scheduler.auditionPitch(instrumentId, pitch).catch((error: unknown) => {
+    void transport.auditionPitch(instrumentId, pitch).catch((error: unknown) => {
       onErrorRef.current(error);
     });
   }, []);
@@ -267,7 +236,7 @@ export function useAudioPlayback(
     gain: number,
   ): void => {
     try {
-      schedulerRef.current?.previewInstrumentGain(instrumentId, gain);
+      transportRef.current?.previewInstrumentGain(instrumentId, gain);
     } catch (error: unknown) {
       onErrorRef.current(error);
     }
@@ -277,55 +246,15 @@ export function useAudioPlayback(
     instrumentId: InstrumentId,
     config: InstrumentConfig | null,
   ): void => {
-    instrumentSettingsPreviewRef.current = config === null
-      ? clearInstrumentSettingsPreview(
-          instrumentSettingsPreviewRef.current,
-          instrumentId,
-        )
-      : setInstrumentSettingsPreview(
-          instrumentSettingsPreviewRef.current,
-          instrumentId,
-          config,
-        );
-
-    pendingInstrumentPreviewIdRef.current = instrumentId;
-
-    if (instrumentPreviewFrameRef.current !== null) {
-      return;
+    try {
+      transportRef.current?.replaceInstrumentPreview(instrumentId, config);
+    } catch (error: unknown) {
+      onErrorRef.current(error);
     }
-
-    instrumentPreviewFrameRef.current = requestAnimationFrame(() => {
-      instrumentPreviewFrameRef.current = null;
-      const pendingInstrumentId = pendingInstrumentPreviewIdRef.current;
-      const scheduler = schedulerRef.current;
-
-      pendingInstrumentPreviewIdRef.current = null;
-
-      if (scheduler === null || pendingInstrumentId === null) {
-        return;
-      }
-
-      try {
-        const state = projectStore.getState();
-        const activeClip = getActiveClip(state);
-
-        scheduler.replaceInstrumentPreview(
-          compilePlaybackPlan(
-            state,
-            createClipPlaybackSource(activeClip),
-            instrumentSettingsPreviewRef.current,
-          ),
-          activeClip.transportSettings,
-          pendingInstrumentId,
-        );
-      } catch (error: unknown) {
-        onErrorRef.current(error);
-      }
-    });
-  }, [projectStore]);
+  }, []);
 
   const previewMasterGain = useCallback((gain: number): void => {
-    schedulerRef.current?.previewMasterGain(gain);
+    transportRef.current?.previewMasterGain(gain);
   }, []);
 
   return {

@@ -1,13 +1,11 @@
 import {
-  type AudioEngineConfig,
-} from "./audio-engine-config";
-import {
   type ClipId,
   type NoteId,
   type Tick,
   type InstrumentId,
 } from "../domain/identifiers";
 import {
+  type InstrumentConfig,
   type OscillatorWaveform,
 } from "../domain/instruments/instrument";
 import {
@@ -66,8 +64,8 @@ export interface SubtractivePlaybackInstrumentSnapshot
 }
 
 /**
- * Discriminated playback instrument variants consumed by the scheduler.
- * Add a new member only when its instrument renderer is implemented.
+ * Discriminated playback instrument variants compiled for the audio worklet.
+ * Add a member only when its sample renderer is implemented.
  */
 export type PlaybackInstrumentSnapshot =
   SubtractivePlaybackInstrumentSnapshot;
@@ -84,38 +82,10 @@ export interface PlaybackPlan {
   readonly instruments: readonly PlaybackInstrumentSnapshot[];
 }
 
-/** Runtime name retained for scheduler snapshots compiled from a pure plan. */
+/** Immutable project-side input used to build the transferable worklet data. */
 export type PlaybackSnapshot = PlaybackPlan;
 
 export type PlaybackStatus = "stopped" | "playing" | "paused";
-
-export interface ScheduledNoteEvent<
-  TInstrument extends PlaybackInstrumentSnapshot = PlaybackInstrumentSnapshot,
-> {
-  readonly occurrenceId: string;
-  readonly generation: number;
-  readonly instrument: TInstrument;
-  readonly pitch: number;
-  readonly velocity: number;
-  readonly startAudioTimeSeconds: number;
-  readonly endAudioTimeSeconds: number;
-}
-
-export interface AudioEnginePort {
-  readonly config: AudioEngineConfig;
-  readonly currentTimeSeconds: number;
-  configure(config: AudioEngineConfig): void;
-  replacePlaybackSnapshot(snapshot: PlaybackSnapshot): void;
-  resume(): Promise<void>;
-  scheduleNote(event: ScheduledNoteEvent): void;
-  previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
-  previewInstrumentSettings(
-    instrument: PlaybackInstrumentSnapshot,
-  ): void;
-  cancelScheduledAfter(atAudioTimeSeconds: number): void;
-  cancelAll(atAudioTimeSeconds: number): void;
-  dispose(): Promise<void>;
-}
 
 export interface InstrumentPreviewPort {
   auditionPitch(instrumentId: InstrumentId, pitch: number): Promise<void>;
@@ -130,15 +100,13 @@ export interface AudioTransportController extends InstrumentPreviewPort {
     transport: TransportState,
   ): void;
   replaceInstrumentPreview(
-    snapshot: PlaybackSnapshot,
-    transport: TransportState,
     instrumentId: InstrumentId,
+    instrument: InstrumentConfig | null,
   ): void;
   play(startTick?: Tick): Promise<void>;
   pause(): void;
   stop(): void;
   seek(tick: Tick): void;
   previewMasterGain(gain: number): void;
-  pulse(): void;
   dispose(): Promise<void>;
 }

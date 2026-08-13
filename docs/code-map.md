@@ -10,9 +10,9 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | composition | `src/app/App.tsx` puis `src/ui/piano-roll/PianoRollWorkspace.tsx` | `EditorRuntime` et hooks de capacité | `tests/integration/critical-behavior.test.ts` |
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
-| instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et couche de prévisualisation audio | `src/audio/__tests__/playback-plan.test.ts` et suite centrale |
+| instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document et `WorkspaceState.activeClipId` | suite centrale de régression |
-| transport | `src/ui/transport/TransportControls.tsx` | document pour boucle/tempo, scheduler pour statut | `src/audio/__tests__/playback-plan.test.ts` et suite centrale |
+| transport | `src/ui/transport/TransportControls.tsx` | document pour boucle/tempo, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
 | fichiers natifs | `src/ui/project-files/useProjectFileWorkflow.ts` | document + état natif d’éditeur | tests sous `src/project-io/native/__tests__/` |
 | MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
@@ -25,7 +25,7 @@ restent le garde-fou de parité des flux transversaux.
 
 | Besoin | Commencer ici | Continuer vers |
 | --- | --- | --- |
-| modifier le bouton Lecture | `src/ui/transport/TransportControls.tsx` | `useAudioPlayback.ts`, puis scheduler |
+| modifier le bouton Lecture | `src/ui/transport/TransportControls.tsx` | `useAudioPlayback.ts`, puis `audio-worklet-transport.ts` |
 | modifier le ruler ou la boucle | `src/ui/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx` et painter |
 | modifier le playhead | `src/ui/piano-roll/PianoRollTimeline.tsx` | signal `playheadTick` du runtime |
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
@@ -63,13 +63,14 @@ muté à la validation du geste.
 TransportControls
   → useAudioPlayback
   → compilePlaybackPlan
-  → LookaheadScheduler
-  → playback-occurrence-scheduler
-  → WebAudioEngine
-  → web-audio-routing / voice-allocation / InstrumentRenderer
+  → createTransferableAudioWorkletTimeline
+  → AudioWorkletTransport / MessagePort
+  → WorkletTimelineEngine
+  → SubtractiveWorkletVoice
 ```
 
-Le statut et les voix ne sont ni persistés ni annulables.
+Le statut et les voix ne sont ni persistés ni annulables. Le worklet avance
+l’horloge à chaque échantillon ; l’UI ne planifie aucune occurrence.
 
 ## Flux : fichier natif
 
@@ -105,15 +106,16 @@ L’export suit `midi-export-plan` puis `midi-exporter` et `smf-writer`.
 ProjectInstrumentControls
   → useInstrumentDialogWorkflow (brouillon)
   → InstrumentPresetDialog
-  → InstrumentSettingsPreviewLayer → PlaybackSnapshot (retour immédiat)
+  → message instrument-preview → WorkletTimelineEngine (retour immédiat)
   → useProjectInstrumentWorkflow
   → commandes instrument
   → ProjectStore
   → PlaybackSnapshot et styles dérivés
 ```
 
-Le brouillon et sa projection audio ne sont pas persistants. La prévisualisation
-est retirée à l’annulation ; la confirmation produit une seule transaction.
+Le brouillon et sa projection audio ne sont pas persistants et ne recompilent
+pas les notes. La prévisualisation est retirée à l’annulation ; la confirmation
+produit une seule transaction.
 
 ## Flux : changement de clip
 

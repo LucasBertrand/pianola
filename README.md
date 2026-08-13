@@ -39,12 +39,13 @@ npm run verify
 | --- | --- |
 | `npm run dev` | lancer Vite sur le port 5173 |
 | `npm run build` | vérifier TypeScript puis produire `dist/` |
-| `npm test` | exécuter les 102 scénarios Vitest |
+| `npm test` | exécuter les 98 scénarios Vitest |
+| `npm run test:worklet-build` | charger et faire rendre le module AudioWorklet produit |
 | `npm run typecheck` | vérifier les trois configurations TypeScript |
 | `npm run check:docs` | vérifier liens locaux et chemins documentés |
 | `npm run check:structure` | vérifier géographie, guides et anciens chemins |
 | `npm run check:boundaries` | vérifier les dépendances entre couches |
-| `npm run verify` | exécuter tous les contrôles de référence |
+| `npm run verify` | exécuter tous les contrôles, le build et son smoke test audio |
 | `npm run preview` | servir localement le build de production |
 
 Les variantes de tests sont décrites dans le
@@ -72,7 +73,7 @@ src/
 ├── domain/                      document musical, invariants et historique
 ├── editor/           noyau d’édition indépendant du DOM
 ├── use-cases/piano-roll/        intentions notes et sélection
-├── audio/                       snapshot, scheduling et Web Audio
+├── audio/                       timeline et moteur AudioWorklet
 ├── project-io/                  format natif et MIDI
 ├── ui/                          React, Canvas et adaptateurs navigateur
 ├── styles/                      CSS par surface propriétaire
@@ -128,7 +129,7 @@ Pianola distingue quatre durées de vie :
 | document musical | `ProjectDocument` dans `ProjectStore` | oui | oui |
 | espace de travail | `WorkspaceState`, runtime et hooks UI | en partie | non |
 | session de geste | sélection, draft, lasso, presse-papier | non | non |
-| temps réel | scheduler, voix audio, buffers Canvas | non | non |
+| temps réel | transport AudioWorklet, voix DSP, buffers Canvas | non | non |
 
 Une intention validée produit au plus une transaction. Les déplacements
 intermédiaires du pointeur ne modifient pas `ProjectState`. Le détail complet se
@@ -142,7 +143,7 @@ L’en-tête contient le titre du projet, les fichiers, les métriques musicales
 le transport. Le bouton de lecture part de
 `src/ui/transport/TransportControls.tsx`, traverse
 `src/ui/transport/useAudioPlayback.ts`, puis la façade
-`src/audio/lookahead-scheduler.ts`.
+`src/audio/audio-worklet-transport.ts`.
 
 ### Piano roll
 
@@ -206,7 +207,8 @@ La référence est `npm run verify`. Elle contrôle, dans l’ordre :
 3. frontières d’import et isolation navigateur ;
 4. TypeScript strict ;
 5. build Vite de production ;
-6. 102 scénarios Vitest.
+6. chargement et rendu du module AudioWorklet produit ;
+7. 98 scénarios Vitest.
 
 La suite centrale de régression reste volontairement en place. Pour cibler un
 fichier :
@@ -214,6 +216,7 @@ fichier :
 ```bash
 npm test -- tests/integration/critical-behavior.test.ts
 npm test -- src/audio/__tests__/playback-plan.test.ts
+npm test -- src/audio/__tests__/worklet-timeline-engine.test.ts
 ```
 
 Les interactions réelles tactiles, Canvas et Web Audio conservent une part de

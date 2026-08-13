@@ -1,0 +1,123 @@
+import type {
+  InstrumentConfig,
+} from "../../domain/instruments/instrument";
+import type {
+  PlaybackSnapshot,
+} from "../playback-model";
+import type {
+  AudioWorkletTimeline,
+  AudioWorkletTimelineInstrument,
+} from "./audio-worklet-protocol";
+
+export interface TransferableAudioWorkletTimeline {
+  readonly timeline: AudioWorkletTimeline;
+  readonly transfers: Transferable[];
+}
+
+/** Strips editor-only metadata and clones arrays for zero-copy port transfer. */
+export function createTransferableAudioWorkletTimeline(
+  snapshot: PlaybackSnapshot,
+): TransferableAudioWorkletTimeline {
+  const transfers: Transferable[] = [];
+  const cloneFloat64Array = (value: Float64Array): Float64Array => {
+    const cloned = new Float64Array(value);
+
+    transfers.push(cloned.buffer);
+    return cloned;
+  };
+  const cloneUint8Array = (value: Uint8Array): Uint8Array => {
+    const cloned = new Uint8Array(value);
+
+    transfers.push(cloned.buffer);
+    return cloned;
+  };
+  const instruments: AudioWorkletTimelineInstrument[] =
+    snapshot.instruments.map((instrument) => {
+      const heldNoteIndex = createMaximumEndTickTree(
+        instrument.startTicks,
+        instrument.durationTicks,
+      );
+
+      transfers.push(heldNoteIndex.maximumEndTickTree.buffer);
+      return {
+        instrumentId: instrument.instrumentId,
+        pitches: cloneUint8Array(instrument.pitches),
+        startTicks: cloneFloat64Array(instrument.startTicks),
+        durationTicks: cloneFloat64Array(instrument.durationTicks),
+        maximumEndTickTree: heldNoteIndex.maximumEndTickTree,
+        endTickTreeLeafCount: heldNoteIndex.leafCount,
+        gain: instrument.gain,
+        pan: instrument.pan,
+        muted: instrument.muted,
+        solo: instrument.solo,
+        instrument: cloneInstrument(instrument.instrument),
+      };
+    });
+
+  return {
+    timeline: {
+      ppqn: snapshot.ppqn,
+      durationTicks: snapshot.durationTicks,
+      masterGain: snapshot.masterGain,
+      masterMuted: snapshot.masterMuted,
+      masterTuningFrequencyHz: snapshot.masterTuningFrequencyHz,
+      tempoStartTicks: cloneFloat64Array(snapshot.tempoMap.startTicks),
+      tempoBpms: cloneFloat64Array(snapshot.tempoMap.bpms),
+      instruments,
+    },
+    transfers,
+  };
+}
+
+function createMaximumEndTickTree(
+  startTicks: Float64Array,
+  durationTicks: Float64Array,
+): {
+  readonly maximumEndTickTree: Float64Array;
+  readonly leafCount: number;
+} {
+  if (startTicks.length === 0) {
+    return {
+      maximumEndTickTree: new Float64Array(0),
+      leafCount: 0,
+    };
+  }
+
+  let leafCount = 1;
+
+  while (leafCount < startTicks.length) {
+    leafCount *= 2;
+  }
+
+  const tree = new Float64Array(leafCount * 2);
+
+  tree.fill(Number.NEGATIVE_INFINITY);
+
+  for (let noteIndex = 0; noteIndex < startTicks.length; noteIndex += 1) {
+    tree[leafCount + noteIndex] = (
+      startTicks[noteIndex] ?? 0
+    ) + (durationTicks[noteIndex] ?? 0);
+  }
+
+  for (let nodeIndex = leafCount - 1; nodeIndex > 0; nodeIndex -= 1) {
+    tree[nodeIndex] = Math.max(
+      tree[nodeIndex * 2] ?? Number.NEGATIVE_INFINITY,
+      tree[nodeIndex * 2 + 1] ?? Number.NEGATIVE_INFINITY,
+    );
+  }
+
+  return {
+    maximumEndTickTree: tree,
+    leafCount,
+  };
+}
+
+function cloneInstrument<TInstrument extends InstrumentConfig>(
+  instrument: TInstrument,
+): TInstrument {
+  return {
+    ...instrument,
+    envelope: { ...instrument.envelope },
+    filterEnvelope: { ...instrument.filterEnvelope },
+  };
+}
