@@ -168,7 +168,7 @@ courante à chaque vérification.
 ## Vérification
 
 `npm run verify` exécute documentation, structure, frontières, TypeScript,
-build, smoke test du module worklet produit et les 98 tests. Les règles
+build, smoke test du module worklet produit et les 100 tests. Les règles
 structurelles sont dans
 `scripts/check-structure.mjs`; les frontières techniques restent dans
 `scripts/check-import-boundaries.mjs`.

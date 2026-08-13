@@ -2,7 +2,7 @@ import type {
   PlaybackEnvelope,
 } from "../playback-model";
 
-const MINIMUM_EDGE_SECONDS = 0.003;
+const MINIMUM_EDGE_SECONDS = 0.001;
 
 type EnvelopeStage =
   | "attack"

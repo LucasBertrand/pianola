@@ -87,7 +87,10 @@ export class SubtractiveWorkletVoice {
     this.targetFilterResonance = this.filterResonance;
     if (!preserveContinuity) {
       this.phase = 0;
-      this.integratedTriangle = 0;
+      // The integrated square represents a triangle at -1 when phase is 0.
+      // Starting the integrator at 0 would add a frequency-dependent fade-in
+      // of roughly half a period, most audible with a zero attack.
+      this.integratedTriangle = -1;
       this.filterIntegratorOne = 0;
       this.filterIntegratorTwo = 0;
     }

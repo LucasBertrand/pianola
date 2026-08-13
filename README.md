@@ -39,7 +39,7 @@ npm run verify
 | --- | --- |
 | `npm run dev` | lancer Vite sur le port 5173 |
 | `npm run build` | vérifier TypeScript puis produire `dist/` |
-| `npm test` | exécuter les 98 scénarios Vitest |
+| `npm test` | exécuter les 100 scénarios Vitest |
 | `npm run test:worklet-build` | charger et faire rendre le module AudioWorklet produit |
 | `npm run typecheck` | vérifier les trois configurations TypeScript |
 | `npm run check:docs` | vérifier liens locaux et chemins documentés |
@@ -208,7 +208,7 @@ La référence est `npm run verify`. Elle contrôle, dans l’ordre :
 4. TypeScript strict ;
 5. build Vite de production ;
 6. chargement et rendu du module AudioWorklet produit ;
-7. 98 scénarios Vitest.
+7. 100 scénarios Vitest.
 
 La suite centrale de régression reste volontairement en place. Pour cibler un
 fichier :
