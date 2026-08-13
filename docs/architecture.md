@@ -196,8 +196,8 @@ de travail.
 - fichiers TypeScript : `kebab-case.ts` ;
 - composants React : `PascalCase.tsx` ;
 - hooks : `useCamelCase.ts` ;
-- tests modernes : `*.test.ts[x]` ; les deux témoins historiques `.test.mjs`
-  restent des suites Vitest identifiées dans le journal P1 ;
+- tests : `*.test.ts[x]` ou `.test.mjs`, tous exécutés par Vitest avec les
+  builders partagés ;
 - ports : suffixe `-port.ts` ; adaptateurs : technologie explicite ;
 - aucun fichier nommé seulement `types`, `contracts`, `state`, `input`,
   `helpers`, `utils` ou `common`.

@@ -276,10 +276,10 @@ function EnvelopeControls({
     <fieldset className="instrument-editor-module instrument-editor-envelope">
       <legend>{title}</legend>
       <div className="instrument-editor-envelope-controls">
-        <ParameterControl label="Attack" value={envelope.attackSeconds} minimum={0} maximum={EDITOR_CONSTANTS.envelopeTimeMaximumSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(attackSeconds) => onChange({ ...envelope, attackSeconds })} />
-        <ParameterControl label="Decay" value={envelope.decaySeconds} minimum={0} maximum={EDITOR_CONSTANTS.envelopeDecayMaximumSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(decaySeconds) => onChange({ ...envelope, decaySeconds })} />
+        <ParameterControl label="Attack" value={envelope.attackSeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(attackSeconds) => onChange({ ...envelope, attackSeconds })} />
+        <ParameterControl label="Decay" value={envelope.decaySeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(decaySeconds) => onChange({ ...envelope, decaySeconds })} />
         <ParameterControl label="Sustain" value={envelope.sustainLevel} minimum={0} maximum={1} step={EDITOR_CONSTANTS.sustainStep} format={(value) => `${Math.round(value * 100)}%`} onChange={(sustainLevel) => onChange({ ...envelope, sustainLevel })} />
-        <ParameterControl label="Release" value={envelope.releaseSeconds} minimum={0} maximum={EDITOR_CONSTANTS.envelopeTimeMaximumSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(releaseSeconds) => onChange({ ...envelope, releaseSeconds })} />
+        <ParameterControl label="Release" value={envelope.releaseSeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(releaseSeconds) => onChange({ ...envelope, releaseSeconds })} />
       </div>
     </fieldset>
   );

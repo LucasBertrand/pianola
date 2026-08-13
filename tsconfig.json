@@ -22,15 +22,18 @@
     "noEmit": true
   },
   "include": [
-    "src/application/**/*.ts",
-    "src/audio/contracts.ts",
+    "src/config/**/*.ts",
+    "src/use-cases/**/*.ts",
+    "src/audio/playback-model.ts",
     "src/audio/playback-snapshot.ts",
+    "src/audio/playback-source.ts",
     "src/audio/time-math.ts",
     "src/domain/**/*.ts",
-    "src/geometry/**/*.ts",
-    "src/interaction/**/*.ts",
-    "src/midi/**/*.ts",
+    "src/editor/**/*.ts",
     "src/music/**/*.ts",
-    "src/persistence/**/*.ts"
+    "src/project-io/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/__tests__/**"
   ]
 }

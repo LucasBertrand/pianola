@@ -55,7 +55,7 @@ Le socle est déjà robuste : TypeScript strict, modèle immuable, mutations par
 transactions, rendu haute fréquence hors React, codec MIDI borné et moteur audio
 séparé en snapshot, scheduler, moteur et renderer.
 
-Après P0 et le socle P1, les coûts de maintenance principaux sont :
+Après P0 et P1, les coûts de maintenance principaux sont :
 
 - 114 fichiers TypeScript pour environ 33 400 lignes, mais plusieurs fichiers
   dépassent 800 lignes ;
@@ -239,10 +239,12 @@ Critères de sortie :
 
 ## P1 — Clarifier les frontières et l’arborescence
 
-**État au 13 août 2026 : socle livré sur `migration/p1-boundaries`.** Les
+**État au 13 août 2026 : terminé sur `migration/p1-boundaries`.** Les
 déplacements P1.1 à P1.7, la configuration propriétaire, les gardes de structure,
-`PlaybackSource` et la projection MIDI neutre sont implémentés. Le détail des
-chemins et des compatibilités est consigné dans
+`PlaybackSource`, la projection MIDI neutre et la passe de nettoyage finale sont
+implémentés. Les anciens dossiers sont supprimés et les scripts de vérification
+référencent uniquement l’arborescence actuelle. Le détail des chemins et des
+compatibilités est consigné dans
 [`p1-migration.md`](p1-migration.md) et la propriété des états dans
 [`state-ownership.md`](state-ownership.md). Le miroir `activeClipId` du format
 natif v1 est conservé jusqu’à une migration de schéma versionnée.

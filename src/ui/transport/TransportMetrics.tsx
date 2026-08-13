@@ -124,12 +124,12 @@ export function TransportMetrics(
       }
 
       const bpm = Math.min(
-        EDITOR_CONSTANTS.tempoMaximumBpm,
+        PROJECT_CONSTANTS.maximumTempoBpm,
         Math.max(
-          EDITOR_CONSTANTS.tempoMinimumBpm,
+          PROJECT_CONSTANTS.minimumTempoBpm,
           Math.round(
-            requestedBpm / EDITOR_CONSTANTS.tempoStepBpm,
-          ) * EDITOR_CONSTANTS.tempoStepBpm,
+            requestedBpm / PROJECT_CONSTANTS.tempoStepBpm,
+          ) * PROJECT_CONSTANTS.tempoStepBpm,
         ),
       );
 
@@ -210,9 +210,9 @@ export function TransportMetrics(
           ref={tempoInputRef}
           className="metric-control tempo-control"
           type="number"
-          min={EDITOR_CONSTANTS.tempoMinimumBpm}
-          max={EDITOR_CONSTANTS.tempoMaximumBpm}
-          step={EDITOR_CONSTANTS.tempoStepBpm}
+          min={PROJECT_CONSTANTS.minimumTempoBpm}
+          max={PROJECT_CONSTANTS.maximumTempoBpm}
+          step={PROJECT_CONSTANTS.tempoStepBpm}
           defaultValue={PROJECT_CONSTANTS.demoTempoBpm.toFixed(1)}
           inputMode="decimal"
           onBlur={handleTempoCommit}

@@ -1,7 +1,4 @@
 import {
-  EDITOR_CONSTANTS,
-} from "../../config/editor-config";
-import {
   MIDI_CONSTANTS,
 } from "../../config/midi-config";
 import {
@@ -851,14 +848,14 @@ function selectTempo(candidates: TempoCandidate[]): number {
 function normalizeImportedTempo(tempoBpm: number): number {
   const steppedTempo =
     Math.round(
-      tempoBpm / EDITOR_CONSTANTS.tempoStepBpm,
-    ) * EDITOR_CONSTANTS.tempoStepBpm;
+      tempoBpm / PROJECT_CONSTANTS.tempoStepBpm,
+    ) * PROJECT_CONSTANTS.tempoStepBpm;
 
   return Number(
     Math.min(
-      EDITOR_CONSTANTS.tempoMaximumBpm,
+      PROJECT_CONSTANTS.maximumTempoBpm,
       Math.max(
-        EDITOR_CONSTANTS.tempoMinimumBpm,
+        PROJECT_CONSTANTS.minimumTempoBpm,
         steppedTempo,
       ),
     ).toFixed(6),
@@ -1559,9 +1556,9 @@ function assertImportedProjectState(state: ProjectState): void {
   if (
     !Number.isFinite(activeClip.transportSettings.bpm)
     || activeClip.transportSettings.bpm
-      < EDITOR_CONSTANTS.tempoMinimumBpm
+      < PROJECT_CONSTANTS.minimumTempoBpm
     || activeClip.transportSettings.bpm
-      > EDITOR_CONSTANTS.tempoMaximumBpm
+      > PROJECT_CONSTANTS.maximumTempoBpm
     || !Number.isSafeInteger(
       activeClip.transportSettings.timeSignature.numerator,
     )

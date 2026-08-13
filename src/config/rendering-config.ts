@@ -4,7 +4,6 @@ import {
 
 /** Rendering budgets and colors sourced from the application theme. */
 export const RENDERING_CONSTANTS = Object.freeze({
-  defaultNoteColor: APPLICATION_COLORS.notes.default,
   noteLabelMinimumHeightCssPixels: 11,
   noteLabelHorizontalPaddingCssPixels: 2,
   noteLabelFontSizeCssPixels: 9,

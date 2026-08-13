@@ -32,12 +32,12 @@ const vite = await createServer({
 try {
   const {
     createDemoProjectState,
-  } = await vite.ssrLoadModule("/src/app/demo-scene.ts");
+  } = await vite.ssrLoadModule("/src/app/demo-project.ts");
   const {
     serializeNativeProjectFile,
     parseNativeProjectFile,
   } = await vite.ssrLoadModule(
-    "/src/persistence/native-project-file.ts",
+    "/src/project-io/native/native-project-file.ts",
   );
   const {
     ProjectStore,
@@ -47,7 +47,7 @@ try {
   } = await vite.ssrLoadModule("/src/music/pitch-snap.ts");
   const {
     DEFAULT_GRID_SETTINGS,
-  } = await vite.ssrLoadModule("/src/ui/rendering/grid-settings.ts");
+  } = await vite.ssrLoadModule("/src/editor/model/grid-settings.ts");
   const project = createLargeProject(createDemoProjectState());
   const editorState = createEditorState(
     project,

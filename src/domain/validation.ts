@@ -12,9 +12,6 @@ import type {
   InstrumentId,
 } from "./model";
 import {
-  EDITOR_CONSTANTS,
-} from "../config/editor-config";
-import {
   INSTRUMENT_CONSTANTS,
 } from "../config/domain-limits";
 import {
@@ -486,12 +483,6 @@ export function assertValidProjectInstrument(instrument: ProjectInstrument): voi
   assertValidationResult(validateProjectInstrument(instrument));
 }
 
-export function assertValidInstrumentPreset(
-  preset: InstrumentPreset,
-): void {
-  assertValidationResult(validateInstrumentPreset(preset));
-}
-
 export function assertValidTransportState(transport: TransportState): void {
   assertValidationResult(validateTransportState(transport));
 }
@@ -612,14 +603,14 @@ function validateEnvelope(
     envelope.attackSeconds,
     `${path}.attackSeconds`,
     0,
-    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
     issues,
   );
   validateNumberInRange(
     envelope.decaySeconds,
     `${path}.decaySeconds`,
     0,
-    EDITOR_CONSTANTS.envelopeDecayMaximumSeconds,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds,
     issues,
   );
 
@@ -639,7 +630,7 @@ function validateEnvelope(
     envelope.releaseSeconds,
     `${path}.releaseSeconds`,
     0,
-    EDITOR_CONSTANTS.envelopeTimeMaximumSeconds,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
     issues,
   );
 }

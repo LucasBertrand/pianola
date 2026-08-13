@@ -7,7 +7,7 @@ Dernière mise à jour : 13 août 2026.
 
 ## État
 
-Le socle P1 est en place et les critères techniques de sortie sont couverts :
+P1 est terminé et ses critères techniques de sortie sont couverts :
 
 - contrats de grille, couleur, runtime et dialogue indépendants des composants ;
 - `src/app` limité à `App.tsx`, `create-app-runtime.ts` et `demo-project.ts` ;
@@ -23,9 +23,18 @@ Le socle P1 est en place et les critères techniques de sortie sont couverts :
 - registre de renderers audio conservé dans le moteur, sans branche instrument
   dans le scheduler générique.
 
-La suite de régression compte 82 tests Vitest. Les deux grands témoins
-historiques conservent provisoirement l’extension `.test.mjs`; ils utilisent le
-runner Vitest et les builders partagés, et aucun runner historique ne subsiste.
+La passe de clôture a également :
+
+- supprimé les anciens dossiers devenus vides après les déplacements ;
+- retiré une assertion exportée et une constante de rendu sans consommateur ;
+- replacé les bornes de tempo et d’enveloppe dans la configuration métier ;
+- réaligné les trois configurations TypeScript sur l’arborescence P1 ;
+- réparé les chemins du script de baseline afin que la mesure P0 reste
+  comparable après la migration.
+
+La suite de régression compte 82 tests Vitest. Les deux grandes suites
+`.test.mjs` utilisent le même runner Vitest et les mêmes builders partagés que
+les suites TypeScript ; aucun runner historique ne subsiste.
 
 ## Compatibilité assumée
 
