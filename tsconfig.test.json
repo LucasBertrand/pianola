@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.ui.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "vitest.config.ts"
+  ]
+}

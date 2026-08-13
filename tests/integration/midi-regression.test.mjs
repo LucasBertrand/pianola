@@ -1,55 +1,41 @@
 import assert from "node:assert/strict";
 import {
-  createServer,
-} from "vite";
-
-const vite = await createServer({
-  appType: "custom",
-  configFile: false,
-  logLevel: "error",
-  root: process.cwd(),
-  server: {
-    middlewareMode: true,
-  },
-});
-
-try {
-  const {
-    MidiCodecError,
-  } = await vite.ssrLoadModule("/src/midi/errors.ts");
-  const {
-    readStandardMidiFile,
-  } = await vite.ssrLoadModule("/src/midi/smf-reader.ts");
-  const {
-    writeStandardMidiFile,
-  } = await vite.ssrLoadModule("/src/midi/smf-writer.ts");
-  const {
-    analyzeMidiImport,
-    createProjectFromMidiImport,
-  } = await vite.ssrLoadModule("/src/midi/midi-importer.ts");
-  const {
-    createMidiExport,
-  } = await vite.ssrLoadModule("/src/midi/midi-exporter.ts");
-  const {
-    PROJECT_SCHEMA_VERSION,
-    createDefaultMasterBusState,
-    createDefaultTransportState,
-  } = await vite.ssrLoadModule("/src/domain/model.ts");
-  const {
-    createDefaultProjectInstrument,
-  } = await vite.ssrLoadModule("/src/domain/project-instrument-factory.ts");
-  const {
-    createDefaultInstrumentConfig,
-  } = await vite.ssrLoadModule("/src/domain/instrument-presets.ts");
-  const tests = [];
-
-  function test(name, callback) {
-    tests.push({
-      name,
-      callback,
-    });
-  }
-
+  test,
+} from "vitest";
+import {
+  createDefaultInstrumentConfig,
+} from "../../src/domain/instrument-presets";
+import {
+  createDefaultMasterBusState,
+  createDefaultTransportState,
+  PROJECT_SCHEMA_VERSION,
+} from "../../src/domain/model";
+import {
+  createDefaultProjectInstrument,
+} from "../../src/domain/project-instrument-factory";
+import {
+  MidiCodecError,
+} from "../../src/midi/errors";
+import {
+  createMidiExport,
+} from "../../src/midi/midi-exporter";
+import {
+  analyzeMidiImport,
+  createProjectFromMidiImport,
+} from "../../src/midi/midi-importer";
+import {
+  readStandardMidiFile,
+} from "../../src/midi/smf-reader";
+import {
+  writeStandardMidiFile,
+} from "../../src/midi/smf-writer";
+import {
+  createMidiImportAnalysisFixture as createImportAnalysis,
+  createRawFormatZeroMidiFile as createRawFormatZeroFile,
+  getActiveTestClip,
+  getProjectNotes,
+  normalizeProjectInstruments,
+} from "../support/midi-fixtures";
   function parseWrittenFile(file) {
     return readStandardMidiFile(
       writeStandardMidiFile(file),
@@ -65,93 +51,6 @@ try {
       ),
       `Expected MIDI codec error ${expectedCode}.`,
     );
-  }
-
-  function createRawFormatZeroFile(
-    trackBytes,
-    division = 480,
-  ) {
-    const bytes = new Uint8Array(22 + trackBytes.length);
-    bytes.set([
-      0x4d, 0x54, 0x68, 0x64,
-      0x00, 0x00, 0x00, 0x06,
-      0x00, 0x00,
-      0x00, 0x01,
-      (division >>> 8) & 0xff,
-      division & 0xff,
-      0x4d, 0x54, 0x72, 0x6b,
-      (trackBytes.length >>> 24) & 0xff,
-      (trackBytes.length >>> 16) & 0xff,
-      (trackBytes.length >>> 8) & 0xff,
-      trackBytes.length & 0xff,
-    ]);
-    bytes.set(trackBytes, 22);
-    return bytes;
-  }
-
-  function createImportAnalysis(
-    projectInstrument,
-    notes,
-    collisionCount,
-  ) {
-    return {
-      title: "Collision import",
-      sourceFormat: 1,
-      sourceTicksPerQuarterNote: 960,
-      tempoBpm: 120,
-      timeSignature: {
-        numerator: 4,
-        denominator: 4,
-      },
-      timelineEndTick: notes.reduce(
-        (maximum, note) => Math.max(
-          maximum,
-          note.startTick + note.durationTicks,
-        ),
-        0,
-      ),
-      instrumentCandidates: [
-        {
-          projectInstrument,
-          notes,
-        },
-      ],
-      noteCount: notes.length,
-      collisionCount,
-      ignoredControlChangeCount: 0,
-      ignoredSustainControlChangeCount: 0,
-      warnings: [],
-    };
-  }
-
-  function getProjectNotes(state, instrumentId) {
-    return Object.values(
-      getActiveTestClip(state).tracksByInstrumentId[instrumentId].notesById,
-    ).sort((left, right) =>
-      left.startTick - right.startTick
-      || left.pitch - right.pitch
-      || left.id.localeCompare(right.id));
-  }
-
-  function getActiveTestClip(state) {
-    return state.clipsById[state.activeClipId];
-  }
-
-  function normalizeProjectInstruments(state) {
-    return state.instrumentOrder.map((instrumentId) => {
-      const instrument = state.projectInstrumentsById[instrumentId];
-      const notes = getProjectNotes(state, instrumentId);
-
-      return {
-        name: instrument.name,
-        notes: notes.map((note) => [
-          note.pitch,
-          note.startTick,
-          note.durationTicks,
-          note.velocity,
-        ]),
-      };
-    });
   }
 
   test("round-trips deterministic SMF tracks and metadata", () => {
@@ -1045,21 +944,3 @@ try {
       240,
     );
   });
-
-  let passedTestCount = 0;
-
-  for (const currentTest of tests) {
-    try {
-      await currentTest.callback();
-      passedTestCount += 1;
-      console.log(`ok ${passedTestCount} - ${currentTest.name}`);
-    } catch (error) {
-      console.error(`not ok - ${currentTest.name}`);
-      throw error;
-    }
-  }
-
-  console.log(`\n${passedTestCount} MIDI integration tests passed.`);
-} finally {
-  await vite.close();
-}

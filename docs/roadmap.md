@@ -73,15 +73,15 @@ L’audit relève toutefois plusieurs coûts de maintenance :
   à deviner sans lire les imports ; une même fonctionnalité est souvent répartie
   entre plusieurs de ces dossiers ;
 - la persistance dépend encore de types situés sous `ui/rendering` ;
-- les 71 tests exécutables sont concentrés dans deux scripts de plus de 4 500
-  lignes au total, ce qui ralentit la localisation et l’ajout d’un scénario ;
+- les 81 tests exécutables sont désormais pilotés par Vitest avec des fixtures
+  partagées ; les deux anciens scripts monolithiques ont été supprimés en P0 ;
 - les interactions DOM, Canvas, le responsive et Web Audio réel ne sont pas
   couverts automatiquement ;
 - le bundle JavaScript principal dépasse actuellement le seuil d’avertissement
   Vite de 500 kB avant gzip.
 
-Le point de référence est vert : `npm run verify` passe avec 62 scénarios
-domaine/application/audio/persistance et 9 scénarios MIDI.
+Le point de référence est vert : `npm run verify` passe avec le contrôle des
+frontières, trois configurations TypeScript, le build et 81 scénarios Vitest.
 
 ### Décision sur les sauvegardes pendant cette feuille de route
 
@@ -134,9 +134,9 @@ et le format natif, car ces modules concentrent le plus de règles persistantes.
 
 ### P0.1 Adopter un vrai runner de tests
 
-Remplacer progressivement le mini-runner des scripts par Vitest, déjà cohérent
-avec la toolchain Vite. Ne pas convertir les 71 scénarios dans une seule pull
-request.
+Le mini-runner des scripts a été remplacé par Vitest, cohérent avec la toolchain
+Vite. Les 71 scénarios existants ont été conservés puis rejoints par 10 témoins
+et garde-fous ciblés.
 
 Arborescence proposée :
 
@@ -154,15 +154,15 @@ tests/
 src/**/__tests__/*.test.ts  tests unitaires proches du module
 ```
 
-Ordre de migration : calculs purs, reducer et store, persistance, MIDI, puis
-scheduler et moteur. Les scripts existants restent exécutés tant qu’un groupe
-n’a pas été migré.
+Les calculs purs, reducer et store, persistance, MIDI, scheduler et moteur sont
+maintenant enregistrés directement auprès de Vitest. Les fixtures communes sont
+centralisées sous `tests/support`.
 
 Critères de sortie :
 
 - un test isolé peut être lancé par fichier ou par nom ;
 - les fixtures ne sont plus dupliquées entre les suites ;
-- `npm test` exécute ancien et nouveau runner pendant la transition ;
+- `npm test` exécute uniquement Vitest ;
 - le nombre de scénarios ne diminue pas.
 
 ### P0.2 Automatiser les frontières

@@ -44,8 +44,8 @@ import {
   type CanvasFrame,
 } from "../hooks/useCanvasRenderer";
 import type {
-  PianoRollEventController,
-} from "../../interaction/piano-roll-event-controller";
+  PianoRollControllerPort,
+} from "../../interaction/piano-roll-controller-port";
 import type {
   SelectionMode,
 } from "../../interaction/core/state";
@@ -111,8 +111,8 @@ export interface PianoRollLayersProps {
   readonly onHorizontalViewportInteractionStart: () => void;
   readonly onHorizontalViewportInteractionEnd: () => void;
   readonly onTwoFingerDoubleTap: () => void;
-  readonly eventControllerRef: MutableRefObject<
-    PianoRollEventController | null
+  readonly controllerRef: MutableRefObject<
+    PianoRollControllerPort | null
   >;
   readonly onSelectionChange: (
     hasSelection: boolean,
@@ -192,7 +192,7 @@ export function PianoRollLayers(
     onHorizontalViewportInteractionStart,
     onHorizontalViewportInteractionEnd,
     onTwoFingerDoubleTap,
-    eventControllerRef,
+    controllerRef,
     onSelectionChange,
     onGridSeek,
     onNoteCollision,
@@ -250,7 +250,7 @@ export function PianoRollLayers(
         }
         onTwoFingerDoubleTap={onTwoFingerDoubleTap}
         editingNoteMask={editingNoteMask}
-        eventControllerRef={eventControllerRef}
+        controllerRef={controllerRef}
         onSelectionChange={onSelectionChange}
         onGridSeek={onGridSeek}
         onNoteCollision={onNoteCollision}

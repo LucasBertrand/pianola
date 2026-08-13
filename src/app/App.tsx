@@ -78,8 +78,8 @@ import {
   useAudioPlayback,
 } from "../ui/hooks/useAudioPlayback";
 import type {
-  PianoRollEventController,
-} from "../interaction/piano-roll-event-controller";
+  PianoRollControllerPort,
+} from "../interaction/piano-roll-controller-port";
 import {
   type PitchSnapSettings,
 } from "../music/pitch-snap";
@@ -126,27 +126,27 @@ import {
 } from "../domain/instrument-presets";
 
 export function App(): React.JSX.Element {
-  const sceneRef = useRef<EditorRuntime | null>(null);
-  const pianoRollEventControllerRef =
-    useRef<PianoRollEventController | null>(null);
+  const runtimeRef = useRef<EditorRuntime | null>(null);
+  const pianoRollControllerRef =
+    useRef<PianoRollControllerPort | null>(null);
   const editTransactionSequenceRef = useRef(0);
   const pendingMidiImportRef =
     useRef<MidiImportAnalysis | null>(null);
 
-  if (sceneRef.current === null) {
-    sceneRef.current = createEditorRuntime(
+  if (runtimeRef.current === null) {
+    runtimeRef.current = createEditorRuntime(
       createDemoProjectState(),
     );
   }
 
-  const scene = sceneRef.current;
+  const runtime = runtimeRef.current;
 
   const [projectState, setProjectState] = useState(
-    () => scene.projectStore.getState(),
+    () => runtime.projectStore.getState(),
   );
   const [selectedInstrumentId, setSelectedInstrumentId] =
     useState<InstrumentId | null>(
-      () => scene.projectStore.getState().instrumentOrder[0] ?? null,
+      () => runtime.projectStore.getState().instrumentOrder[0] ?? null,
     );
   const [generalInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
@@ -162,7 +162,7 @@ export function App(): React.JSX.Element {
     useState<SelectionMode>("replace");
   const [noteColorMode, setNoteColorMode] =
     useState<NoteColorMode>(
-      () => scene.noteColorMode.get(),
+      () => runtime.noteColorMode.get(),
     );
   const [pitchPreviewEnabled, setPitchPreviewEnabled] =
     useState<boolean>(
@@ -170,7 +170,7 @@ export function App(): React.JSX.Element {
     );
   const [pitchSnapSettings, setPitchSnapSettings] =
     useState<PitchSnapSettings>(
-      () => scene.pitchSnapSettings.get(),
+      () => runtime.pitchSnapSettings.get(),
     );
   const [applicationDialog, setApplicationDialog] =
     useState<ApplicationDialogState | null>(null);
@@ -189,14 +189,14 @@ export function App(): React.JSX.Element {
   const updatePitchSnapSettings = useCallback(
     (changes: Partial<PitchSnapSettings>): void => {
       const nextSettings: PitchSnapSettings = {
-        ...scene.pitchSnapSettings.get(),
+        ...runtime.pitchSnapSettings.get(),
         ...changes,
       };
 
-      scene.pitchSnapSettings.set(nextSettings);
+      runtime.pitchSnapSettings.set(nextSettings);
       setPitchSnapSettings(nextSettings);
     },
-    [scene],
+    [runtime],
   );
   const handleSelectionChange = useCallback(
     (
@@ -212,7 +212,7 @@ export function App(): React.JSX.Element {
     [],
   );
   const handlePitchSelect = useCallback((pitch: number): void => {
-    pianoRollEventControllerRef.current
+    pianoRollControllerRef.current
       ?.togglePitchSelection(pitch);
   }, []);
   const showApplicationAlert = useCallback(
@@ -278,8 +278,8 @@ export function App(): React.JSX.Element {
     previewInstrumentGain,
     previewMasterGain,
   } = useAudioPlayback({
-    projectStore: scene.projectStore,
-    playheadTick: scene.playheadTick,
+    projectStore: runtime.projectStore,
+    playheadTick: runtime.playheadTick,
     onError(error) {
       showApplicationAlert(
         "Playback unavailable",
@@ -298,13 +298,13 @@ export function App(): React.JSX.Element {
   ]);
 
   useEffect(
-    () => scene.projectStore.subscribe((state, previousState) => {
+    () => runtime.projectStore.subscribe((state, previousState) => {
       if (state.activeClipId !== previousState.activeClipId) {
-        const controller = pianoRollEventControllerRef.current;
+        const controller = pianoRollControllerRef.current;
 
         controller?.cancel();
         controller?.clearSelection();
-        scene.selectionRequests.clear();
+        runtime.selectionRequests.clear();
         setSelectionAvailable(false);
       }
 
@@ -320,13 +320,13 @@ export function App(): React.JSX.Element {
         return state.instrumentOrder[0] ?? null;
       });
     }),
-    [scene],
+    [runtime],
   );
   useEffect(
-    () => scene.pitchSnapSettings.subscribe(() => {
-      setPitchSnapSettings(scene.pitchSnapSettings.get());
+    () => runtime.pitchSnapSettings.subscribe(() => {
+      setPitchSnapSettings(runtime.pitchSnapSettings.get());
     }),
-    [scene],
+    [runtime],
   );
 
   const {
@@ -342,14 +342,14 @@ export function App(): React.JSX.Element {
     endHorizontalViewportInteraction,
     publishViewport,
   } = useViewportControls(
-    scene,
+    runtime,
     generalInspectorOpen,
     playbackStatus === "playing",
     seekPlayback,
   );
   const handleReturnToStart = useCallback((): void => {
     returnToStart();
-    const viewport = scene.viewport.get();
+    const viewport = runtime.viewport.get();
 
     if (viewport.scrollX !== 0) {
       publishViewport({
@@ -357,7 +357,7 @@ export function App(): React.JSX.Element {
         scrollX: 0,
       });
     }
-  }, [publishViewport, returnToStart, scene]);
+  }, [publishViewport, returnToStart, runtime]);
   const dispatchEditCommands = useCallback(
     (
       commands: readonly PianoRollCommand[],
@@ -368,9 +368,9 @@ export function App(): React.JSX.Element {
       }
 
       editTransactionSequenceRef.current += 1;
-      return scene.editorCommands.dispatch(commands, label);
+      return runtime.editorCommands.dispatch(commands, label);
     },
-    [scene],
+    [runtime],
   );
   const handleNoteCollision = useCallback(
     (request: NoteCollisionResolutionRequest): void => {
@@ -379,7 +379,7 @@ export function App(): React.JSX.Element {
       ): void => {
         const timestamp = Date.now();
         const plan = createNoteCollisionResolutionPlan(
-          scene.projectStore.getState(),
+          runtime.projectStore.getState(),
           {
             originalNotes: request.originalNotes,
             proposedNotes: request.proposedNotes,
@@ -439,7 +439,7 @@ export function App(): React.JSX.Element {
     },
     [
       dispatchEditCommands,
-      scene,
+      runtime,
       showApplicationAlert,
     ],
   );
@@ -452,20 +452,20 @@ export function App(): React.JSX.Element {
     selectNotes: handleSelectInstrumentNotes,
     toggleLock: handleToggleInstrumentLock,
   } = useProjectInstrumentWorkflow({
-    commands: scene.editorCommands,
+    commands: runtime.editorCommands,
     selectedInstrumentId,
     selectInstrument: setSelectedInstrumentId,
     toggleInstrumentSelection(instrumentId) {
-      scene.selectionRequests.toggleInstrument(instrumentId);
+      runtime.selectionRequests.toggleInstrument(instrumentId);
     },
     removeInstrumentFromSelection(instrumentId) {
-      pianoRollEventControllerRef.current
+      pianoRollControllerRef.current
         ?.removeInstrumentFromSelection(instrumentId);
     },
     confirm: showApplicationConfirmation,
   });
   const handleOpenAddInstrumentDialog = useCallback((): void => {
-    const state = scene.projectStore.getState();
+    const state = runtime.projectStore.getState();
     const presetId = selectInstrumentPresetId(
       state.instrumentPresetOrder,
       state.instrumentOrder.length,
@@ -488,27 +488,31 @@ export function App(): React.JSX.Element {
     setPendingEditedInstrumentId(null);
     setPendingInstrumentConfig(createInstrumentConfigFromPreset(preset));
     setPendingInstrumentPresetId(presetId);
-  }, [scene]);
+  }, [runtime]);
   const handleOpenEditInstrumentDialog = useCallback((instrumentId: InstrumentId): void => {
-    const instrument = scene.projectStore.getState().projectInstrumentsById[instrumentId];
+    const projectInstrument =
+      runtime.projectStore.getState().projectInstrumentsById[instrumentId];
 
-    if (instrument === undefined || instrument.instrument.kind !== "subtractive") {
+    if (
+      projectInstrument === undefined
+      || projectInstrument.instrument.kind !== "subtractive"
+    ) {
       return;
     }
 
     setApplicationDialog(null);
     setPendingEditedInstrumentId(instrumentId);
-    setPendingInstrumentName(instrument.name);
-    setPendingInstrumentColor(instrument.color);
+    setPendingInstrumentName(projectInstrument.name);
+    setPendingInstrumentColor(projectInstrument.color);
     setPendingInstrumentConfig({
-      ...instrument.instrument,
-      envelope: { ...instrument.instrument.envelope },
-      filterEnvelope: { ...instrument.instrument.filterEnvelope },
+      ...projectInstrument.instrument,
+      envelope: { ...projectInstrument.instrument.envelope },
+      filterEnvelope: { ...projectInstrument.instrument.filterEnvelope },
     });
     setPendingInstrumentPresetId("");
-  }, [scene]);
+  }, [runtime]);
   const handleInstrumentPresetSelection = useCallback((presetId: PresetId): void => {
-    const preset = scene.projectStore.getState().instrumentPresetsById[presetId];
+    const preset = runtime.projectStore.getState().instrumentPresetsById[presetId];
 
     if (preset === undefined) {
       return;
@@ -516,7 +520,7 @@ export function App(): React.JSX.Element {
 
     setPendingInstrumentPresetId(presetId);
     setPendingInstrumentConfig(createInstrumentConfigFromPreset(preset));
-  }, [scene]);
+  }, [runtime]);
   const handleConfirmAddInstrument = useCallback((): void => {
     if (pendingInstrumentPresetId === null || pendingInstrumentConfig === null) {
       return;
@@ -556,19 +560,19 @@ export function App(): React.JSX.Element {
     pendingInstrumentName,
     pendingInstrumentPresetId,
   ]);
-  const getPianoRollEventController = useCallback(
-    (): PianoRollEventController | null =>
-      pianoRollEventControllerRef.current,
+  const getPianoRollController = useCallback(
+    (): PianoRollControllerPort | null =>
+      pianoRollControllerRef.current,
     [],
   );
   const clearInteractionSelection = useCallback((): void => {
-    const controller = pianoRollEventControllerRef.current;
+    const controller = pianoRollControllerRef.current;
 
     controller?.cancel();
     controller?.clearSelection();
-    scene.selectionRequests.clear();
+    runtime.selectionRequests.clear();
     setSelectionAvailable(false);
-  }, [scene]);
+  }, [runtime]);
   const beginClipChange = useCallback((): void => {
     stopPlayback();
     clearInteractionSelection();
@@ -581,9 +585,9 @@ export function App(): React.JSX.Element {
     remove: handleDeleteClip,
     rename: handleRenameClip,
   } = useClipWorkflow({
-    commands: scene.editorCommands,
+    commands: runtime.editorCommands,
     beginClipChange,
-    duplicateEditorState: scene.duplicateClipEditorState,
+    duplicateEditorState: runtime.duplicateClipEditorState,
     confirm: showApplicationConfirmation,
   });
   const {
@@ -596,8 +600,8 @@ export function App(): React.JSX.Element {
     toggleLoop: handleToggleLoop,
     commitLoopRegion: handleLoopRegionCommit,
   } = useTransportWorkflow({
-    runtime: scene,
-    getController: getPianoRollEventController,
+    runtime,
+    getController: getPianoRollController,
     seekPlayback,
   });
   const {
@@ -614,15 +618,15 @@ export function App(): React.JSX.Element {
     paste: handlePaste,
     transferToInstrument: handleTransferSelectionToInstrument,
   } = useSelectionWorkflow({
-    commands: scene.editorCommands,
-    projectStore: scene.projectStore,
-    getController: getPianoRollEventController,
+    commands: runtime.editorCommands,
+    projectStore: runtime.projectStore,
+    getController: getPianoRollController,
     getPlayheadTick() {
-      return scene.playheadTick.get();
+      return runtime.playheadTick.get();
     },
     setPlayheadTick: seekPlayback,
     getGridResolutionTicks() {
-      return scene.gridResolutionTicks.get();
+      return runtime.gridResolutionTicks.get();
     },
     resolveCollision: handleNoteCollision,
     alert: showApplicationAlert,
@@ -632,10 +636,10 @@ export function App(): React.JSX.Element {
       const nextMode: NoteColorMode =
         currentMode === "instrument" ? "pitch" : "instrument";
 
-      scene.noteColorMode.set(nextMode);
+      runtime.noteColorMode.set(nextMode);
       return nextMode;
     });
-  }, [scene]);
+  }, [runtime]);
   const {
     loadInputRef: loadProjectInputRef,
     save: handleSaveProject,
@@ -644,11 +648,11 @@ export function App(): React.JSX.Element {
     load: handleProjectFileChange,
     replaceActiveProject,
   } = useProjectFileWorkflow({
-    runtime: scene,
+    runtime,
     getEditorState() {
-      const runtimeStates = scene.captureClipEditorStates();
+      const runtimeStates = runtime.captureClipEditorStates();
       const clipStatesById: Record<ClipId, NativeClipEditorState> = {};
-      const state = scene.projectStore.getState();
+      const state = runtime.projectStore.getState();
 
       for (const [clipId, clipState] of Object.entries(runtimeStates)) {
         const clip = state.clipsById[clipId];
@@ -679,7 +683,7 @@ export function App(): React.JSX.Element {
     stopPlayback,
     seekPlayback,
     resetInteraction() {
-      const controller = pianoRollEventControllerRef.current;
+      const controller = pianoRollControllerRef.current;
 
       controller?.cancel();
       controller?.clearSelection();
@@ -712,7 +716,7 @@ export function App(): React.JSX.Element {
     importFile: handleMidiFileChange,
     exportFile: handleExportMidi,
   } = useMidiFileWorkflow({
-    runtime: scene,
+    runtime,
     pendingAnalysisRef: pendingMidiImportRef,
     replaceActiveProject,
     showDialog: setApplicationDialog,
@@ -726,9 +730,9 @@ export function App(): React.JSX.Element {
       data-project-revision="0"
     >
       <EditorHeader
-        projectStore={scene.projectStore}
-        editorCommands={scene.editorCommands}
-        gridSettings={scene.gridSettings}
+        projectStore={runtime.projectStore}
+        editorCommands={runtime.editorCommands}
+        gridSettings={runtime.gridSettings}
         projectState={projectState}
         playbackStatus={playbackStatus}
         projectInputRef={loadProjectInputRef}
@@ -772,8 +776,8 @@ export function App(): React.JSX.Element {
           <EditorToolbar
             inspectorOpen={generalInspectorOpen}
             inspectorSection={generalInspectorSection}
-            canUndo={scene.projectStore.canUndo()}
-            canRedo={scene.projectStore.canRedo()}
+            canUndo={runtime.projectStore.canUndo()}
+            canRedo={runtime.projectStore.canRedo()}
             measureCount={activeClip.measureCount}
             selectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
@@ -810,7 +814,7 @@ export function App(): React.JSX.Element {
 
           <div className="roll-frame">
             <PianoKeyboard
-              viewport={scene.viewport}
+              viewport={runtime.viewport}
               previewEnabled={pitchPreviewEnabled}
               pitchSnapSettings={pitchSnapSettings}
               onPreviewToggle={() => {
@@ -819,19 +823,19 @@ export function App(): React.JSX.Element {
               onPitchAudition={handlePitchAudition}
               onPitchLongPress={handlePitchSelect}
               onPitchInteractionChange={(pitch) => {
-                scene.highlightedPitch.set(pitch);
+                runtime.highlightedPitch.set(pitch);
               }}
             />
             <div ref={stageRef} className="roll-stage">
               <BarRuler
-                viewport={scene.viewport}
-                projectStore={scene.projectStore}
-                gridResolutionTicks={scene.gridResolutionTicks}
+                viewport={runtime.viewport}
+                projectStore={runtime.projectStore}
+                gridResolutionTicks={runtime.gridResolutionTicks}
                 onLoopCommit={handleLoopRegionCommit}
               />
               <div className="canvas-host">
                 <PianoRollLayers
-                  runtime={scene}
+                  runtime={runtime}
                   selectionMode={selectionMode}
                   activeInstrumentId={selectedInstrumentId ?? ""}
                   totalTicks={totalTicks}
@@ -843,8 +847,8 @@ export function App(): React.JSX.Element {
                     endHorizontalViewportInteraction
                   }
                   onTwoFingerDoubleTap={handleUndo}
-                  eventControllerRef={
-                    pianoRollEventControllerRef
+                  controllerRef={
+                    pianoRollControllerRef
                   }
                   onSelectionChange={handleSelectionChange}
                   onGridSeek={seekPlayback}
@@ -852,8 +856,8 @@ export function App(): React.JSX.Element {
                 />
               </div>
               <RollPlayhead
-                viewport={scene.viewport}
-                playheadTick={scene.playheadTick}
+                viewport={runtime.viewport}
+                playheadTick={runtime.playheadTick}
               />
             </div>
           </div>

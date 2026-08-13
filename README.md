@@ -37,6 +37,7 @@ conservée uniquement comme archive de décision.
 | [`README.md`](README.md) | installer, lancer, utiliser, déployer et dépanner Pianola |
 | [`docs/architecture.md`](docs/architecture.md) | comprendre les modules, propriétaires d’état, flux et règles de dépendances |
 | [`docs/roadmap.md`](docs/roadmap.md) | suivre les priorités de modularisation, nommage, tests et réorganisation |
+| [`docs/p0-baseline.md`](docs/p0-baseline.md) | consulter les garde-fous, témoins critiques et mesures de référence de P0 |
 | [`docs/old-hypothetical-rewrite-roadmap.md`](docs/old-hypothetical-rewrite-roadmap.md) | consulter l’hypothèse de réécriture v2 archivée et non planifiée |
 | [`src/ui/rendering/README.md`](src/ui/rendering/README.md) | modifier le pipeline Canvas et ses contraintes de performance |
 | [`src/geometry/__tests__/TEST_PLAN.md`](src/geometry/__tests__/TEST_PLAN.md) | implémenter les tests de propriétés et benchmarks géométriques |
@@ -111,7 +112,8 @@ de panne et simplifie les mises à jour.
 ├── .github/workflows/ci.yml   Vérification automatique GitHub Actions
 ├── docs/                      Architecture détaillée et feuille de route
 ├── public/                    Manifeste et icône copiés tels quels dans dist
-├── scripts/                   Runner actuel des 71 scénarios automatisés
+├── scripts/                   Contrôles de frontières et mesures de baseline
+├── tests/                     Suites Vitest et supports de test partagés
 ├── src/
 │   ├── app/                   Composition, runtime et workflows navigateur
 │   ├── application/           Cas d'usage, sélection et plans de commandes
@@ -305,9 +307,9 @@ utiliser le déploiement Vercel en HTTPS.
 | `npm run typecheck` | Vérifie tout le TypeScript strict |
 | `npm run typecheck:core` | Vérifie domaine, géométrie, MIDI et persistance |
 | `npm run typecheck:ui` | Vérifie React, DOM, UI et audio complet |
-| `npm run test:audio` | Lance 62 scénarios domaine/application/audio/persistance |
-| `npm run test:midi` | Lance 9 tests d’intégration MIDI |
-| `npm test` | Lance les deux suites de tests |
+| `npm run typecheck:test` | Vérifie les tests TypeScript et leurs supports partagés |
+| `npm test` | Lance les 81 scénarios avec Vitest |
+| `npm run test:vitest:watch` | Relance les tests concernés pendant le développement |
 | `npm run build` | Typecheck puis produit le bundle `dist/` |
 | `npm run preview` | Sert localement le dernier build de production |
 | `npm run verify` | Build complet puis toutes les suites de tests |
@@ -380,15 +382,15 @@ les fichiers de production.
 
 ### Couverture actuelle
 
-Les 71 scénarios exécutables couvrent les invariants du domaine, les commandes,
+Les 81 scénarios Vitest couvrent les invariants du domaine, les commandes,
 l’historique, les collisions, la persistance, le timing audio, le scheduler,
-la polyphonie, le solo, les boucles et les conversions MIDI.
+la polyphonie, le solo, les boucles, les conversions MIDI, la géométrie et les
+frontières d’import. Chaque scénario est exécutable par fichier ou par nom.
 
 Les gestes tactiles, le layout responsive, le rendu Canvas et le comportement
 réel de Web Audio doivent encore être validés manuellement. Le plan des tests
 géométriques complémentaires se trouve dans
-`src/geometry/__tests__/TEST_PLAN.md`. La migration vers des tests isolables et
-les parcours navigateur prioritaires sont détaillés dans
+`src/geometry/__tests__/TEST_PLAN.md`. Les parcours navigateur prioritaires sont détaillés dans
 [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Déploiement continu GitHub vers Vercel
@@ -704,8 +706,7 @@ interaction, rendu, fichiers et MIDI est un chantier P1 de la
 2. Implémenter son traitement sans mutation de l’état reçu.
 3. Valider toutes les données avant de produire le nouvel état.
 4. Déclencher une transaction unique depuis l’UI.
-5. Ajouter un scénario dans `scripts/test-audio.mjs` ou une nouvelle suite
-   dédiée.
+5. Ajouter un scénario Vitest près du module ou dans `tests/integration`.
 6. Vérifier Undo et Redo.
 
 Ne pas modifier directement `ProjectState` dans un composant React.
@@ -812,9 +813,9 @@ configuration et ses réglages globaux de mixage, tandis que
 l’interprète. Ne pas généraliser cette limite à tous les instruments : un futur
 drumkit définira sa propre politique de superposition et de choke groups.
 
-Toute correction de timing doit être testable avec un faux moteur dans
-`scripts/test-audio.mjs`. Éviter de dépendre de l’horloge murale directement
-dans les calculs purs.
+Toute correction de timing doit être testable avec le faux moteur de
+`tests/support/fake-audio-engine.ts`. Éviter de dépendre de l’horloge murale
+directement dans les calculs purs.
 
 ### Mettre à jour les dépendances
 
@@ -1010,7 +1011,7 @@ taille, pistes, événements et notes sont intentionnelles.
 Après toute correction du codec, exécuter :
 
 ```bash
-npm run test:midi
+npx vitest run tests/integration/midi-regression.test.mjs
 ```
 
 ### La CI GitHub échoue alors que le poste local passe

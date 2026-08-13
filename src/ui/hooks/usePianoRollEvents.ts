@@ -70,8 +70,8 @@ import {
   PianoRollInteractionSession,
 } from "../../interaction/piano-roll-interaction-session";
 import type {
-  PianoRollEventController,
-} from "../../interaction/piano-roll-event-controller";
+  PianoRollControllerPort,
+} from "../../interaction/piano-roll-controller-port";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
@@ -121,7 +121,7 @@ const TOUCH_NOTE_HIT_ENVELOPE_CSS_PIXELS =
 
 export function usePianoRollEvents(
   options: UsePianoRollEventsOptions,
-): PianoRollEventController {
+): PianoRollControllerPort {
   const {
     overlayRef,
     visualsRef,

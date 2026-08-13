@@ -47,8 +47,8 @@ import {
   type SelectionTransformationKind,
 } from "../../domain/selection-transformations";
 import type {
-  PianoRollEventController,
-} from "../../interaction/piano-roll-event-controller";
+  PianoRollControllerPort,
+} from "../../interaction/piano-roll-controller-port";
 import type {
   ShowApplicationAlert,
 } from "./dialog-types";
@@ -56,7 +56,7 @@ import type {
 export interface SelectionWorkflowOptions {
   readonly commands: EditorCommandPort;
   readonly projectStore: ProjectStorePort;
-  readonly getController: () => PianoRollEventController | null;
+  readonly getController: () => PianoRollControllerPort | null;
   readonly getPlayheadTick: () => number;
   readonly setPlayheadTick: (tick: number) => void;
   readonly getGridResolutionTicks: () => number;

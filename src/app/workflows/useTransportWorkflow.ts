@@ -10,15 +10,15 @@ import {
   type LoopRegion,
 } from "../../domain/model";
 import type {
-  PianoRollEventController,
-} from "../../interaction/piano-roll-event-controller";
+  PianoRollControllerPort,
+} from "../../interaction/piano-roll-controller-port";
 import type {
   EditorRuntime,
 } from "../editor-runtime";
 
 export interface TransportWorkflowOptions {
   readonly runtime: EditorRuntime;
-  readonly getController: () => PianoRollEventController | null;
+  readonly getController: () => PianoRollControllerPort | null;
   readonly seekPlayback: (tick: number) => void;
 }
 

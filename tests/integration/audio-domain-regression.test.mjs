@@ -1,341 +1,152 @@
 import assert from "node:assert/strict";
 import {
-  createServer,
-} from "vite";
-
-const vite = await createServer({
-  appType: "custom",
-  configFile: false,
-  logLevel: "error",
-  root: process.cwd(),
-  server: {
-    middlewareMode: true,
-  },
-});
-
-try {
-  const {
-    CommandRejectedError,
-    projectReducer,
-  } = await vite.ssrLoadModule("/src/domain/commands.ts");
-  const {
-    countNoteEditCollisions,
-    createNoteCollisionResolutionPlan,
-  } = await vite.ssrLoadModule(
-    "/src/domain/note-collision.ts",
-  );
-  const {
-    SelectionTransformationError,
-    transformNoteSelection,
-  } = await vite.ssrLoadModule(
-    "/src/domain/selection-transformations.ts",
-  );
-  const {
-    ProjectStore,
-  } = await vite.ssrLoadModule(
-    "/src/domain/project-store.ts",
-  );
-  const {
-    createEditorRuntime,
-  } = await vite.ssrLoadModule(
-    "/src/app/editor-runtime.ts",
-  );
-  const {
-    EditorCommandService,
-  } = await vite.ssrLoadModule(
-    "/src/application/editor-command-service.ts",
-  );
-  const {
-    EditorSelection,
-  } = await vite.ssrLoadModule(
-    "/src/application/editor-selection.ts",
-  );
-  const {
-    EditorSelectionRequests,
-  } = await vite.ssrLoadModule(
-    "/src/application/editor-selection-requests.ts",
-  );
-  const {
-    NoteGestureWorkflow,
-  } = await vite.ssrLoadModule(
-    "/src/application/note-gesture-workflow.ts",
-  );
-  const {
-    buildDeleteNoteCommands,
-    buildRepositionNoteCommands,
-    buildSetNotesEnabledCommands,
-  } = await vite.ssrLoadModule(
-    "/src/application/note-edit-commands.ts",
-  );
-  const {
-    buildSliceCommandsForNotes,
-    canPlacePastedNotes,
-    createPastedNotes,
-    createInstrumentTransferPlan,
-    findNotesByIds,
-    getRequiredMeasureCountForNotes,
-  } = await vite.ssrLoadModule(
-    "/src/application/selection-edit-plans.ts",
-  );
-  const {
-    EditingNoteMask,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/core/editing-note-mask.ts",
-  );
-  const {
-    createInteractionDraft,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/core/state.ts",
-  );
-  const {
-    PianoRollGestureStateMachine,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/core/gesture-state-machine.ts",
-  );
-  const {
-    buildRepositionedNotes: buildGestureRepositionedNotes,
-    calculateResizeDeltaBounds,
-    measureNoteSelection,
-    quantizeTick,
-    snapTickToCellStart,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/core/note-gesture-math.ts",
-  );
-  const {
-    classifyPinchZoomAxis,
-    PinchViewportGesture,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/core/pinch-viewport-gesture.ts",
-  );
-  const {
-    TwoPointerDoubleTapGesture,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/core/two-pointer-double-tap.ts",
-  );
-  const {
-    constrainViewportToContent,
-    getMaximumHorizontalScroll,
-    getMaximumVerticalScroll,
-    getMinimumHorizontalZoom,
-    getMinimumVerticalZoom,
-    getPagedScrollXForTick,
-    getPlaybackFollowScrollX,
-    getScrollXToRevealTick,
-  } = await vite.ssrLoadModule(
-    "/src/geometry/viewport-bounds.ts",
-  );
-  const {
-    PianoRollInteractionSession,
-  } = await vite.ssrLoadModule(
-    "/src/interaction/piano-roll-interaction-session.ts",
-  );
-  const {
-    DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
-    PROJECT_SCHEMA_VERSION,
-    createDefaultMasterBusState,
-    createDefaultTransportState,
-  } = await vite.ssrLoadModule("/src/domain/model.ts");
-  const {
-    createDefaultInstrumentPresetLibrary,
-    createDefaultInstrumentConfig,
-  } = await vite.ssrLoadModule(
-    "/src/domain/instrument-presets.ts",
-  );
-  const {
-    compilePlaybackSnapshot,
-  } = await vite.ssrLoadModule("/src/audio/playback-snapshot.ts");
-  const {
-    projectTickIntoLoop,
-    secondsToTick,
-    tickToSeconds,
-  } = await vite.ssrLoadModule("/src/audio/time-math.ts");
-  const {
-    DEFAULT_AUDIO_ENGINE_CONFIG,
-    LookaheadScheduler,
-  } = await vite.ssrLoadModule("/src/audio/lookahead-scheduler.ts");
-  const {
-    WebAudioEngine,
-  } = await vite.ssrLoadModule("/src/audio/web-audio-engine.ts");
-  const {
-    SubtractiveInstrumentRenderer,
-  } = await vite.ssrLoadModule(
-    "/src/audio/instruments/subtractive-instrument-renderer.ts",
-  );
-  const {
-    countOverlappingVoiceWindows,
-    findOldestOverlappingVoiceIndex,
-  } = await vite.ssrLoadModule("/src/audio/voice-allocation.ts");
-  const {
-    parseNativeProjectFile,
-    serializeNativeProjectFile,
-  } = await vite.ssrLoadModule(
-    "/src/persistence/native-project-file.ts",
-  );
-  const {
-    DEFAULT_PITCH_SNAP_SETTINGS,
-    getPitchScaleDegreeColorIndex,
-    getScaleDegreeColorIndex,
-    getScaleDegreeTriadQuality,
-    getTonalPatternDefinition,
-    isPitchAllowedByTonalPattern,
-    snapPitchToTonalPattern,
-  } = await vite.ssrLoadModule(
-    "/src/music/pitch-snap.ts",
-  );
-  const {
-    getMidiNoteLabel,
-    getPreferredTonicLabel,
-    getScaleDegreeLabel,
-  } = await vite.ssrLoadModule(
-    "/src/ui/rendering/pitch-label.ts",
-  );
-  const {
-    resolveNoteEnvelopePeakLevel,
-  } = await vite.ssrLoadModule(
-    "/src/audio/note-dynamics.ts",
-  );
+  test,
+} from "vitest";
+import {
+  EditorCommandService,
+} from "../../src/application/editor-command-service";
+import {
+  EditorSelectionRequests,
+} from "../../src/application/editor-selection-requests";
+import {
+  EditorSelection,
+} from "../../src/application/editor-selection";
+import {
+  buildDeleteNoteCommands,
+  buildRepositionNoteCommands,
+  buildSetNotesEnabledCommands,
+} from "../../src/application/note-edit-commands";
+import {
+  NoteGestureWorkflow,
+} from "../../src/application/note-gesture-workflow";
+import {
+  buildSliceCommandsForNotes,
+  canPlacePastedNotes,
+  createInstrumentTransferPlan,
+  createPastedNotes,
+  findNotesByIds,
+  getRequiredMeasureCountForNotes,
+} from "../../src/application/selection-edit-plans";
+import {
+  createEditorRuntime,
+} from "../../src/app/editor-runtime";
+import {
+  SubtractiveInstrumentRenderer,
+} from "../../src/audio/instruments/subtractive-instrument-renderer";
+import {
+  DEFAULT_AUDIO_ENGINE_CONFIG,
+  LookaheadScheduler,
+} from "../../src/audio/lookahead-scheduler";
+import {
+  resolveNoteEnvelopePeakLevel,
+} from "../../src/audio/note-dynamics";
+import {
+  compilePlaybackSnapshot,
+} from "../../src/audio/playback-snapshot";
+import {
+  projectTickIntoLoop,
+  secondsToTick,
+  tickToSeconds,
+} from "../../src/audio/time-math";
+import {
+  countOverlappingVoiceWindows,
+  findOldestOverlappingVoiceIndex,
+} from "../../src/audio/voice-allocation";
+import {
+  WebAudioEngine,
+} from "../../src/audio/web-audio-engine";
+import {
+  CommandRejectedError,
+  projectReducer,
+} from "../../src/domain/commands";
+import {
+  createDefaultInstrumentConfig,
+  createDefaultInstrumentPresetLibrary,
+} from "../../src/domain/instrument-presets";
+import {
+  createDefaultMasterBusState,
+  createDefaultTransportState,
+  DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
+  PROJECT_SCHEMA_VERSION,
+} from "../../src/domain/model";
+import {
+  countNoteEditCollisions,
+  createNoteCollisionResolutionPlan,
+} from "../../src/domain/note-collision";
+import {
+  ProjectStore,
+} from "../../src/domain/project-store";
+import {
+  SelectionTransformationError,
+  transformNoteSelection,
+} from "../../src/domain/selection-transformations";
+import {
+  constrainViewportToContent,
+  getMaximumHorizontalScroll,
+  getMaximumVerticalScroll,
+  getMinimumHorizontalZoom,
+  getMinimumVerticalZoom,
+  getPagedScrollXForTick,
+  getPlaybackFollowScrollX,
+  getScrollXToRevealTick,
+} from "../../src/geometry/viewport-bounds";
+import {
+  EditingNoteMask,
+} from "../../src/interaction/core/editing-note-mask";
+import {
+  PianoRollGestureStateMachine,
+} from "../../src/interaction/core/gesture-state-machine";
+import {
+  buildRepositionedNotes as buildGestureRepositionedNotes,
+  calculateResizeDeltaBounds,
+  measureNoteSelection,
+  quantizeTick,
+  snapTickToCellStart,
+} from "../../src/interaction/core/note-gesture-math";
+import {
+  classifyPinchZoomAxis,
+  PinchViewportGesture,
+} from "../../src/interaction/core/pinch-viewport-gesture";
+import {
+  createInteractionDraft,
+} from "../../src/interaction/core/state";
+import {
+  TwoPointerDoubleTapGesture,
+} from "../../src/interaction/core/two-pointer-double-tap";
+import {
+  PianoRollInteractionSession,
+} from "../../src/interaction/piano-roll-interaction-session";
+import {
+  DEFAULT_PITCH_SNAP_SETTINGS,
+  getPitchScaleDegreeColorIndex,
+  getScaleDegreeColorIndex,
+  getScaleDegreeTriadQuality,
+  getTonalPatternDefinition,
+  isPitchAllowedByTonalPattern,
+  snapPitchToTonalPattern,
+} from "../../src/music/pitch-snap";
+import {
+  parseNativeProjectFile,
+  serializeNativeProjectFile,
+} from "../../src/persistence/native-project-file";
+import {
+  getMidiNoteLabel,
+  getPreferredTonicLabel,
+  getScaleDegreeLabel,
+} from "../../src/ui/rendering/pitch-label";
+import {
+  FakeAudioEngine,
+  FakeSchedulerTimer,
+} from "../support/fake-audio-engine";
+import {
+  createAudioTestEditorState as createEditorState,
+  createAudioTestNote as createNote,
+  createAudioTestProject as createProject,
+  createAudioTestProjectInstrument as createProjectInstrument,
+  getAudioTestActiveClip as getActiveTestClip,
+} from "../support/project-fixtures";
 
   let transactionSequence = 0;
-
-  function createProjectInstrument(instrumentId, instrumentIndex = 0) {
-    return {
-      id: instrumentId,
-      name: `Instrument ${instrumentIndex + 1}`,
-      color: instrumentIndex % 2 === 0 ? "#79a7ff" : "#a77bf3",
-      instrument: createDefaultInstrumentConfig(instrumentIndex),
-      gain: 0.8,
-      muted: false,
-      solo: false,
-      pan: 0,
-      effects: [],
-      generativeRules: [],
-      interpretation: {
-        transposeSemitones: 0,
-        timingOffsetTicks: 0,
-        gateRatio: 1,
-        velocityScale: 1,
-        probability: 1,
-      },
-    };
-  }
-
-  function createNote(
-    id,
-    instrumentId,
-    pitch,
-    startTick,
-    durationTicks = 120,
-    velocity = 100,
-  ) {
-    return {
-      id,
-      pitch,
-      startTick,
-      durationTicks,
-      velocity,
-      instrumentId,
-      enabled: true,
-    };
-  }
-
-  function createProject(options = {}) {
-    const {
-      measureCount = 4,
-      notesByInstrumentId = {},
-      revision = 0,
-      masterGain = createDefaultMasterBusState().gain,
-      masterMuted = createDefaultMasterBusState().muted,
-      masterTuningFrequencyHz =
-        createDefaultMasterBusState().tuningFrequencyHz,
-      transport: transportChanges = {},
-      instrumentOrder = ["voice-a"],
-      projectInstrumentChangesById = {},
-      instrumentStateChangesById = {},
-    } = options;
-    const defaultTransport = createDefaultTransportState();
-    const transportSettings = {
-      ...defaultTransport,
-      ...transportChanges,
-      loop: {
-        ...defaultTransport.loop,
-        ...transportChanges.loop,
-      },
-      timeSignature: {
-        ...defaultTransport.timeSignature,
-        ...transportChanges.timeSignature,
-      },
-    };
-    const projectInstrumentsById = {};
-    const tracksByInstrumentId = {};
-    const instrumentStatesById = {};
-
-    for (
-      let instrumentIndex = 0;
-      instrumentIndex < instrumentOrder.length;
-      instrumentIndex += 1
-    ) {
-      const instrumentId = instrumentOrder[instrumentIndex];
-
-      if (instrumentId === undefined) {
-        continue;
-      }
-
-      const notes = notesByInstrumentId[instrumentId] ?? [];
-      const notesById = {};
-
-      for (const note of notes) {
-        notesById[note.id] = note;
-      }
-
-      projectInstrumentsById[instrumentId] = {
-        ...createProjectInstrument(instrumentId, instrumentIndex),
-        ...projectInstrumentChangesById[instrumentId],
-      };
-      tracksByInstrumentId[instrumentId] = {
-        instrumentId,
-        notesById,
-      };
-      instrumentStatesById[instrumentId] = {
-        locked: false,
-        ...instrumentStateChangesById[instrumentId],
-      };
-    }
-
-    const clipId = "clip-test";
-
-    const presetLibrary = createDefaultInstrumentPresetLibrary();
-
-    return {
-      schemaVersion: PROJECT_SCHEMA_VERSION,
-      revision,
-      title: "Audio test project",
-      projectInstrumentsById,
-      instrumentOrder: [...instrumentOrder],
-      instrumentPresetsById: presetLibrary.instrumentPresetsById,
-      instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
-      clipsById: {
-        [clipId]: {
-          id: clipId,
-          name: "Test Clip",
-          measureCount,
-          tracksByInstrumentId,
-          instrumentStatesById,
-          transportSettings,
-        },
-      },
-      clipOrder: [clipId],
-      activeClipId: clipId,
-      masterBus: {
-        gain: masterGain,
-        muted: masterMuted,
-        tuningFrequencyHz: masterTuningFrequencyHz,
-      },
-    };
-  }
-
-  function getActiveTestClip(state) {
-    return state.clipsById[state.activeClipId];
-  }
 
   function dispatch(state, command) {
     transactionSequence += 1;
@@ -348,37 +159,6 @@ try {
     });
   }
 
-  function createEditorState(overrides = {}) {
-    return {
-      selectedInstrumentId: "voice-a",
-      selectionMode: "add",
-      noteColorMode: "pitch",
-      pitchPreviewEnabled: false,
-      clipStatesById: {
-        "clip-test": {
-          playheadTick: 960,
-          pitchSnapSettings: {
-            ...DEFAULT_PITCH_SNAP_SETTINGS,
-            enabled: true,
-            visualGuideEnabled: true,
-            tonicPitchClass: 2,
-          },
-          gridSettings: {
-            baseResolutionTicks: 480,
-            subdivision: "triplet",
-            resolutionTicks: 320,
-          },
-          viewport: {
-            zoomX: 1.4,
-            zoomY: 1.2,
-            scrollX: 240,
-            scrollY: 360,
-          },
-        },
-      },
-      ...overrides,
-    };
-  }
 
   function dispatchCommands(state, commands, label) {
     transactionSequence += 1;
@@ -408,109 +188,6 @@ try {
       Math.abs(actual - expected) <= tolerance,
       `Expected ${actual} to be within ${tolerance} of ${expected}.`,
     );
-  }
-
-  class FakeAudioEngine {
-    constructor(configChanges = {}) {
-      this.config = {
-        ...DEFAULT_AUDIO_ENGINE_CONFIG,
-        latencyCompensationSeconds: 0,
-        ...configChanges,
-      };
-      this.currentTimeSeconds = 0;
-      this.cancelledAt = [];
-      this.cancelledFutureAt = [];
-      this.configurations = [];
-      this.disposed = false;
-      this.events = [];
-      this.resumeGate = null;
-      this.resumeCount = 0;
-      this.scheduleFailureAfterEventCount = null;
-      this.snapshots = [];
-      this.instrumentGainPreviews = [];
-    }
-
-    configure(config) {
-      this.config = config;
-      this.configurations.push(config);
-    }
-
-    replacePlaybackSnapshot(snapshot) {
-      this.snapshots.push(snapshot);
-    }
-
-    async resume() {
-      this.resumeCount += 1;
-
-      if (this.resumeGate !== null) {
-        await this.resumeGate;
-      }
-    }
-
-    scheduleNote(event) {
-      if (
-        this.scheduleFailureAfterEventCount !== null
-        && this.events.length
-          >= this.scheduleFailureAfterEventCount
-      ) {
-        throw new Error("Synthetic scheduling failure.");
-      }
-
-      this.events.push(event);
-    }
-
-    previewInstrumentGain(instrumentId, gain) {
-      this.instrumentGainPreviews.push({
-        instrumentId,
-        gain,
-      });
-    }
-
-    cancelAll(atAudioTimeSeconds) {
-      this.cancelledAt.push(atAudioTimeSeconds);
-    }
-
-    cancelScheduledAfter(atAudioTimeSeconds) {
-      this.cancelledFutureAt.push(atAudioTimeSeconds);
-    }
-
-    async dispose() {
-      this.disposed = true;
-    }
-  }
-
-  class FakeSchedulerTimer {
-    constructor() {
-      this.entries = new Map();
-      this.nextHandle = 1;
-    }
-
-    setTimeout(callback, delayMilliseconds) {
-      const handle = this.nextHandle;
-      this.nextHandle += 1;
-      this.entries.set(handle, {
-        callback,
-        delayMilliseconds,
-      });
-      return handle;
-    }
-
-    clearTimeout(handle) {
-      this.entries.delete(handle);
-    }
-
-    get pendingCount() {
-      return this.entries.size;
-    }
-  }
-
-  const tests = [];
-
-  function test(name, callback) {
-    tests.push({
-      name,
-      callback,
-    });
   }
 
   test("centralizes editor transactions behind the application port", () => {
@@ -3583,21 +3260,3 @@ try {
 
     assert.equal(scheduler.getPositionTick(), 1_440);
   });
-
-  let passedTestCount = 0;
-
-  for (const currentTest of tests) {
-    try {
-      await currentTest.callback();
-      passedTestCount += 1;
-      console.log(`ok ${passedTestCount} - ${currentTest.name}`);
-    } catch (error) {
-      console.error(`not ok - ${currentTest.name}`);
-      throw error;
-    }
-  }
-
-  console.log(`\n${passedTestCount} audio/domain tests passed.`);
-} finally {
-  await vite.close();
-}

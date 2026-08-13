@@ -339,7 +339,7 @@ La commande de référence est :
 npm run verify
 ```
 
-Au 13 août 2026, elle exécute le TypeScript strict, le build Vite, 62 scénarios
-domaine/application/audio/persistance et 9 scénarios d’intégration MIDI. Les
+Au 13 août 2026, elle exécute le TypeScript strict, le contrôle des frontières,
+le build Vite et 81 scénarios Vitest isolables. Les
 gestes DOM, Canvas, le responsive et Web Audio réel restent principalement
 manuels ; leur automatisation est priorisée dans la feuille de route.

@@ -26,8 +26,8 @@ import {
   usePianoRollEvents,
 } from "../hooks/usePianoRollEvents";
 import type {
-  PianoRollEventController,
-} from "../../interaction/piano-roll-event-controller";
+  PianoRollControllerPort,
+} from "../../interaction/piano-roll-controller-port";
 import type {
   SelectionMode,
 } from "../../interaction/core/state";
@@ -51,8 +51,8 @@ export interface InteractionOverlayProps {
   readonly onHorizontalViewportInteractionEnd: () => void;
   readonly onTwoFingerDoubleTap: () => void;
   readonly editingNoteMask: EditingNoteMask;
-  readonly eventControllerRef: MutableRefObject<
-    PianoRollEventController | null
+  readonly controllerRef: MutableRefObject<
+    PianoRollControllerPort | null
   >;
   readonly onSelectionChange: (
     hasSelection: boolean,
@@ -112,7 +112,7 @@ export function InteractionOverlay(
     onHorizontalViewportInteractionEnd,
     onTwoFingerDoubleTap,
     editingNoteMask,
-    eventControllerRef,
+    controllerRef,
     onSelectionChange,
     onGridSeek,
     onNoteCollision,
@@ -154,7 +154,7 @@ export function InteractionOverlay(
     onTwoFingerDoubleTap,
   });
 
-  const eventController = usePianoRollEvents({
+  const controller = usePianoRollEvents({
     overlayRef,
     visualsRef,
     strategyRef,
@@ -175,17 +175,17 @@ export function InteractionOverlay(
 
   useEffect(
     () => {
-      eventControllerRef.current = eventController;
+      controllerRef.current = controller;
 
       return (): void => {
-        if (eventControllerRef.current === eventController) {
-          eventControllerRef.current = null;
+        if (controllerRef.current === controller) {
+          controllerRef.current = null;
         }
       };
     },
     [
-      eventController,
-      eventControllerRef,
+      controller,
+      controllerRef,
     ],
   );
 

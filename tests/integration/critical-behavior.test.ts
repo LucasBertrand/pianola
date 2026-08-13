@@ -1,0 +1,200 @@
+import {
+  describe,
+  expect,
+  test,
+} from "vitest";
+import {
+  compilePlaybackSnapshot,
+} from "../../src/audio/playback-snapshot";
+import {
+  LookaheadScheduler,
+} from "../../src/audio/lookahead-scheduler";
+import {
+  createEditorRuntime,
+} from "../../src/app/editor-runtime";
+import type {
+  PianoRollCommand,
+  Transaction,
+} from "../../src/domain/commands";
+import {
+  createNoteCollisionResolutionPlan,
+} from "../../src/domain/note-collision";
+import {
+  getActiveClip,
+} from "../../src/domain/model";
+import {
+  ProjectStore,
+} from "../../src/domain/project-store";
+import {
+  CRITICAL_BEHAVIOR_EXPECTATION,
+  createCriticalBehaviorProject,
+  SECOND_TEST_CLIP_ID,
+} from "../support/project-fixtures";
+import {
+  FakeAudioEngine,
+  FakeSchedulerTimer,
+} from "../support/fake-audio-engine";
+import {
+  createTestNote,
+  TEST_CLIP_ID,
+  TEST_INSTRUMENT_ID,
+} from "../support/test-builders";
+
+describe("P0 critical behavior witnesses", () => {
+  test("draws and moves a note as two observable transactions", () => {
+    const store = new ProjectStore(createCriticalBehaviorProject());
+    const drawnNote = createTestNote({
+      id: "drawn-note",
+      pitch: 64,
+      startTick: 240,
+      durationTicks: 120,
+      velocity: 96,
+    });
+
+    dispatch(store, {
+      type: "AddNotes",
+      trackInstrumentId: TEST_INSTRUMENT_ID,
+      notes: [drawnNote],
+    }, 1);
+    dispatch(store, {
+      type: "RepositionNotes",
+      trackInstrumentId: TEST_INSTRUMENT_ID,
+      changes: [{
+        noteId: drawnNote.id,
+        startTick: 360,
+        pitch: 64,
+      }],
+    }, 2);
+
+    expect(activeNotes(store)[drawnNote.id]).toEqual(
+      CRITICAL_BEHAVIOR_EXPECTATION.drawnNote,
+    );
+    expect(store.getState().revision).toBe(2);
+  });
+
+  test("resolves a same-pitch collision with a deterministic merge", () => {
+    const store = new ProjectStore(createCriticalBehaviorProject());
+    const collisionProposal = createTestNote({
+      id: "collision-proposal",
+      pitch: 60,
+      startTick: 60,
+      durationTicks: 120,
+    });
+    const plan = createNoteCollisionResolutionPlan(
+      store.getState(),
+      {
+        originalNotes: [],
+        proposedNotes: [collisionProposal],
+      },
+      "merge",
+      "p0-witness",
+    );
+
+    dispatchMany(store, plan.commands, 1);
+
+    expect(activeNotes(store)["existing-note"]).toBeUndefined();
+    expect(activeNotes(store)[collisionProposal.id]).toEqual(
+      CRITICAL_BEHAVIOR_EXPECTATION.mergedCollision,
+    );
+    expect(plan.resultingSelectionNoteIds).toEqual([collisionProposal.id]);
+  });
+
+  test("launches playback with the expected deterministic audio plan", async () => {
+    const project = createCriticalBehaviorProject();
+    const snapshot = compilePlaybackSnapshot(project);
+    const engine = new FakeAudioEngine({
+      scheduleAheadSeconds: 0.6,
+    });
+    const timer = new FakeSchedulerTimer();
+    const scheduler = new LookaheadScheduler(
+      engine,
+      snapshot,
+      getActiveClip(project).transportSettings,
+      {},
+      timer,
+      0,
+    );
+
+    await scheduler.play();
+
+    expect(engine.resumeCount).toBe(1);
+    expect(engine.events.map((event) => ({
+      noteId: event.instrument.noteIds.find((noteId) =>
+        event.occurrenceId.endsWith(`:${noteId}`)),
+      pitch: event.pitch,
+      startAudioTimeSeconds: event.startAudioTimeSeconds,
+      endAudioTimeSeconds: event.endAudioTimeSeconds,
+    }))).toEqual([
+      {
+        noteId: "existing-note",
+        pitch: 60,
+        startAudioTimeSeconds: 0.012,
+        endAudioTimeSeconds: 0.0745,
+      },
+      {
+        noteId: "scheduled-note",
+        pitch: 67,
+        startAudioTimeSeconds: 0.262,
+        endAudioTimeSeconds: 0.387,
+      },
+    ]);
+    expect(timer.pendingCount).toBe(1);
+
+    await scheduler.dispose();
+    expect(engine.disposed).toBe(true);
+  });
+
+  test("restores each clip playhead while navigation stays outside undo", () => {
+    const runtime = createEditorRuntime(createCriticalBehaviorProject());
+
+    runtime.playheadTick.set(640);
+    runtime.editorCommands.dispatch(
+      [{ type: "ActivateClip", clipId: SECOND_TEST_CLIP_ID }],
+      "Select second clip",
+    );
+    runtime.playheadTick.set(1_280);
+    runtime.editorCommands.dispatch(
+      [{ type: "ActivateClip", clipId: TEST_CLIP_ID }],
+      "Select first clip",
+    );
+
+    expect(runtime.playheadTick.get()).toBe(640);
+    expect(runtime.projectStore.canUndo()).toBe(false);
+
+    runtime.editorCommands.dispatch(
+      [{ type: "ActivateClip", clipId: SECOND_TEST_CLIP_ID }],
+      "Select second clip",
+    );
+
+    expect(runtime.playheadTick.get()).toBe(1_280);
+    expect(runtime.projectStore.canUndo()).toBe(false);
+  });
+});
+
+function activeNotes(store: ProjectStore) {
+  return getActiveClip(store.getState())
+    .tracksByInstrumentId[TEST_INSTRUMENT_ID]?.notesById ?? {};
+}
+
+function dispatch(
+  store: ProjectStore,
+  command: PianoRollCommand,
+  sequence: number,
+): void {
+  dispatchMany(store, [command], sequence);
+}
+
+function dispatchMany(
+  store: ProjectStore,
+  commands: readonly PianoRollCommand[],
+  sequence: number,
+): void {
+  const transaction: Transaction = {
+    transactionId: `p0-witness-${sequence}`,
+    label: "P0 behavior witness",
+    createdAt: sequence,
+    commands,
+  };
+
+  store.dispatch(transaction);
+}

@@ -56,7 +56,9 @@ export interface AudioTransportCallbacks {
 
 const DEFAULT_SCHEDULER_TIMER: SchedulerTimerPort = {
   setTimeout(callback, delayMilliseconds) {
-    return globalThis.setTimeout(callback, delayMilliseconds);
+    const handle = globalThis.setTimeout(callback, delayMilliseconds);
+
+    return typeof handle === "number" ? handle : Number(handle);
   },
   clearTimeout(handle) {
     globalThis.clearTimeout(handle);

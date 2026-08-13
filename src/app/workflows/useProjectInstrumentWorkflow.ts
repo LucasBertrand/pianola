@@ -37,7 +37,7 @@ export interface ProjectInstrumentWorkflow {
   readonly select: (instrumentId: InstrumentId) => void;
   readonly add: (
     name: string,
-    instrument: InstrumentConfig,
+    instrumentConfig: InstrumentConfig,
     color: string,
   ) => void;
   readonly reorder: (
@@ -56,7 +56,7 @@ export interface ProjectInstrumentWorkflow {
     label: string,
   ) => void;
   readonly selectNotes: (instrumentId: InstrumentId) => void;
-  readonly toggleLock: (instrument: ProjectInstrument) => void;
+  readonly toggleLock: (projectInstrument: ProjectInstrument) => void;
 }
 
 export function useProjectInstrumentWorkflow({
@@ -118,7 +118,7 @@ export function useProjectInstrumentWorkflow({
     }
 
     instrumentSequenceRef.current += 1;
-    const instrument = createUserInstrument(
+    const projectInstrument = createUserInstrument(
       instrumentSequenceRef.current,
       cloneInstrumentConfig(instrumentConfig),
       normalizedName,
@@ -131,12 +131,12 @@ export function useProjectInstrumentWorkflow({
     commands.dispatch(
       [{
         type: "AddProjectInstrument",
-        instrument,
+        instrument: projectInstrument,
         clipInstrumentStatesById,
       }],
       "Add instrument",
     );
-    selectInstrument(instrument.id);
+    selectInstrument(projectInstrument.id);
   }, [commands, selectInstrument]);
 
   const reorder = useCallback(
@@ -174,15 +174,16 @@ export function useProjectInstrumentWorkflow({
 
   const remove = useCallback(
     (instrumentId: InstrumentId): void => {
-      const instrument = commands.getState().projectInstrumentsById[instrumentId];
+      const projectInstrument =
+        commands.getState().projectInstrumentsById[instrumentId];
 
-      if (instrument === undefined) {
+      if (projectInstrument === undefined) {
         return;
       }
 
       confirm({
         title: "Delete instrument?",
-        message: `Delete "${instrument.name}" and all of its notes?`,
+        message: `Delete "${projectInstrument.name}" and all of its notes?`,
         confirmLabel: "Delete",
         tone: "danger",
         onConfirm(): void {
@@ -235,25 +236,25 @@ export function useProjectInstrumentWorkflow({
   );
 
   const toggleLock = useCallback(
-    (instrument: ProjectInstrument): void => {
-      const instrumentState = getActiveClip(
+    (projectInstrument: ProjectInstrument): void => {
+      const clipInstrumentState = getActiveClip(
         commands.getState(),
-      ).instrumentStatesById[instrument.id];
+      ).instrumentStatesById[projectInstrument.id];
 
-      if (instrumentState === undefined) {
+      if (clipInstrumentState === undefined) {
         return;
       }
 
       updateClipState(
-        instrument.id,
+        projectInstrument.id,
         {
-          locked: !instrumentState.locked,
+          locked: !clipInstrumentState.locked,
         },
-        instrumentState.locked ? "Unlock instrument" : "Lock instrument",
+        clipInstrumentState.locked ? "Unlock instrument" : "Lock instrument",
       );
 
-      if (!instrumentState.locked) {
-        removeInstrumentFromSelection(instrument.id);
+      if (!clipInstrumentState.locked) {
+        removeInstrumentFromSelection(projectInstrument.id);
       }
     },
     [commands, removeInstrumentFromSelection, updateClipState],
@@ -273,7 +274,7 @@ export function useProjectInstrumentWorkflow({
 
 function createUserInstrument(
   sequence: number,
-  instrument: InstrumentConfig,
+  instrumentConfig: InstrumentConfig,
   name: string,
   color: string,
 ): ProjectInstrument {
@@ -281,7 +282,7 @@ function createUserInstrument(
     id: `instrument-${Date.now()}-${sequence}`,
     name,
     color,
-    instrument,
+    instrument: instrumentConfig,
   });
 }
 
