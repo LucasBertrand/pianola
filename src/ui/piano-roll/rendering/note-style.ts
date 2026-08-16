@@ -24,13 +24,24 @@ const DEFAULT_NOTE_COLOR =
 export function compareNotesByInstrumentRenderOrder(
   left: Note,
   right: Note,
+  instrumentOrder?: readonly InstrumentId[],
 ): number {
-  if (left.instrumentId < right.instrumentId) {
-    return -1;
-  }
+  if (instrumentOrder !== undefined) {
+    const leftIndex = instrumentOrder.indexOf(left.instrumentId);
+    const rightIndex = instrumentOrder.indexOf(right.instrumentId);
 
-  if (left.instrumentId > right.instrumentId) {
-    return 1;
+    if (leftIndex !== rightIndex) {
+      // Reverse order: first instrument (index 0) should be drawn on top (last)
+      return rightIndex - leftIndex;
+    }
+  } else {
+    if (left.instrumentId < right.instrumentId) {
+      return -1;
+    }
+
+    if (left.instrumentId > right.instrumentId) {
+      return 1;
+    }
   }
 
   const startDifference = left.startTick - right.startTick;
@@ -53,12 +64,13 @@ export function compareNotesByInstrumentRenderOrder(
 export function compareNotesByPitchRenderOrder(
   left: Note,
   right: Note,
+  instrumentOrder?: readonly InstrumentId[],
 ): number {
   if (left.pitch !== right.pitch) {
     return left.pitch - right.pitch;
   }
 
-  return compareNotesByInstrumentRenderOrder(left, right);
+  return compareNotesByInstrumentRenderOrder(left, right, instrumentOrder);
 }
 
 export function getNoteFillStyle(

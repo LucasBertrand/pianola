@@ -75,7 +75,7 @@ export function EditorHeader({
 
   return (
   <header className="topbar">
-    <div className="brand">
+    <div className="topbar-left">
       <ProjectFileMenu
         projectInputRef={loadProjectInputRef}
         midiInputRef={importMidiInputRef}
@@ -87,36 +87,36 @@ export function EditorHeader({
         onProjectFileChange={handleProjectFileChange}
         onMidiFileChange={handleMidiFileChange}
       />
-      <div>
-        <input
-          key={projectState.title}
-          className="project-title-input"
-          type="text"
-          maxLength={MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH}
-          defaultValue={projectState.title}
-          aria-label="Project title"
-          onBlur={(event) => {
-            handleProjectTitleCommit(event.currentTarget);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.currentTarget.blur();
-            }
-          }}
-        />
-      </div>
+      <TransportControls
+        status={playbackStatus}
+        loopEnabled={
+          activeClip.transportSettings.loopEnabled
+        }
+        onReturnToStart={returnToStart}
+        onTogglePlayback={togglePlayback}
+        onStop={stopPlayback}
+        onToggleLoop={handleToggleLoop}
+      />
     </div>
 
-    <TransportControls
-      status={playbackStatus}
-      loopEnabled={
-        activeClip.transportSettings.loopEnabled
-      }
-      onReturnToStart={returnToStart}
-      onTogglePlayback={togglePlayback}
-      onStop={stopPlayback}
-      onToggleLoop={handleToggleLoop}
-    />
+    <div className="topbar-center">
+      <input
+        key={projectState.title}
+        className="project-title-input"
+        type="text"
+        maxLength={MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH}
+        defaultValue={projectState.title}
+        aria-label="Project title"
+        onBlur={(event) => {
+          handleProjectTitleCommit(event.currentTarget);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    </div>
 
     <MasterGainControl
       gain={projectState.masterBus.gain}

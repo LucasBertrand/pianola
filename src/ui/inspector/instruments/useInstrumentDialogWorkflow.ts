@@ -30,6 +30,7 @@ export interface InstrumentDialogWorkflowOptions {
   readonly runtime: EditorRuntime;
   readonly addInstrument: ProjectInstrumentWorkflow["add"];
   readonly updateInstrument: ProjectInstrumentWorkflow["update"];
+  readonly removeInstrument: ProjectInstrumentWorkflow["remove"];
   readonly previewInstrumentSettings: (
     instrumentId: InstrumentId,
     config: SubtractiveSynthConfig | null,
@@ -51,6 +52,7 @@ export interface InstrumentDialogWorkflow {
   readonly setColor: (color: string) => void;
   readonly setConfig: (config: SubtractiveSynthConfig) => void;
   readonly confirm: () => void;
+  readonly remove: () => void;
   readonly cancel: () => void;
 }
 
@@ -59,6 +61,7 @@ export function useInstrumentDialogWorkflow({
   runtime,
   addInstrument,
   updateInstrument,
+  removeInstrument,
   previewInstrumentSettings,
   dismissApplicationDialog,
 }: InstrumentDialogWorkflowOptions): InstrumentDialogWorkflow {
@@ -184,6 +187,12 @@ export function useInstrumentDialogWorkflow({
     selectedPresetId,
     updateInstrument,
   ]);
+  const remove = useCallback((): void => {
+    if (editedInstrumentId !== null) {
+      removeInstrument(editedInstrumentId);
+      cancel();
+    }
+  }, [editedInstrumentId, removeInstrument, cancel]);
 
   return {
     open: selectedPresetId !== null && config !== null,
@@ -199,6 +208,7 @@ export function useInstrumentDialogWorkflow({
     setColor,
     setConfig: updateConfig,
     confirm,
+    remove,
     cancel,
   };
 }

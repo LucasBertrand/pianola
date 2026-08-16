@@ -82,6 +82,7 @@ describe("P3 Canvas painter contracts", () => {
           locked: false,
         },
       },
+      instrumentOrder: ["instrument"],
       colorMode: "instrument",
       pitchLabelSettings: DEFAULT_PITCH_SNAP_SETTINGS,
     });

@@ -47,6 +47,7 @@ export interface NotePaintSnapshot {
   readonly stylesByInstrumentId: Readonly<
     Record<InstrumentId, InstrumentRenderStyle>
   >;
+  readonly instrumentOrder: readonly InstrumentId[];
   readonly colorMode: NoteColorMode;
   readonly pitchLabelSettings: PitchSnapSettings;
 }
@@ -58,14 +59,15 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
     visibleNotes,
     editingNoteIds,
     stylesByInstrumentId,
+    instrumentOrder,
     colorMode,
     pitchLabelSettings,
   } = snapshot;
 
   visibleNotes.sort(
     colorMode === "instrument"
-      ? compareNotesByInstrumentRenderOrder
-      : compareNotesByPitchRenderOrder,
+      ? (a, b) => compareNotesByInstrumentRenderOrder(a, b, instrumentOrder)
+      : (a, b) => compareNotesByPitchRenderOrder(a, b, instrumentOrder),
   );
 
   let currentInstrumentId: InstrumentId | null = null;
@@ -95,7 +97,7 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
     }
 
     const opacity =
-      (instrumentStyle?.opacity ?? 1) * (note.enabled ? 1 : 0.36);
+      (instrumentStyle?.opacity ?? 1) * (note.enabled ? 0.55 : 0.25);
 
     if (instrumentStyle?.locked === true) {
       hasVisibleLockedNote = true;
@@ -202,10 +204,21 @@ function fillNoteRect(
   const y = converter.pitchToCssPixelY(note.pitch);
   const nextRowY = converter.pitchToCssPixelY(note.pitch - 1);
 
-  context.fillRect(
-    x,
-    y,
-    Math.max(1, endX - x - 1),
-    Math.max(1, nextRowY - y - 1),
-  );
+  const width = Math.max(1, endX - x - 1);
+  const height = Math.max(1, nextRowY - y - 1);
+
+  // Fill
+  context.fillRect(x, y, width, height);
+
+  // Border (opaque)
+  const previousAlpha = context.globalAlpha;
+  context.globalAlpha = Math.min(1, previousAlpha + 0.4);
+  
+  // Use a slightly darker color for the border if possible, or just the same color. 
+  // We can just stroke with the same fillStyle since alpha is higher.
+  context.lineWidth = 1;
+  context.strokeStyle = context.fillStyle;
+  context.strokeRect(x + 0.5, y + 0.5, Math.max(0, width - 1), Math.max(0, height - 1));
+  
+  context.globalAlpha = previousAlpha;
 }

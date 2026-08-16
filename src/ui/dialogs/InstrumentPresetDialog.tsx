@@ -30,6 +30,7 @@ export interface InstrumentPresetDialogProps {
   readonly onInstrumentColorChange: (color: string) => void;
   readonly onInstrumentChange: (instrument: SubtractiveSynthConfig) => void;
   readonly onConfirm: () => void;
+  readonly onDelete?: (() => void) | undefined;
   readonly onCancel: () => void;
 }
 
@@ -47,6 +48,7 @@ export function InstrumentPresetDialog({
   onInstrumentColorChange,
   onInstrumentChange,
   onConfirm,
+  onDelete,
   onCancel,
 }: InstrumentPresetDialogProps): React.JSX.Element {
   const update = (
@@ -242,9 +244,22 @@ export function InstrumentPresetDialog({
           />
         </div>
 
-        <div className="application-dialog-actions">
+        <div
+          className={`application-dialog-actions${
+            mode === "edit" && onDelete ? " has-alternate" : ""
+          }`}
+        >
+          {mode === "edit" && onDelete && (
+            <button
+              className="application-dialog-button is-danger"
+              type="button"
+              onClick={onDelete}
+            >
+              Delete instrument
+            </button>
+          )}
           <button
-            className="application-dialog-button is-secondary"
+            className="application-dialog-button is-neutral"
             type="button"
             onClick={onCancel}
           >

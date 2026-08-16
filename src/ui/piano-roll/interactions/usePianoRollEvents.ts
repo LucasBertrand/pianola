@@ -161,6 +161,7 @@ export function usePianoRollEvents(
       instrumentStyles,
       editorCommands,
       getActiveInstrumentId: () => activeInstrumentIdRef.current,
+      getInstrumentOrder: () => editorCommands.getState().instrumentOrder,
       totalTicks,
       selectionMode,
       gridResolutionTicks,

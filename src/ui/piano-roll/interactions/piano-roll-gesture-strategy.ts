@@ -83,6 +83,7 @@ export interface PianoRollGestureStrategyOptions {
   >;
   readonly editorCommands: EditorCommandPort;
   readonly getActiveInstrumentId: () => InstrumentId;
+  readonly getInstrumentOrder: () => readonly InstrumentId[];
   readonly totalTicks: number;
   readonly selectionMode: SelectionMode;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
@@ -116,6 +117,7 @@ export function createPianoRollGestureStrategy(
     instrumentStyles,
     editorCommands,
     getActiveInstrumentId,
+    getInstrumentOrder,
     totalTicks,
     selectionMode,
     gridResolutionTicks,
@@ -185,7 +187,7 @@ export function createPianoRollGestureStrategy(
       pointerPitch,
       bodyEnvelope,
       (note) => selectionController.isNoteEditable(note),
-      compareNotesByInstrumentRenderOrder,
+      (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
     );
     const edgeEnvelope = createTouchEnvelope(
       converter,
@@ -198,7 +200,7 @@ export function createPianoRollGestureStrategy(
       pointerPitch,
       edgeEnvelope,
       (note) => selectionController.isSelectedNoteEditable(note),
-      compareNotesByInstrumentRenderOrder,
+      (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
     );
     const edgeCandidate = selectedEdgeCandidate
       ?? spatialIndex.queryNoteEdge(
@@ -206,7 +208,7 @@ export function createPianoRollGestureStrategy(
         pointerPitch,
         edgeEnvelope,
         (note) => selectionController.isNoteEditable(note),
-        compareNotesByInstrumentRenderOrder,
+        (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
       );
     const edgeHit =
       edgeCandidate !== undefined && selection.has(edgeCandidate.note.id)
@@ -431,7 +433,7 @@ export function createPianoRollGestureStrategy(
       converter.cssPixelXToTick(event.clientX - bounds.left),
       converter.cssPixelYToPitch(event.clientY - bounds.top),
       (candidate) => selectionController.isNoteEditable(candidate),
-      compareNotesByInstrumentRenderOrder,
+      (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
     );
 
     if (note !== undefined && workflow.commitDelete(note)) {

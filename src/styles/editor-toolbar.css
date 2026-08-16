@@ -42,7 +42,7 @@
   cursor: pointer;
 }
 
-.edit-tool-group button > svg {
+.edit-tool-group button>svg {
   width: 19px;
   height: 19px;
   fill: none;
@@ -76,12 +76,10 @@
 .note-color-toggle.is-instrument-mode {
   border-color: var(--color-primary-medium);
   background:
-    linear-gradient(
-      110deg,
+    linear-gradient(110deg,
       var(--color-primary-soft),
       var(--color-purple-soft),
-      var(--color-orange-soft)
-    );
+      var(--color-orange-soft));
   color: var(--color-text-strong);
 }
 
@@ -187,15 +185,13 @@ input[type="range"]::-webkit-slider-thumb {
 
 .view-position-control {
   grid-template-columns:
-    16px
-    var(--view-slider-track-size);
+    16px var(--view-slider-track-size);
   gap: 4px;
 }
 
 .view-zoom-control {
   grid-template-columns:
-    20px
-    var(--view-slider-track-size);
+    20px var(--view-slider-track-size);
   padding-left: 8px;
   gap: 5px;
 }
@@ -258,11 +254,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 6px;
   background: var(--color-tonal-faint);
   grid-template-columns:
-    28px
-    28px
-    38px
-    auto
-    auto;
+    28px 28px 38px auto auto;
   align-items: center;
   gap: 3px;
 }
@@ -297,11 +289,9 @@ input[type="range"]::-webkit-slider-thumb {
 .pitch-snap-control.is-guide-active {
   border-color: var(--color-tonal-medium);
   background:
-    linear-gradient(
-      110deg,
+    linear-gradient(110deg,
       var(--color-tonal-soft),
-      var(--color-warm-faint)
-    );
+      var(--color-warm-faint));
 }
 
 .pitch-snap-icon {
@@ -338,21 +328,17 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .pitch-snap-pattern-select {
-  width: 100%;
+  width: 100px;
 }
 
 .pitch-snap-degree-select {
-  width: 100%;
-  border-color: color-mix(
-    in srgb,
-    var(--degree-color, var(--color-border-control)) 62%,
-    var(--color-border-control)
-  );
-  background: color-mix(
-    in srgb,
-    var(--degree-color, var(--color-surface-inset)) 12%,
-    var(--color-surface-inset)
-  );
+  width: 100px;
+  border-color: color-mix(in srgb,
+      var(--degree-color, var(--color-border-control)) 62%,
+      var(--color-border-control));
+  background: color-mix(in srgb,
+      var(--degree-color, var(--color-surface-inset)) 12%,
+      var(--color-surface-inset));
   color: var(--degree-color, var(--color-text-secondary));
   font-weight: 750;
 }

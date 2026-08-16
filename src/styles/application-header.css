@@ -7,48 +7,44 @@
   background: var(--color-surface-app);
   box-shadow: none;
   grid-template-columns:
-    minmax(300px, 1fr)
+    minmax(260px, 1fr)
     auto
-    minmax(300px, 1fr);
-  grid-template-areas: "brand transport master";
+    minmax(260px, 1fr);
+  grid-template-areas: "left center master";
   align-items: center;
   gap: 22px;
 }
 
-.brand {
-  display: grid;
+.topbar-left {
+  display: flex;
   min-width: 0;
   align-items: center;
   gap: 12px;
-  grid-area: brand;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-area: left;
 }
 
-.brand > div {
+.topbar-center {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  justify-content: center;
+  grid-area: center;
 }
 
-.brand strong,
 .project-title-input {
   display: block;
-}
-
-.brand strong,
-.project-title-input {
+  width: min(320px, 100%);
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  outline: 0;
+  background: transparent;
   color: var(--color-text-bright);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.02em;
-}
-
-.project-title-input {
-  width: min(300px, 100%);
-  min-width: 0;
-  padding: 2px 4px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  outline: 0;
-  background: transparent;
+  text-align: center;
 }
 
 .project-title-input:focus {

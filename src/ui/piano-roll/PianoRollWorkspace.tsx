@@ -294,6 +294,7 @@ export function PianoRollWorkspace({
     runtime,
     addInstrument: addProjectInstrument,
     updateInstrument: handleUpdateProjectInstrument,
+    removeInstrument: handleDeleteProjectInstrument,
     previewInstrumentSettings,
     dismissApplicationDialog(): void {
       setApplicationDialog(null);
@@ -660,6 +661,7 @@ export function PianoRollWorkspace({
           onInstrumentColorChange={instrumentDialog.setColor}
           onInstrumentChange={instrumentDialog.setConfig}
           onConfirm={instrumentDialog.confirm}
+          onDelete={instrumentDialog.mode === "edit" ? instrumentDialog.remove : undefined}
           onCancel={instrumentDialog.cancel}
         />
       )}

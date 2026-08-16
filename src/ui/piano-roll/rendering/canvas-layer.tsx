@@ -218,6 +218,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         visibleNotes,
         editingNoteIds: editingNoteMask.get(),
         stylesByInstrumentId: instrumentStyles.get(),
+        instrumentOrder: projectStore.getState().instrumentOrder,
         colorMode: noteColorMode.get(),
         pitchLabelSettings: pitchSnapSettings.get(),
       });

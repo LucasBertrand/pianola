@@ -96,7 +96,7 @@ export function beginPianoRollLongPressDraw({
     pitch,
     envelope,
     (candidate) => selectionController.isNoteEditable(candidate),
-    compareNotesByInstrumentRenderOrder,
+    (a, b) => compareNotesByInstrumentRenderOrder(a, b, editorCommands.getState().instrumentOrder),
   );
 
   if (note !== undefined) {
