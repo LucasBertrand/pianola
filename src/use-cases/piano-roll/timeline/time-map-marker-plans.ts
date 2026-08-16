@@ -167,10 +167,19 @@ export function planMarkerDraftCommands(
   const tempoMarker = timeMap.tempoMarkers.find(
     (marker) => marker.startTick === draft.startTick,
   );
-  const activeTempo = getTempoAtTick(timeMap, draft.startTick);
+  const previousTempo = getTempoAtTick(
+    timeMap,
+    Math.max(0, draft.startTick - 1),
+  );
 
   if (tempoMarker !== undefined) {
-    if (tempoMarker.bpm !== bpm) {
+    if (previousTempo === bpm && draft.startTick > 0) {
+      commands.push({
+        type: "DeleteTempoMarker",
+        clipId,
+        startTick: draft.startTick,
+      });
+    } else if (tempoMarker.bpm !== bpm) {
       commands.push({
         type: "UpdateTempoMarker",
         clipId,
@@ -178,7 +187,7 @@ export function planMarkerDraftCommands(
         bpm,
       });
     }
-  } else if (activeTempo !== bpm) {
+  } else if (previousTempo !== bpm) {
     commands.push({
       type: "AddTempoMarker",
       clipId,
@@ -186,7 +195,6 @@ export function planMarkerDraftCommands(
       bpm,
     });
   }
-
   return commands;
 }
 
@@ -241,6 +249,11 @@ export function planMarkerMoveCommands(
   let tempoTargetTick = toTick;
 
   if (hasMeter) {
+    const targetHasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === toTick);
+    if (targetHasMeter) {
+      throw new Error("A meter marker already exists at this position.");
+    }
+
     commands.push({
       type: "MoveMeterMarker",
       clipId,
@@ -279,16 +292,22 @@ export function planMarkerMoveCommands(
     }
   }
 
-  if (
-    timeMap.tempoMarkers.some((marker) => marker.startTick === fromTick)
-    && !timeMap.tempoMarkers.some((marker) => marker.startTick === tempoTargetTick)
-  ) {
-    commands.push({
-      type: "MoveTempoMarker",
-      clipId,
-      startTick: fromTick,
-      targetTick: tempoTargetTick,
-    });
+  const isMovingTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === fromTick);
+  const targetHasTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === tempoTargetTick);
+
+  if (isMovingTempo) {
+    if (targetHasTempo && fromTick !== tempoTargetTick) {
+      throw new Error("A tempo marker already exists at this position.");
+    }
+
+    if (fromTick !== tempoTargetTick) {
+      commands.push({
+        type: "MoveTempoMarker",
+        clipId,
+        startTick: fromTick,
+        targetTick: tempoTargetTick,
+      });
+    }
   }
 
   return commands;
@@ -389,3 +408,5 @@ function formatBpm(bpm: number): string {
 
   return bpm.toFixed(1);
 }
+
+

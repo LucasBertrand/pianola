@@ -786,19 +786,6 @@ export function moveMeterMarker(
     );
   }
 
-  const previousIndex = anchors[markerIndex - 1]?.measureIndex ?? 0;
-  const nextIndex =
-    anchors[markerIndex + 1]?.measureIndex ?? spans.length;
-
-  if (
-    targetSpan.index <= previousIndex
-    || targetSpan.index >= nextIndex
-  ) {
-    throw new RangeError(
-      "A meter marker must stay between its neighbours.",
-    );
-  }
-
   return rebuildMeterStructure(
     ppqn,
     anchors.map((anchor, index) =>
@@ -915,14 +902,6 @@ export function moveTempoMarker(
   }
 
   const markers = timeMap.tempoMarkers;
-  const previousTick = markers[markerIndex - 1]?.startTick ?? 0;
-  const nextTick = markers[markerIndex + 1]?.startTick ?? durationTicks;
-
-  if (targetTick <= previousTick || targetTick >= nextTick) {
-    throw new RangeError(
-      "A tempo marker must stay between its neighbours.",
-    );
-  }
 
   const moved = markers.map((candidate, index) =>
     index === markerIndex
@@ -1063,12 +1042,7 @@ export function removeTimeFromTimeMap(
       continue;
     }
 
-    const segmentEndIndex =
-      anchors[anchorIndex + 1]?.measureIndex ?? spans.length;
 
-    if (segmentEndIndex > lastIndex + 1) {
-      keptAnchors.push({ ...anchor, measureIndex: firstIndex });
-    }
   }
 
   if (keptAnchors[0]?.measureIndex !== 0) {

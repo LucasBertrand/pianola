@@ -136,6 +136,7 @@ function createPaintRecorder(): PaintRecorder {
     fillRect(x: number, y: number, width: number, height: number): void {
       fillRects.push([x, y, width, height]);
     },
+    strokeRect(): void {},
     fillText(label: string): void {
       labels.push(label);
     },

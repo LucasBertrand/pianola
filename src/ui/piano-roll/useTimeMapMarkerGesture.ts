@@ -69,6 +69,22 @@ export function useTimeMapMarkerGesture({
     }
 
     if (flag.isInitial) {
+      const handle = reactEvent.currentTarget;
+      const pointerId = reactEvent.pointerId;
+      
+      const finishClickOnly = (event: PointerEvent): void => {
+        handle.removeEventListener("pointerup", finishClickOnly);
+        const rect = handle.getBoundingClientRect();
+        const inside = event.clientX >= rect.left && event.clientX <= rect.right
+          && event.clientY >= rect.top && event.clientY <= rect.bottom;
+        
+        if (inside) {
+          onOpenMarker(flag.startTick);
+        }
+      };
+
+      handle.setPointerCapture(pointerId);
+      handle.addEventListener("pointerup", finishClickOnly);
       return;
     }
 
@@ -88,33 +104,19 @@ export function useTimeMapMarkerGesture({
 
     const clip = getActiveClip(projectStore.getState());
     const { timeMap, durationTicks } = clip.timeline;
-    let lowerBound = 0;
-    let upperBound = durationTicks;
     let measureBoundaryTicks: readonly number[] = [];
 
     if (hasMeter) {
-      const meterTicks = timeMap.meterMarkers.map((marker) => marker.startTick);
-      const markerIndex = meterTicks.indexOf(originTick);
-
-      lowerBound = meterTicks[markerIndex - 1] ?? 0;
-      upperBound = meterTicks[markerIndex + 1] ?? durationTicks;
       measureBoundaryTicks = getMeasureSpans(
         projectStore.getState().clock.ppqn,
         timeMap,
         durationTicks,
       ).map((span) => span.startTick);
-    } else {
-      const tempoTicks = timeMap.tempoMarkers.map((marker) => marker.startTick);
-      const markerIndex = tempoTicks.indexOf(originTick);
-
-      lowerBound = tempoTicks[markerIndex - 1] ?? 0;
-      upperBound = tempoTicks[markerIndex + 1] ?? durationTicks;
     }
 
     let targetTick = originTick;
     let dragging = false;
 
-    // React events are synthetic, we only capture pointer events for tracking drag
     handle.setPointerCapture(pointerId);
 
     const pointerTick = (clientX: number): number => {
@@ -152,6 +154,7 @@ export function useTimeMapMarkerGesture({
       }
 
       dragging = true;
+
       const rawTick = pointerTick(event.clientX);
 
       if (hasMeter) {
@@ -159,7 +162,7 @@ export function useTimeMapMarkerGesture({
         let nearestDistance = Number.POSITIVE_INFINITY;
 
         for (const boundaryTick of measureBoundaryTicks) {
-          if (boundaryTick <= lowerBound || boundaryTick >= upperBound) {
+          if (boundaryTick === 0) {
             continue;
           }
 
@@ -181,13 +184,13 @@ export function useTimeMapMarkerGesture({
           rawTick,
           resolution,
         );
-        targetTick = Math.min(upperBound - 1, Math.max(lowerBound + 1, targetTick));
+        targetTick = Math.min(durationTicks, Math.max(0, targetTick));
       }
 
       applyDraftPosition(targetTick);
     };
 
-    const finish = (): void => {
+    const finish = (event: PointerEvent): void => {
       handle.removeEventListener("pointermove", move);
       handle.removeEventListener("pointerup", finish);
       handle.removeEventListener("pointercancel", cancel);
@@ -195,8 +198,21 @@ export function useTimeMapMarkerGesture({
       
       resetPositions();
 
-      if (dragging && originTick !== targetTick) {
-        onMoveMarker(originTick, targetTick);
+      if (dragging) {
+        if (originTick !== targetTick) {
+          onMoveMarker(originTick, targetTick);
+        }
+      } else {
+        const flagElement = getFlagElement(originTick);
+        if (flagElement !== null) {
+          const rect = flagElement.getBoundingClientRect();
+          const inside = event.clientX >= rect.left && event.clientX <= rect.right
+            && event.clientY >= rect.top && event.clientY <= rect.bottom;
+          
+          if (inside) {
+            onOpenMarker(originTick);
+          }
+        }
       }
     };
 

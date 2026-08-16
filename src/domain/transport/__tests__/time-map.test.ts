@@ -222,13 +222,6 @@ describe("meter marker operations", () => {
       PPQN,
       createMixedTimeMap(),
       MIXED_DURATION,
-      14_400,
-      3_840,
-    )).toThrow(RangeError);
-    expect(() => moveMeterMarker(
-      PPQN,
-      createMixedTimeMap(),
-      MIXED_DURATION,
       0,
       3_840,
     )).toThrow(RangeError);
@@ -307,8 +300,6 @@ describe("tempo marker operations", () => {
     expect(moved.tempoMarkers[1]?.startTick).toBe(7_680);
     expect(() => moveTempoMarker(withMarker, 4 * 3_840, 0, 7_680))
       .toThrow(RangeError);
-    expect(() => moveTempoMarker(withMarker, 4 * 3_840, 3_840, 0))
-      .toThrow(RangeError);
 
     const updated = updateTempoMarker(withMarker, 3_840, 100);
 
@@ -357,9 +348,8 @@ describe("structural time edits", () => {
       .toEqual([0, 11_520, 18_240]);
   });
 
-  test("removing a measure re-anchors meter markers by measure index", () => {
-    // Remove the first 7/8 measure [7_680, 11_040). The 7/8 segment
-    // continues past the removal, so its marker survives at index 2.
+  test("removing a measure drops its meter marker even if the segment continued", () => {
+    // Remove the first 7/8 measure [7_680, 11_040).
     const edit = removeTimeFromTimeMap(
       PPQN,
       createMixedTimeMap(),
@@ -369,11 +359,9 @@ describe("structural time edits", () => {
     );
 
     expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
-      .toEqual([0, 7_680, 11_040]);
-    expect(edit.timeMap.meterMarkers[1]?.timeSignature.numerator).toBe(7);
-    expect(edit.timeMap.tempoMarkers.map((marker) => marker.startTick))
-      .toEqual([0]);
-    expect(edit.durationTicks).toBe(MIXED_DURATION - 3_360);
+      .toEqual([0, 11_520]);
+    expect(edit.timeMap.meterMarkers[1]?.timeSignature.numerator).toBe(3);
+    expect(edit.durationTicks).toBe(14_400);
     expect(getMeasureCount(PPQN, edit.timeMap, edit.durationTicks)).toBe(4);
   });
 

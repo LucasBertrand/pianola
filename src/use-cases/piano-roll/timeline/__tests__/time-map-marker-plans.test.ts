@@ -97,16 +97,16 @@ describe("createTimeMapMarkerFlags", () => {
 });
 
 describe("createMarkerDraft", () => {
-  test("resolves a ruler tick to its measure boundary in create mode", () => {
+  test("creates a tempo-only draft at exact tick when off-grid", () => {
     const state = createProjectWithMarkers();
     const draft = createMarkerDraft(state, TEST_CLIP_ID, MEASURE_TICKS + 100);
 
     expect(draft).toEqual({
       mode: "create",
-      startTick: MEASURE_TICKS,
-      measureIndex: 1,
-      bpm: 120,
-      timeSignature: { numerator: 4, denominator: 4 },
+      startTick: MEASURE_TICKS + 100,
+      measureIndex: null,
+      bpm: 120, // The tempo at 0 is 120, and next is at 2*MEASURE_TICKS
+      timeSignature: null,
       canDelete: false,
     });
   });
@@ -273,7 +273,7 @@ describe("planMarkerMoveCommands", () => {
     ]);
   });
 
-  test("does not move a tempo companion onto an occupied tick", () => {
+  test("throws an error when moving a tempo companion onto an occupied tick", () => {
     const base = createProjectWithMarkers();
     const clip = base.clipsById[TEST_CLIP_ID];
 
@@ -302,26 +302,13 @@ describe("planMarkerMoveCommands", () => {
       },
     };
 
-    expect(
+    expect(() =>
       planMarkerMoveCommands(
         state,
         TEST_CLIP_ID,
         2 * MEASURE_TICKS,
         MEASURE_TICKS,
       ),
-    ).toEqual([{
-      type: "MoveMeterMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: 2 * MEASURE_TICKS,
-      targetTick: MEASURE_TICKS,
-    }]);
-    expect(
-      planMarkerMoveCommands(
-        state,
-        TEST_CLIP_ID,
-        2 * MEASURE_TICKS,
-        2 * MEASURE_TICKS,
-      ),
-    ).toEqual([]);
+    ).toThrowError("A tempo marker already exists at this position.");
   });
 });

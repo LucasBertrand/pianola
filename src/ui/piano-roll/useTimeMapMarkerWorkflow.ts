@@ -34,13 +34,23 @@ export interface TimeMapMarkerWorkflow {
   readonly cancelDraft: () => void;
 }
 
+import type {
+  ShowApplicationAlert,
+} from "../../use-cases/dialogs/application-dialog-port";
+
+export interface TimeMapMarkerWorkflowOptions {
+  readonly runtime: EditorRuntime;
+  readonly alert: ShowApplicationAlert;
+}
+
 /**
  * Owns the marker dialog draft and turns validated gestures into single
  * transactions. The document never changes while a dialog or drag is open.
  */
-export function useTimeMapMarkerWorkflow(
-  runtime: EditorRuntime,
-): TimeMapMarkerWorkflow {
+export function useTimeMapMarkerWorkflow({
+  runtime,
+  alert,
+}: TimeMapMarkerWorkflowOptions): TimeMapMarkerWorkflow {
   const [draft, setDraft] = useState<TimeMapMarkerDraft | null>(null);
 
   const openMarker = useCallback(
@@ -57,15 +67,23 @@ export function useTimeMapMarkerWorkflow(
     (fromTick: Tick, toTick: Tick): void => {
       const state = runtime.projectStore.getState();
       const clipId = getActiveClip(state).id;
-      const commands = planMarkerMoveCommands(state, clipId, fromTick, toTick);
-
+      let commands;
+      try {
+        commands = planMarkerMoveCommands(state, clipId, fromTick, toTick);
+      } catch (error) {
+        if (error instanceof Error) {
+          alert("Invalid move", error.message, "danger");
+        }
+        return;
+      }
+      
       if (commands.length === 0) {
         return;
       }
 
       runtime.editorCommands.dispatch(commands, "Move marker");
     },
-    [runtime],
+    [runtime, alert],
   );
   const setDraftBpm = useCallback((bpm: number): void => {
     setDraft((current) => current === null ? null : { ...current, bpm });

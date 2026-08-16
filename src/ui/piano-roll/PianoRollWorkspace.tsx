@@ -336,7 +336,10 @@ export function PianoRollWorkspace({
     getController: getPianoRollController,
     seekPlayback,
   });
-  const timeMapMarkers = useTimeMapMarkerWorkflow(runtime);
+  const timeMapMarkers = useTimeMapMarkerWorkflow({
+    runtime,
+    alert: showApplicationAlert,
+  });
   const {
     clipboardAvailable,
     clearClipboard: clearSelectionClipboard,

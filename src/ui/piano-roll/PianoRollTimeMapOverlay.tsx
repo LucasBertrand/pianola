@@ -129,10 +129,6 @@ export function PianoRollTimeMapOverlay({
             onPointerDown={(event) => {
               markerGesture.begin(flag, event);
             }}
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenMarker(flag.startTick);
-            }}
           >
             {formatMarkerFlagLabel(flag)}
           </button>
