@@ -328,6 +328,7 @@
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     gap: 10px;
+    margin-bottom: 0;
   }
 
   .instrument-management-panel {
