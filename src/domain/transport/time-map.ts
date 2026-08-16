@@ -887,7 +887,6 @@ export function insertTempoMarker(
 
 export function moveTempoMarker(
   timeMap: TimeMap,
-  durationTicks: Tick,
   startTick: Tick,
   targetTick: Tick,
 ): TimeMap {

@@ -402,7 +402,6 @@ export function applyMoveTempoMarker(
   const timeMap = applyMarkerOperation(command, () =>
     moveTempoMarker(
       state.timeline.timeMap,
-      state.timeline.durationTicks,
       command.startTick,
       command.targetTick,
     ));

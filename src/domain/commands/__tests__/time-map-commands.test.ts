@@ -278,11 +278,10 @@ describe("measure operations across meter markers", () => {
 
     const timeline = activeTimeline(store);
 
-    // The 3/4 segment extends past the removed measure, so its marker
-    // survives at measure index 2; the inner tempo marker is dropped.
-    expect(timeline.durationTicks).toBe(2 * MEASURE_TICKS + 2_880);
-    expect(timeline.timeMap.meterMarkers[1]?.startTick)
-      .toBe(2 * MEASURE_TICKS);
+    // The 3/4 marker was placed on the removed measure, so it is entirely dropped.
+    // The remaining measures revert to the previous active meter (4/4).
+    expect(timeline.durationTicks).toBe(3 * MEASURE_TICKS);
+    expect(timeline.timeMap.meterMarkers).toHaveLength(1);
     expect(timeline.timeMap.tempoMarkers).toHaveLength(1);
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),

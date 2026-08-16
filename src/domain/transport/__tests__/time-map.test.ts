@@ -295,10 +295,10 @@ describe("tempo marker operations", () => {
       4 * 3_840,
       { startTick: 3_840, bpm: 90 },
     );
-    const moved = moveTempoMarker(withMarker, 4 * 3_840, 3_840, 7_680);
+    const moved = moveTempoMarker(withMarker, 3_840, 7_680);
 
     expect(moved.tempoMarkers[1]?.startTick).toBe(7_680);
-    expect(() => moveTempoMarker(withMarker, 4 * 3_840, 0, 7_680))
+    expect(() => moveTempoMarker(withMarker, 0, 7_680))
       .toThrow(RangeError);
 
     const updated = updateTempoMarker(withMarker, 3_840, 100);
