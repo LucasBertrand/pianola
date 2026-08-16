@@ -5,7 +5,7 @@ comportement précis, partir de la [carte du code](code-map.md). Pour décider s
 un état doit persister ou entrer dans Undo/Redo, consulter
 [`state-ownership.md`](state-ownership.md).
 
-Dernière revue complète : 13 août 2026.
+Dernière revue complète : 16 août 2026.
 
 ## Vue d’ensemble
 
@@ -58,9 +58,16 @@ Le domaine est réparti par propriétaire :
 | `src/domain/notes/note.ts` | note, pitch et vélocité |
 | `src/domain/instruments/instrument.ts` | sons, presets et instruments |
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
-| `src/domain/transport/transport.ts` | horloge, métrique et boucle |
+| `src/domain/transport/transport.ts` | horloge (PPQN) et boucle |
+| `src/domain/transport/time-map.ts` | marqueurs de tempo et de métrique par clip, navigation en mesures |
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
 | `src/domain/project/project-document.ts` | document, workspace et accès clip |
+
+La `TimeMap` d’un clip est l’unique source de vérité temporelle : les
+marqueurs de métrique sont ancrés aux indices de mesure (leurs ticks sont
+recalculés à chaque édition) et les marqueurs de tempo restent ancrés aux
+ticks. Mesures, positions musicales et conversions tick↔seconde en sont
+dérivées ; aucun nombre de mesures ni tempo « courant » n’est persisté.
 
 Les mutations durables passent par `EditorCommandPort`, une transaction et les
 reducers de `src/domain/commands/`. `ProjectStore` est le propriétaire de

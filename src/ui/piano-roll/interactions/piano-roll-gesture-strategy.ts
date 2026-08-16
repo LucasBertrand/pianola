@@ -1,4 +1,10 @@
 import {
+  getActiveClip,
+} from "../../../domain/project/project-document";
+import {
+  snapTickToMeasureGrid,
+} from "../../../domain/transport/time-map";
+import {
   INTERACTION_CONSTANTS,
 } from "../../../config/interaction-config";
 import {
@@ -13,11 +19,7 @@ import type {
 import {
   calculateResizeDeltaBounds,
   measureNoteSelection,
-  quantizeTick,
 } from "../../../editor/interactions/gestures/note-gesture-math";
-import type {
-  SelectionMode,
-} from "../../../editor/interactions/gestures/gesture-draft";
 import type {
   PianoRollInteractionSession,
 } from "../../../editor/interactions/piano-roll-interaction-session";
@@ -55,6 +57,9 @@ import type {
 import type {
   PianoRollSelectionController,
 } from "./piano-roll-selection-controller";
+import type {
+  SelectionMode,
+} from "../../../editor/interactions/gestures/gesture-draft";
 import {
   handleDirectNoteTap,
 } from "./direct-note-tap";
@@ -159,6 +164,16 @@ export function createPianoRollGestureStrategy(
     const pointerTick = converter.cssPixelXToTick(localX);
     const pointerPitch = converter.cssPixelYToPitch(localY);
     const resolutionTicks = gridResolutionTicks.get();
+    const gestureState = editorCommands.getState();
+    const gestureClip = getActiveClip(gestureState);
+    const snapAbsoluteTick = (tick: number): number =>
+      snapTickToMeasureGrid(
+        gestureState.clock.ppqn,
+        gestureClip.timeline.timeMap,
+        gestureClip.timeline.durationTicks,
+        tick,
+        resolutionTicks,
+      );
     const bodyEnvelope = createTouchEnvelope(
       converter,
       event.pointerType,
@@ -208,6 +223,7 @@ export function createPianoRollGestureStrategy(
       pointerPitch,
       targetNoteId: targetNote?.id ?? null,
       snapResolutionTicks: resolutionTicks,
+      snapAbsoluteTick,
       pitchSnapSettings: pitchSnapSettings.get(),
       selectionMode: event.shiftKey ? "add" : selectionMode,
     });
@@ -373,7 +389,12 @@ export function createPianoRollGestureStrategy(
       const pointerTick = converter.cssPixelXToTick(
         completion.currentLocalX,
       );
-      const snappedTick = quantizeTick(
+      const seekState = editorCommands.getState();
+      const seekClip = getActiveClip(seekState);
+      const snappedTick = snapTickToMeasureGrid(
+        seekState.clock.ppqn,
+        seekClip.timeline.timeMap,
+        seekClip.timeline.durationTicks,
         pointerTick,
         completion.snapResolutionTicks,
       );

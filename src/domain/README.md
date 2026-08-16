@@ -9,7 +9,10 @@ master bus, validations, commandes, transformations, collisions et historique.
 
 Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
 `instruments/instrument.ts` ou `notes/note.ts`. Une mutation commence dans
-`commands/command-types.ts` et aboutit au reducer.
+`commands/command-types.ts` et aboutit au reducer. La structure temporelle
+d’un clip — marqueurs de tempo et de métrique, dérivation des mesures — vit
+dans `transport/time-map.ts` ; ses invariants sont validés dans
+`validation/transport-validation.ts`.
 
 ## Quelles dépendances sont autorisées ?
 

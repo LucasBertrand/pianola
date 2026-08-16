@@ -11,8 +11,9 @@ import type {
   SpatialIndex,
 } from "../../../editor/geometry/spatial-index";
 import {
-  snapTickToCellStart,
-} from "../../../editor/interactions/gestures/note-gesture-math";
+  snapTickToMeasureCellStart,
+  snapTickToMeasureGrid,
+} from "../../../domain/transport/time-map";
 import type {
   PianoRollInteractionSession,
 } from "../../../editor/interactions/piano-roll-interaction-session";
@@ -116,7 +117,16 @@ export function beginPianoRollLongPressDraw({
     return;
   }
 
-  const startTick = Math.max(0, snapTickToCellStart(tick, resolutionTicks));
+  const startTick = Math.max(
+    0,
+    snapTickToMeasureCellStart(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
+      tick,
+      resolutionTicks,
+    ),
+  );
   const activePitchSnapSettings = pitchSnapSettings.get();
   const drawPitch = snapPitchToTonalPattern(pitch, activePitchSnapSettings, 0);
 
@@ -134,6 +144,13 @@ export function beginPianoRollLongPressDraw({
     pointerPitch: pitch,
     targetNoteId: null,
     snapResolutionTicks: resolutionTicks,
+    snapAbsoluteTick: (t) => snapTickToMeasureGrid(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
+      t,
+      resolutionTicks,
+    ),
     pitchSnapSettings: activePitchSnapSettings,
     selectionMode: "replace",
   })) {

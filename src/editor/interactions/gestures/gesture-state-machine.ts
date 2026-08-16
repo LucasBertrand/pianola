@@ -6,7 +6,6 @@ import type {
   PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import {
-  quantizeTick,
   type NoteSelectionBounds,
   type ResizeDeltaBounds,
 } from "./note-gesture-math";
@@ -35,6 +34,7 @@ export interface PointerGestureStart {
   readonly pointerPitch: number;
   readonly targetNoteId: NoteId | null;
   readonly snapResolutionTicks: number;
+  readonly snapAbsoluteTick: (tick: number) => number;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly selectionMode: SelectionMode;
 }
@@ -88,6 +88,8 @@ export class PianoRollGestureStateMachine {
     this.draft.originPointerPitch = start.pointerPitch;
     this.draft.targetNoteId = start.targetNoteId;
     this.draft.snapResolutionTicks = start.snapResolutionTicks;
+    this.draft.snapAbsoluteTick =
+      start.snapAbsoluteTick ?? this.draft.snapAbsoluteTick;
     this.draft.pitchSnapSettings = start.pitchSnapSettings;
     this.draft.selectionMode = start.selectionMode;
     this.draft.deltaTicks = 0;
@@ -289,10 +291,10 @@ export class PianoRollGestureStateMachine {
     pointerPitch: number,
     totalTicks: number,
   ): GestureUpdateKind {
-    let deltaTicks = quantizeTick(
-      pointerTick - this.draft.originPointerTick,
-      this.draft.snapResolutionTicks,
-    );
+    const rawAbsoluteTick = this.draft.minimumSelectedStartTick
+      + (pointerTick - this.draft.originPointerTick);
+    let deltaTicks = this.draft.snapAbsoluteTick(rawAbsoluteTick)
+      - this.draft.minimumSelectedStartTick;
     let deltaPitch =
       pointerPitch - this.draft.originPointerPitch;
 
@@ -323,11 +325,10 @@ export class PianoRollGestureStateMachine {
   }
 
   private updateResize(pointerTick: number): GestureUpdateKind {
-    const targetTick = quantizeTick(
+    const targetTick = this.draft.snapAbsoluteTick(
       this.draft.originResizeTick
         + pointerTick
         - this.draft.originPointerTick,
-      this.draft.snapResolutionTicks,
     );
     let deltaTicks = targetTick - this.draft.originResizeTick;
 
@@ -349,10 +350,7 @@ export class PianoRollGestureStateMachine {
     pointerTick: number,
     totalTicks: number,
   ): GestureUpdateKind {
-    const snappedEndTick = quantizeTick(
-      pointerTick,
-      this.draft.snapResolutionTicks,
-    );
+    const snappedEndTick = this.draft.snapAbsoluteTick(pointerTick);
     const durationTicks = Math.min(
       totalTicks - this.draft.drawStartTick,
       Math.max(

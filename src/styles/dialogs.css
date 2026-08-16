@@ -109,6 +109,26 @@
   color: var(--color-text-bright);
 }
 
+.application-dialog-button.is-danger {
+  border-color: var(--color-border-danger);
+  background: var(--color-surface-danger);
+  color: var(--color-accent-danger);
+}
+
+.tempo-meter-marker-meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.tempo-meter-marker-meter > span {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .application-dialog[data-tone="danger"]
   .application-dialog-button.is-primary {
   border-color: var(--color-border-danger);

@@ -24,7 +24,6 @@
     grid-template-columns:
       minmax(200px, 1fr)
       auto
-      auto
       minmax(200px, 1fr);
   }
 
@@ -47,8 +46,7 @@
       auto
       minmax(0, 1fr);
     grid-template-areas:
-      "brand transport master"
-      ". metrics .";
+      "brand transport master";
     row-gap: 10px;
   }
 
@@ -56,15 +54,8 @@
     justify-self: start;
   }
 
-  .transport-cluster,
-  .transport-metrics {
+  .transport-cluster {
     justify-self: center;
-  }
-
-  .metric {
-    min-width: 94px;
-    padding-right: 10px;
-    padding-left: 10px;
   }
 }
 
@@ -77,22 +68,8 @@
     padding-bottom: 10px;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     grid-template-areas:
-      "brand transport master"
-      ". metrics .";
+      "brand transport master";
     gap: 10px;
-  }
-
-  .transport-metrics {
-    display: flex;
-    width: 100%;
-    overflow-x: auto;
-    grid-area: metrics;
-    scrollbar-width: thin;
-  }
-
-  .transport-metrics .metric {
-    min-width: 108px;
-    flex: 1 0 auto;
   }
 
   .master-bus-control {
@@ -140,8 +117,7 @@
       auto
       minmax(168px, 1fr);
     grid-template-areas:
-      "brand transport master"
-      "metrics metrics metrics";
+      "brand transport master";
     align-items: center;
     column-gap: 12px;
     row-gap: 10px;
@@ -155,12 +131,6 @@
   .transport-cluster {
     align-self: center;
     justify-self: center;
-  }
-
-  .transport-metrics {
-    width: 100%;
-    max-width: 100%;
-    justify-self: stretch;
   }
 
   .master-bus-control {
@@ -291,19 +261,9 @@
   }
 
   .view-controls {
-    --view-slider-track-size: clamp(46px, 9vw, 72px);
-    padding-left: 6px;
-    grid-template-columns:
-      58px
-      calc(var(--view-slider-track-size) + 20px)
-      calc(var(--view-slider-track-size) + 28px)
-      calc(
-        var(--view-slider-track-size)
-        + var(--view-slider-track-size)
-        + 57px
-      )
-      minmax(228px, 1.4fr);
-    gap: 3px;
+    --view-slider-track-size: clamp(40px, 7vw, 60px);
+    padding: 0 8px;
+    gap: 8px;
   }
 
   .view-controls output {
@@ -325,19 +285,9 @@
     gap: 3px;
   }
 
-  .pitch-view-controls {
-    width: 100%;
-    padding-left: 6px;
-    grid-template-columns:
-      calc(var(--view-slider-track-size) + 20px)
-      calc(var(--view-slider-track-size) + 28px);
-    gap: 3px;
-  }
 
   .pitch-snap-control {
-    width: min(100%, 300px);
-    max-width: 300px;
-    padding: 3px;
+    padding: 0;
     grid-template-columns:
       27px
       27px
@@ -345,6 +295,16 @@
       minmax(48px, 0.8fr)
       minmax(70px, 1.2fr);
     gap: 3px;
+  }
+
+  .view-controls,
+  .view-controls-left,
+  .view-sliders {
+    flex-wrap: wrap;
+  }
+
+  .grid-control {
+    width: min(100%, 340px);
   }
 
   .pitch-snap-toggle,

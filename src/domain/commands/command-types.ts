@@ -17,8 +17,10 @@ import {
 } from "../instruments/instrument";
 import {
   type LoopRegion,
-  type TimeSignature,
 } from "../transport/transport";
+import {
+  type TimeSignature,
+} from "../transport/time-map";
 import {
   type Note,
 } from "../notes/note";
@@ -211,6 +213,7 @@ export interface SetNotesEnabledCommand {
 
 export interface UpdateTempoCommand {
   readonly type: "UpdateTempo";
+  readonly clipId: ClipId;
   readonly bpm: number;
 }
 
@@ -218,6 +221,60 @@ export interface UpdateTimeSignatureCommand {
   readonly type: "UpdateTimeSignature";
   readonly clipId: ClipId;
   readonly timeSignature: TimeSignature;
+}
+
+export interface AddMeterMarkerCommand {
+  readonly type: "AddMeterMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly timeSignature: TimeSignature;
+}
+
+export interface MoveMeterMarkerCommand {
+  readonly type: "MoveMeterMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly targetTick: Tick;
+}
+
+export interface UpdateMeterMarkerCommand {
+  readonly type: "UpdateMeterMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly timeSignature: TimeSignature;
+}
+
+export interface DeleteMeterMarkerCommand {
+  readonly type: "DeleteMeterMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+}
+
+export interface AddTempoMarkerCommand {
+  readonly type: "AddTempoMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly bpm: number;
+}
+
+export interface MoveTempoMarkerCommand {
+  readonly type: "MoveTempoMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly targetTick: Tick;
+}
+
+export interface UpdateTempoMarkerCommand {
+  readonly type: "UpdateTempoMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly bpm: number;
+}
+
+export interface DeleteTempoMarkerCommand {
+  readonly type: "DeleteTempoMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
 }
 
 export interface UpdateLoopCommand {
@@ -259,5 +316,13 @@ export type PianoRollCommand =
   | SetNotesEnabledCommand
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
+  | AddMeterMarkerCommand
+  | MoveMeterMarkerCommand
+  | UpdateMeterMarkerCommand
+  | DeleteMeterMarkerCommand
+  | AddTempoMarkerCommand
+  | MoveTempoMarkerCommand
+  | UpdateTempoMarkerCommand
+  | DeleteTempoMarkerCommand
   | UpdateLoopCommand
   | SetLoopEnabledCommand;

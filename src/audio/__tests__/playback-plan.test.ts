@@ -9,7 +9,7 @@ import {
 } from "../../../tests/support/test-builders";
 
 describe("playback plans", () => {
-  test("preserves the explicit source and every meter-map segment", () => {
+  test("preserves the explicit source and every meter marker", () => {
     const baseState = createTestProject();
     const baseClip = baseState.clipsById[TEST_CLIP_ID];
 
@@ -23,8 +23,8 @@ describe("playback plans", () => {
       ...baseClip,
       timeline: {
         ...baseClip.timeline,
-        meterMap: {
-          segments: [
+        timeMap: {
+          meterMarkers: [
             {
               startTick: 0,
               timeSignature: { numerator: 4, denominator: 4 as const },
@@ -34,6 +34,7 @@ describe("playback plans", () => {
               timeSignature: { numerator: 3, denominator: 4 as const },
             },
           ],
+          tempoMarkers: [{ startTick: 0, bpm: 120 }],
         },
       },
     };

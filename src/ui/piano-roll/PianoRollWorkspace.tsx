@@ -21,8 +21,19 @@ import {
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
-  getClipMeasureCount,
 } from "../../domain/clips/clip";
+import {
+  getMeasureCount,
+} from "../../domain/transport/time-map";
+import {
+  createTimeMapMarkerFlags,
+} from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
+import {
+  useTimeMapMarkerWorkflow,
+} from "../../ui/piano-roll/useTimeMapMarkerWorkflow";
+import {
+  TempoMeterMarkerDialog,
+} from "../../ui/dialogs/TempoMeterMarkerDialog";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";
@@ -324,6 +335,7 @@ export function PianoRollWorkspace({
     getController: getPianoRollController,
     seekPlayback,
   });
+  const timeMapMarkers = useTimeMapMarkerWorkflow(runtime);
   const {
     clipboardAvailable,
     clearClipboard: clearSelectionClipboard,
@@ -451,9 +463,6 @@ export function PianoRollWorkspace({
       data-project-revision="0"
     >
       <EditorHeader
-        projectStore={runtime.projectStore}
-        editorCommands={runtime.editorCommands}
-        gridSettings={runtime.gridSettings}
         projectState={projectState}
         playbackStatus={playbackStatus}
         projectInputRef={loadProjectInputRef}
@@ -499,9 +508,10 @@ export function PianoRollWorkspace({
             inspectorSection={projectInspectorSection}
             canUndo={runtime.projectStore.canUndo()}
             canRedo={runtime.projectStore.canRedo()}
-            measureCount={getClipMeasureCount(
-              projectState.clock,
-              activeClip,
+            measureCount={getMeasureCount(
+              projectState.clock.ppqn,
+              activeClip.timeline.timeMap,
+              activeClip.timeline.durationTicks,
             )}
             selectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
@@ -531,6 +541,7 @@ export function PianoRollWorkspace({
             onSelectionModeChange={setSelectionMode}
             onNoteColorModeToggle={handleNoteColorModeToggle}
             onSliceSelectionAtPlayhead={handleSliceSelectionAtPlayhead}
+            onAddMarkerAtPlayhead={timeMapMarkers.openMarkerAtPlayhead}
             onTransformSelection={handleTransformSelection}
           />,
           projectInspectorToolbarHost,
@@ -555,7 +566,13 @@ export function PianoRollWorkspace({
                 viewport={runtime.viewport}
                 projectStore={runtime.projectStore}
                 gridResolutionTicks={runtime.gridResolutionTicks}
+                markerFlags={createTimeMapMarkerFlags(
+                  activeClip.timeline.timeMap,
+                )}
                 onLoopCommit={handleLoopRegionCommit}
+                onOpenMarker={timeMapMarkers.openMarker}
+                onMoveMarker={timeMapMarkers.moveMarker}
+                onGridSeek={seekPlayback}
               />
               <div className="canvas-host">
                 <PianoRollLayers
@@ -593,6 +610,7 @@ export function PianoRollWorkspace({
             horizontalZoomRef={zoomInputRef}
             verticalScrollRef={pitchScrollInputRef}
             verticalZoomRef={pitchZoomInputRef}
+            gridSettings={runtime.gridSettings}
             pitchSnapSettings={pitchSnapSettings}
             onPitchSnapSettingsChange={updatePitchSnapSettings}
           />
@@ -643,6 +661,20 @@ export function PianoRollWorkspace({
           onInstrumentChange={instrumentDialog.setConfig}
           onConfirm={instrumentDialog.confirm}
           onCancel={instrumentDialog.cancel}
+        />
+      )}
+      {timeMapMarkers.draft === null ? null : (
+        <TempoMeterMarkerDialog
+          mode={timeMapMarkers.draft.mode}
+          measureIndex={timeMapMarkers.draft.measureIndex}
+          bpm={timeMapMarkers.draft.bpm}
+          timeSignature={timeMapMarkers.draft.timeSignature}
+          canDelete={timeMapMarkers.draft.canDelete}
+          onBpmChange={timeMapMarkers.setDraftBpm}
+          onTimeSignatureChange={timeMapMarkers.setDraftTimeSignature}
+          onDelete={timeMapMarkers.deleteDraft}
+          onConfirm={timeMapMarkers.confirmDraft}
+          onCancel={timeMapMarkers.cancelDraft}
         />
       )}
     </main>

@@ -147,12 +147,24 @@ export function useClipWorkflow({
       },
       timeline: {
         ...sourceClip.timeline,
-        meterMap: {
-          segments: sourceClip.timeline.meterMap.segments.map(
-            (segment) => ({
-              ...segment,
-              timeSignature: { ...segment.timeSignature },
+        timeMap: {
+          meterMarkers: sourceClip.timeline.timeMap.meterMarkers.map(
+            (marker) => ({
+              startTick: marker.startTick,
+              timeSignature: marker.timeSignature.beatGroups === undefined
+                ? {
+                    numerator: marker.timeSignature.numerator,
+                    denominator: marker.timeSignature.denominator,
+                  }
+                : {
+                    numerator: marker.timeSignature.numerator,
+                    denominator: marker.timeSignature.denominator,
+                    beatGroups: [...marker.timeSignature.beatGroups],
+                  },
             }),
+          ),
+          tempoMarkers: sourceClip.timeline.timeMap.tempoMarkers.map(
+            (marker) => ({ ...marker }),
           ),
         },
       },

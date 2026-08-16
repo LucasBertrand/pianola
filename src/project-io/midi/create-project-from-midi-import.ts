@@ -23,15 +23,15 @@ import {
 import {
   createDefaultProjectClock,
   createDefaultTransportState,
-  getTicksPerMeasure,
 } from "../../domain/transport/transport";
+import {
+  getDurationForMeasureCount,
+  getMeasureCountCoveringTick,
+} from "../../domain/transport/time-map";
 import {
   getClip,
   PROJECT_SCHEMA_VERSION,
 } from "../../domain/project/project-document";
-import {
-  getClipTimeSignature,
-} from "../../domain/clips/clip";
 import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
@@ -129,23 +129,25 @@ export function createProjectFromMidiImport(
   }
 
   Object.assign(tracksByInstrumentId, mutableTracks);
-  const clock = {
-    ...createDefaultProjectClock(),
-    tempoBpm: analysis.tempoBpm,
-  };
+  const clock = createDefaultProjectClock();
   const transport = createDefaultTransportState();
 
   assertValidProjectClock(clock);
   assertValidTransportState(transport);
 
-  const ticksPerMeasure = getTicksPerMeasure(clock, analysis.timeSignature);
+  const timeMap = {
+    meterMarkers: analysis.meterMarkers,
+    tempoMarkers: analysis.tempoMarkers,
+  };
   const measureCount = Math.max(
     PROJECT_CONSTANTS.minimumMeasureCount,
-    Math.ceil(
+    getMeasureCountCoveringTick(
+      clock.ppqn,
+      analysis.meterMarkers,
       Math.max(
         maximumNoteEndTick,
         analysis.timelineEndTick,
-      ) / ticksPerMeasure,
+      ),
     ),
   );
 
@@ -155,16 +157,23 @@ export function createProjectFromMidiImport(
     );
   }
 
-  const projectDurationTicks = measureCount * ticksPerMeasure;
+  const projectDurationTicks = getDurationForMeasureCount(
+    clock.ppqn,
+    analysis.meterMarkers,
+    measureCount,
+  );
+  const firstMeasureTicks = getDurationForMeasureCount(
+    clock.ppqn,
+    analysis.meterMarkers,
+    1,
+  );
   const clipId = "clip-imported";
   const clip: Clip = {
     id: clipId,
     name: "Imported Clip",
     timeline: {
       durationTicks: projectDurationTicks,
-      meterMap: {
-        segments: [{ startTick: 0, timeSignature: analysis.timeSignature }],
-      },
+      timeMap,
     },
     tracksByInstrumentId,
     instrumentStatesById,
@@ -173,7 +182,7 @@ export function createProjectFromMidiImport(
       loop: {
         startTick: 0,
         endTick: Math.min(
-          ticksPerMeasure,
+          firstMeasureTicks,
           projectDurationTicks,
         ),
       },
@@ -345,22 +354,6 @@ function assertImportedProjectState(state: ProjectState): void {
   if (noteCount > PROJECT_CONSTANTS.maximumNoteCount) {
     throw new MidiImportError(
       "The imported note count exceeds the project limit.",
-    );
-  }
-
-  if (
-    !Number.isFinite(state.clock.tempoBpm)
-    || state.clock.tempoBpm
-      < PROJECT_CONSTANTS.minimumTempoBpm
-    || state.clock.tempoBpm
-      > PROJECT_CONSTANTS.maximumTempoBpm
-    || !Number.isSafeInteger(
-      getClipTimeSignature(importedClip).numerator,
-    )
-    || getClipTimeSignature(importedClip).numerator <= 0
-  ) {
-    throw new MidiImportError(
-      "The imported transport settings are invalid.",
     );
   }
 }

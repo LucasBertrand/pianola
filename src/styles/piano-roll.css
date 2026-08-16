@@ -142,10 +142,94 @@
   z-index: 3;
   top: 0;
   right: 0;
+  bottom: 0;
   left: 0;
-  height: 100%;
   overflow: hidden;
   touch-action: none;
+}
+
+.bar-ruler-marker-overlay {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  touch-action: none;
+  pointer-events: none;
+}
+
+.bar-ruler-marker-flag {
+  position: absolute;
+  top: calc(50% - 4px);
+  left: 0;
+  display: flex;
+  height: 18px;
+  margin: 0;
+  padding: 0 8px 0 8px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 0 4px 4px 0;
+  border-left: 0;
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+  align-items: center;
+  cursor: grab;
+  touch-action: none;
+  pointer-events: auto;
+  user-select: none;
+  will-change: transform;
+}
+
+.bar-ruler-marker-flag::before {
+  position: absolute;
+  top: 0px;
+  bottom: -11px;
+  left: 0;
+  width: 2px;
+  background: var(--color-accent-primary);
+  content: "";
+}
+
+.bar-ruler-marker-flag.is-initial {
+  border-color: var(--color-border-primary);
+  color: var(--color-text-strong);
+  cursor: default;
+}
+
+.bar-ruler-marker-flag.is-dragging {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-primary);
+  color: var(--color-text-bright);
+  cursor: grabbing;
+}
+
+.bar-ruler-marker-boundaries {
+  position: absolute;
+  z-index: 2;
+  top: 50px;
+  right: 0;
+  left: 0;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bar-ruler-marker-boundaries i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--color-accent-primary);
+  opacity: 0.45;
+  will-change: transform;
 }
 
 .bar-ruler-loop-band,
@@ -198,14 +282,12 @@
   transform: translateX(-50%);
 }
 
-.bar-ruler-loop-overlay[data-enabled="false"]
-  .bar-ruler-loop-band {
+.bar-ruler-loop-overlay[data-enabled="false"] .bar-ruler-loop-band {
   border-color: var(--color-muted-strong);
   background: var(--color-muted-soft);
 }
 
-.bar-ruler-loop-overlay[data-enabled="false"]
-  .bar-ruler-loop-flag {
+.bar-ruler-loop-overlay[data-enabled="false"] .bar-ruler-loop-flag {
   color: var(--color-text-muted);
 }
 

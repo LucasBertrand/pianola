@@ -11,6 +11,9 @@ import {
 import {
   getClipDurationTicks,
 } from "../../domain/clips/clip";
+import {
+  snapTickToMeasureGrid,
+} from "../../domain/transport/time-map";
 import type {
   LoopRegion,
 } from "../../domain/transport/transport";
@@ -20,6 +23,7 @@ import type {
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";
+
 import type {
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";
@@ -38,6 +42,7 @@ export interface PianoRollLoopGestureOptions {
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly onCommit: (loop: LoopRegion) => void;
+  readonly onGridSeek: (tick: number) => void;
   readonly layerRef: RefObject<HTMLDivElement | null>;
   readonly bandRef: RefObject<HTMLButtonElement | null>;
   readonly startFlagRef: RefObject<HTMLButtonElement | null>;
@@ -53,6 +58,7 @@ export function usePianoRollLoopGesture({
   projectStore,
   gridResolutionTicks,
   onCommit,
+  onGridSeek,
   layerRef,
   bandRef,
   startFlagRef,
@@ -89,11 +95,10 @@ export function usePianoRollLoopGesture({
     let draftStartTick = 0;
     let draftEndTick = 0;
     let snapResolutionTicks = 1;
+    let snapFn: (tick: number) => number = (tick) => tick;
     let projectDurationTicks = 1;
     let layerLeft = 0;
     let drawAnchorTick = 0;
-    let pendingClickMode: "set-start" | "set-end" =
-      "set-start";
 
     const updateElements = (
       startTick: number,
@@ -168,10 +173,7 @@ export function usePianoRollLoopGesture({
           )
           * currentViewport.ticksPerPixel
           / currentViewport.zoomX;
-        const snappedPointerTick =
-          Math.round(
-            absolutePointerTick / snapResolutionTicks,
-          ) * snapResolutionTicks;
+        const snappedPointerTick = snapFn(absolutePointerTick);
         const boundedPointerTick = Math.min(
           projectDurationTicks,
           Math.max(0, snappedPointerTick),
@@ -206,10 +208,7 @@ export function usePianoRollLoopGesture({
           )
           * currentViewport.ticksPerPixel
           / currentViewport.zoomX;
-        const snappedStartTick =
-          Math.round(
-            absolutePointerTick / snapResolutionTicks,
-          ) * snapResolutionTicks;
+        const snappedStartTick = snapFn(absolutePointerTick);
         const maximumStartTick = Math.max(
           0,
           originEndTick - minimumDurationTicks,
@@ -229,10 +228,7 @@ export function usePianoRollLoopGesture({
           )
           * currentViewport.ticksPerPixel
           / currentViewport.zoomX;
-        const snappedEndTick =
-          Math.round(
-            absolutePointerTick / snapResolutionTicks,
-          ) * snapResolutionTicks;
+        const snappedEndTick = snapFn(absolutePointerTick);
 
         draftStartTick = originStartTick;
         draftEndTick = Math.max(
@@ -241,10 +237,7 @@ export function usePianoRollLoopGesture({
         );
       } else if (gestureMode === "resize-start") {
         const snappedStartTick = pointerHasMoved
-          ? Math.round(
-              (originStartTick + rawDeltaTicks)
-              / snapResolutionTicks,
-            ) * snapResolutionTicks
+          ? snapFn(originStartTick + rawDeltaTicks)
           : originStartTick;
 
         draftStartTick = Math.min(
@@ -254,10 +247,7 @@ export function usePianoRollLoopGesture({
         draftEndTick = originEndTick;
       } else if (gestureMode === "resize-end") {
         const snappedEndTick = pointerHasMoved
-          ? Math.round(
-              (originEndTick + rawDeltaTicks)
-              / snapResolutionTicks,
-            ) * snapResolutionTicks
+          ? snapFn(originEndTick + rawDeltaTicks)
           : originEndTick;
 
         draftStartTick = originStartTick;
@@ -272,10 +262,7 @@ export function usePianoRollLoopGesture({
         const durationTicks =
           originEndTick - originStartTick;
         const snappedStartTick = pointerHasMoved
-          ? Math.round(
-              (originStartTick + rawDeltaTicks)
-              / snapResolutionTicks,
-            ) * snapResolutionTicks
+          ? snapFn(originStartTick + rawDeltaTicks)
           : originStartTick;
         const movedStartTick = Math.min(
           projectDurationTicks - durationTicks,
@@ -350,12 +337,17 @@ export function usePianoRollLoopGesture({
         gridResolutionTicks.get(),
       );
       projectDurationTicks = getClipDurationTicks(getActiveClip(state));
+      const clip = getActiveClip(state);
+      const snapRes = snapResolutionTicks;
+      snapFn = (tick) =>
+        snapTickToMeasureGrid(
+          state.clock.ppqn,
+          clip.timeline.timeMap,
+          clip.timeline.durationTicks,
+          tick,
+          snapRes,
+        );
       layerLeft = layerBounds.left;
-      pendingClickMode =
-        absolutePointerTick
-          <= (loop.startTick + loop.endTick) / 2
-          ? "set-start"
-          : "set-end";
       const drawMinimumDurationTicks = Math.min(
         snapResolutionTicks,
         projectDurationTicks,
@@ -367,9 +359,7 @@ export function usePianoRollLoopGesture({
         ),
         Math.max(
           0,
-          Math.round(
-            absolutePointerTick / snapResolutionTicks,
-          ) * snapResolutionTicks,
+          snapFn(absolutePointerTick),
         ),
       );
       layer.setPointerCapture(event.pointerId);
@@ -405,7 +395,20 @@ export function usePianoRollLoopGesture({
       }
 
       if (gestureMode === "pending-layer") {
-        gestureMode = pendingClickMode;
+        const currentViewport = viewport.get();
+        const absolutePointerTick = (currentViewport.scrollX + event.clientX - layerLeft) * currentViewport.ticksPerPixel / currentViewport.zoomX;
+        
+        onGridSeek(Math.min(projectDurationTicks, Math.max(0, snapFn(absolutePointerTick))));
+        activePointerId = -1;
+        gestureMode = null;
+        
+        if (layer.hasPointerCapture(event.pointerId)) {
+          layer.releasePointerCapture(event.pointerId);
+        }
+        
+        updateFromState();
+        event.preventDefault();
+        return;
       }
 
       updateDraft(event.clientX);

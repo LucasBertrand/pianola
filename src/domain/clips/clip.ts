@@ -12,12 +12,15 @@ import type {
 } from "../notes/note";
 import {
   createDefaultProjectClock,
-  getTicksPerMeasure,
-  type MeterMap,
   type ProjectClock,
-  type TimeSignature,
   type TransportState,
 } from "../transport/transport";
+import {
+  createDefaultTimeMap,
+  createDefaultTimeSignature,
+  getTicksPerMeasure,
+  type TimeMap,
+} from "../transport/time-map";
 
 export const DEFAULT_MEASURE_COUNT =
   PROJECT_CONSTANTS.defaultMeasureCount;
@@ -42,7 +45,7 @@ export interface Track {
 
 export interface ClipTimeline {
   readonly durationTicks: Tick;
-  readonly meterMap: MeterMap;
+  readonly timeMap: TimeMap;
 }
 
 /** Self-contained musical material rendered by the piano-roll editor. */
@@ -59,16 +62,14 @@ export function createDefaultClipTimeline(
   clock: ProjectClock = createDefaultProjectClock(),
   measureCount: number = DEFAULT_MEASURE_COUNT,
 ): ClipTimeline {
-  const timeSignature: TimeSignature = {
-    numerator: PROJECT_CONSTANTS.defaultTimeSignatureNumerator,
-    denominator: PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
-  };
+  const timeSignature = createDefaultTimeSignature();
 
   return {
-    durationTicks: measureCount * getTicksPerMeasure(clock, timeSignature),
-    meterMap: {
-      segments: [{ startTick: 0, timeSignature }],
-    },
+    durationTicks: measureCount * getTicksPerMeasure(
+      clock.ppqn,
+      timeSignature,
+    ),
+    timeMap: createDefaultTimeMap(),
   };
 }
 
@@ -76,38 +77,4 @@ export function getClipDurationTicks(
   clip: Pick<Clip, "timeline">,
 ): number {
   return clip.timeline.durationTicks;
-}
-
-export function getClipTimeSignature(
-  clip: Pick<Clip, "timeline">,
-  tick: Tick = 0,
-): TimeSignature {
-  const segments = clip.timeline.meterMap.segments;
-  let selected = segments[0];
-
-  for (const segment of segments) {
-    if (segment.startTick > tick) {
-      break;
-    }
-
-    selected = segment;
-  }
-
-  if (selected === undefined) {
-    throw new Error("A clip meter map must start at tick 0.");
-  }
-
-  return selected.timeSignature;
-}
-
-export function getClipMeasureCount(
-  clock: ProjectClock,
-  clip: Pick<Clip, "timeline">,
-): number {
-  const measureTicks = getTicksPerMeasure(
-    clock,
-    getClipTimeSignature(clip),
-  );
-
-  return clip.timeline.durationTicks / measureTicks;
 }

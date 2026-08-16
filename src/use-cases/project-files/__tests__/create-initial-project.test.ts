@@ -18,7 +18,9 @@ describe("createBlankProjectState", () => {
     const state = createBlankProjectState();
     const clip = getActiveClip(state);
 
-    expect(state.clock.tempoBpm).toBe(PROJECT_CONSTANTS.defaultTempoBpm);
+    expect(clip.timeline.timeMap.tempoMarkers[0]?.bpm).toBe(
+      PROJECT_CONSTANTS.defaultTempoBpm,
+    );
     expect(state.instrumentOrder).toEqual([]);
     expect(state.projectInstrumentsById).toEqual({});
     expect(clip.tracksByInstrumentId).toEqual({});

@@ -84,14 +84,16 @@ describe("P2 command family contracts", () => {
 
   test("transport commands support success, rejection, undo and redo", () => {
     const store = new ProjectStore(createTestProject());
+    const initialTempo = () => store.getState()
+      .clipsById[TEST_CLIP_ID]?.timeline.timeMap.tempoMarkers[0]?.bpm;
 
-    dispatch(store, { type: "UpdateTempo", bpm: 90 }, 1);
-    expect(store.getState().clock.tempoBpm).toBe(90);
+    dispatch(store, { type: "UpdateTempo", clipId: TEST_CLIP_ID, bpm: 90 }, 1);
+    expect(initialTempo()).toBe(90);
     store.undo();
-    expect(store.getState().clock.tempoBpm).toBe(120);
+    expect(initialTempo()).toBe(120);
     store.redo();
-    expect(store.getState().clock.tempoBpm).toBe(90);
-    expect(() => dispatch(store, { type: "UpdateTempo", bpm: 0 }, 2))
+    expect(initialTempo()).toBe(90);
+    expect(() => dispatch(store, { type: "UpdateTempo", clipId: TEST_CLIP_ID, bpm: 0 }, 2))
       .toThrow(CommandRejectedError);
   });
 });

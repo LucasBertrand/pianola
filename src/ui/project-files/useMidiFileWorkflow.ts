@@ -121,10 +121,12 @@ export function useMidiFileWorkflow({
   const presentAnalysis = useCallback(
     (analysis: MidiImportAnalysis): void => {
       pendingAnalysisRef.current = analysis;
+      const initialTempo = analysis.tempoMarkers[0];
+      const initialMeter = analysis.meterMarkers[0];
       const details = [
         `Format ${String(analysis.sourceFormat)} - ${String(analysis.sourceTicksPerQuarterNote)} PPQN`,
         `${String(analysis.noteCount)} notes - ${String(analysis.instrumentCandidates.length)} instruments`,
-        `${formatTempo(analysis.tempoBpm)} BPM - ${String(analysis.timeSignature.numerator)}/${String(analysis.timeSignature.denominator)}`,
+        `${formatTempo(initialTempo?.bpm ?? 120)} BPM - ${String(initialMeter?.timeSignature.numerator ?? 4)}/${String(initialMeter?.timeSignature.denominator ?? 4)}`,
         ...analysis.warnings,
       ];
 

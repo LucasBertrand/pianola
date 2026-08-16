@@ -4,6 +4,9 @@ import { createDefaultProjectInstrument } from "../../domain/project-instrument-
 import { createDefaultInstrumentConfig } from "../../domain/instrument-presets";
 import { MidiImportError } from "./midi-import-error";
 import {
+  getMeasureCountCoveringTick,
+} from "../../domain/transport/time-map";
+import {
   countImportedNoteCollisions,
 } from "./midi-import-collisions";
 import type {
@@ -22,10 +25,8 @@ import {
 import {
   convertSourceNotes,
   convertTick,
-  formatTempoForWarning,
-  normalizeImportedTempo,
-  selectTempo,
-  selectTimeSignature,
+  selectMeterMarkers,
+  selectTempoMarkers,
 } from "./midi-import-timing";
 import {
   countTracksWithoutEndOfTrack,
@@ -300,22 +301,25 @@ export function analyzeMidiImport(
     );
   }
 
-  const sourceTempoBpm = selectTempo(tempoCandidates);
-  const tempoBpm = normalizeImportedTempo(sourceTempoBpm);
-  const meterSelection =
-    selectTimeSignature(timeSignatureCandidates);
+  const tempoSelection = selectTempoMarkers(
+    tempoCandidates,
+    file.ticksPerQuarterNote,
+  );
+  const meterSelection = selectMeterMarkers(
+    timeSignatureCandidates,
+    file.ticksPerQuarterNote,
+  );
   const timelineEndTick = convertTick(
     maximumSourceTick,
     file.ticksPerQuarterNote,
   );
-  const importedTicksPerMeasure =
-    PROJECT_CONSTANTS.ppqn
-    * 4
-    * meterSelection.timeSignature.numerator
-    / meterSelection.timeSignature.denominator;
   const requiredMeasureCount = Math.max(
     PROJECT_CONSTANTS.minimumMeasureCount,
-    Math.ceil(timelineEndTick / importedTicksPerMeasure),
+    getMeasureCountCoveringTick(
+      PROJECT_CONSTANTS.ppqn,
+      meterSelection.markers,
+      timelineEndTick,
+    ),
   );
 
   if (
@@ -330,13 +334,8 @@ export function analyzeMidiImport(
   const collisionCount =
     countImportedNoteCollisions(instrumentCandidates);
   const warnings = [...createImportWarnings({
-    tempoChangeCount: Math.max(0, tempoCandidates.length - 1),
-    timeSignatureChangeCount: Math.max(
-      0,
-      timeSignatureCandidates.length
-        - meterSelection.invalidEventCount
-        - meterSelection.acceptedEventCount,
-    ),
+    tempoChangeCount: tempoSelection.ignoredEventCount,
+    timeSignatureChangeCount: meterSelection.ignoredEventCount,
     invalidTimeSignatureCount:
       meterSelection.invalidEventCount,
     orphanNoteOffCount,
@@ -354,9 +353,13 @@ export function analyzeMidiImport(
       countTracksWithoutEndOfTrack(file),
   })];
 
-  if (tempoBpm !== sourceTempoBpm) {
+  if (tempoSelection.adjustedEventCount > 0) {
     warnings.unshift(
-      `Tempo ${formatTempoForWarning(sourceTempoBpm)} BPM was adjusted to ${formatTempoForWarning(tempoBpm)} BPM to match editor limits.`,
+      `${String(tempoSelection.adjustedEventCount)} tempo ${
+        tempoSelection.adjustedEventCount === 1
+          ? "event was"
+          : "events were"
+      } adjusted to match editor limits.`,
     );
   }
 
@@ -368,8 +371,8 @@ export function analyzeMidiImport(
     sourceFormat: file.format,
     sourceTicksPerQuarterNote:
       file.ticksPerQuarterNote,
-    tempoBpm,
-    timeSignature: meterSelection.timeSignature,
+    tempoMarkers: tempoSelection.markers,
+    meterMarkers: meterSelection.markers,
     timelineEndTick,
     instrumentCandidates,
     noteCount,

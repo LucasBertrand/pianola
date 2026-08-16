@@ -9,9 +9,6 @@ import {
   getActiveClip,
 } from "../../../domain/project/project-document";
 import {
-  getClipTimeSignature,
-} from "../../../domain/clips/clip";
-import {
   type InstrumentId,
 } from "../../../domain/identifiers";
 import {
@@ -139,7 +136,8 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         pitchSnapSettings: pitchSnapSettings.get(),
         highlightedPitch: highlightedPitch.get(),
         clock: state.clock,
-        timeSignature: getClipTimeSignature(activeClip),
+        timeMap: activeClip.timeline.timeMap,
+        durationTicks: activeClip.timeline.durationTicks,
       });
     },
     [

@@ -6,8 +6,14 @@ import {
 } from "../../../config/rendering-config";
 import {
   type ProjectClock,
-  type TimeSignature,
 } from "../../../domain/transport/transport";
+import {
+  getBeatTicks,
+  getMeasureBeatBoundaryTicks,
+  getMeasureSpans,
+  getMeasureSubdivisionTicks,
+  type TimeMap,
+} from "../../../domain/transport/time-map";
 import {
   MAX_MIDI_PITCH,
   MIN_MIDI_PITCH,
@@ -61,7 +67,8 @@ export interface GridPaintSnapshot {
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly highlightedPitch: number | null;
   readonly clock: ProjectClock;
-  readonly timeSignature: TimeSignature;
+  readonly timeMap: TimeMap;
+  readonly durationTicks: number;
 }
 
 export function paintGrid(snapshot: GridPaintSnapshot): void {
@@ -76,7 +83,8 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
     pitchSnapSettings,
     highlightedPitch,
     clock,
-    timeSignature,
+    timeMap,
+    durationTicks,
   } = snapshot;
 
   context.fillStyle = APPLICATION_SURFACE_COLOR;
@@ -108,7 +116,8 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
     width,
     height,
     clock,
-    timeSignature,
+    timeMap,
+    durationTicks,
   );
 
   if (pitchSnapSettings.visualGuideEnabled) {
@@ -171,33 +180,72 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
     gridResolutionTicks,
   );
 
-  drawTickLines(
+  const measureSpans = getMeasureSpans(
+    clock.ppqn,
+    timeMap,
+    durationTicks,
+  );
+  const subdivisionBoundaryTicks: number[] = [];
+  const beatBoundaryTicks: number[] = [];
+  const barBoundaryTicks: number[] = [];
+
+  for (const span of measureSpans) {
+    if (span.endTick <= region.startTick) {
+      continue;
+    }
+
+    if (span.startTick > region.endTick) {
+      break;
+    }
+
+    barBoundaryTicks.push(span.startTick);
+
+    for (
+      const subdivisionTick of getMeasureSubdivisionTicks(
+        span,
+        effectiveResolutionTicks,
+      )
+    ) {
+      subdivisionBoundaryTicks.push(subdivisionTick);
+    }
+
+    const beatDurations = getBeatTicks(clock.ppqn, span.timeSignature);
+    const beatStarts = getMeasureBeatBoundaryTicks(clock.ppqn, span);
+
+    beatStarts.forEach((beatTick, i) => {
+      const duration = beatDurations[i];
+      if (
+        beatTick !== span.startTick
+        && duration !== undefined
+        && duration % effectiveResolutionTicks === 0
+      ) {
+        beatBoundaryTicks.push(beatTick);
+      }
+    });
+  }
+
+  drawTickList(
     context,
     devicePixelRatio,
     converter,
-    region,
     height,
-    effectiveResolutionTicks,
+    subdivisionBoundaryTicks,
     SUBDIVISION_LINE_COLOR,
   );
-  const ticksPerBeat = clock.ppqn * 4 / timeSignature.denominator;
-
-  drawTickLines(
+  drawTickList(
     context,
     devicePixelRatio,
     converter,
-    region,
     height,
-    ticksPerBeat,
+    beatBoundaryTicks,
     BEAT_LINE_COLOR,
   );
-  drawTickLines(
+  drawTickList(
     context,
     devicePixelRatio,
     converter,
-    region,
     height,
-    ticksPerBeat * timeSignature.numerator,
+    barBoundaryTicks,
     BAR_LINE_COLOR,
   );
 }
@@ -209,35 +257,34 @@ function paintAlternatingMeasures(
   width: number,
   height: number,
   clock: ProjectClock,
-  timeSignature: TimeSignature,
+  timeMap: TimeMap,
+  durationTicks: number,
 ): void {
-  const ticksPerMeasure =
-    clock.ppqn * 4 / timeSignature.denominator * timeSignature.numerator;
-
-  if (!Number.isSafeInteger(ticksPerMeasure) || ticksPerMeasure <= 0) {
-    return;
-  }
-
-  let measureIndex = Math.max(
-    0,
-    Math.floor(region.startTick / ticksPerMeasure),
+  const measureSpans = getMeasureSpans(
+    clock.ppqn,
+    timeMap,
+    durationTicks,
   );
-
-  if (measureIndex % 2 === 0) {
-    measureIndex += 1;
-  }
 
   context.fillStyle = ALTERNATE_MEASURE_COLOR;
 
-  for (
-    let startTick = measureIndex * ticksPerMeasure;
-    startTick < region.endTick;
-    startTick += ticksPerMeasure * 2
-  ) {
-    const startX = Math.max(0, converter.tickToCssPixelX(startTick));
+  for (const span of measureSpans) {
+    if (span.endTick <= region.startTick) {
+      continue;
+    }
+
+    if (span.startTick >= region.endTick) {
+      break;
+    }
+
+    if (span.index % 2 === 0) {
+      continue;
+    }
+
+    const startX = Math.max(0, converter.tickToCssPixelX(span.startTick));
     const endX = Math.min(
       width,
-      converter.tickToCssPixelX(startTick + ticksPerMeasure),
+      converter.tickToCssPixelX(span.endTick),
     );
 
     if (endX > startX) {
@@ -273,27 +320,15 @@ function getEffectiveGridResolution(
   return resolutionTicks;
 }
 
-function drawTickLines(
+function drawTickList(
   context: CanvasRenderingContext2D,
   devicePixelRatio: number,
   converter: CoordinateConverter,
-  region: Rect,
   height: number,
-  resolutionTicks: number,
+  ticks: readonly number[],
   color: string,
 ): void {
-  if (!Number.isFinite(resolutionTicks) || resolutionTicks <= 0) {
-    return;
-  }
-
-  const firstTick =
-    Math.floor(region.startTick / resolutionTicks) * resolutionTicks;
-
-  for (
-    let tick = firstTick;
-    tick <= region.endTick;
-    tick += resolutionTicks
-  ) {
+  for (const tick of ticks) {
     fillVerticalDeviceLine(
       context,
       converter.tickToCssPixelX(tick),

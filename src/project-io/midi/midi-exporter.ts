@@ -11,7 +11,6 @@ import type {
   MidiEvent,
   MidiFile,
   MidiTrack,
-  MidiTimeSignatureEvent,
 } from "./standard-midi-file";
 
 export interface MidiExportNote {
@@ -32,16 +31,24 @@ export interface MidiExportTrack {
   readonly notes: readonly MidiExportNote[];
 }
 
+export interface MidiExportTempoMarker {
+  readonly tick: number;
+  readonly bpm: number;
+}
+
+export interface MidiExportMeterMarker {
+  readonly tick: number;
+  readonly numerator: number;
+  readonly denominator: number;
+}
+
 /** Musical data required by SMF export, independent from stores and screens. */
 export interface MidiExportPlan {
   readonly sourceId: string;
   readonly title: string;
   readonly ppqn: number;
-  readonly bpm: number;
-  readonly timeSignature: Pick<
-    MidiTimeSignatureEvent,
-    "numerator" | "denominator"
-  >;
+  readonly tempoMarkers: readonly MidiExportTempoMarker[];
+  readonly meterMarkers: readonly MidiExportMeterMarker[];
   readonly durationTicks: number;
   readonly tracks: readonly MidiExportTrack[];
 }
@@ -87,29 +94,37 @@ export function createMidiExport(
       absoluteTick: 0,
       text: source.title,
     },
-    {
+    ...source.tempoMarkers.map((marker): MidiEvent => ({
       kind: "tempo",
-      absoluteTick: 0,
+      absoluteTick: convertProjectTickForMidi(
+        marker.tick,
+        sourcePpqn,
+        outputPpqn,
+      ),
       microsecondsPerQuarterNote:
-        bpmToMicrosecondsPerQuarterNote(
-          source.bpm,
-        ),
-    },
-    {
+        bpmToMicrosecondsPerQuarterNote(marker.bpm),
+    })),
+    ...source.meterMarkers.map((marker): MidiEvent => ({
       kind: "time-signature",
-      absoluteTick: 0,
-      numerator:
-        source.timeSignature.numerator,
-      denominator:
-        source.timeSignature.denominator,
+      absoluteTick: convertProjectTickForMidi(
+        marker.tick,
+        sourcePpqn,
+        outputPpqn,
+      ),
+      numerator: marker.numerator,
+      denominator: marker.denominator,
       midiClocksPerMetronome: 24,
       thirtySecondNotesPerQuarter: 8,
-    },
-    {
-      kind: "end-of-track",
-      absoluteTick: projectEndTick,
-    },
+    })),
   ];
+
+  conductorEvents.sort(
+    (left, right) => left.absoluteTick - right.absoluteTick,
+  );
+  conductorEvents.push({
+    kind: "end-of-track",
+    absoluteTick: projectEndTick,
+  });
   const tracks: MidiTrack[] = [
     {
       events: conductorEvents,

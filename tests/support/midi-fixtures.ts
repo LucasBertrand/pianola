@@ -52,11 +52,14 @@ export function createMidiImportAnalysisFixture(
     title: "Collision import",
     sourceFormat: 1,
     sourceTicksPerQuarterNote: 960,
-    tempoBpm: 120,
-    timeSignature: {
-      numerator: 4,
-      denominator: 4,
-    },
+    tempoMarkers: [{ startTick: 0, bpm: 120 }],
+    meterMarkers: [{
+      startTick: 0,
+      timeSignature: {
+        numerator: 4,
+        denominator: 4,
+      },
+    }],
     timelineEndTick: notes.reduce(
       (maximum, note) => Math.max(
         maximum,

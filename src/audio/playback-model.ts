@@ -9,9 +9,11 @@ import {
   type OscillatorWaveform,
 } from "../domain/instruments/instrument";
 import {
-  type TimeSignature,
   type TransportState,
 } from "../domain/transport/transport";
+import {
+  type TimeSignature,
+} from "../domain/transport/time-map";
 
 export interface PackedInstrumentEvents {
   readonly sourceId: ClipId;

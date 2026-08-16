@@ -1,10 +1,26 @@
-import React from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  type ChangeEvent,
+} from "react";
 import {
   APPLICATION_COLORS,
 } from "../../config/application-colors";
 import {
+  EDITOR_CONSTANTS,
+} from "../../config/editor-config";
+import {
   TONAL_SNAP_CONSTANTS,
 } from "../../config/music-config";
+import {
+  createGridSettings,
+  parseGridSubdivision,
+  type GridSettings,
+} from "../../editor/model/grid-settings";
+import type {
+  MutableRenderSignal,
+} from "../../editor/model/render-signal";
 import {
   getScaleDegreeColorIndex,
   getTonalPatternDefinition,
@@ -18,6 +34,7 @@ import {
 
 export interface PitchSnapControlsProps {
   readonly settings: PitchSnapSettings;
+  readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly onSettingsChange: (
     changes: Partial<PitchSnapSettings>,
   ) => void;
@@ -25,12 +42,75 @@ export interface PitchSnapControlsProps {
 
 export function PitchSnapControls({
   settings: pitchSnapSettings,
+  gridSettings,
   onSettingsChange,
 }: PitchSnapControlsProps): React.JSX.Element {
+  const gridSelectRef = useRef<HTMLSelectElement | null>(null);
+  const subdivisionSelectRef = useRef<HTMLSelectElement | null>(null);
+
+  useEffect(() => {
+    const updateGridControl = (): void => {
+      const settings = gridSettings.get();
+
+      if (gridSelectRef.current !== null) {
+        gridSelectRef.current.value = String(
+          settings.baseResolutionTicks,
+        );
+      }
+
+      if (subdivisionSelectRef.current !== null) {
+        subdivisionSelectRef.current.value = settings.subdivision;
+      }
+    };
+    const unsubscribeGrid = gridSettings.subscribe(updateGridControl);
+
+    updateGridControl();
+
+    return unsubscribeGrid;
+  }, [gridSettings]);
+
+  const handleGridChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>): void => {
+      const baseResolutionTicks = Number(event.currentTarget.value);
+
+      if (
+        Number.isSafeInteger(baseResolutionTicks)
+        && baseResolutionTicks > 0
+      ) {
+        gridSettings.set(
+          createGridSettings(
+            baseResolutionTicks,
+            gridSettings.get().subdivision,
+          ),
+        );
+      }
+    },
+    [gridSettings],
+  );
+  const handleSubdivisionChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>): void => {
+      const subdivision = parseGridSubdivision(
+        event.currentTarget.value,
+      );
+
+      if (subdivision === null) {
+        return;
+      }
+
+      gridSettings.set(
+        createGridSettings(
+          gridSettings.get().baseResolutionTicks,
+          subdivision,
+        ),
+      );
+    },
+    [gridSettings],
+  );
+
   return (
   <div
     className={
-      `pitch-snap-control${
+      `grid-control${
         pitchSnapSettings.enabled
           ? " is-snap-active"
           : ""
@@ -40,8 +120,37 @@ export function PitchSnapControls({
           : ""
       }`
     }
-    aria-label="Tonal pitch snapping"
+    aria-label="Grid and tonal pitch snapping"
   >
+    <div className="grid-control-header">
+      <select
+        ref={gridSelectRef}
+        className="grid-control-select"
+        defaultValue="240"
+        onChange={handleGridChange}
+        aria-label="Grid resolution"
+      >
+        {EDITOR_CONSTANTS.gridResolutionOptions.map((option) => (
+          <option key={option.ticks} value={option.ticks}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <select
+        ref={subdivisionSelectRef}
+        className="grid-control-select"
+        defaultValue="straight"
+        onChange={handleSubdivisionChange}
+        aria-label="Grid subdivision"
+      >
+        {EDITOR_CONSTANTS.gridSubdivisionOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+    <div className="pitch-snap-control">
     <button
       className="pitch-guide-toggle"
       type="button"
@@ -240,6 +349,7 @@ export function PitchSnapControls({
         </option>
       ))}
     </select>
+    </div>
   </div>
 
   );

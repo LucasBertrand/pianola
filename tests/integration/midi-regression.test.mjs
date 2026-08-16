@@ -10,9 +10,11 @@ import {
 } from "../../src/domain/master-bus";
 import {
   createDefaultClipTimeline,
-  getClipMeasureCount,
-  getClipTimeSignature,
 } from "../../src/domain/clips/clip";
+import {
+  getMeasureCount,
+  getMeterAtTick,
+} from "../../src/domain/transport/time-map";
 import {
   createDefaultProjectClock,
   createDefaultTransportState,
@@ -55,6 +57,16 @@ import {
 function createActiveClipMidiExport(project) {
   return createProjectedMidiExport(
     createMidiExportPlan(project, getActiveTestClip(project)),
+  );
+}
+
+function getTestClipMeasureCount(project) {
+  const clip = getActiveTestClip(project);
+
+  return getMeasureCount(
+    project.clock.ppqn,
+    clip.timeline.timeMap,
+    clip.timeline.durationTicks,
   );
 }
 
@@ -630,9 +642,9 @@ function createActiveClipMidiExport(project) {
       "Fast seven.mid",
     );
 
-    assert.equal(analysis.tempoBpm, 240);
+    assert.equal(analysis.tempoMarkers[0].bpm, 240);
     assert.deepEqual(
-      analysis.timeSignature,
+      analysis.meterMarkers[0].timeSignature,
       {
         numerator: 7,
         denominator: 8,
@@ -687,10 +699,7 @@ function createActiveClipMidiExport(project) {
     )[0];
 
     assert.equal(
-      getClipMeasureCount(
-        importedProject.clock,
-        getActiveTestClip(importedProject),
-      ),
+      getTestClipMeasureCount(importedProject),
       1,
     );
     assert.deepEqual(
@@ -812,11 +821,12 @@ function createActiveClipMidiExport(project) {
           name: "Round Trip Clip",
           timeline: {
             durationTicks: 4 * 2_880,
-            meterMap: {
-              segments: [{
+            timeMap: {
+              meterMarkers: [{
                 startTick: 0,
                 timeSignature: { numerator: 3, denominator: 4 },
               }],
+              tempoMarkers: [{ startTick: 0, bpm: 120 }],
             },
           },
           tracksByInstrumentId: {
@@ -895,18 +905,15 @@ function createActiveClipMidiExport(project) {
     assert.equal(exported.file.format, 1);
     assert.equal(exported.file.tracks.length, 3);
     assert.equal(
-      imported.clock.tempoBpm,
+      getActiveTestClip(imported).timeline.timeMap.tempoMarkers[0].bpm,
       120,
     );
     assert.equal(
-      getClipMeasureCount(imported.clock, getActiveTestClip(imported)),
-      getClipMeasureCount(
-        sourceProject.clock,
-        getActiveTestClip(sourceProject),
-      ),
+      getTestClipMeasureCount(imported),
+      getTestClipMeasureCount(sourceProject),
     );
     assert.deepEqual(
-      getClipTimeSignature(getActiveTestClip(imported)),
+      getMeterAtTick(getActiveTestClip(imported).timeline.timeMap, 0),
       {
         numerator: 3,
         denominator: 4,
@@ -976,5 +983,150 @@ function createActiveClipMidiExport(project) {
           && event.note === 64,
       ).absoluteTick,
       240,
+    );
+  });
+
+  test("imports and re-exports every tempo and meter change", () => {
+    const analysis = analyzeMidiImport(
+      parseWrittenFile({
+        format: 1,
+        ticksPerQuarterNote: 960,
+        tracks: [
+          {
+            events: [
+              {
+                kind: "track-name",
+                absoluteTick: 0,
+                text: "Conductor",
+              },
+              {
+                kind: "tempo",
+                absoluteTick: 0,
+                microsecondsPerQuarterNote: 500_000,
+              },
+              {
+                kind: "time-signature",
+                absoluteTick: 0,
+                numerator: 4,
+                denominator: 4,
+                midiClocksPerMetronome: 24,
+                thirtySecondNotesPerQuarter: 8,
+              },
+              {
+                kind: "tempo",
+                absoluteTick: 3_840,
+                microsecondsPerQuarterNote: 1_000_000,
+              },
+              {
+                kind: "time-signature",
+                absoluteTick: 7_680,
+                numerator: 7,
+                denominator: 8,
+                midiClocksPerMetronome: 24,
+                thirtySecondNotesPerQuarter: 8,
+              },
+              {
+                kind: "time-signature",
+                absoluteTick: 8_000,
+                numerator: 5,
+                denominator: 4,
+                midiClocksPerMetronome: 24,
+                thirtySecondNotesPerQuarter: 8,
+              },
+              {
+                kind: "end-of-track",
+                absoluteTick: 15_360,
+              },
+            ],
+          },
+          {
+            events: [
+              {
+                kind: "note-on",
+                absoluteTick: 0,
+                channel: 0,
+                note: 60,
+                velocity: 100,
+              },
+              {
+                kind: "note-off",
+                absoluteTick: 960,
+                channel: 0,
+                note: 60,
+                velocity: 0,
+              },
+              {
+                kind: "end-of-track",
+                absoluteTick: 15_360,
+              },
+            ],
+          },
+        ],
+      }),
+      "Multi map.mid",
+    );
+
+    // The 5/4 change at tick 8_000 falls inside a 7/8 measure and is ignored.
+    assert.deepEqual(
+      analysis.tempoMarkers,
+      [
+        { startTick: 0, bpm: 120 },
+        { startTick: 3_840, bpm: 60 },
+      ],
+    );
+    assert.deepEqual(
+      analysis.meterMarkers,
+      [
+        { startTick: 0, timeSignature: { numerator: 4, denominator: 4 } },
+        { startTick: 7_680, timeSignature: { numerator: 7, denominator: 8 } },
+      ],
+    );
+    assert.ok(
+      analysis.warnings.some(
+        (warning) => warning.includes("time-signature"),
+      ),
+    );
+
+    const imported = createProjectFromMidiImport(analysis, "merge");
+    const clip = getActiveTestClip(imported);
+
+    assert.deepEqual(
+      clip.timeline.timeMap.tempoMarkers,
+      analysis.tempoMarkers,
+    );
+    assert.deepEqual(
+      clip.timeline.timeMap.meterMarkers,
+      analysis.meterMarkers,
+    );
+
+    const exported = createActiveClipMidiExport(imported);
+    const conductorEvents = exported.file.tracks[0].events;
+    const tempoEvents = conductorEvents.filter(
+      (event) => event.kind === "tempo",
+    );
+    const signatureEvents = conductorEvents.filter(
+      (event) => event.kind === "time-signature",
+    );
+
+    assert.deepEqual(
+      tempoEvents.map((event) => [
+        event.absoluteTick,
+        event.microsecondsPerQuarterNote,
+      ]),
+      [
+        [0, 500_000],
+        [3_840, 1_000_000],
+      ],
+    );
+    assert.deepEqual(
+      signatureEvents.map((event) => [
+        event.absoluteTick,
+        event.numerator,
+        event.denominator,
+      ]),
+      [
+        [0, 4, 4],
+        [7_680, 7, 8],
+      ],
     );
   });

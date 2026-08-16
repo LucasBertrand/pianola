@@ -1,10 +1,12 @@
 import React from "react";
 import {
-  getClipMeasureCount,
-  getClipTimeSignature,
   MAXIMUM_CLIP_NAME_LENGTH,
   MAXIMUM_PROJECT_CLIP_COUNT,
 } from "../../../domain/clips/clip";
+import {
+  getMeasureCount,
+  getMeterAtTick,
+} from "../../../domain/transport/time-map";
 import {
   type ClipId,
 } from "../../../domain/identifiers";
@@ -48,7 +50,10 @@ export function ClipInspector({
           if (clip === undefined) {
             return null;
           }
-          const timeSignature = getClipTimeSignature(clip);
+          const timeSignature = getMeterAtTick(
+            clip.timeline.timeMap,
+            0,
+          );
 
           return (
             <article
@@ -102,7 +107,11 @@ export function ClipInspector({
                   onRename={(name) => onRename(clip.id, name)}
                 />
                 <small>
-                  {getClipMeasureCount(projectState.clock, clip)} measures {timeSignature.numerator}/
+                  {getMeasureCount(
+                    projectState.clock.ppqn,
+                    clip.timeline.timeMap,
+                    clip.timeline.durationTicks,
+                  )} measures {timeSignature.numerator}/
                   {timeSignature.denominator}
                 </small>
               </div>

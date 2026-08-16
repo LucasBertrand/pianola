@@ -4,11 +4,11 @@ Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 13 août 2026.
+Dernière mise à jour : 16 août 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |
-| document projet | horloge globale, clips, timelines, pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `ProjectStore` | ouverture du projet | oui, section `project` du format `.pianola` v1 | oui, par transaction métier | faible à moyenne |
+| document projet | horloge globale (PPQN), clips, timelines (marqueurs de tempo/métrique, durée), pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `ProjectStore` | ouverture du projet | oui, section `project` du format `.pianola` v1 | oui, par transaction métier | faible à moyenne |
 | espace de travail | clip affiché, viewport, grille, snap tonal, mode de sélection, couleur des notes, panneaux | `WorkspaceState`, `EditorRuntime` et état React de composition | onglet d’éditeur | préférences utiles dans `NativeEditorState` | non | moyenne |
 | session d’édition | sélection de notes, presse-papier, draft de geste, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | non ; seule la transaction validée entre dans l’historique | élevée |
 | prévisualisation audio | réglages d’instrument en cours d’édition | brouillon du dialogue projeté par message dans le worklet | ouverture du dialogue d’instrument | non | non ; la validation seule crée une transaction | élevée pendant l’interaction |

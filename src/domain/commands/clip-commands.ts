@@ -11,13 +11,9 @@ import {
   type ProjectState,
 } from "../project/project-document";
 import {
-  getClipTimeSignature,
   MAXIMUM_CLIP_NAME_LENGTH,
   MAXIMUM_PROJECT_CLIP_COUNT,
 } from "../clips/clip";
-import {
-  getTicksPerMeasure,
-} from "../transport/transport";
 import {
   MAXIMUM_CLIP_NOTE_COUNT,
 } from "../notes/note";
@@ -182,16 +178,7 @@ function assertValidClip(
   assertValidClipTimeline(clip.timeline, state.clock);
   assertValidTransportState(clip.transportSettings);
   const durationTicks = clip.timeline.durationTicks;
-  const firstTimeSignature = getClipTimeSignature(clip);
-  const ticksPerMeasure = getTicksPerMeasure(state.clock, firstTimeSignature);
 
-  if (durationTicks % ticksPerMeasure !== 0) {
-    reject(
-      "INVALID_COMMAND",
-      `Clip "${clip.id}" duration must contain complete measures.`,
-      commandType,
-    );
-  }
   if (
     clip.instrumentStatesById === null
     || typeof clip.instrumentStatesById !== "object"

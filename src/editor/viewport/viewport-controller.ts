@@ -7,12 +7,13 @@ import {
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
-  getClipTimeSignature,
+  type ClipTimeline,
 } from "../../domain/clips/clip";
 import {
-  type ProjectClock,
-  type TimeSignature,
-} from "../../domain/transport/transport";
+  getMeasurePosition,
+  tickToSeconds,
+  type TimeMap,
+} from "../../domain/transport/time-map";
 import type {
   ViewportState,
 } from "../geometry/converter";
@@ -235,14 +236,14 @@ export class ViewportController {
     return {
       musicalPosition: formatMusicalPosition(
         playheadTick,
-        state.clock,
-        getClipTimeSignature(activeClip),
+        state.clock.ppqn,
+        activeClip.timeline,
         this.runtime.gridResolutionTicks.get(),
       ),
       elapsedTime: formatElapsedTime(
         playheadTick,
         state.clock.ppqn,
-        state.clock.tempoBpm,
+        activeClip.timeline.timeMap,
       ),
     };
   }
@@ -395,32 +396,33 @@ export class ViewportController {
 
 export function formatMusicalPosition(
   tick: number,
-  clock: ProjectClock,
-  timeSignature: TimeSignature,
+  ppqn: number,
+  timeline: ClipTimeline,
   gridResolutionTicks: number,
 ): string {
   const safeTick = Math.max(0, Math.round(tick));
-  const ticksPerBeat = clock.ppqn * 4 / timeSignature.denominator;
-  const ticksPerBar = ticksPerBeat * timeSignature.numerator;
-  const barIndex = Math.floor(safeTick / ticksPerBar);
-  const tickInBar = safeTick - barIndex * ticksPerBar;
-  const beatIndex = Math.floor(tickInBar / ticksPerBeat);
-  const tickInBeat = tickInBar - beatIndex * ticksPerBeat;
+  const position = getMeasurePosition(
+    ppqn,
+    timeline.timeMap,
+    timeline.durationTicks,
+    safeTick,
+  );
   const subdivisionIndex = Math.floor(
-    tickInBeat / Math.max(1, gridResolutionTicks),
+    position.tickInBeat / Math.max(1, gridResolutionTicks),
   );
 
-  return `${barIndex + 1}.${beatIndex + 1}.${subdivisionIndex + 1}`;
+  return `${String(position.measureIndex + 1)}.${String(position.beatIndex + 1)}.${String(subdivisionIndex + 1)}`;
 }
 
 export function formatElapsedTime(
   tick: number,
   ppqn: number,
-  bpm: number,
+  timeMap: TimeMap,
 ): string {
-  const totalSeconds = Math.max(
-    0,
-    tick / Math.max(1, ppqn) * 60 / Math.max(1, bpm),
+  const totalSeconds = tickToSeconds(
+    Math.max(1, ppqn),
+    timeMap,
+    Math.max(0, tick),
   );
   const totalWholeSeconds = Math.floor(totalSeconds);
   const hours = Math.floor(totalWholeSeconds / 3_600);

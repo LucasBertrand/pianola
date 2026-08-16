@@ -59,8 +59,10 @@ import {
 } from "../../src/domain/master-bus";
 import {
   createDefaultClipTimeline,
-  getClipMeasureCount,
 } from "../../src/domain/clips/clip";
+import {
+  getMeasureCount,
+} from "../../src/domain/transport/time-map";
 import {
   createDefaultProjectClock,
   createDefaultTransportState,
@@ -161,7 +163,13 @@ function createTestTimeline(measureCount) {
 }
 
 function getActiveTestMeasureCount(state) {
-  return getClipMeasureCount(state.clock, getActiveTestClip(state));
+  const clip = getActiveTestClip(state);
+
+  return getMeasureCount(
+    state.clock.ppqn,
+    clip.timeline.timeMap,
+    clip.timeline.durationTicks,
+  );
 }
 
   let transactionSequence = 0;
@@ -1261,6 +1269,7 @@ function getActiveTestMeasureCount(state) {
     });
     const tempoState = dispatch(withSecondClip, {
       type: "UpdateTempo",
+      clipId: "clip-test",
       bpm: 84,
     });
     const state = {
@@ -1308,7 +1317,8 @@ function getActiveTestMeasureCount(state) {
       "clip-native-second",
     );
     assert.equal(
-      loaded.projectState.clock.tempoBpm,
+      loaded.projectState.clipsById["clip-test"]
+        .timeline.timeMap.tempoMarkers[0].bpm,
       84,
     );
     assert.deepEqual(

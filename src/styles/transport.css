@@ -102,18 +102,6 @@
   color: var(--color-accent-warm);
 }
 
-.transport-metrics {
-  display: flex;
-  min-width: 0;
-  height: 44px;
-  padding: 0 6px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface-inset);
-  align-items: stretch;
-  grid-area: metrics;
-}
-
 .master-bus-control {
   display: grid;
   width: calc(var(--project-inspector-width) - 32px);
@@ -238,88 +226,6 @@
   border-color: var(--color-danger-strong);
   background: var(--color-danger-soft);
   color: var(--color-accent-danger);
-}
-
-.metric {
-  position: relative;
-  display: grid;
-  min-width: 100px;
-  padding: 7px 12px;
-  grid-template-columns: auto auto;
-  grid-template-rows: 12px 18px;
-  column-gap: 5px;
-  align-items: end;
-}
-
-.metric + .metric {
-  border-left: 1px solid var(--color-border-subtle);
-}
-
-.metric small {
-  color: var(--color-text-quiet);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  grid-column: 1 / -1;
-}
-
-.metric strong {
-  color: var(--color-text-strong);
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.metric-control {
-  min-width: 0;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--color-text-strong);
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 13px;
-  font-weight: 600;
-  touch-action: manipulation;
-}
-
-.metric-control:focus-visible {
-  border-radius: 4px;
-  box-shadow: 0 0 0 2px var(--color-primary-medium);
-}
-
-.tempo-control {
-  width: 54px;
-  appearance: textfield;
-}
-
-.tempo-control::-webkit-inner-spin-button,
-.tempo-control::-webkit-outer-spin-button {
-  margin: 0;
-  appearance: none;
-}
-
-.metric-select {
-  width: 92px;
-  padding-right: 20px;
-  color-scheme: var(--color-browser-scheme);
-  cursor: pointer;
-}
-
-.metric:last-child {
-  min-width: 118px;
-}
-
-.metric:last-child .metric-select {
-  width: 104px;
-}
-
-.metric span {
-  color: var(--color-text-disabled);
-  font-size: 8px;
-  letter-spacing: 0.08em;
 }
 
 .master-gain-input {

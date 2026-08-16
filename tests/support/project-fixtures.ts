@@ -8,10 +8,15 @@ import {
 import {
   createDefaultProjectClock,
   createDefaultTransportState,
-  getTicksPerMeasure,
   type TransportState,
-  type TimeSignature,
 } from "../../src/domain/transport/transport";
+import {
+  getTicksPerMeasure,
+  type TimeSignature,
+} from "../../src/domain/transport/time-map";
+import {
+  PROJECT_CONSTANTS,
+} from "../../src/config/domain-limits";
 import {
   getActiveClip,
   PROJECT_SCHEMA_VERSION,
@@ -132,7 +137,6 @@ export function createAudioTestProject({
   };
   const clock = {
     ...defaultClock,
-    tempoBpm: transportChanges.bpm ?? defaultClock.tempoBpm,
     ppqn: transportChanges.ppqn ?? defaultClock.ppqn,
   };
   const transportSettings: TransportState = {
@@ -194,9 +198,14 @@ export function createAudioTestProject({
         name: "Test Clip",
         timeline: {
           durationTicks:
-            measureCount * getTicksPerMeasure(clock, timeSignature),
-          meterMap: {
-            segments: [{ startTick: 0, timeSignature }],
+            measureCount * getTicksPerMeasure(clock.ppqn, timeSignature),
+          timeMap: {
+            meterMarkers: [{ startTick: 0, timeSignature }],
+            tempoMarkers: [{
+              startTick: 0,
+              bpm: transportChanges.bpm
+                ?? PROJECT_CONSTANTS.defaultTempoBpm,
+            }],
           },
         },
         tracksByInstrumentId,

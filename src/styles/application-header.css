@@ -9,9 +9,8 @@
   grid-template-columns:
     minmax(300px, 1fr)
     auto
-    auto
     minmax(300px, 1fr);
-  grid-template-areas: "brand transport metrics master";
+  grid-template-areas: "brand transport master";
   align-items: center;
   gap: 22px;
 }

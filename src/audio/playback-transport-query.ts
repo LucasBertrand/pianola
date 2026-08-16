@@ -19,23 +19,13 @@ export function findPlaybackInstrument(
   );
 }
 
-export function getPlaybackBpm(snapshot: PlaybackSnapshot): number {
-  const bpm = snapshot.tempoMap.bpms[0];
-
-  if (bpm === undefined) {
-    throw new RangeError("The playback snapshot has no tempo.");
-  }
-
-  return bpm;
-}
-
 export function assertCompatiblePlaybackState(
   snapshot: PlaybackSnapshot,
   transport: TransportState,
 ): void {
   if (
     snapshot.ppqn <= 0
-    || snapshot.tempoMap.bpms.length !== 1
+    || snapshot.tempoMap.bpms.length < 1
     || (snapshot.tempoMap.bpms[0] ?? 0) <= 0
     || transport.loop.startTick < 0
     || transport.loop.endTick <= transport.loop.startTick

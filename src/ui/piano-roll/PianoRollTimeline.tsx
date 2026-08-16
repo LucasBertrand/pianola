@@ -8,8 +8,6 @@ import {
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
-  getClipMeasureCount,
-  getClipTimeSignature,
 } from "../../domain/clips/clip";
 import type {
   LoopRegion,
@@ -33,11 +31,22 @@ import {
 import {
   PianoRollLoopOverlay,
 } from "./PianoRollLoopOverlay";
+import {
+  PianoRollTimeMapOverlay,
+} from "./PianoRollTimeMapOverlay";
+import type {
+  TimeMapMarkerFlag,
+} from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
+
 export interface PianoRollRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly markerFlags: readonly TimeMapMarkerFlag[];
   readonly onLoopCommit: (loop: LoopRegion) => void;
+  readonly onOpenMarker: (tick: number) => void;
+  readonly onMoveMarker: (fromTick: number, toTick: number) => void;
+  readonly onGridSeek: (tick: number) => void;
 }
 
 export function PianoRollRuler(
@@ -47,14 +56,17 @@ export function PianoRollRuler(
     viewport,
     projectStore,
     gridResolutionTicks,
+    markerFlags,
     onLoopCommit,
+    onOpenMarker,
+    onMoveMarker,
+    onGridSeek,
   } = props;
   const renderRuler = useCallback(
     (frame: CanvasFrame): void => {
       const currentViewport = viewport.get();
       const projectState = projectStore.getState();
       const activeClip = getActiveClip(projectState);
-      const timeSignature = getClipTimeSignature(activeClip);
       const totalTicks = getClipDurationTicks(activeClip);
       paintRulerCanvas({
         context: frame.context,
@@ -63,12 +75,8 @@ export function PianoRollRuler(
         devicePixelRatio: frame.devicePixelRatio,
         viewport: currentViewport,
         clock: projectState.clock,
-        timeSignature,
+        timeMap: activeClip.timeline.timeMap,
         durationTicks: totalTicks,
-        measureCount: getClipMeasureCount(
-          projectState.clock,
-          activeClip,
-        ),
         gridResolutionTicks: gridResolutionTicks.get(),
       });
     },
@@ -121,6 +129,15 @@ export function PianoRollRuler(
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}
         onCommit={onLoopCommit}
+        onGridSeek={onGridSeek}
+      />
+      <PianoRollTimeMapOverlay
+        flags={markerFlags}
+        viewport={viewport}
+        projectStore={projectStore}
+        gridResolutionTicks={gridResolutionTicks}
+        onOpenMarker={onOpenMarker}
+        onMoveMarker={onMoveMarker}
       />
     </div>
   );

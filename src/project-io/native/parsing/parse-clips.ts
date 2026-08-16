@@ -12,9 +12,13 @@ import {
 import {
   type LoopRegion,
   type ProjectClock,
-  type TimeSignature,
   type TransportState,
 } from "../../../domain/transport/transport";
+import {
+  type MeterMarker,
+  type TempoMarker,
+  type TimeSignature,
+} from "../../../domain/transport/time-map";
 import {
   type Note,
 } from "../../../domain/notes/note";
@@ -34,8 +38,10 @@ import {
   assertExactRecordKeys,
   readArray,
   readBoolean,
+  readBoundedArray,
   readNonEmptyString,
   readNonNegativeSafeInteger,
+  readNumberInRange,
   readPositiveSafeInteger,
   readRecord,
   readSafeInteger,
@@ -184,35 +190,27 @@ function parseClipTimeline(
   path: string,
 ): ClipTimeline {
   const stored = readRecord(source, path);
-  assertExactRecordKeys(stored, ["durationTicks", "meterMap"], path);
-  const meterMap = readRecord(stored["meterMap"], `${path}.meterMap`);
-  assertExactRecordKeys(meterMap, ["segments"], `${path}.meterMap`);
-  const sourceSegments = readArray(
-    meterMap["segments"],
-    `${path}.meterMap.segments`,
+  assertExactRecordKeys(stored, ["durationTicks", "timeMap"], path);
+  const timeMap = readRecord(stored["timeMap"], `${path}.timeMap`);
+  assertExactRecordKeys(
+    timeMap,
+    ["meterMarkers", "tempoMarkers"],
+    `${path}.timeMap`,
   );
-  const segments = sourceSegments.map((sourceSegment, index) => {
-    const segmentPath = `${path}.meterMap.segments[${String(index)}]`;
-    const segment = readRecord(sourceSegment, segmentPath);
-    assertExactRecordKeys(segment, ["startTick", "timeSignature"], segmentPath);
-
-    return {
-      startTick: readNonNegativeSafeInteger(
-        segment["startTick"],
-        `${segmentPath}.startTick`,
-      ),
-      timeSignature: parseTimeSignature(
-        segment["timeSignature"],
-        `${segmentPath}.timeSignature`,
-      ),
-    };
-  });
+  const meterMarkers = parseMeterMarkers(
+    timeMap["meterMarkers"],
+    `${path}.timeMap.meterMarkers`,
+  );
+  const tempoMarkers = parseTempoMarkers(
+    timeMap["tempoMarkers"],
+    `${path}.timeMap.tempoMarkers`,
+  );
   const timeline: ClipTimeline = {
     durationTicks: readPositiveSafeInteger(
       stored["durationTicks"],
       `${path}.durationTicks`,
     ),
-    meterMap: { segments },
+    timeMap: { meterMarkers, tempoMarkers },
   };
   const validation = validateClipTimeline(timeline, clock);
 
@@ -228,18 +226,102 @@ function parseClipTimeline(
   return timeline;
 }
 
+function parseMeterMarkers(
+  source: unknown,
+  path: string,
+): MeterMarker[] {
+  const sourceMarkers = readBoundedArray(
+    source,
+    path,
+    PROJECT_CONSTANTS.maximumMeasureCount,
+  );
+
+  return sourceMarkers.map((sourceMarker, index) => {
+    const markerPath = `${path}[${String(index)}]`;
+    const marker = readRecord(sourceMarker, markerPath);
+    assertExactRecordKeys(marker, ["startTick", "timeSignature"], markerPath);
+
+    return {
+      startTick: readNonNegativeSafeInteger(
+        marker["startTick"],
+        `${markerPath}.startTick`,
+      ),
+      timeSignature: parseTimeSignature(
+        marker["timeSignature"],
+        `${markerPath}.timeSignature`,
+      ),
+    };
+  });
+}
+
+function parseTempoMarkers(
+  source: unknown,
+  path: string,
+): TempoMarker[] {
+  const sourceMarkers = readBoundedArray(
+    source,
+    path,
+    PROJECT_CONSTANTS.maximumMeasureCount,
+  );
+
+  return sourceMarkers.map((sourceMarker, index) => {
+    const markerPath = `${path}[${String(index)}]`;
+    const marker = readRecord(sourceMarker, markerPath);
+    assertExactRecordKeys(marker, ["startTick", "bpm"], markerPath);
+
+    return {
+      startTick: readNonNegativeSafeInteger(
+        marker["startTick"],
+        `${markerPath}.startTick`,
+      ),
+      bpm: readNumberInRange(
+        marker["bpm"],
+        `${markerPath}.bpm`,
+        PROJECT_CONSTANTS.minimumTempoBpm,
+        PROJECT_CONSTANTS.maximumTempoBpm,
+      ),
+    };
+  });
+}
+
 function parseTimeSignature(source: unknown, path: string): TimeSignature {
   const stored = readRecord(source, path);
-  assertExactRecordKeys(stored, ["numerator", "denominator"], path);
+  const hasBeatGroups = "beatGroups" in stored;
+  assertExactRecordKeys(
+    stored,
+    hasBeatGroups
+      ? ["numerator", "denominator", "beatGroups"]
+      : ["numerator", "denominator"],
+    path,
+  );
   const denominator = readSafeInteger(stored["denominator"], `${path}.denominator`);
 
   if (![1, 2, 4, 8, 16, 32].includes(denominator)) {
     fail("INVALID_DATA", `${path}.denominator`, "Time signature denominator is not supported.");
   }
 
-  return {
+  const timeSignature: TimeSignature = {
     numerator: readPositiveSafeInteger(stored["numerator"], `${path}.numerator`),
     denominator: denominator as TimeSignature["denominator"],
+  };
+
+  if (!hasBeatGroups) {
+    return timeSignature;
+  }
+
+  const beatGroups = readBoundedArray(
+    stored["beatGroups"],
+    `${path}.beatGroups`,
+    PROJECT_CONSTANTS.maximumMeasureCount,
+  ).map((group, index) =>
+    readPositiveSafeInteger(
+      group,
+      `${path}.beatGroups[${String(index)}]`,
+    ));
+
+  return {
+    ...timeSignature,
+    beatGroups,
   };
 }
 

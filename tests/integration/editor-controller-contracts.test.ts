@@ -7,8 +7,8 @@ import {
   createEditorRuntime,
 } from "../../src/app/create-app-runtime";
 import {
-  createDefaultProjectClock,
-} from "../../src/domain/transport/transport";
+  createDefaultTimeMap,
+} from "../../src/domain/transport/time-map";
 import {
   getActiveClip,
 } from "../../src/domain/project/project-document";
@@ -70,13 +70,15 @@ describe("P3 editor controller contracts", () => {
   });
 
   test("formats timeline status independently from DOM outputs", () => {
+    const timeMap = createDefaultTimeMap();
+
     expect(formatMusicalPosition(
       3_960,
-      createDefaultProjectClock(),
-      { numerator: 4, denominator: 4 },
+      960,
+      { durationTicks: 7_680, timeMap },
       120,
     )).toBe("2.1.2");
-    expect(formatElapsedTime(3_840, 480, 120)).toBe("00:00:04");
+    expect(formatElapsedTime(3_840, 480, timeMap)).toBe("00:00:04");
   });
 
   test("exposes selection through an imperative controller", () => {

@@ -1,13 +1,10 @@
 import {
   type Clip,
+  getClipDurationTicks,
 } from "../../domain/clips/clip";
 import {
   type ProjectDocument,
 } from "../../domain/project/project-document";
-import {
-  getClipTimeSignature,
-  getClipDurationTicks,
-} from "../../domain/clips/clip";
 import type {
   MidiExportPlan,
 } from "../../project-io/midi/midi-exporter";
@@ -43,8 +40,16 @@ export function createMidiExportPlan(
     sourceId: clip.id,
     title: state.title,
     ppqn: state.clock.ppqn,
-    bpm: state.clock.tempoBpm,
-    timeSignature: getClipTimeSignature(clip),
+    tempoMarkers: clip.timeline.timeMap.tempoMarkers.map(
+      (marker) => ({ tick: marker.startTick, bpm: marker.bpm }),
+    ),
+    meterMarkers: clip.timeline.timeMap.meterMarkers.map(
+      (marker) => ({
+        tick: marker.startTick,
+        numerator: marker.timeSignature.numerator,
+        denominator: marker.timeSignature.denominator,
+      }),
+    ),
     durationTicks: getClipDurationTicks(clip),
     tracks,
   };

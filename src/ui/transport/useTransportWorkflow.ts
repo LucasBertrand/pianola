@@ -6,13 +6,14 @@ import {
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
-  getClipMeasureCount,
-  getClipTimeSignature,
   MAXIMUM_MEASURE_COUNT,
   MINIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
-  getTicksPerMeasure,
+  getMeasureCount,
+  getMeasureSpanAtTick,
+} from "../../domain/transport/time-map";
+import {
   type LoopRegion,
 } from "../../domain/transport/transport";
 import type {
@@ -54,17 +55,22 @@ export function useTransportWorkflow({
   const insertMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
-    const measureCount = getClipMeasureCount(state.clock, activeClip);
+    const measureCount = getMeasureCount(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
+    );
 
     if (measureCount >= MAXIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureTicks = getTicksPerMeasure(state.clock, getClipTimeSignature(activeClip));
-    const measureIndex = Math.min(
-      measureCount - 1,
-      Math.floor(runtime.playheadTick.get() / measureTicks),
-    );
+    const measureIndex = getMeasureSpanAtTick(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
+      runtime.playheadTick.get(),
+    ).index;
 
     prepareStructuralEdit();
     runtime.editorCommands.dispatch(
@@ -80,17 +86,22 @@ export function useTransportWorkflow({
   const removeMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
-    const measureCount = getClipMeasureCount(state.clock, activeClip);
+    const measureCount = getMeasureCount(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
+    );
 
     if (measureCount <= MINIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureTicks = getTicksPerMeasure(state.clock, getClipTimeSignature(activeClip));
-    const measureIndex = Math.min(
-      measureCount - 1,
-      Math.floor(runtime.playheadTick.get() / measureTicks),
-    );
+    const measureIndex = getMeasureSpanAtTick(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
+      runtime.playheadTick.get(),
+    ).index;
     const currentPlayheadTick = runtime.playheadTick.get();
 
     prepareStructuralEdit();

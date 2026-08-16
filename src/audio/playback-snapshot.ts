@@ -9,8 +9,10 @@ import {
   type ProjectDocument,
 } from "../domain/project/project-document";
 import {
-  type MeterMapSegment,
-} from "../domain/transport/transport";
+  getMeterAtTick,
+  getTempoAtTick,
+  type TimeMap,
+} from "../domain/transport/time-map";
 import {
   type InstrumentId,
 } from "../domain/identifiers";
@@ -56,7 +58,13 @@ export function compilePlaybackPlan(
   const clip = source.clip;
 
   assertPositiveSafeInteger(projectState.clock.ppqn, "Project PPQN");
-  assertPositiveFiniteNumber(projectState.clock.tempoBpm, "Project BPM");
+
+  for (const tempoMarker of clip.timeline.timeMap.tempoMarkers) {
+    assertPositiveFiniteNumber(
+      tempoMarker.bpm,
+      `Tempo marker at tick ${String(tempoMarker.startTick)}`,
+    );
+  }
 
   const durationTicks = getClipDurationTicks(clip);
 
@@ -158,9 +166,8 @@ export function compilePlaybackPlan(
     masterTuningFrequencyHz:
       projectState.masterBus.tuningFrequencyHz,
     tempoMap: createTempoMapSnapshot(
-      projectState.clock.tempoBpm,
       projectState.clock.ppqn,
-      clip.timeline.meterMap.segments,
+      clip.timeline.timeMap,
     ),
     instruments: Object.freeze(instruments),
   };
@@ -333,28 +340,52 @@ function cloneInstrument(
   });
 }
 
+/**
+ * Flattens the clip time map into parallel arrays segmented on the union of
+ * tempo and meter marker ticks. Segment seconds accumulate with the tempo of
+ * the previous segment, so tick↔seconds conversion stays exact across tempo
+ * changes.
+ */
 function createTempoMapSnapshot(
-  bpm: number,
   ppqn: number,
-  segments: readonly MeterMapSegment[],
+  timeMap: TimeMap,
 ): TempoMapSnapshot {
-  if (segments.length === 0 || segments[0]?.startTick !== 0) {
+  if (
+    timeMap.meterMarkers[0]?.startTick !== 0
+    || timeMap.tempoMarkers[0]?.startTick !== 0
+  ) {
     throw new PlaybackSnapshotCompilationError(
-      "A playback meter map must start at tick 0.",
+      "A playback time map must start with meter and tempo markers at tick 0.",
     );
   }
 
-  const startTicks = new Float64Array(segments.length);
-  const startSeconds = new Float64Array(segments.length);
-  const bpms = new Float64Array(segments.length);
-  const timeSignatures = segments.map((segment, index) => {
-    startTicks[index] = segment.startTick;
-    startSeconds[index] = segment.startTick * 60 / (bpm * ppqn);
+  const segmentTicks = [...new Set([
+    ...timeMap.meterMarkers.map((marker) => marker.startTick),
+    ...timeMap.tempoMarkers.map((marker) => marker.startTick),
+  ])].sort((left, right) => left - right);
+  const startTicks = new Float64Array(segmentTicks.length);
+  const startSeconds = new Float64Array(segmentTicks.length);
+  const bpms = new Float64Array(segmentTicks.length);
+  const timeSignatures = segmentTicks.map((startTick, index) => {
+    const bpm = getTempoAtTick(timeMap, startTick);
+
+    startTicks[index] = startTick;
     bpms[index] = bpm;
 
+    if (index > 0) {
+      const previousBpm = bpms[index - 1] ?? bpm;
+      const previousStartTick = startTicks[index - 1] ?? 0;
+      const previousStartSeconds = startSeconds[index - 1] ?? 0;
+
+      startSeconds[index] = previousStartSeconds
+        + (startTick - previousStartTick) * 60 / (previousBpm * ppqn);
+    }
+
+    const timeSignature = getMeterAtTick(timeMap, startTick);
+
     return Object.freeze({
-      numerator: segment.timeSignature.numerator,
-      denominator: segment.timeSignature.denominator,
+      numerator: timeSignature.numerator,
+      denominator: timeSignature.denominator,
     });
   });
 

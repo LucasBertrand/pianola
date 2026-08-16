@@ -36,6 +36,7 @@ export interface EditorToolbarProps {
   readonly onSelectionModeChange: (mode: SelectionMode) => void;
   readonly onNoteColorModeToggle: () => void;
   readonly onSliceSelectionAtPlayhead: () => void;
+  readonly onAddMarkerAtPlayhead: () => void;
   readonly onTransformSelection: (
     kind: SelectionTransformationKind,
     label: string,
@@ -65,6 +66,7 @@ export function EditorToolbar({
   onSelectionModeChange,
   onNoteColorModeToggle,
   onSliceSelectionAtPlayhead,
+  onAddMarkerAtPlayhead,
   onTransformSelection,
 }: EditorToolbarProps): React.JSX.Element {
   return (
@@ -135,6 +137,16 @@ export function EditorToolbar({
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="m15 7 5 5-5 5" />
             <path d="M19 12h-8a6 6 0 0 0-6 6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          title="Add marker at playhead"
+          aria-label="Add marker at playhead"
+          onClick={onAddMarkerAtPlayhead}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+             <path d="M5 21V3h9l2 3h5v9h-6l-2-3H7v9H5Z" />
           </svg>
         </button>
         <button

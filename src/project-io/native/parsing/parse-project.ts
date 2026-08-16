@@ -32,7 +32,6 @@ import {
   readBoolean,
   readNonEmptyString,
   readNumberInRange,
-  readPositiveNumber,
   readPositiveSafeInteger,
   readRecord,
   readSafeInteger,
@@ -131,9 +130,8 @@ export function parseProjectSnapshot(
 
 function parseProjectClock(source: unknown, path: string): ProjectClock {
   const stored = readRecord(source, path);
-  assertExactRecordKeys(stored, ["tempoBpm", "ppqn", "launchGridTicks"], path);
+  assertExactRecordKeys(stored, ["ppqn", "launchGridTicks"], path);
   const clock: ProjectClock = {
-    tempoBpm: readPositiveNumber(stored["tempoBpm"], `${path}.tempoBpm`),
     ppqn: readPositiveSafeInteger(stored["ppqn"], `${path}.ppqn`),
     launchGridTicks: readPositiveSafeInteger(
       stored["launchGridTicks"],

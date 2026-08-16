@@ -5,8 +5,9 @@ import {
   type ProjectInstrument,
 } from "../../domain/instruments/instrument";
 import {
-  type TimeSignature,
-} from "../../domain/transport/transport";
+  type MeterMarker,
+  type TempoMarker,
+} from "../../domain/transport/time-map";
 import type { MidiEvent } from "./standard-midi-file";
 
 export type MidiImportCollisionStrategy = "merge" | "slice";
@@ -20,8 +21,8 @@ export interface MidiImportAnalysis {
   readonly title: string;
   readonly sourceFormat: 0 | 1;
   readonly sourceTicksPerQuarterNote: number;
-  readonly tempoBpm: number;
-  readonly timeSignature: TimeSignature;
+  readonly tempoMarkers: readonly TempoMarker[];
+  readonly meterMarkers: readonly MeterMarker[];
   readonly timelineEndTick: number;
   readonly instrumentCandidates: readonly MidiImportInstrumentCandidate[];
   readonly noteCount: number;

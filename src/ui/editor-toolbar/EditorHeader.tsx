@@ -5,9 +5,6 @@ import React, {
 import type {
   PlaybackStatus,
 } from "../../audio/playback-model";
-import type {
-  EditorCommandPort,
-} from "../../use-cases/commands/editor-command-service";
 import {
   getActiveClip,
   type ProjectState,
@@ -15,15 +12,6 @@ import {
 import {
   MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
 } from "../../project-io/native/version";
-import type {
-  ProjectStorePort,
-} from "../../domain/project-store";
-import type {
-  GridSettings,
-} from "../../editor/model/grid-settings";
-import type {
-  MutableRenderSignal,
-} from "../../editor/model/render-signal";
 import {
   MasterGainControl,
 } from "../transport/MasterGainControl";
@@ -33,14 +21,8 @@ import {
 import {
   TransportControls,
 } from "../transport/TransportControls";
-import {
-  TransportMetrics,
-} from "../transport/TransportMetrics";
 
 export interface EditorHeaderProps {
-  readonly projectStore: ProjectStorePort;
-  readonly editorCommands: EditorCommandPort;
-  readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly projectState: ProjectState;
   readonly playbackStatus: PlaybackStatus;
   readonly projectInputRef: RefObject<HTMLInputElement | null>;
@@ -68,9 +50,6 @@ export interface EditorHeaderProps {
 }
 
 export function EditorHeader({
-  projectStore,
-  editorCommands,
-  gridSettings,
   projectState,
   playbackStatus,
   projectInputRef: loadProjectInputRef,
@@ -137,11 +116,6 @@ export function EditorHeader({
       onTogglePlayback={togglePlayback}
       onStop={stopPlayback}
       onToggleLoop={handleToggleLoop}
-    />
-        <TransportMetrics
-          projectStore={projectStore}
-          editorCommands={editorCommands}
-          gridSettings={gridSettings}
     />
 
     <MasterGainControl

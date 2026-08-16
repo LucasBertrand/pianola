@@ -28,7 +28,6 @@ import type {
   UpdateMasterTuningCommand,
   UpdateProjectInstrumentCommand,
   UpdateProjectTitleCommand,
-  UpdateTempoCommand,
 } from "./command-types";
 import {
   applyAddProjectInstrument,
@@ -57,12 +56,20 @@ import {
   applyUpdateProjectTitle,
 } from "./project-commands";
 import {
+  applyAddMeterMarker,
+  applyAddTempoMarker,
   applyAppendMeasures,
+  applyDeleteMeterMarker,
+  applyDeleteTempoMarker,
   applyInsertMeasure,
+  applyMoveMeterMarker,
+  applyMoveTempoMarker,
   applyRemoveMeasure,
   applySetLoopEnabled,
   applyUpdateLoop,
+  applyUpdateMeterMarker,
   applyUpdateTempo,
+  applyUpdateTempoMarker,
   applyUpdateTimeSignature,
 } from "./transport-commands";
 import { assertValidTransaction } from "./transaction";
@@ -131,8 +138,6 @@ function applyCommand(
       return applySetMasterMuted(state, command);
     case "UpdateMasterTuning":
       return applyUpdateMasterTuning(state, command);
-    case "UpdateTempo":
-      return applyUpdateTempo(state, command);
     default:
       return applyActiveClipCommand(state, command);
   }
@@ -152,7 +157,6 @@ type ActiveClipCommand = Exclude<
   | UpdateMasterGainCommand
   | SetMasterMutedCommand
   | UpdateMasterTuningCommand
-  | UpdateTempoCommand
 >;
 
 function applyActiveClipCommand(
@@ -219,6 +223,33 @@ function applyActiveClipCommand(
       break;
     case "UpdateTimeSignature":
       nextContext = applyUpdateTimeSignature(context, command);
+      break;
+    case "UpdateTempo":
+      nextContext = applyUpdateTempo(context, command);
+      break;
+    case "AddMeterMarker":
+      nextContext = applyAddMeterMarker(context, command);
+      break;
+    case "MoveMeterMarker":
+      nextContext = applyMoveMeterMarker(context, command);
+      break;
+    case "UpdateMeterMarker":
+      nextContext = applyUpdateMeterMarker(context, command);
+      break;
+    case "DeleteMeterMarker":
+      nextContext = applyDeleteMeterMarker(context, command);
+      break;
+    case "AddTempoMarker":
+      nextContext = applyAddTempoMarker(context, command);
+      break;
+    case "MoveTempoMarker":
+      nextContext = applyMoveTempoMarker(context, command);
+      break;
+    case "UpdateTempoMarker":
+      nextContext = applyUpdateTempoMarker(context, command);
+      break;
+    case "DeleteTempoMarker":
+      nextContext = applyDeleteTempoMarker(context, command);
       break;
     case "UpdateLoop":
       nextContext = applyUpdateLoop(context, command);

@@ -7,8 +7,13 @@ import {
   type Note,
 } from "../../domain/notes/note";
 import {
+  areTimeSignaturesEqual,
+  createDefaultTimeSignature,
+  getTicksPerMeasure,
+  type MeterMarker,
+  type TempoMarker,
   type TimeSignature,
-} from "../../domain/transport/transport";
+} from "../../domain/transport/time-map";
 import { MidiImportError } from "./midi-import-error";
 import type {
   ImportedSourceNote,
@@ -92,19 +97,61 @@ export function convertTick(tick: number, sourcePpqn: number): number {
   return converted;
 }
 
-export function selectTempo(candidates: TempoCandidate[]): number {
-  candidates.sort(compareMetaCandidates);
-  const selected = candidates[0]?.event;
+export interface TempoMarkerSelection {
+  readonly markers: readonly TempoMarker[];
+  readonly ignoredEventCount: number;
+  readonly adjustedEventCount: number;
+}
 
-  if (selected === undefined) {
-    return PROJECT_CONSTANTS.defaultTempoBpm;
+/**
+ * Imports every tempo change. Events sharing a converted tick are ignored
+ * (the first one wins) and a default marker is inserted at tick 0 when the
+ * first event occurs later, matching the MIDI default of 120 BPM.
+ */
+export function selectTempoMarkers(
+  candidates: TempoCandidate[],
+  sourcePpqn: number,
+): TempoMarkerSelection {
+  candidates.sort(compareMetaCandidates);
+  const markers: TempoMarker[] = [];
+  const seenTicks = new Set<number>();
+  let ignoredEventCount = 0;
+  let adjustedEventCount = 0;
+
+  for (const candidate of candidates) {
+    const sourceBpm = Number(
+      (
+        60_000_000 / candidate.event.microsecondsPerQuarterNote
+      ).toFixed(6),
+    );
+    const bpm = normalizeImportedTempo(sourceBpm);
+
+    if (bpm !== sourceBpm) {
+      adjustedEventCount += 1;
+    }
+
+    const startTick = convertTick(
+      candidate.event.absoluteTick,
+      sourcePpqn,
+    );
+
+    if (seenTicks.has(startTick)) {
+      ignoredEventCount += 1;
+      continue;
+    }
+
+    seenTicks.add(startTick);
+    markers.push({ startTick, bpm });
   }
 
-  return Number(
-    (
-      60_000_000 / selected.microsecondsPerQuarterNote
-    ).toFixed(6),
-  );
+  if (markers[0]?.startTick !== 0) {
+    markers.unshift({
+      startTick: 0,
+      bpm: PROJECT_CONSTANTS.defaultTempoBpm,
+    });
+  }
+
+  return { markers, ignoredEventCount, adjustedEventCount };
 }
 
 export function normalizeImportedTempo(tempoBpm: number): number {
@@ -124,63 +171,96 @@ export function normalizeImportedTempo(tempoBpm: number): number {
   );
 }
 
-export function formatTempoForWarning(tempoBpm: number): string {
-  return tempoBpm
-    .toFixed(6)
-    .replace(/0+$/u, "")
-    .replace(/\.$/u, "");
+export interface MeterMarkerSelection {
+  readonly markers: readonly MeterMarker[];
+  readonly ignoredEventCount: number;
+  readonly invalidEventCount: number;
 }
 
-export function selectTimeSignature(
+/**
+ * Imports every valid time-signature change. A change is ignored when it is
+ * identical to the active meter, lands on an already-used tick, or does not
+ * fall on a measure boundary determined by the previous meter. A default 4/4
+ * marker is inserted at tick 0 when the first event occurs later.
+ */
+export function selectMeterMarkers(
   candidates: TimeSignatureCandidate[],
-): {
-  readonly timeSignature: TimeSignature;
-  readonly acceptedEventCount: number;
-  readonly invalidEventCount: number;
-} {
+  sourcePpqn: number,
+): MeterMarkerSelection {
   candidates.sort(compareMetaCandidates);
+  const markers: MeterMarker[] = [];
+  let ignoredEventCount = 0;
   let invalidEventCount = 0;
-  let selectedTimeSignature: TimeSignature | null = null;
+  let boundaryTick = 0;
 
   for (const candidate of candidates) {
     const event = candidate.event;
 
     if (
-      Number.isSafeInteger(event.numerator)
-      && event.numerator > 0
-      && isSupportedTimeSignatureDenominator(
-        event.denominator,
-      )
+      !Number.isSafeInteger(event.numerator)
+      || event.numerator <= 0
+      || !isSupportedTimeSignatureDenominator(event.denominator)
     ) {
-      if (selectedTimeSignature === null) {
-        selectedTimeSignature = {
-          numerator: event.numerator,
-          denominator: event.denominator,
-        };
-      }
-    } else {
       invalidEventCount += 1;
+      continue;
     }
-  }
 
-  if (selectedTimeSignature !== null) {
-    return {
-      timeSignature: selectedTimeSignature,
-      acceptedEventCount: 1,
-      invalidEventCount,
+    const timeSignature: TimeSignature = {
+      numerator: event.numerator,
+      denominator: event.denominator,
     };
+    const startTick = convertTick(event.absoluteTick, sourcePpqn);
+
+    if (markers.length === 0 && startTick === 0) {
+      markers.push({ startTick: 0, timeSignature });
+      continue;
+    }
+
+    if (markers.length === 0) {
+      markers.push({
+        startTick: 0,
+        timeSignature: createDefaultTimeSignature(),
+      });
+      boundaryTick = 0;
+    }
+
+    const activeMarker = markers[markers.length - 1];
+
+    if (activeMarker === undefined) {
+      continue;
+    }
+
+    if (
+      startTick <= activeMarker.startTick
+      || areTimeSignaturesEqual(activeMarker.timeSignature, timeSignature)
+    ) {
+      ignoredEventCount += 1;
+      continue;
+    }
+
+    while (boundaryTick < startTick) {
+      boundaryTick += getTicksPerMeasure(
+        PROJECT_CONSTANTS.ppqn,
+        activeMarker.timeSignature,
+      );
+    }
+
+    if (boundaryTick !== startTick) {
+      ignoredEventCount += 1;
+      continue;
+    }
+
+    markers.push({ startTick, timeSignature });
   }
 
-  return {
-    timeSignature: {
-      numerator:
-        PROJECT_CONSTANTS.defaultTimeSignatureNumerator,
-      denominator:
-        PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
-    },
-    acceptedEventCount: 0,
-    invalidEventCount,
-  };
+  if (markers.length === 0) {
+    markers.push({
+      startTick: 0,
+      timeSignature: createDefaultTimeSignature(),
+    });
+  }
+
+  return { markers, ignoredEventCount, invalidEventCount };
 }
 
 function compareMetaCandidates(

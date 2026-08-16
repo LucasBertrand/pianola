@@ -27,8 +27,8 @@ import {
   getActiveClip,
 } from "../../domain/project/project-document";
 import {
-  getClipMeasureCount,
-} from "../../domain/clips/clip";
+  getMeasureCount,
+} from "../../domain/transport/time-map";
 import {
   type Note,
 } from "../../domain/notes/note";
@@ -322,9 +322,10 @@ export function usePianoRollSelectionWorkflow({
         activeClip.id,
         pastedNotes,
       );
-    const currentMeasureCount = getClipMeasureCount(
-      state.clock,
-      activeClip,
+    const currentMeasureCount = getMeasureCount(
+      state.clock.ppqn,
+      activeClip.timeline.timeMap,
+      activeClip.timeline.durationTicks,
     );
     const timelineCommands =
       requiredMeasureCount > currentMeasureCount

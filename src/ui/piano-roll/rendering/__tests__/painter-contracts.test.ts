@@ -3,6 +3,9 @@ import {
   createDefaultProjectClock,
 } from "../../../../domain/transport/transport";
 import {
+  createDefaultTimeMap,
+} from "../../../../domain/transport/time-map";
+import {
   type Note,
 } from "../../../../domain/notes/note";
 import {
@@ -52,7 +55,8 @@ describe("P3 Canvas painter contracts", () => {
       pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
       highlightedPitch: 60,
       clock: createDefaultProjectClock(),
-      timeSignature: { numerator: 4, denominator: 4 },
+      timeMap: createDefaultTimeMap(),
+      durationTicks: 3_840,
     });
 
     expect(recorder.fillRects.length).toBeGreaterThan(20);
@@ -97,9 +101,8 @@ describe("P3 Canvas painter contracts", () => {
       devicePixelRatio: 1,
       viewport: VIEWPORT,
       clock: createDefaultProjectClock(),
-      timeSignature: { numerator: 4, denominator: 4 },
-      durationTicks: 3_840,
-      measureCount: 2,
+      timeMap: createDefaultTimeMap(),
+      durationTicks: 7_680,
       gridResolutionTicks: 240,
     });
 

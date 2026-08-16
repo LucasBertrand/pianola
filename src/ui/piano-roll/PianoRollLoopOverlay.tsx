@@ -22,6 +22,7 @@ export interface PianoRollLoopOverlayProps {
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly onCommit: (loop: LoopRegion) => void;
+  readonly onGridSeek: (tick: number) => void;
 }
 
 export function PianoRollLoopOverlay(
@@ -32,6 +33,7 @@ export function PianoRollLoopOverlay(
     projectStore,
     gridResolutionTicks,
     onCommit,
+    onGridSeek,
   } = props;
   const layerRef = useRef<HTMLDivElement | null>(null);
   const bandRef = useRef<HTMLButtonElement | null>(null);
@@ -46,6 +48,7 @@ export function PianoRollLoopOverlay(
     projectStore,
     gridResolutionTicks,
     onCommit,
+    onGridSeek,
     layerRef,
     bandRef,
     startFlagRef,

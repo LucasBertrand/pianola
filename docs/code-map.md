@@ -12,7 +12,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document et `WorkspaceState.activeClipId` | suite centrale de régression |
-| transport | `src/ui/transport/TransportControls.tsx` | document pour boucle/tempo, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
+| transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` du clip pour tempo/métrique, document pour boucle, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
 | fichiers natifs | `src/ui/project-files/useProjectFileWorkflow.ts` | document + état natif d’éditeur | tests sous `src/project-io/native/__tests__/` |
 | MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
@@ -27,6 +27,7 @@ restent le garde-fou de parité des flux transversaux.
 | --- | --- | --- |
 | modifier le bouton Lecture | `src/ui/transport/TransportControls.tsx` | `useAudioPlayback.ts`, puis `audio-worklet-transport.ts` |
 | modifier le ruler ou la boucle | `src/ui/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx` et painter |
+| modifier les marqueurs tempo/métrique | `src/ui/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, puis `use-cases/piano-roll/timeline/time-map-marker-plans.ts` |
 | modifier le playhead | `src/ui/piano-roll/PianoRollTimeline.tsx` | signal `playheadTick` du runtime |
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
@@ -35,6 +36,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier l’inspecteur | `src/ui/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et format natif |
 | modifier le master bus | `src/ui/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
+| modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | commandes de transport, validation et painters ruler/grid |
 | modifier `.pianola` | `src/project-io/native/parse-native-project.ts` | schéma, parsing et sérialiseur |
 | modifier le MIDI | `src/project-io/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/config/application-colors.ts` | tokens CSS et styles de surface |

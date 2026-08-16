@@ -6,13 +6,12 @@ import {
   type ProjectDocument,
 } from "../../../domain/project/project-document";
 import {
-  getClipMeasureCount,
-  getClipTimeSignature,
   MAXIMUM_MEASURE_COUNT,
 } from "../../../domain/clips/clip";
 import {
-  getTicksPerMeasure,
-} from "../../../domain/transport/transport";
+  getMeasureCount,
+  getMeasureCountCoveringTick,
+} from "../../../domain/transport/time-map";
 import {
   type Note,
 } from "../../../domain/notes/note";
@@ -238,14 +237,15 @@ export function getRequiredMeasureCountForNotes(
     maximumEndTick = Math.max(maximumEndTick, noteEndTick);
   }
 
-  const ticksPerMeasure = getTicksPerMeasure(
-    state.clock,
-    getClipTimeSignature(clip),
-  );
+  const { timeMap, durationTicks } = clip.timeline;
 
   return Math.max(
-    getClipMeasureCount(state.clock, clip),
-    Math.ceil(maximumEndTick / ticksPerMeasure),
+    getMeasureCount(state.clock.ppqn, timeMap, durationTicks),
+    getMeasureCountCoveringTick(
+      state.clock.ppqn,
+      timeMap.meterMarkers,
+      maximumEndTick,
+    ),
   );
 }
 
