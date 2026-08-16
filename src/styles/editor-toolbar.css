@@ -279,7 +279,11 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .pitch-snap-control.is-snap-active .pitch-snap-toggle,
-.pitch-snap-control.is-guide-active .pitch-guide-toggle {
+.pitch-snap-control.is-guide-active .pitch-guide-toggle,
+.pitch-snap-toggle.is-active,
+.pitch-snap-toggle[aria-pressed="true"],
+.pitch-guide-toggle.is-active,
+.pitch-guide-toggle[aria-pressed="true"] {
   border-color: var(--color-warm-strong);
   background: var(--color-warm-soft);
   color: var(--color-accent-warm);

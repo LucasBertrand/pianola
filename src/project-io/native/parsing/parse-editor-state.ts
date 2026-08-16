@@ -200,14 +200,6 @@ function parsePitchSnapSettings(
     `${path}.visualGuideEnabled`,
   );
 
-  if (enabled && !visualGuideEnabled) {
-    return fail(
-      "INVALID_DATA",
-      `${path}.visualGuideEnabled`,
-      "The tonal guide must be enabled while pitch snapping is active.",
-    );
-  }
-
   return {
     enabled,
     visualGuideEnabled,
