@@ -149,7 +149,7 @@ function createCompletion(
     targetNoteId: null,
     deltaTicks: 0,
     deltaPitch: 0,
-    pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+    getSnapSettingsAtTick: () => DEFAULT_PITCH_SNAP_SETTINGS,
     drawStartTick: 0,
     drawPitch: 60,
     drawDurationTicks: 120,

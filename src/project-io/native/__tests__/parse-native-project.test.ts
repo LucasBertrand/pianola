@@ -83,6 +83,7 @@ describe("native v1 parser", () => {
           { startTick: 0, bpm: 120 },
           { startTick: 3_840, bpm: 92.5 },
         ],
+scaleMarkers: [],
       },
     };
     const customProject = {

@@ -37,6 +37,7 @@ describe("validateClipTimeline", () => {
           timeSignature: { numerator: 4, denominator: 4 },
         }],
         tempoMarkers: [],
+scaleMarkers: [],
       }),
       CLOCK,
     );
@@ -57,6 +58,7 @@ describe("validateClipTimeline", () => {
           { startTick: 7_680, timeSignature: { numerator: 5, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
       }),
       CLOCK,
     );
@@ -75,6 +77,7 @@ describe("validateClipTimeline", () => {
           { startTick: 4_000, timeSignature: { numerator: 3, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
       }),
       CLOCK,
     );
@@ -93,6 +96,7 @@ describe("validateClipTimeline", () => {
           { startTick: 3_840, timeSignature: { numerator: 4, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
       }),
       CLOCK,
     );
@@ -111,6 +115,7 @@ describe("validateClipTimeline", () => {
           { startTick: 7_680, timeSignature: { numerator: 3, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
       }),
       CLOCK,
     );
@@ -133,6 +138,7 @@ describe("validateClipTimeline", () => {
           },
         }],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
       }),
       CLOCK,
     );
@@ -151,6 +157,7 @@ describe("validateClipTimeline", () => {
             },
           }],
           tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
         },
         4 * 3_360,
       ),
@@ -171,6 +178,7 @@ describe("validateClipTimeline", () => {
           { startTick: 0, bpm: 120 },
           { startTick: 3_840, bpm: 999 },
         ],
+scaleMarkers: [],
       }),
       CLOCK,
     );

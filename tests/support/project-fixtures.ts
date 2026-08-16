@@ -206,6 +206,7 @@ export function createAudioTestProject({
               bpm: transportChanges.bpm
                 ?? PROJECT_CONSTANTS.defaultTempoBpm,
             }],
+scaleMarkers: [],
           },
         },
         tracksByInstrumentId,

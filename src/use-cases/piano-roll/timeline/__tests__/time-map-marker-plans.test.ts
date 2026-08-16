@@ -39,6 +39,7 @@ function createProjectWithMarkers(): ReturnType<typeof createTestProject> {
       { startTick: 0, bpm: 120 },
       { startTick: 2 * MEASURE_TICKS, bpm: 90 },
     ],
+scaleMarkers: [],
   };
 
   return {
@@ -86,6 +87,7 @@ describe("createTimeMapMarkerFlags", () => {
         { startTick: 0, bpm: 120 },
         { startTick: 2 * MEASURE_TICKS, bpm: 90 },
       ],
+scaleMarkers: [],
     });
 
     expect(flags.map((flag) => formatMarkerFlagLabel(flag))).toEqual([
@@ -296,6 +298,7 @@ describe("planMarkerMoveCommands", () => {
                 { startTick: MEASURE_TICKS, bpm: 100 },
                 { startTick: 2 * MEASURE_TICKS, bpm: 90 },
               ],
+scaleMarkers: [],
             },
           },
         },

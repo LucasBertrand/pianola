@@ -35,6 +35,7 @@ describe("playback plans", () => {
             },
           ],
           tempoMarkers: [{ startTick: 0, bpm: 120 }],
+scaleMarkers: [],
         },
       },
     };
