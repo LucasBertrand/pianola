@@ -554,6 +554,8 @@ export function PianoRollWorkspace({
           <div className="roll-frame">
             <PianoKeyboard
               viewport={runtime.viewport}
+              playheadTick={runtime.playheadTick}
+              timeMap={activeClip.timeline.timeMap}
               previewEnabled={pitchPreviewEnabled}
               pitchSnapSettings={pitchSnapSettings}
               onPreviewToggle={() => {
@@ -674,9 +676,15 @@ export function PianoRollWorkspace({
           measureIndex={timeMapMarkers.draft.measureIndex}
           bpm={timeMapMarkers.draft.bpm}
           timeSignature={timeMapMarkers.draft.timeSignature}
+          tonicPitchClass={timeMapMarkers.draft.tonicPitchClass}
+          patternId={timeMapMarkers.draft.patternId}
+          scaleDegreeIndex={timeMapMarkers.draft.scaleDegreeIndex}
           canDelete={timeMapMarkers.draft.canDelete}
           onBpmChange={timeMapMarkers.setDraftBpm}
           onTimeSignatureChange={timeMapMarkers.setDraftTimeSignature}
+          onTonicPitchClassChange={timeMapMarkers.setDraftTonicPitchClass}
+          onPatternIdChange={timeMapMarkers.setDraftPatternId}
+          onScaleDegreeIndexChange={timeMapMarkers.setDraftScaleDegreeIndex}
           onDelete={timeMapMarkers.deleteDraft}
           onConfirm={timeMapMarkers.confirmDraft}
           onCancel={timeMapMarkers.cancelDraft}

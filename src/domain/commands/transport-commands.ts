@@ -14,10 +14,14 @@ import {
   moveTempoMarker,
   removeMeterMarker,
   removeTempoMarker,
+  removeScaleMarker,
   removeTimeFromTimeMap,
   replaceInitialMeter,
   updateMeterMarker,
   updateTempoMarker,
+  updateScaleMarker,
+  insertScaleMarker,
+  moveScaleMarker,
   type MeterMarkerEdit,
   type TimeMap,
 } from "../transport/time-map";
@@ -42,6 +46,10 @@ import type {
   UpdateTempoCommand,
   UpdateTempoMarkerCommand,
   UpdateTimeSignatureCommand,
+  AddScaleMarkerCommand,
+  MoveScaleMarkerCommand,
+  UpdateScaleMarkerCommand,
+  DeleteScaleMarkerCommand,
 } from "./command-types";
 import {
   assertMeasureIndex,
@@ -437,6 +445,62 @@ export function applyDeleteTempoMarker(
 ): ActiveClipProjectState {
   const timeMap = applyMarkerOperation(command, () =>
     removeTempoMarker(state.timeline.timeMap, command.startTick));
+
+  return withTimeMap(state, timeMap);
+}
+
+export function applyAddScaleMarker(
+  state: ActiveClipProjectState,
+  command: AddScaleMarkerCommand,
+): ActiveClipProjectState {
+  const timeMap = applyMarkerOperation(command, () =>
+    insertScaleMarker(
+      state.timeline.timeMap,
+      state.timeline.durationTicks,
+      command.marker,
+    ));
+
+  return withTimeMap(state, timeMap);
+}
+
+export function applyMoveScaleMarker(
+  state: ActiveClipProjectState,
+  command: MoveScaleMarkerCommand,
+): ActiveClipProjectState {
+  if (command.startTick === command.targetTick) {
+    return state;
+  }
+
+  const timeMap = applyMarkerOperation(command, () =>
+    moveScaleMarker(
+      state.timeline.timeMap,
+      command.startTick,
+      command.targetTick,
+    ));
+
+  return withTimeMap(state, timeMap);
+}
+
+export function applyUpdateScaleMarker(
+  state: ActiveClipProjectState,
+  command: UpdateScaleMarkerCommand,
+): ActiveClipProjectState {
+  const timeMap = applyMarkerOperation(command, () =>
+    updateScaleMarker(
+      state.timeline.timeMap,
+      command.startTick,
+      command.changes,
+    ));
+
+  return withTimeMap(state, timeMap);
+}
+
+export function applyDeleteScaleMarker(
+  state: ActiveClipProjectState,
+  command: DeleteScaleMarkerCommand,
+): ActiveClipProjectState {
+  const timeMap = applyMarkerOperation(command, () =>
+    removeScaleMarker(state.timeline.timeMap, command.startTick));
 
   return withTimeMap(state, timeMap);
 }

@@ -17,11 +17,15 @@ import {
   getMeasureSpans,
   getMeterAtTick,
   getTempoAtTick,
+  getScaleMarkerAtTick,
   moveMeterMarker,
   isMeasureBoundary,
   type TimeMap,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
+import type { TonalPatternId } from "../../../music/pitch-snap";
+import { getPreferredTonicLabel, getScaleDegreeLabel } from "../../../ui/piano-roll/rendering/pitch-label";
+import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
 
 /**
  * One ruler flag: the union of meter and tempo marker ticks. A flag may
@@ -31,6 +35,9 @@ export interface TimeMapMarkerFlag {
   readonly startTick: Tick;
   readonly bpm: number | null;
   readonly timeSignature: TimeSignature | null;
+  readonly tonicPitchClass: number | null;
+  readonly patternId: string | null;
+  readonly scaleDegreeIndex: number | null;
   readonly isInitial: boolean;
 }
 
@@ -41,6 +48,9 @@ export interface TimeMapMarkerDraft {
   readonly measureIndex: number | null;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
+  readonly tonicPitchClass: number;
+  readonly patternId: TonalPatternId;
+  readonly scaleDegreeIndex: number | null;
   readonly canDelete: boolean;
 }
 
@@ -51,18 +61,25 @@ export function createTimeMapMarkerFlags(
   const ticks = [...new Set([
     ...timeMap.meterMarkers.map((marker) => marker.startTick),
     ...timeMap.tempoMarkers.map((marker) => marker.startTick),
+    ...timeMap.scaleMarkers.map((marker) => marker.startTick),
   ])].sort((left, right) => left - right);
 
-  return ticks.map((startTick) => ({
-    startTick,
-    bpm: timeMap.tempoMarkers.find(
-      (marker) => marker.startTick === startTick,
-    )?.bpm ?? null,
-    timeSignature: timeMap.meterMarkers.find(
-      (marker) => marker.startTick === startTick,
-    )?.timeSignature ?? null,
-    isInitial: startTick === 0,
-  }));
+  return ticks.map((startTick) => {
+    const scaleMarker = timeMap.scaleMarkers.find(m => m.startTick === startTick);
+    return {
+      startTick,
+      bpm: timeMap.tempoMarkers.find(
+        (marker) => marker.startTick === startTick,
+      )?.bpm ?? null,
+      timeSignature: timeMap.meterMarkers.find(
+        (marker) => marker.startTick === startTick,
+      )?.timeSignature ?? null,
+      tonicPitchClass: scaleMarker?.tonicPitchClass ?? null,
+      patternId: scaleMarker?.patternId ?? null,
+      scaleDegreeIndex: scaleMarker?.scaleDegreeIndex ?? null,
+      isInitial: startTick === 0,
+    };
+  });
 }
 
 /**
@@ -97,7 +114,12 @@ export function createMarkerDraft(
     const tempoMarker = timeMap.tempoMarkers.find(
       (marker) => marker.startTick === span.startTick,
     );
-    const hasMarker = meterMarker !== undefined || tempoMarker !== undefined;
+    const scaleMarker = timeMap.scaleMarkers.find(
+      (marker) => marker.startTick === span.startTick,
+    );
+    const hasMarker = meterMarker !== undefined || tempoMarker !== undefined || scaleMarker !== undefined;
+
+    const activeScaleMarker = getScaleMarkerAtTick(timeMap, span.startTick);
 
     return {
       mode: hasMarker ? "edit" : "create",
@@ -106,6 +128,9 @@ export function createMarkerDraft(
       bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, span.startTick),
       timeSignature: meterMarker?.timeSignature
         ?? getMeterAtTick(timeMap, span.startTick),
+      tonicPitchClass: scaleMarker?.tonicPitchClass ?? activeScaleMarker.tonicPitchClass,
+      patternId: scaleMarker?.patternId ?? activeScaleMarker.patternId,
+      scaleDegreeIndex: scaleMarker?.scaleDegreeIndex ?? activeScaleMarker.scaleDegreeIndex,
       canDelete: hasMarker && span.startTick > 0,
     };
   }
@@ -113,14 +138,22 @@ export function createMarkerDraft(
   const tempoMarker = timeMap.tempoMarkers.find(
     (marker) => marker.startTick === tick,
   );
+  const scaleMarker = timeMap.scaleMarkers.find(
+    (marker) => marker.startTick === tick,
+  );
+  const hasMarker = tempoMarker !== undefined || scaleMarker !== undefined;
+  const activeScaleMarker = getScaleMarkerAtTick(timeMap, tick);
 
   return {
-    mode: tempoMarker !== undefined ? "edit" : "create",
+    mode: hasMarker ? "edit" : "create",
     startTick: tick,
     measureIndex: null,
     bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, tick),
     timeSignature: null,
-    canDelete: tempoMarker !== undefined && tick > 0,
+    tonicPitchClass: scaleMarker?.tonicPitchClass ?? activeScaleMarker.tonicPitchClass,
+    patternId: scaleMarker?.patternId ?? activeScaleMarker.patternId,
+    scaleDegreeIndex: scaleMarker?.scaleDegreeIndex ?? activeScaleMarker.scaleDegreeIndex,
+    canDelete: hasMarker && tick > 0,
   };
 }
 
@@ -195,6 +228,55 @@ export function planMarkerDraftCommands(
       bpm,
     });
   }
+
+  const scaleMarker = timeMap.scaleMarkers.find(m => m.startTick === draft.startTick);
+  const previousScaleMarker = getScaleMarkerAtTick(timeMap, Math.max(0, draft.startTick - 1));
+
+  if (scaleMarker !== undefined) {
+    if (
+      previousScaleMarker.tonicPitchClass === draft.tonicPitchClass &&
+      previousScaleMarker.patternId === draft.patternId &&
+      previousScaleMarker.scaleDegreeIndex === draft.scaleDegreeIndex &&
+      draft.startTick > 0
+    ) {
+      commands.push({
+        type: "DeleteScaleMarker",
+        clipId,
+        startTick: draft.startTick,
+      });
+    } else if (
+      scaleMarker.tonicPitchClass !== draft.tonicPitchClass ||
+      scaleMarker.patternId !== draft.patternId ||
+      scaleMarker.scaleDegreeIndex !== draft.scaleDegreeIndex
+    ) {
+      commands.push({
+        type: "UpdateScaleMarker",
+        clipId,
+        startTick: draft.startTick,
+        changes: {
+          tonicPitchClass: draft.tonicPitchClass,
+          patternId: draft.patternId,
+          scaleDegreeIndex: draft.scaleDegreeIndex,
+        },
+      });
+    }
+  } else if (
+    previousScaleMarker.tonicPitchClass !== draft.tonicPitchClass ||
+    previousScaleMarker.patternId !== draft.patternId ||
+    previousScaleMarker.scaleDegreeIndex !== draft.scaleDegreeIndex
+  ) {
+    commands.push({
+      type: "AddScaleMarker",
+      clipId,
+      marker: {
+        startTick: draft.startTick,
+        tonicPitchClass: draft.tonicPitchClass,
+        patternId: draft.patternId,
+        scaleDegreeIndex: draft.scaleDegreeIndex,
+      },
+    });
+  }
+
   return commands;
 }
 
@@ -222,6 +304,12 @@ export function planMarkerDeletionCommands(
     timeMap.tempoMarkers.some((marker) => marker.startTick === startTick)
   ) {
     commands.push({ type: "DeleteTempoMarker", clipId, startTick });
+  }
+
+  if (
+    timeMap.scaleMarkers.some((marker) => marker.startTick === startTick)
+  ) {
+    commands.push({ type: "DeleteScaleMarker", clipId, startTick });
   }
 
   return commands;
@@ -310,6 +398,24 @@ export function planMarkerMoveCommands(
     }
   }
 
+  const isMovingScale = timeMap.scaleMarkers.some((marker) => marker.startTick === fromTick);
+  const targetHasScale = timeMap.scaleMarkers.some((marker) => marker.startTick === tempoTargetTick);
+
+  if (isMovingScale) {
+    if (targetHasScale && fromTick !== tempoTargetTick) {
+      throw new Error("A scale marker already exists at this position.");
+    }
+
+    if (fromTick !== tempoTargetTick) {
+      commands.push({
+        type: "MoveScaleMarker",
+        clipId,
+        startTick: fromTick,
+        targetTick: tempoTargetTick,
+      });
+    }
+  }
+
   return commands;
 }
 
@@ -388,6 +494,26 @@ export function formatMarkerFlagLabel(flag: TimeMapMarkerFlag): string {
     parts.push(
       `${String(flag.timeSignature.numerator)}/${String(flag.timeSignature.denominator)}`,
     );
+  }
+
+  if (flag.patternId !== null && flag.tonicPitchClass !== null) {
+    const patternId = flag.patternId as TonalPatternId;
+    const pattern = TONAL_SNAP_CONSTANTS.patterns.find(p => p.id === patternId);
+    let scaleLabel = `${getPreferredTonicLabel(flag.tonicPitchClass, patternId)} ${pattern?.label ?? ''}`;
+    
+    if (flag.scaleDegreeIndex !== null && pattern !== undefined) {
+      const mockSettings = {
+        enabled: false,
+        visualGuideEnabled: false,
+        tonicPitchClass: flag.tonicPitchClass,
+        patternId: patternId,
+        scaleDegreeIndex: flag.scaleDegreeIndex,
+      };
+      const degreeLabel = getScaleDegreeLabel(mockSettings, flag.scaleDegreeIndex);
+      scaleLabel += ` (${degreeLabel})`;
+    }
+    
+    parts.push(scaleLabel);
   }
 
   return parts.join(" · ");

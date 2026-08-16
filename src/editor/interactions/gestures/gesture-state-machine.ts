@@ -35,7 +35,7 @@ export interface PointerGestureStart {
   readonly targetNoteId: NoteId | null;
   readonly snapResolutionTicks: number;
   readonly snapAbsoluteTick: (tick: number) => number;
-  readonly pitchSnapSettings: PitchSnapSettings;
+  readonly getSnapSettingsAtTick: (tick: number) => PitchSnapSettings;
   readonly selectionMode: SelectionMode;
 }
 
@@ -45,7 +45,7 @@ export interface GestureCompletion {
   readonly targetNoteId: NoteId | null;
   readonly deltaTicks: number;
   readonly deltaPitch: number;
-  readonly pitchSnapSettings: PitchSnapSettings;
+  readonly getSnapSettingsAtTick: (tick: number) => PitchSnapSettings;
   readonly drawStartTick: number;
   readonly drawPitch: number;
   readonly drawDurationTicks: number;
@@ -88,9 +88,8 @@ export class PianoRollGestureStateMachine {
     this.draft.originPointerPitch = start.pointerPitch;
     this.draft.targetNoteId = start.targetNoteId;
     this.draft.snapResolutionTicks = start.snapResolutionTicks;
-    this.draft.snapAbsoluteTick =
-      start.snapAbsoluteTick ?? this.draft.snapAbsoluteTick;
-    this.draft.pitchSnapSettings = start.pitchSnapSettings;
+    this.draft.snapAbsoluteTick = start.snapAbsoluteTick;
+    this.draft.getSnapSettingsAtTick = start.getSnapSettingsAtTick;
     this.draft.selectionMode = start.selectionMode;
     this.draft.deltaTicks = 0;
     this.draft.deltaPitch = 0;
@@ -227,7 +226,7 @@ export class PianoRollGestureStateMachine {
       targetNoteId: this.draft.targetNoteId,
       deltaTicks: this.draft.deltaTicks,
       deltaPitch: this.draft.deltaPitch,
-      pitchSnapSettings: this.draft.pitchSnapSettings,
+      getSnapSettingsAtTick: this.draft.getSnapSettingsAtTick,
       drawStartTick: this.draft.drawStartTick,
       drawPitch: this.draft.drawPitch,
       drawDurationTicks: this.draft.drawDurationTicks,

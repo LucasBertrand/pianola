@@ -1,9 +1,16 @@
 import {
   PROJECT_CONSTANTS,
 } from "../../config/domain-limits";
+import {
+  TONAL_SNAP_CONSTANTS,
+} from "../../config/music-config";
 import type {
   Tick,
 } from "../identifiers";
+import type {
+  TonalPatternId,
+} from "../../music/pitch-snap";
+
 
 /**
  * Musical meter. `beatGroups` optionally spells the pulse grouping in
@@ -29,6 +36,14 @@ export interface TempoMarker {
   readonly bpm: number;
 }
 
+/** Scale change positioned anywhere inside a clip timeline. */
+export interface ScaleMarker {
+  readonly startTick: Tick;
+  readonly tonicPitchClass: number;
+  readonly patternId: TonalPatternId;
+  readonly scaleDegreeIndex: number | null;
+}
+
 /**
  * Sole source of truth for the temporal structure of a clip. Both marker
  * lists are sorted by tick, hold unique ticks and start at tick 0.
@@ -36,6 +51,7 @@ export interface TempoMarker {
 export interface TimeMap {
   readonly meterMarkers: readonly MeterMarker[];
   readonly tempoMarkers: readonly TempoMarker[];
+  readonly scaleMarkers: readonly ScaleMarker[];
 }
 
 /** One measure derived from a time map; the primary navigation primitive. */
@@ -69,6 +85,12 @@ export function createDefaultTimeMap(): TimeMap {
     tempoMarkers: [{
       startTick: 0,
       bpm: PROJECT_CONSTANTS.defaultTempoBpm,
+    }],
+    scaleMarkers: [{
+      startTick: 0,
+      tonicPitchClass: TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
+      patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
+      scaleDegreeIndex: TONAL_SNAP_CONSTANTS.defaultScaleDegreeIndex,
     }],
   };
 }
@@ -194,6 +216,13 @@ export function getTempoAtTick(
   tick: Tick,
 ): number {
   return getMarkerAtTick(timeMap.tempoMarkers, tick).bpm;
+}
+
+export function getScaleMarkerAtTick(
+  timeMap: TimeMap,
+  tick: Tick,
+): ScaleMarker {
+  return getMarkerAtTick(timeMap.scaleMarkers, tick);
 }
 
 /**
@@ -491,6 +520,41 @@ export function getDurationForMeasureCount(
   return durationTicks;
 }
 
+function remapMarkerTicks<T extends { readonly startTick: Tick }>(
+  ppqn: number,
+  markers: readonly T[],
+  oldSpans: readonly MeasureSpan[],
+  newSpans: readonly MeasureSpan[],
+): T[] {
+  return markers.map((marker) => {
+    if (marker.startTick === 0) {
+      return marker;
+    }
+
+    const oldSpanIndex = oldSpans.findIndex((span, index) => {
+      const nextSpan = oldSpans[index + 1];
+      return marker.startTick >= span.startTick && (nextSpan === undefined || marker.startTick < nextSpan.startTick);
+    });
+
+    if (oldSpanIndex < 0) {
+      return marker;
+    }
+
+    const oldSpan = oldSpans[oldSpanIndex];
+    const newSpan = newSpans[oldSpanIndex];
+
+    if (oldSpan === undefined || newSpan === undefined) {
+      return marker;
+    }
+
+    const offset = marker.startTick - oldSpan.startTick;
+    const newMeasureTicks = getTicksPerMeasure(ppqn, newSpan.timeSignature);
+    const newTick = newSpan.startTick + Math.min(offset, newMeasureTicks);
+
+    return { ...marker, startTick: newTick };
+  });
+}
+
 interface MeterAnchor {
   readonly measureIndex: number;
   readonly timeSignature: TimeSignature;
@@ -507,6 +571,8 @@ function rebuildMeterStructure(
   anchors: readonly MeterAnchor[],
   tempoMarkers: readonly TempoMarker[],
   measureCount: number,
+  scaleMarkers?: readonly ScaleMarker[],
+  oldSpans?: readonly MeasureSpan[],
 ): {
   readonly timeMap: TimeMap;
   readonly durationTicks: Tick;
@@ -549,10 +615,31 @@ function rebuildMeterStructure(
     + (measureCount - (last?.measureIndex ?? 0))
       * getTicksPerMeasure(ppqn, last?.timeSignature ?? first.timeSignature);
 
+  const newTimeMap: TimeMap = {
+    meterMarkers,
+    tempoMarkers: [],
+    scaleMarkers: [],
+  };
+
+  const newSpans = oldSpans !== undefined
+    ? getMeasureSpans(ppqn, newTimeMap, durationTicks)
+    : [];
+
+  const shiftedTempoMarkers = oldSpans !== undefined
+    ? remapMarkerTicks(ppqn, tempoMarkers, oldSpans, newSpans)
+    : tempoMarkers;
+
+  const shiftedScaleMarkers = oldSpans !== undefined
+    ? remapMarkerTicks(ppqn, scaleMarkers ?? [], oldSpans, newSpans)
+    : (scaleMarkers ?? []);
+
   return {
     timeMap: {
       meterMarkers,
-      tempoMarkers: tempoMarkers.filter(
+      tempoMarkers: shiftedTempoMarkers.filter(
+        (marker) => marker.startTick < durationTicks,
+      ),
+      scaleMarkers: shiftedScaleMarkers.filter(
         (marker) => marker.startTick < durationTicks,
       ),
     },
@@ -630,6 +717,7 @@ export function replaceInitialMeter(
       index === 0 ? { ...anchor, timeSignature } : anchor),
     timeMap.tempoMarkers,
     getMeasureSpans(ppqn, timeMap, durationTicks).length,
+    timeMap.scaleMarkers,
   );
 }
 
@@ -679,6 +767,35 @@ export function normalizeTempoMarkers(
     }
 
     if (previous !== undefined && previous.bpm === marker.bpm) {
+      continue;
+    }
+
+    normalized.push(marker);
+  }
+
+  return normalized;
+}
+
+/** Sorts by tick and keeps the first marker of a duplicate tick. */
+export function normalizeScaleMarkers(
+  markers: readonly ScaleMarker[],
+): ScaleMarker[] {
+  const sorted = sortByTick(markers);
+  const normalized: ScaleMarker[] = [];
+
+  for (const marker of sorted) {
+    const previous = normalized[normalized.length - 1];
+
+    if (previous !== undefined && previous.startTick === marker.startTick) {
+      continue;
+    }
+
+    if (
+      previous !== undefined
+      && previous.tonicPitchClass === marker.tonicPitchClass
+      && previous.patternId === marker.patternId
+      && previous.scaleDegreeIndex === marker.scaleDegreeIndex
+    ) {
       continue;
     }
 
@@ -746,6 +863,8 @@ export function insertMeterMarker(
     ],
     timeMap.tempoMarkers,
     spans.length,
+    timeMap.scaleMarkers,
+    spans,
   );
 }
 
@@ -791,9 +910,12 @@ export function moveMeterMarker(
     anchors.map((anchor, index) =>
       index === markerIndex
         ? { ...anchor, measureIndex: targetSpan.index }
-        : anchor),
+        : anchor,
+    ),
     timeMap.tempoMarkers,
     spans.length,
+    timeMap.scaleMarkers,
+    spans,
   );
 }
 
@@ -826,6 +948,8 @@ export function updateMeterMarker(
       index === markerIndex ? { ...anchor, timeSignature } : anchor),
     timeMap.tempoMarkers,
     getMeasureSpans(ppqn, timeMap, durationTicks).length,
+    timeMap.scaleMarkers,
+    getMeasureSpans(ppqn, timeMap, durationTicks),
   );
 }
 
@@ -860,6 +984,8 @@ export function removeMeterMarker(
     anchors.filter((_, index) => index !== markerIndex),
     timeMap.tempoMarkers,
     getMeasureSpans(ppqn, timeMap, durationTicks).length,
+    timeMap.scaleMarkers,
+    getMeasureSpans(ppqn, timeMap, durationTicks),
   );
 }
 
@@ -877,7 +1003,7 @@ export function insertTempoMarker(
   assertPositiveBpm(marker.bpm);
 
   return {
-    meterMarkers: timeMap.meterMarkers,
+    ...timeMap,
     tempoMarkers: normalizeTempoMarkers([
       ...timeMap.tempoMarkers,
       marker,
@@ -908,7 +1034,7 @@ export function moveTempoMarker(
       : candidate);
 
   return {
-    meterMarkers: timeMap.meterMarkers,
+    ...timeMap,
     tempoMarkers: normalizeTempoMarkers(moved),
   };
 }
@@ -922,7 +1048,7 @@ export function updateTempoMarker(
   assertPositiveBpm(bpm);
 
   return {
-    meterMarkers: timeMap.meterMarkers,
+    ...timeMap,
     tempoMarkers: timeMap.tempoMarkers.map((marker) =>
       marker.startTick === startTick ? { ...marker, bpm } : marker),
   };
@@ -943,9 +1069,95 @@ export function removeTempoMarker(
   }
 
   return {
-    meterMarkers: timeMap.meterMarkers,
+    ...timeMap,
     tempoMarkers: normalizeTempoMarkers(
       timeMap.tempoMarkers.filter(
+        (marker) => marker.startTick !== startTick,
+      ),
+    ),
+  };
+}
+
+export function insertScaleMarker(
+  timeMap: TimeMap,
+  durationTicks: Tick,
+  marker: ScaleMarker,
+): TimeMap {
+  if (marker.startTick <= 0 || marker.startTick >= durationTicks) {
+    throw new RangeError(
+      "A scale marker must start inside the clip, after tick 0.",
+    );
+  }
+
+  return {
+    ...timeMap,
+    scaleMarkers: normalizeScaleMarkers([
+      ...timeMap.scaleMarkers,
+      marker,
+    ]),
+  };
+}
+
+export function moveScaleMarker(
+  timeMap: TimeMap,
+  startTick: Tick,
+  targetTick: Tick,
+): TimeMap {
+  const markerIndex = findMarkerIndex(
+    timeMap.scaleMarkers,
+    startTick,
+    "scale",
+  );
+
+  if (markerIndex === 0) {
+    throw new RangeError("The initial scale marker cannot be moved.");
+  }
+
+  const markers = timeMap.scaleMarkers;
+
+  const moved = markers.map((candidate, index) =>
+    index === markerIndex
+      ? { ...candidate, startTick: targetTick }
+      : candidate);
+
+  return {
+    ...timeMap,
+    scaleMarkers: normalizeScaleMarkers(moved),
+  };
+}
+
+export function updateScaleMarker(
+  timeMap: TimeMap,
+  startTick: Tick,
+  changes: Partial<Omit<ScaleMarker, "startTick">>,
+): TimeMap {
+  findMarkerIndex(timeMap.scaleMarkers, startTick, "scale");
+
+  return {
+    ...timeMap,
+    scaleMarkers: timeMap.scaleMarkers.map((marker) =>
+      marker.startTick === startTick ? { ...marker, ...changes } : marker),
+  };
+}
+
+export function removeScaleMarker(
+  timeMap: TimeMap,
+  startTick: Tick,
+): TimeMap {
+  const markerIndex = findMarkerIndex(
+    timeMap.scaleMarkers,
+    startTick,
+    "scale",
+  );
+
+  if (markerIndex === 0) {
+    throw new RangeError("The initial scale marker cannot be removed.");
+  }
+
+  return {
+    ...timeMap,
+    scaleMarkers: normalizeScaleMarkers(
+      timeMap.scaleMarkers.filter(
         (marker) => marker.startTick !== startTick,
       ),
     ),
@@ -972,6 +1184,7 @@ export function insertTimeIntoTimeMap(
   return {
     meterMarkers: timeMap.meterMarkers.map(shiftMarker),
     tempoMarkers: timeMap.tempoMarkers.map(shiftMarker),
+    scaleMarkers: timeMap.scaleMarkers.map(shiftMarker),
   };
 }
 
@@ -1086,11 +1299,37 @@ export function removeTimeFromTimeMap(
     });
   }
 
+  const scaleMarkers = timeMap.scaleMarkers.flatMap((marker) => {
+    if (
+      marker.startTick >= removalStartTick
+      && marker.startTick < removalEndTick
+    ) {
+      return [];
+    }
+
+    if (marker.startTick >= removalEndTick) {
+      return [{
+        ...marker,
+        startTick: marker.startTick - removedTicks,
+      }];
+    }
+
+    return [marker];
+  });
+
+  if (scaleMarkers[0]?.startTick !== 0) {
+    scaleMarkers.unshift({
+      ...getScaleMarkerAtTick(timeMap, removalEndTick),
+      startTick: 0,
+    });
+  }
+
   return rebuildMeterStructure(
     ppqn,
     keptAnchors,
     tempoMarkers,
     spans.length - removedCount,
+    scaleMarkers,
   );
 }
 

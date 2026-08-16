@@ -57,17 +57,21 @@ import {
 } from "./project-commands";
 import {
   applyAddMeterMarker,
+  applyAddScaleMarker,
   applyAddTempoMarker,
   applyAppendMeasures,
   applyDeleteMeterMarker,
+  applyDeleteScaleMarker,
   applyDeleteTempoMarker,
   applyInsertMeasure,
   applyMoveMeterMarker,
+  applyMoveScaleMarker,
   applyMoveTempoMarker,
   applyRemoveMeasure,
   applySetLoopEnabled,
   applyUpdateLoop,
   applyUpdateMeterMarker,
+  applyUpdateScaleMarker,
   applyUpdateTempo,
   applyUpdateTempoMarker,
   applyUpdateTimeSignature,
@@ -250,6 +254,18 @@ function applyActiveClipCommand(
       break;
     case "DeleteTempoMarker":
       nextContext = applyDeleteTempoMarker(context, command);
+      break;
+    case "AddScaleMarker":
+      nextContext = applyAddScaleMarker(context, command);
+      break;
+    case "MoveScaleMarker":
+      nextContext = applyMoveScaleMarker(context, command);
+      break;
+    case "UpdateScaleMarker":
+      nextContext = applyUpdateScaleMarker(context, command);
+      break;
+    case "DeleteScaleMarker":
+      nextContext = applyDeleteScaleMarker(context, command);
       break;
     case "UpdateLoop":
       nextContext = applyUpdateLoop(context, command);

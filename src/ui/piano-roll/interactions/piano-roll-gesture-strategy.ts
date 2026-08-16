@@ -42,6 +42,9 @@ import type {
 import type {
   PitchSnapSettings,
 } from "../../../music/pitch-snap";
+import {
+  resolvePitchSnapSettings,
+} from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import type {
   EditorCommandPort,
 } from "../../../use-cases/commands/editor-command-service";
@@ -226,7 +229,11 @@ export function createPianoRollGestureStrategy(
       targetNoteId: targetNote?.id ?? null,
       snapResolutionTicks: resolutionTicks,
       snapAbsoluteTick,
-      pitchSnapSettings: pitchSnapSettings.get(),
+      getSnapSettingsAtTick: (tick) => resolvePitchSnapSettings(
+        gestureClip.timeline.timeMap,
+        pitchSnapSettings.get(),
+        tick,
+      ),
       selectionMode: event.shiftKey ? "add" : selectionMode,
     });
 
@@ -326,8 +333,9 @@ export function createPianoRollGestureStrategy(
       getVisuals()?.updateDrag(
         deltaX,
         pitchStepCssPixels,
+        draft.deltaTicks,
         draft.deltaPitch,
-        draft.pitchSnapSettings,
+        draft.getSnapSettingsAtTick,
       );
     } else if (updateKind === "updateResize") {
       const deltaX = converter.tickToCssPixelX(draft.deltaTicks)

@@ -18,6 +18,10 @@ import {
 import type {
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";
+import {
+  getScaleMarkerAtTick,
+  type TimeMap,
+} from "../../domain/transport/time-map";
 
 const PITCH_CLASS_NAMES = [
   "C",
@@ -43,6 +47,8 @@ const PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE =
 
 export interface PianoKeyboardProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
+  readonly playheadTick: ReadonlyRenderSignal<number>;
+  readonly timeMap: TimeMap;
   readonly previewEnabled: boolean;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly onPreviewToggle: () => void;
@@ -58,6 +64,8 @@ export function PianoKeyboard(
 ): React.JSX.Element {
   const {
     viewport,
+    playheadTick,
+    timeMap,
     previewEnabled,
     pitchSnapSettings,
     onPreviewToggle,
@@ -187,9 +195,18 @@ export function PianoKeyboard(
       rawPitch: number,
       movementDirection: number,
     ): number => {
+      const currentTick = playheadTick.get();
+      const activeMarker = getScaleMarkerAtTick(timeMap, currentTick);
+      const currentSnapSettings = {
+        ...pitchSnapSettings,
+        tonicPitchClass: activeMarker.tonicPitchClass,
+        patternId: activeMarker.patternId,
+        scaleDegreeIndex: activeMarker.scaleDegreeIndex,
+      };
+
       const auditionedPitch = snapPitchToTonalPattern(
         rawPitch,
-        pitchSnapSettings,
+        currentSnapSettings,
         movementDirection,
       );
 
@@ -371,6 +388,8 @@ export function PianoKeyboard(
     onPitchInteractionChange,
     pitchSnapSettings,
     previewEnabled,
+    playheadTick,
+    timeMap,
   ]);
 
   return (

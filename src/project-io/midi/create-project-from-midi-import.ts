@@ -1,5 +1,6 @@
 import { MIDI_CONSTANTS } from "../../config/midi-config";
 import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
 import {
   type Clip,
   type ClipInstrumentState,
@@ -138,6 +139,12 @@ export function createProjectFromMidiImport(
   const timeMap = {
     meterMarkers: analysis.meterMarkers,
     tempoMarkers: analysis.tempoMarkers,
+    scaleMarkers: [{
+      startTick: 0,
+      tonicPitchClass: TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
+      patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
+      scaleDegreeIndex: TONAL_SNAP_CONSTANTS.defaultScaleDegreeIndex,
+    }],
   };
   const measureCount = Math.max(
     PROJECT_CONSTANTS.minimumMeasureCount,

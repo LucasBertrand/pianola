@@ -82,7 +82,7 @@ export class NoteGestureWorkflowAdapter {
         this.options.selection.notes,
         completion.deltaTicks,
         completion.deltaPitch,
-        completion.pitchSnapSettings,
+        completion.getSnapSettingsAtTick,
       ),
     );
   }

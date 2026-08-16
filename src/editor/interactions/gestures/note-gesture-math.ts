@@ -147,20 +147,21 @@ export function buildRepositionedNotes(
   notes: readonly Note[],
   deltaTicks: number,
   deltaPitch: number,
-  pitchSnapSettings: PitchSnapSettings,
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
 ): readonly Note[] {
   const repositionedNotes: Note[] = [];
 
   for (const note of notes) {
+    const destinationTick = Math.max(0, note.startTick + deltaTicks);
     repositionedNotes.push({
       ...note,
-      startTick: note.startTick + deltaTicks,
+      startTick: destinationTick,
       pitch:
         deltaPitch === 0
           ? note.pitch
           : snapPitchToTonalPattern(
               note.pitch + deltaPitch,
-              pitchSnapSettings,
+              getSnapSettingsAtTick(destinationTick),
               deltaPitch,
             ),
     });

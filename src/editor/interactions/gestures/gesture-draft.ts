@@ -49,7 +49,7 @@ export interface InteractionDraft {
   drawInstrumentId: InstrumentId | null;
   snapResolutionTicks: number;
   snapAbsoluteTick: (tick: number) => number;
-  pitchSnapSettings: PitchSnapSettings;
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings;
   selectionMode: SelectionMode;
 }
 
@@ -81,7 +81,7 @@ export function createInteractionDraft(): InteractionDraft {
     drawInstrumentId: null,
     snapResolutionTicks: 240,
     snapAbsoluteTick: (tick) => tick,
-    pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+    getSnapSettingsAtTick: () => DEFAULT_PITCH_SNAP_SETTINGS,
     selectionMode: "replace",
   };
 }

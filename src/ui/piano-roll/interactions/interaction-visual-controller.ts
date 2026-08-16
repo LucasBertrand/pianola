@@ -26,8 +26,9 @@ export interface InteractionVisualController {
   updateDrag(
     deltaXCssPixels: number,
     pitchStepCssPixels: number,
+    deltaTicks: number,
     deltaPitch: number,
-    pitchSnapSettings: PitchSnapSettings,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void;
   endDrag(): void;
   beginResize(

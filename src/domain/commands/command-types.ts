@@ -21,6 +21,7 @@ import {
 import {
   type TimeSignature,
 } from "../transport/time-map";
+import type { TonalPatternId } from "../../music/pitch-snap";
 import {
   type Note,
 } from "../notes/note";
@@ -277,6 +278,41 @@ export interface DeleteTempoMarkerCommand {
   readonly startTick: Tick;
 }
 
+export interface AddScaleMarkerCommand {
+  readonly type: "AddScaleMarker";
+  readonly clipId: ClipId;
+  readonly marker: {
+    readonly startTick: Tick;
+    readonly tonicPitchClass: number;
+    readonly patternId: TonalPatternId;
+    readonly scaleDegreeIndex: number | null;
+  };
+}
+
+export interface MoveScaleMarkerCommand {
+  readonly type: "MoveScaleMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly targetTick: Tick;
+}
+
+export interface UpdateScaleMarkerCommand {
+  readonly type: "UpdateScaleMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly changes: Partial<{
+    readonly tonicPitchClass: number;
+    readonly patternId: TonalPatternId;
+    readonly scaleDegreeIndex: number | null;
+  }>;
+}
+
+export interface DeleteScaleMarkerCommand {
+  readonly type: "DeleteScaleMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+}
+
 export interface UpdateLoopCommand {
   readonly type: "UpdateLoop";
   readonly clipId: ClipId;
@@ -324,5 +360,9 @@ export type PianoRollCommand =
   | MoveTempoMarkerCommand
   | UpdateTempoMarkerCommand
   | DeleteTempoMarkerCommand
+  | AddScaleMarkerCommand
+  | MoveScaleMarkerCommand
+  | UpdateScaleMarkerCommand
+  | DeleteScaleMarkerCommand
   | UpdateLoopCommand
   | SetLoopEnabledCommand;

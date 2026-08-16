@@ -260,7 +260,7 @@ const DARK_APPLICATION_THEME = Object.freeze({
   }),
   pianoRoll: Object.freeze({
     background: "#111318",
-    alternateMeasure: "rgba(76, 103, 145, 0.075)",
+    alternateMeasure: "rgba(76, 103, 145, 0.04)",
     blackKeyRow: "#121419",
     pitchLine: "#252a33",
     subdivisionLine: "#242933",
@@ -430,7 +430,7 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
   }),
   pianoRoll: Object.freeze({
     background: "#f2ead9",
-    alternateMeasure: "rgba(116, 91, 51, 0.065)",
+    alternateMeasure: "rgba(116, 91, 51, 0.035)",
     blackKeyRow: "#e5d8be",
     pitchLine: "#ddcfb3",
     subdivisionLine: "#d7c7a7",

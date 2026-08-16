@@ -101,29 +101,34 @@ export class DomInteractionVisualController
   public updateDrag(
     deltaXCssPixels: number,
     pitchStepCssPixels: number,
+    deltaTicks: number,
     deltaPitch: number,
-    activePitchSnapSettings: PitchSnapSettings,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
-    if (activePitchSnapSettings.enabled) {
+    if (getSnapSettingsAtTick(0).enabled) {
       resetLayerTransform(this.ghostLayer);
       resetLayerTransform(this.selectionLayer);
       updatePitchSnappedDrag(
         this.ghostElements,
         this.ghostGeometry?.pitch ?? null,
+        this.ghostGeometry?.startTick ?? null,
         deltaXCssPixels,
         pitchStepCssPixels,
+        deltaTicks,
         deltaPitch,
-        activePitchSnapSettings,
+        getSnapSettingsAtTick,
         true,
         this.noteColorMode.get() === "pitch",
       );
       updatePitchSnappedDrag(
         this.selectionElements,
         this.selectionGeometry?.pitch ?? null,
+        this.selectionGeometry?.startTick ?? null,
         deltaXCssPixels,
         pitchStepCssPixels,
+        deltaTicks,
         deltaPitch,
-        activePitchSnapSettings,
+        getSnapSettingsAtTick,
         false,
         false,
       );

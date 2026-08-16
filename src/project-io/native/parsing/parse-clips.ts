@@ -1,4 +1,5 @@
 import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
+import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
 import {
   type Clip,
   type ClipTimeline,
@@ -205,12 +206,16 @@ function parseClipTimeline(
     timeMap["tempoMarkers"],
     `${path}.timeMap.tempoMarkers`,
   );
+  const scaleMarkers = parseScaleMarkers(
+    timeMap["scaleMarkers"],
+    `${path}.timeMap.scaleMarkers`,
+  );
   const timeline: ClipTimeline = {
     durationTicks: readPositiveSafeInteger(
       stored["durationTicks"],
       `${path}.durationTicks`,
     ),
-    timeMap: { meterMarkers, tempoMarkers },
+    timeMap: { meterMarkers, tempoMarkers, scaleMarkers },
   };
   const validation = validateClipTimeline(timeline, clock);
 
@@ -280,6 +285,40 @@ function parseTempoMarkers(
         PROJECT_CONSTANTS.minimumTempoBpm,
         PROJECT_CONSTANTS.maximumTempoBpm,
       ),
+    };
+  });
+}
+
+function parseScaleMarkers(
+  source: unknown,
+  path: string,
+): any[] {
+  if (source === undefined) {
+    return [{
+      startTick: 0,
+      tonicPitchClass: TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
+      patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
+      scaleDegreeIndex: TONAL_SNAP_CONSTANTS.defaultScaleDegreeIndex,
+    }];
+  }
+
+  const sourceMarkers = readBoundedArray(
+    source,
+    path,
+    PROJECT_CONSTANTS.maximumMeasureCount,
+  );
+
+  return sourceMarkers.map((sourceMarker, index) => {
+    const markerPath = `${path}[${String(index)}]`;
+    const marker = readRecord(sourceMarker, markerPath);
+    return {
+      startTick: readNonNegativeSafeInteger(
+        marker["startTick"],
+        `${markerPath}.startTick`,
+      ),
+      tonicPitchClass: readSafeInteger(marker["tonicPitchClass"], `${markerPath}.tonicPitchClass`),
+      patternId: readNonEmptyString(marker["patternId"], `${markerPath}.patternId`, 64) as any,
+      scaleDegreeIndex: marker["scaleDegreeIndex"] === null ? null : readSafeInteger(marker["scaleDegreeIndex"], `${markerPath}.scaleDegreeIndex`),
     };
   });
 }

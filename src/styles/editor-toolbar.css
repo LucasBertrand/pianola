@@ -245,16 +245,14 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 4px;
 }
 
-.grid-control .pitch-snap-control {
-  display: grid;
+.pitch-snap-control {
+  display: flex;
   max-width: none;
   min-width: 0;
   padding: 0;
   border: 0px solid var(--color-tonal-soft);
   border-radius: 6px;
   background: var(--color-tonal-faint);
-  grid-template-columns:
-    28px 28px 38px auto auto;
   align-items: center;
   gap: 3px;
 }
@@ -278,8 +276,6 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
 }
 
-.pitch-snap-control.is-snap-active .pitch-snap-toggle,
-.pitch-snap-control.is-guide-active .pitch-guide-toggle,
 .pitch-snap-toggle.is-active,
 .pitch-snap-toggle[aria-pressed="true"],
 .pitch-guide-toggle.is-active,

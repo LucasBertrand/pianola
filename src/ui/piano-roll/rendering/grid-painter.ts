@@ -121,8 +121,35 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
   );
 
   if (pitchSnapSettings.visualGuideEnabled) {
+    for (let i = 0; i < timeMap.scaleMarkers.length; i += 1) {
+    const marker = timeMap.scaleMarkers[i];
+    const nextMarker = timeMap.scaleMarkers[i + 1];
+    
+    if (marker === undefined) continue;
+    
+    const startTick = marker.startTick;
+    const endTick = nextMarker !== undefined ? nextMarker.startTick : durationTicks;
+
+    if (endTick <= region.startTick || startTick >= region.endTick) {
+      continue;
+    }
+
+    const startX = Math.max(0, converter.tickToCssPixelX(startTick));
+    const endX = Math.min(width, converter.tickToCssPixelX(endTick));
+
+    if (endX <= startX) {
+      continue;
+    }
+
+    const segmentSettings = {
+      ...pitchSnapSettings,
+      tonicPitchClass: marker.tonicPitchClass,
+      patternId: marker.patternId,
+      scaleDegreeIndex: marker.scaleDegreeIndex,
+    };
+
     for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {
-      if (!isPitchAllowedByTonalPattern(pitch, pitchSnapSettings)) {
+      if (!isPitchAllowedByTonalPattern(pitch, segmentSettings)) {
         continue;
       }
 
@@ -131,7 +158,7 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
       const pitchClass = ((pitch % 12) + 12) % 12;
       const degreeColorIndex = getPitchScaleDegreeColorIndex(
         pitch,
-        pitchSnapSettings,
+        segmentSettings,
       );
       const degreePitchRowColor = degreeColorIndex === null
         ? undefined
@@ -141,11 +168,12 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
         : APPLICATION_COLORS.pianoRoll.degreeRootRows[degreeColorIndex];
 
       context.fillStyle = pitchClass
-        === getPitchSnapRootPitchClass(pitchSnapSettings)
+        === getPitchSnapRootPitchClass(segmentSettings)
         ? degreeRootRowColor ?? TONAL_SNAP_TONIC_ROW_COLOR
         : degreePitchRowColor ?? TONAL_SNAP_PITCH_ROW_COLOR;
-      context.fillRect(0, y, width, nextY - y);
+      context.fillRect(startX, y, endX - startX, nextY - y);
     }
+  }
   }
 
   if (

@@ -32,6 +32,7 @@ export interface LayerGeometry {
   readonly left: Float64Array;
   readonly width: Float64Array;
   readonly pitch: Int16Array;
+  readonly startTick: Int32Array;
 }
 export function populateGhostLayer(
   ghostLayer: HTMLDivElement | null,
@@ -53,6 +54,7 @@ export function populateGhostLayer(
   const left = new Float64Array(notes.length);
   const width = new Float64Array(notes.length);
   const pitch = new Int16Array(notes.length);
+  const startTick = new Int32Array(notes.length);
   const fragment = document.createDocumentFragment();
 
   for (
@@ -107,15 +109,17 @@ export function populateGhostLayer(
       note.pitch,
       pitchSnapSettings,
     );
-    left[elements.length] = x;
-    width[elements.length] = noteWidth;
-    pitch[elements.length] = note.pitch;
     elements.push(element);
     fragment.appendChild(element);
+    left[noteIndex] = x;
+    width[noteIndex] = noteWidth;
+    pitch[noteIndex] = note.pitch;
+    startTick[noteIndex] = note.startTick;
   }
 
   ghostLayer.appendChild(fragment);
-  return { left, width, pitch };
+
+  return { left, width, pitch, startTick };
 }
 
 export function populateSelectionLayer(
@@ -134,6 +138,7 @@ export function populateSelectionLayer(
   const left = new Float64Array(notes.length);
   const width = new Float64Array(notes.length);
   const pitch = new Int16Array(notes.length);
+  const startTick = new Int32Array(notes.length);
   const fragment = document.createDocumentFragment();
 
   for (
@@ -171,15 +176,17 @@ export function populateSelectionLayer(
     element.style.top = `${y}px`;
     element.style.width = `${noteWidth}px`;
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
-    left[elements.length] = x;
-    width[elements.length] = noteWidth;
-    pitch[elements.length] = note.pitch;
     elements.push(element);
     fragment.appendChild(element);
+    left[noteIndex] = x;
+    width[noteIndex] = noteWidth;
+    pitch[noteIndex] = note.pitch;
+    startTick[noteIndex] = note.startTick;
   }
 
   selectionLayer.appendChild(fragment);
-  return { left, width, pitch };
+
+  return { left, width, pitch, startTick };
 }
 
 export function updateGhostPitchPresentation(
@@ -217,10 +224,12 @@ export function updateGhostPitchPresentation(
 export function updatePitchSnappedDrag(
   elements: readonly HTMLElement[],
   basePitches: Int16Array | null,
+  baseTicks: Int32Array | null,
   deltaXCssPixels: number,
   pitchStepCssPixels: number,
+  deltaTicks: number,
   deltaPitch: number,
-  pitchSnapSettings: PitchSnapSettings,
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   updatePitchLabel: boolean,
   updatePitchColor: boolean,
 ): void {
@@ -231,17 +240,20 @@ export function updatePitchSnappedDrag(
   for (let index = 0; index < elements.length; index += 1) {
     const element = elements[index];
     const basePitch = basePitches[index];
+    const baseTick = baseTicks?.[index];
 
-    if (element === undefined || basePitch === undefined) {
+    if (element === undefined || basePitch === undefined || baseTick === undefined) {
       continue;
     }
 
+    const destinationTick = Math.max(0, baseTick + deltaTicks);
+    const snapSettings = getSnapSettingsAtTick(destinationTick);
     const snappedPitch =
       deltaPitch === 0
         ? basePitch
         : snapPitchToTonalPattern(
             basePitch + deltaPitch,
-            pitchSnapSettings,
+            snapSettings,
             deltaPitch,
           );
     const deltaYCssPixels =
@@ -253,7 +265,7 @@ export function updatePitchSnappedDrag(
     if (updatePitchLabel) {
       element.textContent = getMidiNoteLabel(
         snappedPitch,
-        pitchSnapSettings,
+        snapSettings,
       );
     }
 
