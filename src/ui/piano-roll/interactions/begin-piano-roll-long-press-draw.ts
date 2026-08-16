@@ -151,7 +151,7 @@ export function beginPianoRollLongPressDraw({
       t,
       resolutionTicks,
     ),
-    pitchSnapSettings: activePitchSnapSettings,
+    getSnapSettingsAtTick: () => activePitchSnapSettings,
     selectionMode: "replace",
   })) {
     return;

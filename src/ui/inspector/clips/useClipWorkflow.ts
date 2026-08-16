@@ -166,6 +166,9 @@ export function useClipWorkflow({
           tempoMarkers: sourceClip.timeline.timeMap.tempoMarkers.map(
             (marker) => ({ ...marker }),
           ),
+          scaleMarkers: sourceClip.timeline.timeMap.scaleMarkers.map(
+            (marker) => ({ ...marker }),
+          ),
         },
       },
     };

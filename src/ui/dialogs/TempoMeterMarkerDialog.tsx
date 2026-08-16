@@ -188,7 +188,7 @@ export function TempoMeterMarkerDialog({
           </select>
         </label>
 
-        {selectedPattern !== undefined && selectedPattern.id !== "chromatic" ? (
+        {selectedPattern !== undefined ? (
           <label className="instrument-preset-dialog-control">
             <span>Degree</span>
             <select

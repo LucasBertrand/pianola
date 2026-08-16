@@ -272,7 +272,7 @@ export function updatePitchSnappedDrag(
     if (updatePitchColor) {
       element.style.background = getPitchNoteColor(
         snappedPitch,
-        pitchSnapSettings,
+        snapSettings,
       );
     }
   }
