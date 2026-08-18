@@ -83,6 +83,7 @@ export class DomInteractionVisualController
     notes: readonly Note[],
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
     this.editingNoteMask.replace(notes);
     resetLayerTransform(this.selectionLayer);
@@ -92,7 +93,7 @@ export class DomInteractionVisualController
       converter,
       stylesByInstrumentId,
       this.noteColorMode.get(),
-      this.pitchSnapSettings.get(),
+      getSnapSettingsAtTick,
       null,
       this.ghostElements,
     );
@@ -150,8 +151,10 @@ export class DomInteractionVisualController
     updateGhostPitchPresentation(
       this.ghostElements,
       this.ghostGeometry?.pitch ?? null,
+      this.ghostGeometry?.startTick ?? null,
       deltaPitch,
-      this.pitchSnapSettings.get(),
+      deltaTicks,
+      getSnapSettingsAtTick,
       this.noteColorMode.get() === "pitch",
     );
   }
@@ -168,6 +171,7 @@ export class DomInteractionVisualController
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     edge: ResizeEdge,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
     this.editingNoteMask.replace(notes);
     resetLayerTransform(this.selectionLayer);
@@ -177,7 +181,7 @@ export class DomInteractionVisualController
       converter,
       stylesByInstrumentId,
       this.noteColorMode.get(),
-      this.pitchSnapSettings.get(),
+      getSnapSettingsAtTick,
       edge,
       this.ghostElements,
     );
@@ -215,6 +219,7 @@ export class DomInteractionVisualController
     instrumentId: InstrumentId,
     converter: CoordinateConverter,
     style: InstrumentRenderStyle | undefined,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
     if (this.ghostLayer === null) {
       return;
@@ -243,12 +248,12 @@ export class DomInteractionVisualController
       this.noteColorMode.get() === "pitch"
         ? getPitchNoteColor(
             pitch,
-            this.pitchSnapSettings.get(),
+            getSnapSettingsAtTick(startTick),
           )
         : style?.fillStyle ?? APPLICATION_COLORS.accent.primary;
     element.textContent = getMidiNoteLabel(
       pitch,
-      this.pitchSnapSettings.get(),
+      getSnapSettingsAtTick(startTick),
     );
     this.drawGhostElement = element;
     this.ghostLayer.appendChild(element);
@@ -308,6 +313,7 @@ export class DomInteractionVisualController
   public showSelection(
     notes: readonly Note[],
     converter: CoordinateConverter,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
     this.selectionGeometry = populateSelectionLayer(
       this.selectionLayer,

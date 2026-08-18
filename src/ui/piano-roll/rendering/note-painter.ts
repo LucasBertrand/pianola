@@ -27,7 +27,11 @@ import {
   compareNotesByPitchRenderOrder,
   getNoteFillStyle,
 } from "./note-style";
+import {
+  type TimeMap,
+} from "../../../domain/transport/time-map";
 import { getMidiNoteLabel } from "./pitch-label";
+import { resolvePitchSnapSettings } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 
 const NOTE_LABEL_MINIMUM_HEIGHT =
   RENDERING_CONSTANTS.noteLabelMinimumHeightCssPixels;
@@ -49,7 +53,8 @@ export interface NotePaintSnapshot {
   >;
   readonly instrumentOrder: readonly InstrumentId[];
   readonly colorMode: NoteColorMode;
-  readonly pitchLabelSettings: PitchSnapSettings;
+  readonly globalPitchSnapSettings: PitchSnapSettings;
+  readonly timeMap: TimeMap;
 }
 
 export function paintNotes(snapshot: NotePaintSnapshot): void {
@@ -61,7 +66,8 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
     stylesByInstrumentId,
     instrumentOrder,
     colorMode,
-    pitchLabelSettings,
+    globalPitchSnapSettings,
+    timeMap,
   } = snapshot;
 
   visibleNotes.sort(
@@ -82,18 +88,31 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
 
     const instrumentStyle = stylesByInstrumentId[note.instrumentId];
 
+    const noteSnapSettings = resolvePitchSnapSettings(
+      timeMap,
+      globalPitchSnapSettings,
+      note.startTick,
+    );
+
     if (
-      (colorMode === "instrument" && note.instrumentId !== currentInstrumentId)
-      || (colorMode === "pitch" && note.pitch !== currentPitch)
+      colorMode === "instrument"
     ) {
+      if (note.instrumentId !== currentInstrumentId) {
+        context.fillStyle = getNoteFillStyle(
+          note,
+          stylesByInstrumentId,
+          colorMode,
+          noteSnapSettings,
+        );
+        currentInstrumentId = note.instrumentId;
+      }
+    } else {
       context.fillStyle = getNoteFillStyle(
         note,
         stylesByInstrumentId,
         colorMode,
-        pitchLabelSettings,
+        noteSnapSettings,
       );
-      currentInstrumentId = note.instrumentId;
-      currentPitch = note.pitch;
     }
 
     const opacity =
@@ -145,7 +164,8 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
     visibleNotes,
     editingNoteIds,
     stylesByInstrumentId,
-    pitchLabelSettings,
+    timeMap,
+    globalPitchSnapSettings,
   } = snapshot;
 
   context.fillStyle = NOTE_LABEL_COLOR;
@@ -154,12 +174,17 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
     + '"SFMono-Regular", Consolas, monospace';
   context.textAlign = "left";
   context.textBaseline = "middle";
-  const noteLabelWidths = getNoteLabelWidths(context, pitchLabelSettings);
 
   for (const note of visibleNotes) {
     if (editingNoteIds.has(note.id)) {
       continue;
     }
+
+    const noteSnapSettings = resolvePitchSnapSettings(
+      timeMap,
+      globalPitchSnapSettings,
+      note.startTick,
+    );
 
     const x = converter.tickToCssPixelX(note.startTick);
     const endX = converter.tickToCssPixelX(
@@ -169,8 +194,9 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
     const nextRowY = converter.pitchToCssPixelY(note.pitch - 1);
     const width = Math.max(1, endX - x - 1);
     const height = Math.max(1, nextRowY - y - 1);
-    const label = getMidiNoteLabel(note.pitch, pitchLabelSettings);
-    const labelWidth = noteLabelWidths[note.pitch] ?? 0;
+    const label = getMidiNoteLabel(note.pitch, noteSnapSettings);
+    // Dynamically calculate width instead of caching, since settings may vary per note
+    const labelWidth = context.measureText(label).width;
 
     if (
       label.length === 0

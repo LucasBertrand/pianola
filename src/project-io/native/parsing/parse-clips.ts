@@ -46,6 +46,7 @@ import {
   readPositiveSafeInteger,
   readRecord,
   readSafeInteger,
+  readString,
 } from "./json-readers";
 import { parseClipInstrumentStates } from "./parse-instruments";
 
@@ -193,9 +194,12 @@ function parseClipTimeline(
   const stored = readRecord(source, path);
   assertExactRecordKeys(stored, ["durationTicks", "timeMap"], path);
   const timeMap = readRecord(stored["timeMap"], `${path}.timeMap`);
+  const timeMapKeys = "scaleMarkers" in timeMap
+    ? ["meterMarkers", "tempoMarkers", "scaleMarkers"]
+    : ["meterMarkers", "tempoMarkers"];
   assertExactRecordKeys(
     timeMap,
-    ["meterMarkers", "tempoMarkers"],
+    timeMapKeys,
     `${path}.timeMap`,
   );
   const meterMarkers = parseMeterMarkers(
@@ -296,9 +300,9 @@ function parseScaleMarkers(
   if (source === undefined) {
     return [{
       startTick: 0,
-      tonicPitchClass: TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
+      rootNote: TONAL_SNAP_CONSTANTS.defaultRootNote,
+      patternType: "scale",
       patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
-      scaleDegreeIndex: TONAL_SNAP_CONSTANTS.defaultScaleDegreeIndex,
     }];
   }
 
@@ -311,14 +315,21 @@ function parseScaleMarkers(
   return sourceMarkers.map((sourceMarker, index) => {
     const markerPath = `${path}[${String(index)}]`;
     const marker = readRecord(sourceMarker, markerPath);
+    
+    // Default patternType for backwards compatibility
+    let patternType = "scale";
+    if (marker["patternType"] !== undefined) {
+      patternType = marker["patternType"] as string;
+    }
+
     return {
       startTick: readNonNegativeSafeInteger(
         marker["startTick"],
         `${markerPath}.startTick`,
       ),
-      tonicPitchClass: readSafeInteger(marker["tonicPitchClass"], `${markerPath}.tonicPitchClass`),
+      rootNote: readString(marker["rootNote"] ?? "C", `${markerPath}.rootNote`, 10),
+      patternType,
       patternId: readNonEmptyString(marker["patternId"], `${markerPath}.patternId`, 64) as any,
-      scaleDegreeIndex: marker["scaleDegreeIndex"] === null ? null : readSafeInteger(marker["scaleDegreeIndex"], `${markerPath}.scaleDegreeIndex`),
     };
   });
 }

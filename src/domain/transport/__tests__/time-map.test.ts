@@ -56,7 +56,12 @@ function createMixedTimeMap(): TimeMap {
       { startTick: 0, bpm: 120 },
       { startTick: 7_680, bpm: 60 },
     ],
-scaleMarkers: [],
+    scaleMarkers: [{
+      startTick: 0,
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "ionian",
+    }],
   };
 }
 

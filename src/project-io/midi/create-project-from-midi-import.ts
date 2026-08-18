@@ -141,9 +141,9 @@ export function createProjectFromMidiImport(
     tempoMarkers: analysis.tempoMarkers,
     scaleMarkers: [{
       startTick: 0,
-      tonicPitchClass: TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
+      rootNote: TONAL_SNAP_CONSTANTS.defaultRootNote,
+      patternType: "scale" as const,
       patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
-      scaleDegreeIndex: TONAL_SNAP_CONSTANTS.defaultScaleDegreeIndex,
     }],
   };
   const measureCount = Math.max(

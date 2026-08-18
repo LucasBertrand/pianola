@@ -1,5 +1,5 @@
 import { EDITOR_CONSTANTS, VIEWPORT_CONSTANTS } from "../../../config/editor-config";
-import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
+
 import {
   type ClipId,
 } from "../../../domain/identifiers";
@@ -11,9 +11,9 @@ import {
 } from "../../../domain/identifiers";
 import { createGridSettings, parseGridSubdivision, type GridSettings } from "../../../editor/model/grid-settings";
 import {
-  getTonalPatternDefinition,
   isTonalPatternId,
   type PitchSnapSettings,
+  type TonalPatternType,
 } from "../../../music/pitch-snap";
 import { fail } from "../native-project-error";
 import type {
@@ -24,7 +24,6 @@ import type {
 import {
   assertExactRecordKeys,
   readBoolean,
-  readIntegerInRange,
   readNonEmptyString,
   readNumberInRange,
   readPositiveSafeInteger,
@@ -182,15 +181,20 @@ function parsePitchSnapSettings(
     );
   }
 
-  const scaleDegreeSource = settings["scaleDegreeIndex"];
-  const scaleDegreeIndex = scaleDegreeSource === null
-    ? null
-    : readIntegerInRange(
-        scaleDegreeSource,
-        `${path}.scaleDegreeIndex`,
-        0,
-        getTonalPatternDefinition(patternId).intervals.length - 1,
-      );
+  const patternTypeSource = settings["patternType"];
+  let patternType: TonalPatternType = "scale";
+  if (patternTypeSource !== undefined) {
+    const typeStr = readString(
+      patternTypeSource,
+      `${path}.patternType`,
+      16,
+    );
+    if (typeStr !== "scale" && typeStr !== "chord") {
+       return fail("INVALID_DATA", `${path}.patternType`, "Invalid pattern type.");
+    }
+    patternType = typeStr as TonalPatternType;
+  }
+
   const enabled = readBoolean(
     settings["enabled"],
     `${path}.enabled`,
@@ -203,14 +207,13 @@ function parsePitchSnapSettings(
   return {
     enabled,
     visualGuideEnabled,
-    tonicPitchClass: readIntegerInRange(
-      settings["tonicPitchClass"],
-      `${path}.tonicPitchClass`,
-      0,
-      TONAL_SNAP_CONSTANTS.tonicOptions.length - 1,
+    rootNote: readString(
+      settings["rootNote"] ?? "C",
+      `${path}.rootNote`,
+      10,
     ),
+    patternType,
     patternId,
-    scaleDegreeIndex,
   };
 }
 

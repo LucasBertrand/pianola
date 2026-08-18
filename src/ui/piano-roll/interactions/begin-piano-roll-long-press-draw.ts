@@ -33,6 +33,9 @@ import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,
 } from "../../../music/pitch-snap";
+import {
+  resolvePitchSnapSettings,
+} from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import type {
   EditorCommandPort,
 } from "../../../use-cases/commands/editor-command-service";
@@ -127,8 +130,15 @@ export function beginPianoRollLongPressDraw({
       resolutionTicks,
     ),
   );
-  const activePitchSnapSettings = pitchSnapSettings.get();
-  const drawPitch = snapPitchToTonalPattern(pitch, activePitchSnapSettings, 0);
+  const drawPitch = snapPitchToTonalPattern(
+    pitch,
+    resolvePitchSnapSettings(
+      activeClip.timeline.timeMap,
+      pitchSnapSettings.get(),
+      startTick,
+    ),
+    0,
+  );
 
   if (startTick + resolutionTicks > totalTicks) {
     return;
@@ -151,7 +161,11 @@ export function beginPianoRollLongPressDraw({
       t,
       resolutionTicks,
     ),
-    getSnapSettingsAtTick: () => activePitchSnapSettings,
+    getSnapSettingsAtTick: (t) => resolvePitchSnapSettings(
+      activeClip.timeline.timeMap,
+      pitchSnapSettings.get(),
+      t,
+    ),
     selectionMode: "replace",
   })) {
     return;
@@ -171,5 +185,10 @@ export function beginPianoRollLongPressDraw({
     activeInstrumentId,
     converter,
     instrumentStyles.get()[activeInstrumentId],
+    (t) => resolvePitchSnapSettings(
+      activeClip.timeline.timeMap,
+      pitchSnapSettings.get(),
+      t,
+    ),
   );
 }

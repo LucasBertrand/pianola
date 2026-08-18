@@ -13,14 +13,12 @@ export function resolvePitchSnapSettings(
   globalSettings: PitchSnapSettings,
   tick: number,
 ): PitchSnapSettings {
-  if (!globalSettings.enabled) {
-    return globalSettings;
-  }
+
   const scaleMarker = getScaleMarkerAtTick(timeMap, tick);
   return {
     ...globalSettings,
-    tonicPitchClass: scaleMarker.tonicPitchClass,
+    rootNote: scaleMarker.rootNote,
     patternId: scaleMarker.patternId,
-    scaleDegreeIndex: scaleMarker.scaleDegreeIndex,
+    patternType: scaleMarker.patternType,
   };
 }

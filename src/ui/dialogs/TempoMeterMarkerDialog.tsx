@@ -6,8 +6,9 @@ import type {
   TimeSignature,
 } from "../../domain/transport/time-map";
 import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
-import type { TonalPatternId } from "../../music/pitch-snap";
-import { getPreferredTonicLabel } from "../piano-roll/rendering/pitch-label";
+import type { TonalPatternType } from "../../music/pitch-snap";
+
+import { ScaleType, ChordType } from "@tonaljs/tonal";
 
 const DENOMINATOR_OPTIONS = [1, 2, 4, 8, 16, 32] as const;
 
@@ -16,15 +17,15 @@ export interface TempoMeterMarkerDialogProps {
   readonly measureIndex: number | null;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
-  readonly tonicPitchClass: number;
-  readonly patternId: TonalPatternId;
-  readonly scaleDegreeIndex: number | null;
+  readonly rootNote: string;
+  readonly patternType: TonalPatternType;
+  readonly patternId: string;
   readonly canDelete: boolean;
   readonly onBpmChange: (bpm: number) => void;
   readonly onTimeSignatureChange: (timeSignature: TimeSignature) => void;
-  readonly onTonicPitchClassChange: (tonicPitchClass: number) => void;
-  readonly onPatternIdChange: (patternId: TonalPatternId) => void;
-  readonly onScaleDegreeIndexChange: (scaleDegreeIndex: number | null) => void;
+  readonly onRootNoteChange: (rootNote: string) => void;
+  readonly onPatternTypeChange: (patternType: TonalPatternType) => void;
+  readonly onPatternIdChange: (patternId: string) => void;
   readonly onDelete: () => void;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
@@ -36,22 +37,19 @@ export function TempoMeterMarkerDialog({
   measureIndex,
   bpm,
   timeSignature,
-  tonicPitchClass,
+  rootNote,
+  patternType,
   patternId,
-  scaleDegreeIndex,
   canDelete,
   onBpmChange,
   onTimeSignatureChange,
-  onTonicPitchClassChange,
+  onRootNoteChange,
+  onPatternTypeChange,
   onPatternIdChange,
-  onScaleDegreeIndexChange,
   onDelete,
   onConfirm,
   onCancel,
 }: TempoMeterMarkerDialogProps): React.JSX.Element {
-  const selectedPattern = TONAL_SNAP_CONSTANTS.patterns.find(
-    (pattern) => pattern.id === patternId,
-  );
   return (
     <div className="application-dialog-backdrop">
       <form
@@ -65,7 +63,7 @@ export function TempoMeterMarkerDialog({
           onConfirm();
         }}
       >
-        <div className="application-dialog-heading">
+        <div className="application-dialog-heading" style={{ marginBottom: "1rem" }}>
           <span className="application-dialog-mark" aria-hidden="true">
             {mode === "create" ? "+" : "~"}
           </span>
@@ -73,10 +71,10 @@ export function TempoMeterMarkerDialog({
             {mode === "create"
               ? measureIndex !== null
                 ? `Add marker at measure ${String(measureIndex + 1)}`
-                : "Add tempo marker"
+                : "Add marker"
               : measureIndex !== null
                 ? `Edit marker at measure ${String(measureIndex + 1)}`
-                : "Edit tempo marker"}
+                : "Edit marker"}
           </h2>
         </div>
 
@@ -155,59 +153,72 @@ export function TempoMeterMarkerDialog({
         )}
 
         <label className="instrument-preset-dialog-control">
-          <span>Tonic</span>
+          <span>Root</span>
           <select
-            value={tonicPitchClass}
-            aria-label="Tonic pitch class"
+            value={rootNote}
+            aria-label="Root pitch class"
             onChange={(event) => {
-              onTonicPitchClassChange(Number(event.currentTarget.value));
+              onRootNoteChange(event.currentTarget.value);
             }}
           >
-            {TONAL_SNAP_CONSTANTS.tonicOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {getPreferredTonicLabel(opt.value, patternId)}
+            {TONAL_SNAP_CONSTANTS.rootOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
               </option>
             ))}
           </select>
         </label>
 
         <label className="instrument-preset-dialog-control">
-          <span>Scale</span>
+          <span>Type</span>
           <select
-            value={patternId}
-            aria-label="Tonal scale pattern"
+            value={patternType}
+            aria-label="Pattern type"
             onChange={(event) => {
-              onPatternIdChange(event.currentTarget.value as TonalPatternId);
+              const newType = event.currentTarget.value as TonalPatternType;
+              onPatternTypeChange(newType);
+              if (newType === "scale") {
+                onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedScales[0]);
+              } else {
+                onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedChords[0]);
+              }
             }}
           >
-            {TONAL_SNAP_CONSTANTS.patterns.map((pattern) => (
-              <option key={pattern.id} value={pattern.id}>
-                {pattern.label}
-              </option>
-            ))}
+            <option value="scale">Gamme</option>
+            <option value="chord">Accord</option>
           </select>
         </label>
 
-        {selectedPattern !== undefined ? (
-          <label className="instrument-preset-dialog-control">
-            <span>Degree</span>
-            <select
-              value={scaleDegreeIndex === null ? "none" : scaleDegreeIndex}
-              aria-label="Scale degree highlight"
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                onScaleDegreeIndexChange(value === "none" ? null : Number(value));
-              }}
-            >
-              <option value="none">None</option>
-              {selectedPattern.intervals.map((_, index) => (
-                <option key={index} value={index}>
-                  Degree {index + 1}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+        <label className="instrument-preset-dialog-control">
+          <span>{patternType === "scale" ? "Scale" : "Chord"}</span>
+          <select
+            value={patternId}
+            aria-label="Tonal pattern"
+            onChange={(event) => {
+              onPatternIdChange(event.currentTarget.value);
+            }}
+          >
+            {patternType === "scale" ? (
+              TONAL_SNAP_CONSTANTS.supportedScales.map((scaleId) => {
+                const scale = ScaleType.get(scaleId);
+                return (
+                  <option key={scaleId} value={scaleId}>
+                    {scaleId}
+                  </option>
+                );
+              })
+            ) : (
+              TONAL_SNAP_CONSTANTS.supportedChords.map((chordId) => {
+                const chord = ChordType.get(chordId);
+                return (
+                  <option key={chordId} value={chordId}>
+                    {chord.aliases[0] ?? chordId} ({chord.name})
+                  </option>
+                );
+              })
+            )}
+          </select>
+        </label>
 
         <div
           className={`application-dialog-actions${

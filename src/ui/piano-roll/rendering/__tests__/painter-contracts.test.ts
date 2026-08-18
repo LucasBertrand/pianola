@@ -83,8 +83,9 @@ describe("P3 Canvas painter contracts", () => {
         },
       },
       instrumentOrder: ["instrument"],
-      colorMode: "instrument",
-      pitchLabelSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      colorMode: "velocity",
+      globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      timeMap: createDefaultTimeMap(),
     });
 
     expect(notes.map((note) => note.id)).toEqual(["first", "second"]);

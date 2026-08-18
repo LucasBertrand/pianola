@@ -143,9 +143,9 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
 
     const segmentSettings = {
       ...pitchSnapSettings,
-      tonicPitchClass: marker.tonicPitchClass,
+      rootNote: marker.rootNote,
+      patternType: marker.patternType,
       patternId: marker.patternId,
-      scaleDegreeIndex: marker.scaleDegreeIndex,
     };
 
     for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {
@@ -162,10 +162,14 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
       );
       const degreePitchRowColor = degreeColorIndex === null
         ? undefined
-        : APPLICATION_COLORS.pianoRoll.degreePitchRows[degreeColorIndex];
+        : APPLICATION_COLORS.pianoRoll.degreePitchRows[
+          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreePitchRows.length
+        ];
       const degreeRootRowColor = degreeColorIndex === null
         ? undefined
-        : APPLICATION_COLORS.pianoRoll.degreeRootRows[degreeColorIndex];
+        : APPLICATION_COLORS.pianoRoll.degreeRootRows[
+          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreeRootRows.length
+        ];
 
       context.fillStyle = pitchClass
         === getPitchSnapRootPitchClass(segmentSettings)

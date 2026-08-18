@@ -39,7 +39,12 @@ function createProjectWithMarkers(): ReturnType<typeof createTestProject> {
       { startTick: 0, bpm: 120 },
       { startTick: 2 * MEASURE_TICKS, bpm: 90 },
     ],
-scaleMarkers: [],
+    scaleMarkers: [{
+      startTick: 0,
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "ionian",
+    }],
   };
 
   return {
@@ -87,11 +92,16 @@ describe("createTimeMapMarkerFlags", () => {
         { startTick: 0, bpm: 120 },
         { startTick: 2 * MEASURE_TICKS, bpm: 90 },
       ],
-scaleMarkers: [],
+      scaleMarkers: [{
+        startTick: 0,
+        rootNote: "C",
+        patternType: "scale",
+        patternId: "ionian",
+      }],
     });
 
     expect(flags.map((flag) => formatMarkerFlagLabel(flag))).toEqual([
-      "120 · 4/4",
+      "120 · 4/4 · C ionian",
       "3/4",
       "90",
     ]);
@@ -109,6 +119,9 @@ describe("createMarkerDraft", () => {
       measureIndex: null,
       bpm: 120, // The tempo at 0 is 120, and next is at 2*MEASURE_TICKS
       timeSignature: null,
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "ionian",
       canDelete: false,
     });
   });
@@ -298,7 +311,12 @@ describe("planMarkerMoveCommands", () => {
                 { startTick: MEASURE_TICKS, bpm: 100 },
                 { startTick: 2 * MEASURE_TICKS, bpm: 90 },
               ],
-scaleMarkers: [],
+                scaleMarkers: [{
+                  startTick: 0,
+                  rootNote: "C",
+                  patternType: "scale",
+                  patternId: "ionian",
+                }],
             },
           },
         },

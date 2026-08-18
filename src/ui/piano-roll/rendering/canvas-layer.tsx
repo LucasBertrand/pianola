@@ -8,6 +8,7 @@ import React, {
 import {
   getActiveClip,
 } from "../../../domain/project/project-document";
+import { resolvePitchSnapSettings } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import {
   type InstrumentId,
 } from "../../../domain/identifiers";
@@ -212,6 +213,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         region.maxPitch,
         visibleNotes,
       );
+      const activeClip = getActiveClip(projectStore.getState());
       paintNotes({
         context: frame.context,
         converter,
@@ -220,7 +222,8 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         stylesByInstrumentId: instrumentStyles.get(),
         instrumentOrder: projectStore.getState().instrumentOrder,
         colorMode: noteColorMode.get(),
-        pitchLabelSettings: pitchSnapSettings.get(),
+        globalPitchSnapSettings: pitchSnapSettings.get(),
+        timeMap: activeClip.timeline.timeMap,
       });
     },
     [

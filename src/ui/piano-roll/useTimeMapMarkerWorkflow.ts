@@ -21,7 +21,7 @@ import {
   planMarkerMoveCommands,
   type TimeMapMarkerDraft,
 } from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
-import type { TonalPatternId } from "../../music/pitch-snap";
+import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
 
 export interface TimeMapMarkerWorkflow {
   readonly draft: TimeMapMarkerDraft | null;
@@ -30,9 +30,9 @@ export interface TimeMapMarkerWorkflow {
   readonly moveMarker: (fromTick: Tick, toTick: Tick) => void;
   readonly setDraftBpm: (bpm: number) => void;
   readonly setDraftTimeSignature: (timeSignature: TimeSignature) => void;
-  readonly setDraftTonicPitchClass: (tonicPitchClass: number) => void;
+  readonly setDraftRootNote: (rootNote: string) => void;
   readonly setDraftPatternId: (patternId: TonalPatternId) => void;
-  readonly setDraftScaleDegreeIndex: (scaleDegreeIndex: number | null) => void;
+  readonly setDraftPatternType: (patternType: TonalPatternType) => void;
   readonly confirmDraft: () => void;
   readonly deleteDraft: () => void;
   readonly cancelDraft: () => void;
@@ -99,14 +99,14 @@ export function useTimeMapMarkerWorkflow({
     },
     [],
   );
-  const setDraftTonicPitchClass = useCallback((tonicPitchClass: number): void => {
-    setDraft((current) => current === null ? null : { ...current, tonicPitchClass });
+  const setDraftRootNote = useCallback((rootNote: string): void => {
+    setDraft((current) => current === null ? null : { ...current, rootNote });
   }, []);
   const setDraftPatternId = useCallback((patternId: TonalPatternId): void => {
     setDraft((current) => current === null ? null : { ...current, patternId });
   }, []);
-  const setDraftScaleDegreeIndex = useCallback((scaleDegreeIndex: number | null): void => {
-    setDraft((current) => current === null ? null : { ...current, scaleDegreeIndex });
+  const setDraftPatternType = useCallback((patternType: TonalPatternType): void => {
+    setDraft((current) => current === null ? null : { ...current, patternType });
   }, []);
   const confirmDraft = useCallback((): void => {
     if (draft === null) {
@@ -169,9 +169,9 @@ export function useTimeMapMarkerWorkflow({
     moveMarker,
     setDraftBpm,
     setDraftTimeSignature,
-    setDraftTonicPitchClass,
+    setDraftRootNote,
     setDraftPatternId,
-    setDraftScaleDegreeIndex,
+    setDraftPatternType,
     confirmDraft,
     deleteDraft,
     cancelDraft,

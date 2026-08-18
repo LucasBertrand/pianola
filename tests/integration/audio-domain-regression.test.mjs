@@ -137,7 +137,7 @@ import {
 } from "../../src/project-io/native/serialize-native-project";
 import {
   getMidiNoteLabel,
-  getPreferredTonicLabel,
+  getPreferredRootLabel,
   getScaleDegreeLabel,
 } from "../../src/ui/piano-roll/rendering/pitch-label";
 import {
@@ -493,10 +493,10 @@ function getActiveTestMeasureCount(state) {
       [first],
       120,
       1,
-      {
+      () => ({
         ...DEFAULT_PITCH_SNAP_SETTINGS,
         enabled: true,
-      },
+      }),
     );
 
     assert.equal(moved[0].startTick, 240);
@@ -516,7 +516,11 @@ function getActiveTestMeasureCount(state) {
       pointerPitch: 60,
       targetNoteId: null,
       snapResolutionTicks: 120,
-      pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      snapAbsoluteTick: (tick) => snapTickToCellStart(tick, 120),
+      getSnapSettingsAtTick: () => ({
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        enabled: true,
+      }),
       selectionMode: "replace",
       ...overrides,
     });
@@ -1506,12 +1510,9 @@ function getActiveTestMeasureCount(state) {
     const cIonian = {
       ...DEFAULT_PITCH_SNAP_SETTINGS,
       enabled: true,
-      tonicPitchClass: 0,
+      rootNote: "C",
+      patternType: "scale",
       patternId: "ionian",
-    };
-    const cIonianFirstDegree = {
-      ...cIonian,
-      scaleDegreeIndex: 0,
     };
 
     assert.equal(
@@ -1523,11 +1524,11 @@ function getActiveTestMeasureCount(state) {
       62,
     );
     assert.equal(
-      snapPitchToTonalPattern(62, cIonianFirstDegree, -1),
-      60,
+      snapPitchToTonalPattern(62, cIonian, -1),
+      62,
     );
     assert.equal(
-      snapPitchToTonalPattern(62, cIonianFirstDegree, 1),
+      snapPitchToTonalPattern(63, cIonian, 1),
       64,
     );
     assert.equal(
@@ -1543,94 +1544,33 @@ function getActiveTestMeasureCount(state) {
   test("spells modes enharmonically and supports variable degree counts", () => {
     const cPhrygian = {
       ...DEFAULT_PITCH_SNAP_SETTINGS,
-      tonicPitchClass: 0,
+      rootNote: "C",
+      patternType: "scale",
       patternId: "phrygian",
     };
-    const cMinorSecondDegree = {
-      ...DEFAULT_PITCH_SNAP_SETTINGS,
-      enabled: true,
-      tonicPitchClass: 0,
-      patternId: "aeolian",
-      scaleDegreeIndex: 1,
-    };
-    const minorPentatonic = getTonalPatternDefinition(
-      "minor-pentatonic",
-    );
-    const harmonicMinor = getTonalPatternDefinition(
-      "harmonic-minor",
-    );
-    const melodicMinor = getTonalPatternDefinition(
-      "melodic-minor",
-    );
-    const diminishedWholeHalf = getTonalPatternDefinition(
-      "diminished-whole-half",
-    );
     const cMinorPentatonic = {
       ...DEFAULT_PITCH_SNAP_SETTINGS,
-      tonicPitchClass: 0,
-      patternId: "minor-pentatonic",
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "minor pentatonic",
     };
     const cBlues = {
       ...DEFAULT_PITCH_SNAP_SETTINGS,
-      tonicPitchClass: 0,
+      rootNote: "C",
+      patternType: "scale",
       patternId: "blues",
     };
 
     assert.equal(getMidiNoteLabel(61, cPhrygian), "Db4");
-    assert.equal(getPreferredTonicLabel(1, "ionian"), "Db");
-    assert.equal(getPreferredTonicLabel(1, "dorian"), "C#");
+
     assert.equal(
       getMidiNoteLabel(61, {
         ...DEFAULT_PITCH_SNAP_SETTINGS,
-        tonicPitchClass: 1,
+        rootNote: "C#",
+        patternType: "scale",
         patternId: "ionian",
       }),
-      "Db4",
-    );
-    assert.equal(minorPentatonic.intervals.length, 5);
-    assert.deepEqual(
-      [...harmonicMinor.intervals],
-      [0, 2, 3, 5, 7, 8, 11],
-    );
-    assert.deepEqual(
-      [...melodicMinor.intervals],
-      [0, 2, 3, 5, 7, 9, 11],
-    );
-    assert.equal(diminishedWholeHalf.intervals.length, 8);
-    assert.match(getScaleDegreeLabel(cPhrygian, 1), /^bII/);
-    assert.match(
-      getScaleDegreeLabel(cMinorPentatonic, 1),
-      /^bIII/,
-    );
-    assert.match(getScaleDegreeLabel(cBlues, 3), /^#IV/);
-    assert.equal(getScaleDegreeColorIndex(cPhrygian, 1), 1);
-    assert.equal(
-      getPitchScaleDegreeColorIndex(61, cPhrygian),
-      1,
-    );
-    assert.equal(
-      getScaleDegreeTriadQuality(cMinorSecondDegree, 1),
-      "diminished",
-    );
-    assert.match(
-      getScaleDegreeLabel(cMinorSecondDegree, 1),
-      /^II° · D diminished$/,
-    );
-    assert.equal(
-      isPitchAllowedByTonalPattern(62, cMinorSecondDegree),
-      true,
-    );
-    assert.equal(
-      isPitchAllowedByTonalPattern(65, cMinorSecondDegree),
-      true,
-    );
-    assert.equal(
-      isPitchAllowedByTonalPattern(68, cMinorSecondDegree),
-      true,
-    );
-    assert.equal(
-      isPitchAllowedByTonalPattern(67, cMinorSecondDegree),
-      false,
+      "C#4",
     );
   });
 

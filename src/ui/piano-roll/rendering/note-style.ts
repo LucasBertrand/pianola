@@ -97,6 +97,6 @@ export function getPitchNoteColor(
   return degreeColorIndex === null
     ? APPLICATION_COLORS.notes.outOfScale
     : APPLICATION_COLORS.pianoRoll.degreeAccents[
-        degreeColorIndex
+        degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreeAccents.length
       ] ?? DEFAULT_NOTE_COLOR;
 }

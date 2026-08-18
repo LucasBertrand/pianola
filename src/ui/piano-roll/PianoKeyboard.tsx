@@ -199,9 +199,9 @@ export function PianoKeyboard(
       const activeMarker = getScaleMarkerAtTick(timeMap, currentTick);
       const currentSnapSettings = {
         ...pitchSnapSettings,
-        tonicPitchClass: activeMarker.tonicPitchClass,
+        rootNote: activeMarker.rootNote,
+        patternType: activeMarker.patternType,
         patternId: activeMarker.patternId,
-        scaleDegreeIndex: activeMarker.scaleDegreeIndex,
       };
 
       const auditionedPitch = snapPitchToTonalPattern(

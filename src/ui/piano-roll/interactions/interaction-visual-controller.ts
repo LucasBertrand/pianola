@@ -22,6 +22,7 @@ export interface InteractionVisualController {
     notes: readonly Note[],
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void;
   updateDrag(
     deltaXCssPixels: number,
@@ -36,6 +37,7 @@ export interface InteractionVisualController {
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     edge: ResizeEdge,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void;
   updateResize(edge: ResizeEdge, deltaXCssPixels: number): void;
   endResize(): void;
@@ -46,6 +48,7 @@ export interface InteractionVisualController {
     instrumentId: InstrumentId,
     converter: CoordinateConverter,
     style: InstrumentRenderStyle | undefined,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void;
   updateDraw(widthCssPixels: number): void;
   endDraw(): void;
@@ -60,6 +63,7 @@ export interface InteractionVisualController {
   showSelection(
     notes: readonly Note[],
     converter: CoordinateConverter,
+    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void;
   clearSelection(): void;
 }

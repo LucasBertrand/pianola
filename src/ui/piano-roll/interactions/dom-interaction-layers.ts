@@ -40,7 +40,7 @@ export function populateGhostLayer(
   converter: CoordinateConverter,
   stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
   colorMode: NoteColorMode,
-  pitchSnapSettings: PitchSnapSettings,
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   resizeEdge: ResizeEdge | null,
   elements: HTMLElement[],
 ): LayerGeometry | null {
@@ -95,11 +95,13 @@ export function populateGhostLayer(
     element.style.top = `${y}px`;
     element.style.width = `${noteWidth}px`;
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
+    const noteSnapSettings = getSnapSettingsAtTick(note.startTick);
+
     element.style.background = getNoteFillStyle(
       note,
       stylesByInstrumentId,
       colorMode,
-      pitchSnapSettings,
+      noteSnapSettings,
     );
     element.style.opacity = String(
       (stylesByInstrumentId[note.instrumentId]?.opacity ?? 1)
@@ -107,7 +109,7 @@ export function populateGhostLayer(
     );
     element.textContent = getMidiNoteLabel(
       note.pitch,
-      pitchSnapSettings,
+      noteSnapSettings,
     );
     elements.push(element);
     fragment.appendChild(element);
@@ -192,8 +194,10 @@ export function populateSelectionLayer(
 export function updateGhostPitchPresentation(
   elements: readonly HTMLElement[],
   basePitches: Int16Array | null,
+  baseTicks: Int32Array | null,
   deltaPitch: number,
-  pitchSnapSettings: PitchSnapSettings,
+  deltaTicks: number,
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   updatePitchColor: boolean,
 ): void {
   if (basePitches === null) {
@@ -204,18 +208,21 @@ export function updateGhostPitchPresentation(
     const element = elements[index];
     const basePitch = basePitches[index];
 
-    if (element === undefined || basePitch === undefined) {
+    const baseTick = baseTicks?.[index];
+
+    if (element === undefined || basePitch === undefined || baseTick === undefined) {
       continue;
     }
 
     const pitch = basePitch + deltaPitch;
+    const snapSettings = getSnapSettingsAtTick(Math.max(0, baseTick + deltaTicks));
 
-    element.textContent = getMidiNoteLabel(pitch, pitchSnapSettings);
+    element.textContent = getMidiNoteLabel(pitch, snapSettings);
 
     if (updatePitchColor) {
       element.style.background = getPitchNoteColor(
         pitch,
-        pitchSnapSettings,
+        snapSettings,
       );
     }
   }

@@ -9,6 +9,7 @@ import type {
 } from "../identifiers";
 import type {
   TonalPatternId,
+  TonalPatternType,
 } from "../../music/pitch-snap";
 
 
@@ -39,9 +40,9 @@ export interface TempoMarker {
 /** Scale change positioned anywhere inside a clip timeline. */
 export interface ScaleMarker {
   readonly startTick: Tick;
-  readonly tonicPitchClass: number;
+  readonly rootNote: string;
+  readonly patternType: TonalPatternType;
   readonly patternId: TonalPatternId;
-  readonly scaleDegreeIndex: number | null;
 }
 
 /**
@@ -88,9 +89,9 @@ export function createDefaultTimeMap(): TimeMap {
     }],
     scaleMarkers: [{
       startTick: 0,
-      tonicPitchClass: TONAL_SNAP_CONSTANTS.defaultTonicPitchClass,
+      rootNote: TONAL_SNAP_CONSTANTS.defaultRootNote,
+      patternType: "scale",
       patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
-      scaleDegreeIndex: TONAL_SNAP_CONSTANTS.defaultScaleDegreeIndex,
     }],
   };
 }
@@ -792,9 +793,9 @@ export function normalizeScaleMarkers(
 
     if (
       previous !== undefined
-      && previous.tonicPitchClass === marker.tonicPitchClass
+      && previous.rootNote === marker.rootNote
+      && previous.patternType === marker.patternType
       && previous.patternId === marker.patternId
-      && previous.scaleDegreeIndex === marker.scaleDegreeIndex
     ) {
       continue;
     }

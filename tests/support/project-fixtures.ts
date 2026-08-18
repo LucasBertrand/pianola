@@ -240,7 +240,7 @@ export function createAudioTestEditorState(
           ...DEFAULT_PITCH_SNAP_SETTINGS,
           enabled: true,
           visualGuideEnabled: true,
-          tonicPitchClass: 2,
+          rootNote: "D",
         },
         gridSettings: {
           baseResolutionTicks: 480,

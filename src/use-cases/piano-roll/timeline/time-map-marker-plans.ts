@@ -23,9 +23,9 @@ import {
   type TimeMap,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
-import type { TonalPatternId } from "../../../music/pitch-snap";
-import { getPreferredTonicLabel, getScaleDegreeLabel } from "../../../ui/piano-roll/rendering/pitch-label";
-import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
+import type { TonalPatternId, TonalPatternType } from "../../../music/pitch-snap";
+import { ChordType } from "@tonaljs/tonal";
+
 
 /**
  * One ruler flag: the union of meter and tempo marker ticks. A flag may
@@ -35,9 +35,9 @@ export interface TimeMapMarkerFlag {
   readonly startTick: Tick;
   readonly bpm: number | null;
   readonly timeSignature: TimeSignature | null;
-  readonly tonicPitchClass: number | null;
+  readonly rootNote: string | null;
+  readonly patternType: TonalPatternType | null;
   readonly patternId: string | null;
-  readonly scaleDegreeIndex: number | null;
   readonly isInitial: boolean;
 }
 
@@ -48,9 +48,9 @@ export interface TimeMapMarkerDraft {
   readonly measureIndex: number | null;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
-  readonly tonicPitchClass: number;
+  readonly rootNote: string;
+  readonly patternType: TonalPatternType;
   readonly patternId: TonalPatternId;
-  readonly scaleDegreeIndex: number | null;
   readonly canDelete: boolean;
 }
 
@@ -74,9 +74,9 @@ export function createTimeMapMarkerFlags(
       timeSignature: timeMap.meterMarkers.find(
         (marker) => marker.startTick === startTick,
       )?.timeSignature ?? null,
-      tonicPitchClass: scaleMarker?.tonicPitchClass ?? null,
+      rootNote: scaleMarker?.rootNote ?? null,
+      patternType: scaleMarker?.patternType ?? null,
       patternId: scaleMarker?.patternId ?? null,
-      scaleDegreeIndex: scaleMarker?.scaleDegreeIndex ?? null,
       isInitial: startTick === 0,
     };
   });
@@ -128,9 +128,9 @@ export function createMarkerDraft(
       bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, span.startTick),
       timeSignature: meterMarker?.timeSignature
         ?? getMeterAtTick(timeMap, span.startTick),
-      tonicPitchClass: scaleMarker?.tonicPitchClass ?? activeScaleMarker.tonicPitchClass,
+      rootNote: scaleMarker?.rootNote ?? activeScaleMarker.rootNote,
+      patternType: scaleMarker?.patternType ?? activeScaleMarker.patternType,
       patternId: scaleMarker?.patternId ?? activeScaleMarker.patternId,
-      scaleDegreeIndex: scaleMarker?.scaleDegreeIndex ?? activeScaleMarker.scaleDegreeIndex,
       canDelete: hasMarker && span.startTick > 0,
     };
   }
@@ -150,9 +150,9 @@ export function createMarkerDraft(
     measureIndex: null,
     bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, tick),
     timeSignature: null,
-    tonicPitchClass: scaleMarker?.tonicPitchClass ?? activeScaleMarker.tonicPitchClass,
+    rootNote: scaleMarker?.rootNote ?? activeScaleMarker.rootNote,
+    patternType: scaleMarker?.patternType ?? activeScaleMarker.patternType,
     patternId: scaleMarker?.patternId ?? activeScaleMarker.patternId,
-    scaleDegreeIndex: scaleMarker?.scaleDegreeIndex ?? activeScaleMarker.scaleDegreeIndex,
     canDelete: hasMarker && tick > 0,
   };
 }
@@ -234,9 +234,9 @@ export function planMarkerDraftCommands(
 
   if (scaleMarker !== undefined) {
     if (
-      previousScaleMarker.tonicPitchClass === draft.tonicPitchClass &&
+      previousScaleMarker.rootNote === draft.rootNote &&
+      previousScaleMarker.patternType === draft.patternType &&
       previousScaleMarker.patternId === draft.patternId &&
-      previousScaleMarker.scaleDegreeIndex === draft.scaleDegreeIndex &&
       draft.startTick > 0
     ) {
       commands.push({
@@ -245,34 +245,34 @@ export function planMarkerDraftCommands(
         startTick: draft.startTick,
       });
     } else if (
-      scaleMarker.tonicPitchClass !== draft.tonicPitchClass ||
-      scaleMarker.patternId !== draft.patternId ||
-      scaleMarker.scaleDegreeIndex !== draft.scaleDegreeIndex
+      scaleMarker.rootNote !== draft.rootNote ||
+      scaleMarker.patternType !== draft.patternType ||
+      scaleMarker.patternId !== draft.patternId
     ) {
       commands.push({
         type: "UpdateScaleMarker",
         clipId,
         startTick: draft.startTick,
         changes: {
-          tonicPitchClass: draft.tonicPitchClass,
+          rootNote: draft.rootNote,
+          patternType: draft.patternType,
           patternId: draft.patternId,
-          scaleDegreeIndex: draft.scaleDegreeIndex,
         },
       });
     }
   } else if (
-    previousScaleMarker.tonicPitchClass !== draft.tonicPitchClass ||
-    previousScaleMarker.patternId !== draft.patternId ||
-    previousScaleMarker.scaleDegreeIndex !== draft.scaleDegreeIndex
+    previousScaleMarker.rootNote !== draft.rootNote ||
+    previousScaleMarker.patternType !== draft.patternType ||
+    previousScaleMarker.patternId !== draft.patternId
   ) {
     commands.push({
       type: "AddScaleMarker",
       clipId,
       marker: {
         startTick: draft.startTick,
-        tonicPitchClass: draft.tonicPitchClass,
+        rootNote: draft.rootNote,
+        patternType: draft.patternType,
         patternId: draft.patternId,
-        scaleDegreeIndex: draft.scaleDegreeIndex,
       },
     });
   }
@@ -496,21 +496,15 @@ export function formatMarkerFlagLabel(flag: TimeMapMarkerFlag): string {
     );
   }
 
-  if (flag.patternId !== null && flag.tonicPitchClass !== null) {
-    const patternId = flag.patternId as TonalPatternId;
-    const pattern = TONAL_SNAP_CONSTANTS.patterns.find(p => p.id === patternId);
-    let scaleLabel = `${getPreferredTonicLabel(flag.tonicPitchClass, patternId)} ${pattern?.label ?? ''}`;
-    
-    if (flag.scaleDegreeIndex !== null && pattern !== undefined) {
-      const mockSettings = {
-        enabled: false,
-        visualGuideEnabled: false,
-        tonicPitchClass: flag.tonicPitchClass,
-        patternId: patternId,
-        scaleDegreeIndex: flag.scaleDegreeIndex,
-      };
-      const degreeLabel = getScaleDegreeLabel(mockSettings, flag.scaleDegreeIndex);
-      scaleLabel += ` (${degreeLabel})`;
+  if (flag.patternId !== null && flag.rootNote !== null) {
+    const rootLabel = flag.rootNote;
+    let scaleLabel = "";
+    if (flag.patternType === "chord") {
+      const chord = ChordType.get(flag.patternId);
+      const symbol = chord.aliases[0] ?? flag.patternId;
+      scaleLabel = `${rootLabel} ${symbol}`;
+    } else {
+      scaleLabel = `${rootLabel} ${flag.patternId}`;
     }
     
     parts.push(scaleLabel);
