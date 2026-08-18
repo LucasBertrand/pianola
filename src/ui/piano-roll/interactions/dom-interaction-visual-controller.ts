@@ -63,8 +63,6 @@ export class DomInteractionVisualController
     private readonly editingNoteMask: EditingNoteMask,
     private readonly noteColorMode:
       ReadonlyRenderSignal<NoteColorMode>,
-    private readonly pitchSnapSettings:
-      ReadonlyRenderSignal<PitchSnapSettings>,
   ) {}
 
   public setGhostLayer(element: HTMLDivElement | null): void {
@@ -313,7 +311,6 @@ export class DomInteractionVisualController
   public showSelection(
     notes: readonly Note[],
     converter: CoordinateConverter,
-    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
     this.selectionGeometry = populateSelectionLayer(
       this.selectionLayer,

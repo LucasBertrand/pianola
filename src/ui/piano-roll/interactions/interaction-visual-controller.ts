@@ -63,7 +63,6 @@ export interface InteractionVisualController {
   showSelection(
     notes: readonly Note[],
     converter: CoordinateConverter,
-    getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void;
   clearSelection(): void;
 }

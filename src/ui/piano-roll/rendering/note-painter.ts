@@ -21,7 +21,6 @@ import type {
   PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import { getLockedNotePattern } from "./locked-note-pattern";
-import { getNoteLabelWidths } from "./note-label-cache";
 import {
   compareNotesByInstrumentRenderOrder,
   compareNotesByPitchRenderOrder,
@@ -77,7 +76,6 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
   );
 
   let currentInstrumentId: InstrumentId | null = null;
-  let currentPitch = -1;
   let currentOpacity = -1;
   let hasVisibleLockedNote = false;
 

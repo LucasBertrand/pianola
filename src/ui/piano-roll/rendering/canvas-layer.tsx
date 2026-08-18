@@ -8,7 +8,7 @@ import React, {
 import {
   getActiveClip,
 } from "../../../domain/project/project-document";
-import { resolvePitchSnapSettings } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
+
 import {
   type InstrumentId,
 } from "../../../domain/identifiers";
