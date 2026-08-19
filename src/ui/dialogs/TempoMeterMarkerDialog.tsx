@@ -14,7 +14,6 @@ const DENOMINATOR_OPTIONS = [1, 2, 4, 8, 16, 32] as const;
 
 export interface TempoMeterMarkerDialogProps {
   readonly mode: "create" | "edit";
-  readonly measureIndex: number | null;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string;
@@ -34,7 +33,6 @@ export interface TempoMeterMarkerDialogProps {
 /** Draft-only tempo/meter marker dialog; the document mutates on confirm. */
 export function TempoMeterMarkerDialog({
   mode,
-  measureIndex,
   bpm,
   timeSignature,
   rootNote,

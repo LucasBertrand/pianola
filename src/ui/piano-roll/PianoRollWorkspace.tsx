@@ -673,7 +673,6 @@ export function PianoRollWorkspace({
       {timeMapMarkers.draft === null ? null : (
         <TempoMeterMarkerDialog
           mode={timeMapMarkers.draft.mode}
-          measureIndex={timeMapMarkers.draft.measureIndex}
           bpm={timeMapMarkers.draft.bpm}
           timeSignature={timeMapMarkers.draft.timeSignature}
           rootNote={timeMapMarkers.draft.rootNote}
