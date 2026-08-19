@@ -122,62 +122,62 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
 
   if (pitchSnapSettings.visualGuideEnabled) {
     for (let i = 0; i < timeMap.scaleMarkers.length; i += 1) {
-    const marker = timeMap.scaleMarkers[i];
-    const nextMarker = timeMap.scaleMarkers[i + 1];
-    
-    if (marker === undefined) continue;
-    
-    const startTick = marker.startTick;
-    const endTick = nextMarker !== undefined ? nextMarker.startTick : durationTicks;
+      const marker = timeMap.scaleMarkers[i];
+      const nextMarker = timeMap.scaleMarkers[i + 1];
 
-    if (endTick <= region.startTick || startTick >= region.endTick) {
-      continue;
-    }
+      if (marker === undefined) continue;
 
-    const startX = Math.max(0, converter.tickToCssPixelX(startTick));
-    const endX = Math.min(width, converter.tickToCssPixelX(endTick));
+      const startTick = marker.startTick;
+      const endTick = nextMarker !== undefined ? nextMarker.startTick : durationTicks;
 
-    if (endX <= startX) {
-      continue;
-    }
-
-    const segmentSettings = {
-      ...pitchSnapSettings,
-      rootNote: marker.rootNote,
-      patternType: marker.patternType,
-      patternId: marker.patternId,
-    };
-
-    for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {
-      if (!isPitchAllowedByTonalPattern(pitch, segmentSettings)) {
+      if (endTick <= region.startTick || startTick >= region.endTick) {
         continue;
       }
 
-      const y = converter.pitchToCssPixelY(pitch);
-      const nextY = converter.pitchToCssPixelY(pitch - 1);
-      const pitchClass = ((pitch % 12) + 12) % 12;
-      const degreeColorIndex = getPitchScaleDegreeColorIndex(
-        pitch,
-        segmentSettings,
-      );
-      const degreePitchRowColor = degreeColorIndex === null
-        ? undefined
-        : APPLICATION_COLORS.pianoRoll.degreePitchRows[
-          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreePitchRows.length
-        ];
-      const degreeRootRowColor = degreeColorIndex === null
-        ? undefined
-        : APPLICATION_COLORS.pianoRoll.degreeRootRows[
-          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreeRootRows.length
-        ];
+      const startX = Math.max(0, converter.tickToCssPixelX(startTick));
+      const endX = Math.min(width, converter.tickToCssPixelX(endTick));
 
-      context.fillStyle = pitchClass
-        === getPitchSnapRootPitchClass(segmentSettings)
-        ? degreeRootRowColor ?? TONAL_SNAP_TONIC_ROW_COLOR
-        : degreePitchRowColor ?? TONAL_SNAP_PITCH_ROW_COLOR;
-      context.fillRect(startX, y, endX - startX, nextY - y);
+      if (endX <= startX) {
+        continue;
+      }
+
+      const segmentSettings = {
+        ...pitchSnapSettings,
+        rootNote: marker.rootNote,
+        patternType: marker.patternType,
+        patternId: marker.patternId,
+      };
+
+      for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {
+        if (!isPitchAllowedByTonalPattern(pitch, segmentSettings)) {
+          continue;
+        }
+
+        const y = converter.pitchToCssPixelY(pitch);
+        const nextY = converter.pitchToCssPixelY(pitch - 1);
+        const pitchClass = ((pitch % 12) + 12) % 12;
+        const degreeColorIndex = getPitchScaleDegreeColorIndex(
+          pitch,
+          segmentSettings,
+        );
+        const degreePitchRowColor = degreeColorIndex === null
+          ? undefined
+          : APPLICATION_COLORS.pianoRoll.degreePitchRows[
+          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreePitchRows.length
+          ];
+        const degreeRootRowColor = degreeColorIndex === null
+          ? undefined
+          : APPLICATION_COLORS.pianoRoll.degreeRootRows[
+          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreeRootRows.length
+          ];
+
+        context.fillStyle = pitchClass
+          === getPitchSnapRootPitchClass(segmentSettings)
+          ? degreeRootRowColor ?? TONAL_SNAP_TONIC_ROW_COLOR
+          : degreePitchRowColor ?? TONAL_SNAP_PITCH_ROW_COLOR;
+        context.fillRect(startX, y, endX - startX, nextY - y);
+      }
     }
-  }
   }
 
   if (
@@ -232,28 +232,32 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
 
     barBoundaryTicks.push(span.startTick);
 
-    for (
-      const subdivisionTick of getMeasureSubdivisionTicks(
-        span,
-        effectiveResolutionTicks,
-      )
-    ) {
-      subdivisionBoundaryTicks.push(subdivisionTick);
-    }
+    const spanWidthCssPixels = converter.tickToCssPixelX(span.endTick) - converter.tickToCssPixelX(span.startTick);
 
-    const beatDurations = getBeatTicks(clock.ppqn, span.timeSignature);
-    const beatStarts = getMeasureBeatBoundaryTicks(clock.ppqn, span);
-
-    beatStarts.forEach((beatTick, i) => {
-      const duration = beatDurations[i];
-      if (
-        beatTick !== span.startTick
-        && duration !== undefined
-        && duration % effectiveResolutionTicks === 0
+    if (spanWidthCssPixels >= 15) {
+      for (
+        const subdivisionTick of getMeasureSubdivisionTicks(
+          span,
+          effectiveResolutionTicks,
+        )
       ) {
-        beatBoundaryTicks.push(beatTick);
+        subdivisionBoundaryTicks.push(subdivisionTick);
       }
-    });
+
+      const beatDurations = getBeatTicks(clock.ppqn, span.timeSignature);
+      const beatStarts = getMeasureBeatBoundaryTicks(clock.ppqn, span);
+
+      beatStarts.forEach((beatTick, i) => {
+        const duration = beatDurations[i];
+        if (
+          beatTick !== span.startTick
+          && duration !== undefined
+          && duration % effectiveResolutionTicks === 0
+        ) {
+          beatBoundaryTicks.push(beatTick);
+        }
+      });
+    }
   }
 
   drawTickList(

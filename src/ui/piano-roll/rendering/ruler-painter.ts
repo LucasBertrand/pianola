@@ -68,13 +68,16 @@ export function paintRuler(snapshot: RulerPaintSnapshot): void {
       break;
     }
 
-    for (
-      const subdivisionTick of getMeasureSubdivisionTicks(
-        span,
-        effectiveGridTicks,
-      )
-    ) {
-      subdivisionBoundaryTicks.push(subdivisionTick);
+    const measureWidthPixels = (span.endTick - span.startTick) * pixelsPerTick;
+    if (measureWidthPixels >= 15) {
+      for (
+        const subdivisionTick of getMeasureSubdivisionTicks(
+          span,
+          effectiveGridTicks,
+        )
+      ) {
+        subdivisionBoundaryTicks.push(subdivisionTick);
+      }
     }
   }
 
@@ -102,25 +105,29 @@ export function paintRuler(snapshot: RulerPaintSnapshot): void {
       break;
     }
 
-    const beatDurations = getBeatTicks(clock.ppqn, span.timeSignature);
-    const filteredBeats = getMeasureBeatBoundaryTicks(clock.ppqn, span).filter(
-      (tick, i) => {
-        const duration = beatDurations[i];
-        return tick !== span.startTick
-          && duration !== undefined
-          && duration % effectiveGridTicks === 0;
-      },
-    );
-    drawRulerTickList(
-      context,
-      filteredBeats,
-      pixelsPerTick,
-      viewport.scrollX,
-      heightCssPixels,
-      10,
-      devicePixelRatio,
-      APPLICATION_COLORS.pianoRoll.rulerBeat,
-    );
+    const measureWidthPixels = (span.endTick - span.startTick) * pixelsPerTick;
+
+    if (measureWidthPixels >= 15) {
+      const beatDurations = getBeatTicks(clock.ppqn, span.timeSignature);
+      const filteredBeats = getMeasureBeatBoundaryTicks(clock.ppqn, span).filter(
+        (tick, i) => {
+          const duration = beatDurations[i];
+          return tick !== span.startTick
+            && duration !== undefined
+            && duration % effectiveGridTicks === 0;
+        },
+      );
+      drawRulerTickList(
+        context,
+        filteredBeats,
+        pixelsPerTick,
+        viewport.scrollX,
+        heightCssPixels,
+        10,
+        devicePixelRatio,
+        APPLICATION_COLORS.pianoRoll.rulerBeat,
+      );
+    }
     drawRulerTickList(
       context,
       [span.startTick],
@@ -134,8 +141,6 @@ export function paintRuler(snapshot: RulerPaintSnapshot): void {
 
     const x =
       span.startTick * pixelsPerTick - viewport.scrollX;
-
-    const measureWidthPixels = (span.endTick - span.startTick) * pixelsPerTick;
 
     if (measureWidthPixels >= 30) {
       context.fillStyle = APPLICATION_COLORS.pianoRoll.rulerText;
