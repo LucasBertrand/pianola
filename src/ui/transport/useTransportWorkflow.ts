@@ -30,7 +30,7 @@ export interface TransportWorkflowOptions {
 }
 
 export interface TransportWorkflow {
-  readonly insertMeasureAtPlayhead: () => void;
+  readonly insertMeasuresAtPlayhead: (count: number, position: "before" | "after") => void;
   readonly removeMeasureAtPlayhead: () => void;
   readonly commitMasterGain: (gain: number) => void;
   readonly toggleMasterMute: () => void;
@@ -52,7 +52,7 @@ export function useTransportWorkflow({
     controller?.clearSelection();
   }, [getController]);
 
-  const insertMeasureAtPlayhead = useCallback((): void => {
+  const insertMeasuresAtPlayhead = useCallback((count: number, position: "before" | "after"): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
     const measureCount = getMeasureCount(
@@ -61,16 +61,18 @@ export function useTransportWorkflow({
       activeClip.timeline.durationTicks,
     );
 
-    if (measureCount >= MAXIMUM_MEASURE_COUNT) {
+    if (measureCount + count > MAXIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureIndex = getMeasureSpanAtTick(
+    const span = getMeasureSpanAtTick(
       state.clock.ppqn,
       activeClip.timeline.timeMap,
       activeClip.timeline.durationTicks,
       runtime.playheadTick.get(),
-    ).index;
+    );
+
+    const measureIndex = position === "before" ? span.index : span.index + 1;
 
     prepareStructuralEdit();
     runtime.editorCommands.dispatch(
@@ -78,8 +80,9 @@ export function useTransportWorkflow({
         type: "InsertMeasure",
         clipId: activeClip.id,
         measureIndex,
+        count,
       }],
-      `Insert measure before ${measureIndex + 1}`,
+      `Insert ${count} measure(s) ${position} measure ${span.index + 1}`,
     );
   }, [prepareStructuralEdit, runtime]);
 
@@ -210,7 +213,7 @@ export function useTransportWorkflow({
   }, [runtime]);
 
   return {
-    insertMeasureAtPlayhead,
+    insertMeasuresAtPlayhead,
     removeMeasureAtPlayhead,
     commitMasterGain,
     toggleMasterMute,

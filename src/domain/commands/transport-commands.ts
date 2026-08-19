@@ -76,7 +76,7 @@ export function applyInsertMeasure(
   );
   assertMeasureIndex(command.measureIndex, spans.length, command.type);
 
-  if (spans.length >= MAXIMUM_MEASURE_COUNT) {
+  if (spans.length + command.count > MAXIMUM_MEASURE_COUNT) {
     reject(
       "INVALID_COMMAND",
       `A project cannot contain more than ${MAXIMUM_MEASURE_COUNT} measures.`,
@@ -95,7 +95,7 @@ export function applyInsertMeasure(
   }
 
   const insertionTick = span.startTick;
-  const insertedTicks = span.endTick - span.startTick;
+  const insertedTicks = (span.endTick - span.startTick) * command.count;
   const tracksByInstrumentId = transformTracksForInsertedTime(
     state,
     insertionTick,

@@ -85,6 +85,7 @@ export interface InsertMeasureCommand {
   readonly type: "InsertMeasure";
   readonly clipId: ClipId;
   readonly measureIndex: number;
+  readonly count: number;
 }
 
 export interface RemoveMeasureCommand {

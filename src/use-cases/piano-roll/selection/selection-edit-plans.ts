@@ -170,7 +170,7 @@ export function createPastedNotes(
     notes.push({
       ...sourceNote,
       id:
-        `${sourceNote.id}-copy-${timestamp}-${sequence}-${noteIndex}`,
+        `note-copy-${timestamp}-${sequence}-${noteIndex}`,
       startTick:
         pasteTick
         + sourceNote.startTick

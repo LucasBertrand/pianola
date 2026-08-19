@@ -215,6 +215,7 @@ describe("measure operations across meter markers", () => {
       type: "InsertMeasure",
       clipId: TEST_CLIP_ID,
       measureIndex: 2,
+      count: 1,
     });
 
     const timeline = activeTimeline(store);
@@ -242,6 +243,7 @@ describe("measure operations across meter markers", () => {
       type: "InsertMeasure",
       clipId: TEST_CLIP_ID,
       measureIndex: 0,
+      count: 1,
     });
 
     const timeline = activeTimeline(store);

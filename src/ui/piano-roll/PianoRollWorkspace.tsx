@@ -34,6 +34,9 @@ import {
 import {
   TempoMeterMarkerDialog,
 } from "../../ui/dialogs/TempoMeterMarkerDialog";
+import {
+  ManageMeasuresDialog,
+} from "../../ui/dialogs/ManageMeasuresDialog";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";
@@ -146,6 +149,8 @@ export function PianoRollWorkspace({
     clearInteractionSelection,
   } = usePianoRollProjectState(runtime, pianoRollControllerRef);
   const [projectInspectorOpen, setGeneralInspectorOpen] =
+    useState(false);
+  const [manageMeasuresDialogOpen, setManageMeasuresDialogOpen] =
     useState(false);
   const [projectInspectorSection, setGeneralInspectorSection] =
     useState<"instruments" | "clips">("instruments");
@@ -323,7 +328,7 @@ export function PianoRollWorkspace({
     confirm: showApplicationConfirmation,
   });
   const {
-    insertMeasureAtPlayhead: handleInsertMeasureAtPlayhead,
+    insertMeasuresAtPlayhead: handleInsertMeasuresAtPlayhead,
     removeMeasureAtPlayhead: handleRemoveMeasureAtPlayhead,
     commitMasterGain: handleMasterGainCommit,
     toggleMasterMute: handleMasterMuteToggle,
@@ -535,7 +540,7 @@ export function PianoRollWorkspace({
             }}
             onUndo={handleUndo}
             onRedo={handleRedo}
-            onInsertMeasure={handleInsertMeasureAtPlayhead}
+            onManageMeasures={() => setManageMeasuresDialogOpen(true)}
             onRemoveMeasure={handleRemoveMeasureAtPlayhead}
             onDeleteSelection={handleDeleteSelection}
             onToggleSelectionEnabled={handleToggleSelectionEnabled}
@@ -689,6 +694,15 @@ export function PianoRollWorkspace({
           onCancel={timeMapMarkers.cancelDraft}
         />
       )}
+      {manageMeasuresDialogOpen ? (
+        <ManageMeasuresDialog
+          onConfirm={(count, position) => {
+            handleInsertMeasuresAtPlayhead(count, position);
+            setManageMeasuresDialogOpen(false);
+          }}
+          onCancel={() => setManageMeasuresDialogOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
