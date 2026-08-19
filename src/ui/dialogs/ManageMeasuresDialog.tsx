@@ -64,7 +64,7 @@ export function ManageMeasuresDialog({
                   setCount("" as unknown as number);
                 }
               }}
-              onBlur={(event) => {
+              onBlur={() => {
                 if (!Number.isSafeInteger(count) || count < 1) {
                   setCount(1);
                 }
