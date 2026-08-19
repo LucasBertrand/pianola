@@ -137,7 +137,7 @@ export function paintRuler(snapshot: RulerPaintSnapshot): void {
 
     const measureWidthPixels = (span.endTick - span.startTick) * pixelsPerTick;
 
-    if (measureWidthPixels >= 20) {
+    if (measureWidthPixels >= 30) {
       context.fillStyle = APPLICATION_COLORS.pianoRoll.rulerText;
       context.fillText(String(span.index + 1), x + 7, 2);
     }
