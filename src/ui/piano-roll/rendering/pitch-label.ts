@@ -1,9 +1,7 @@
 import {
   PROJECT_CONSTANTS,
 } from "../../../config/domain-limits";
-import {
-  TONAL_SNAP_CONSTANTS,
-} from "../../../config/music-config";
+
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   type PitchSnapSettings,
@@ -40,10 +38,7 @@ export function getMidiNoteLabel(
     // The correct octave is the octave of the C natural below it.
     // Midi pitch of C natural is pitch - pitchClass.
     const octave = Math.floor(pitch / 12) - 1;
-    const baseMidi = pitch - pitchClass; // This is the C of the current octave
     
-    // The chroma of the matched note
-    const chroma = Note.chroma(matchedNote) as number;
     // We can reconstruct the midi by checking Note.midi(`${matchedNote}${octave}`)
     let noteOctave = octave;
     if (Note.midi(`${matchedNote}${octave}`) === pitch - 12) {

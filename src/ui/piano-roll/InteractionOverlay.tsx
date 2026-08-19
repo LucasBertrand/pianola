@@ -137,7 +137,6 @@ export function InteractionOverlay(
     visualsRef.current = new DomInteractionVisualController(
       editingNoteMask,
       noteColorMode,
-      pitchSnapSettings,
     );
   }
 

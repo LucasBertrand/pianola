@@ -153,13 +153,7 @@ export function createPianoRollGestureStrategy(
   const cancelGesture = (): void => {
     endGestureVisual();
     session.resetDraft();
-    selectionController.showSelection(
-      (tick) => resolvePitchSnapSettings(
-        getActiveClip(editorCommands.getState()).timeline.timeMap,
-        pitchSnapSettings.get(),
-        tick,
-      ),
-    );
+    selectionController.showSelection();
   };
   const handlePointerDown = (event: PointerSample): void => {
     if (!isSupportedPointerActivation(event) || draft.mode !== "IDLE") {
@@ -384,21 +378,15 @@ export function createPianoRollGestureStrategy(
     if (mode === "DRAGGING") {
       workflow.commitMove(completion);
       getVisuals()?.endDrag();
-      selectionController.showSelection(
-        draft.getSnapSettingsAtTick,
-      );
+      selectionController.showSelection();
     } else if (mode === "RESIZING_START" || mode === "RESIZING_END") {
       workflow.commitResize(completion);
       getVisuals()?.endResize();
-      selectionController.showSelection(
-        session.getSnapSettingsAtTick(),
-      );
+      selectionController.showSelection();
     } else if (mode === "DRAWING") {
       workflow.commitDraw(completion, session.createNoteId(Date.now()));
       getVisuals()?.endDraw();
-      selectionController.showSelection(
-        session.getSnapSettingsAtTick(),
-      );
+      selectionController.showSelection();
     } else if (mode === "LASSO_SELECTING") {
       completePianoRollLasso({
         completion,

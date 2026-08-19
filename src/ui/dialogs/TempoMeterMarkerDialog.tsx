@@ -8,7 +8,7 @@ import type {
 import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
 import type { TonalPatternType } from "../../music/pitch-snap";
 
-import { ScaleType, ChordType } from "@tonaljs/tonal";
+import { ChordType } from "@tonaljs/tonal";
 
 const DENOMINATOR_OPTIONS = [1, 2, 4, 8, 16, 32] as const;
 
@@ -200,7 +200,6 @@ export function TempoMeterMarkerDialog({
           >
             {patternType === "scale" ? (
               TONAL_SNAP_CONSTANTS.supportedScales.map((scaleId) => {
-                const scale = ScaleType.get(scaleId);
                 return (
                   <option key={scaleId} value={scaleId}>
                     {scaleId}
