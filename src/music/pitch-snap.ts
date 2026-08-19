@@ -120,7 +120,7 @@ export function isPitchAllowedByTonalPattern(
   const relativePitchClass =
     (
       pitch
-      - (Note.chroma(settings.rootNote) ?? 0)
+      - (Note.chroma(settings.rootNote) || 0)
       + 12
     ) % 12;
   const mask = getCachedMask(settings.patternType, settings.patternId);
@@ -130,7 +130,7 @@ export function isPitchAllowedByTonalPattern(
 export function getPitchSnapRootPitchClass(
   settings: PitchSnapSettings,
 ): number {
-  return Note.chroma(settings.rootNote) ?? 0;
+  return Note.chroma(settings.rootNote) || 0;
 }
 
 /** Finds the index (0-N) of a MIDI pitch in the selected mode/chord for coloring. */
@@ -144,7 +144,7 @@ export function getPitchScaleDegreeColorIndex(
 
   const relativePitchClass = (
     pitch
-    - (Note.chroma(settings.rootNote) ?? 0)
+    - (Note.chroma(settings.rootNote) || 0)
     + 12
   ) % 12;
 

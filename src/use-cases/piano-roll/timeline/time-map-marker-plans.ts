@@ -497,17 +497,21 @@ export function formatMarkerFlagLabel(flag: TimeMapMarkerFlag): string {
   }
 
   if (flag.patternId !== null && flag.rootNote !== null) {
-    const rootLabel = flag.rootNote;
-    let scaleLabel = "";
-    if (flag.patternType === "chord") {
-      const chord = ChordType.get(flag.patternId);
-      const symbol = chord.aliases[0] ?? flag.patternId;
-      scaleLabel = `${rootLabel} ${symbol}`;
+    if (flag.rootNote === "none") {
+      parts.push("Chromatic");
     } else {
-      scaleLabel = `${rootLabel} ${flag.patternId}`;
+      const rootLabel = flag.rootNote;
+      let scaleLabel = "";
+      if (flag.patternType === "chord") {
+        const chord = ChordType.get(flag.patternId);
+        const symbol = chord.aliases[0] ?? flag.patternId;
+        scaleLabel = `${rootLabel}${symbol}`;
+      } else {
+        scaleLabel = `${rootLabel} ${flag.patternId}`;
+      }
+
+      parts.push(scaleLabel);
     }
-    
-    parts.push(scaleLabel);
   }
 
   return parts.join(" · ");

@@ -68,13 +68,7 @@ export function TempoMeterMarkerDialog({
             {mode === "create" ? "+" : "~"}
           </span>
           <h2 id="tempo-meter-marker-dialog-title">
-            {mode === "create"
-              ? measureIndex !== null
-                ? `Add marker at measure ${String(measureIndex + 1)}`
-                : "Add marker"
-              : measureIndex !== null
-                ? `Edit marker at measure ${String(measureIndex + 1)}`
-                : "Edit marker"}
+            {mode === "create" ? "Add marker" : "Edit marker"}
           </h2>
         </div>
 
@@ -94,7 +88,7 @@ export function TempoMeterMarkerDialog({
             }}
           />
         </label>
-        
+
         {timeSignature !== null && (
           <div className="instrument-preset-dialog-control">
             <span>Meter</span>
@@ -158,7 +152,16 @@ export function TempoMeterMarkerDialog({
             value={rootNote}
             aria-label="Root pitch class"
             onChange={(event) => {
-              onRootNoteChange(event.currentTarget.value);
+              const newRoot = event.currentTarget.value;
+              const oldRoot = rootNote;
+              onRootNoteChange(newRoot);
+              if (newRoot === "none") {
+                onPatternTypeChange("scale");
+                onPatternIdChange("chromatic");
+              } else if (oldRoot === "none") {
+                onPatternTypeChange("scale");
+                onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedScales[0]);
+              }
             }}
           >
             {TONAL_SNAP_CONSTANTS.rootOptions.map((opt) => (
@@ -169,71 +172,74 @@ export function TempoMeterMarkerDialog({
           </select>
         </label>
 
-        <label className="instrument-preset-dialog-control">
-          <span>Type</span>
-          <select
-            value={patternType}
-            aria-label="Pattern type"
-            onChange={(event) => {
-              const newType = event.currentTarget.value as TonalPatternType;
-              onPatternTypeChange(newType);
-              if (newType === "scale") {
-                onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedScales[0]);
-              } else {
-                onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedChords[0]);
-              }
-            }}
-          >
-            <option value="scale">Gamme</option>
-            <option value="chord">Accord</option>
-          </select>
-        </label>
+        {rootNote !== "none" && (
+          <>
+            <label className="instrument-preset-dialog-control">
+              <span>Type</span>
+              <select
+                value={patternType}
+                aria-label="Pattern type"
+                onChange={(event) => {
+                  const newType = event.currentTarget.value as TonalPatternType;
+                  onPatternTypeChange(newType);
+                  if (newType === "scale") {
+                    onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedScales[0]);
+                  } else {
+                    onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedChords[0]);
+                  }
+                }}
+              >
+                <option value="scale">Gamme</option>
+                <option value="chord">Accord</option>
+              </select>
+            </label>
 
-        <label className="instrument-preset-dialog-control">
-          <span>{patternType === "scale" ? "Scale" : "Chord"}</span>
-          <select
-            value={patternId}
-            aria-label="Tonal pattern"
-            onChange={(event) => {
-              onPatternIdChange(event.currentTarget.value);
-            }}
-          >
-            {patternType === "scale" ? (
-              TONAL_SNAP_CONSTANTS.supportedScales.map((scaleId) => {
-                return (
-                  <option key={scaleId} value={scaleId}>
-                    {scaleId}
-                  </option>
-                );
-              })
-            ) : (
-              TONAL_SNAP_CONSTANTS.supportedChords.map((chordId) => {
-                const chord = ChordType.get(chordId);
-                return (
-                  <option key={chordId} value={chordId}>
-                    {chord.aliases[0] ?? chordId} ({chord.name})
-                  </option>
-                );
-              })
-            )}
-          </select>
-        </label>
+            <label className="instrument-preset-dialog-control">
+              <span>{patternType === "scale" ? "Scale" : "Chord"}</span>
+              <select
+                value={patternId}
+                aria-label="Tonal pattern"
+                onChange={(event) => {
+                  onPatternIdChange(event.currentTarget.value);
+                }}
+              >
+                {patternType === "scale" ? (
+                  TONAL_SNAP_CONSTANTS.supportedScales.map((scaleId) => {
+                    return (
+                      <option key={scaleId} value={scaleId}>
+                        {scaleId}
+                      </option>
+                    );
+                  })
+                ) : (
+                  TONAL_SNAP_CONSTANTS.supportedChords.map((chordId) => {
+                    const chord = ChordType.get(chordId);
+                    return (
+                      <option key={chordId} value={chordId}>
+                        {chord.aliases[0] ?? chordId} ({chord.name})
+                      </option>
+                    );
+                  })
+                )}
+              </select>
+            </label>
+          </>
+        )}
 
         <div
-          className={`application-dialog-actions${
-            canDelete ? " has-alternate" : ""
-          }`}
+          className={`application-dialog-actions${canDelete ? " has-alternate" : ""
+            }`}
         >
           {canDelete
             ? (
-                <button
-                  className="application-dialog-button is-danger"
-                  type="button"
-                  onClick={onDelete}
-                >
-                  Delete
-                </button>
-              )
+              <button
+                className="application-dialog-button is-danger"
+                type="button"
+                onClick={onDelete}
+              >
+                Delete
+              </button>
+            )
             : null}
           <button
             className="application-dialog-button"

@@ -2,10 +2,10 @@
 export const TONAL_SNAP_CONSTANTS = Object.freeze({
   defaultEnabled: false,
   defaultVisualGuideEnabled: false,
-  defaultRootNote: "C",
-  defaultPatternId: "ionian",
+  defaultRootNote: "none",
+  defaultPatternId: "chromatic",
   rootOptions: Object.freeze([
-    "Cb", "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
+    "none", "Cb", "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
   ] as const),
   supportedScales: Object.freeze([
     "ionian",
@@ -26,8 +26,7 @@ export const TONAL_SNAP_CONSTANTS = Object.freeze({
     "hirajoshi",
     "in sen",
     "whole tone",
-    "diminished", // Remplace diminished-whole-half
-    // diminished-half-whole peut être ignoré ou géré différemment si besoin
+    "diminished",
   ] as const),
   supportedChords: Object.freeze([
     "M",
