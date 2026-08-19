@@ -335,6 +335,7 @@ export function planMarkerMoveCommands(
 
   const hasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === fromTick);
   let tempoTargetTick = toTick;
+  let tempoFromTick = fromTick;
 
   if (hasMeter) {
     const targetHasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === toTick);
@@ -365,15 +366,23 @@ export function planMarkerMoveCommands(
       const targetSpanIndex = oldSpans.find(
         (s) => s.startTick === toTick,
       )?.index;
+      const fromSpanIndex = oldSpans.find(
+        (s) => s.startTick === fromTick,
+      )?.index;
       const nextSpans = getMeasureSpans(
         state.clock.ppqn,
         edit.timeMap,
         edit.durationTicks,
       );
       const newSpan = nextSpans.find((s) => s.index === targetSpanIndex);
+      const newFromSpan = nextSpans.find((s) => s.index === fromSpanIndex);
 
       if (newSpan !== undefined) {
         tempoTargetTick = newSpan.startTick;
+      }
+
+      if (newFromSpan !== undefined) {
+        tempoFromTick = newFromSpan.startTick;
       }
     } catch {
       // Ignored
@@ -384,15 +393,15 @@ export function planMarkerMoveCommands(
   const targetHasTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === tempoTargetTick);
 
   if (isMovingTempo) {
-    if (targetHasTempo && fromTick !== tempoTargetTick) {
+    if (targetHasTempo && tempoFromTick !== tempoTargetTick) {
       throw new Error("A tempo marker already exists at this position.");
     }
 
-    if (fromTick !== tempoTargetTick) {
+    if (tempoFromTick !== tempoTargetTick) {
       commands.push({
         type: "MoveTempoMarker",
         clipId,
-        startTick: fromTick,
+        startTick: tempoFromTick,
         targetTick: tempoTargetTick,
       });
     }
@@ -402,15 +411,15 @@ export function planMarkerMoveCommands(
   const targetHasScale = timeMap.scaleMarkers.some((marker) => marker.startTick === tempoTargetTick);
 
   if (isMovingScale) {
-    if (targetHasScale && fromTick !== tempoTargetTick) {
+    if (targetHasScale && tempoFromTick !== tempoTargetTick) {
       throw new Error("A scale marker already exists at this position.");
     }
 
-    if (fromTick !== tempoTargetTick) {
+    if (tempoFromTick !== tempoTargetTick) {
       commands.push({
         type: "MoveScaleMarker",
         clipId,
-        startTick: fromTick,
+        startTick: tempoFromTick,
         targetTick: tempoTargetTick,
       });
     }
