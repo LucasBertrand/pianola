@@ -1,7 +1,7 @@
 /** Persistent project defaults, hard limits, and instrument defaults. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 12,
+  schemaVersion: 1,
   defaultMeasureCount: 16,
   defaultTempoBpm: 120,
   minimumTempoBpm: 30,
