@@ -135,8 +135,12 @@ export function paintRuler(snapshot: RulerPaintSnapshot): void {
     const x =
       span.startTick * pixelsPerTick - viewport.scrollX;
 
-    context.fillStyle = APPLICATION_COLORS.pianoRoll.rulerText;
-    context.fillText(String(span.index + 1), x + 7, 2);
+    const measureWidthPixels = (span.endTick - span.startTick) * pixelsPerTick;
+
+    if (measureWidthPixels >= 20) {
+      context.fillStyle = APPLICATION_COLORS.pianoRoll.rulerText;
+      context.fillText(String(span.index + 1), x + 7, 2);
+    }
   }
 }
 
