@@ -83,7 +83,7 @@ describe("P3 Canvas painter contracts", () => {
         },
       },
       instrumentOrder: ["instrument"],
-      colorMode: "velocity",
+      colorMode: "instrument",
       globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
       timeMap: createDefaultTimeMap(),
     });
