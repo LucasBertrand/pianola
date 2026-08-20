@@ -130,7 +130,7 @@ export function PianoRollTimeMapOverlay({
               markerGesture.begin(flag, event);
             }}
           >
-            {formatMarkerFlagLabel(flag)}
+            <span>{formatMarkerFlagLabel(flag)}</span>
           </button>
         ))}
       </div>

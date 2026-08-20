@@ -35,7 +35,7 @@ describe("playback plans", () => {
             },
           ],
           tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+          scaleMarkers: baseClip.timeline.timeMap.scaleMarkers,
         },
       },
     };

@@ -63,11 +63,18 @@ Le domaine est réparti par propriétaire :
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
 | `src/domain/project/project-document.ts` | document, workspace et accès clip |
 
-La `TimeMap` d’un clip est l’unique source de vérité temporelle : les
-marqueurs de métrique sont ancrés aux indices de mesure (leurs ticks sont
-recalculés à chaque édition) et les marqueurs de tempo restent ancrés aux
-ticks. Mesures, positions musicales et conversions tick↔seconde en sont
-dérivées ; aucun nombre de mesures ni tempo « courant » n’est persisté.
+La `TimeMap` d’un clip est l’unique source de vérité temporelle. Notes,
+marqueurs de tempo et marqueurs de gamme sont ancrés à leurs ticks absolus.
+Les marqueurs de métrique sont structurels : chacun doit commencer une mesure
+complète. Une modification en amont conserve son tick s’il reste valide,
+sinon elle le projette vers la première frontière valide suivante, sans jamais
+le reculer. La fin du clip suit la même règle et peut donc s’allonger.
+
+L’ajout et la suppression de mesures sont, eux, des insertions et suppressions
+littérales de temps : le contenu situé à droite est décalé de la durée exacte
+ajoutée ou retirée. Mesures, positions musicales et conversions tick↔seconde
+sont dérivées de la `TimeMap` ; aucun nombre de mesures ni tempo « courant »
+n’est persisté.
 
 Les mutations durables passent par `EditorCommandPort`, une transaction et les
 reducers de `src/domain/commands/`. `ProjectStore` est le propriétaire de

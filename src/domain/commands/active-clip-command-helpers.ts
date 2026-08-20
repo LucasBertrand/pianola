@@ -197,14 +197,27 @@ export function insertTimeIntoTransport(
     transport.anchorTick >= insertionTick
       ? transport.anchorTick + insertedTicks
       : transport.anchorTick;
+  const loop = {
+    startTick: transport.loop.startTick >= insertionTick
+      ? transport.loop.startTick + insertedTicks
+      : transport.loop.startTick,
+    endTick: transport.loop.endTick >= insertionTick
+      ? transport.loop.endTick + insertedTicks
+      : transport.loop.endTick,
+  };
 
-  if (anchorTick === transport.anchorTick) {
+  if (
+    anchorTick === transport.anchorTick
+    && loop.startTick === transport.loop.startTick
+    && loop.endTick === transport.loop.endTick
+  ) {
     return transport;
   }
 
   return {
     ...transport,
     anchorTick,
+    loop,
   };
 }
 
@@ -219,10 +232,25 @@ export function removeTimeFromTransport(
     removalStartTick,
     removalEndTick,
   );
-  const loop = fitLoopRegionToProject(
-    transport.loop,
-    projectDurationTicks,
-  );
+  const collapsedLoop = {
+    startTick: collapseTickForRemovedTime(
+      transport.loop.startTick,
+      removalStartTick,
+      removalEndTick,
+    ),
+    endTick: collapseTickForRemovedTime(
+      transport.loop.endTick,
+      removalStartTick,
+      removalEndTick,
+    ),
+  };
+  const loop = collapsedLoop.endTick > collapsedLoop.startTick
+    ? fitLoopRegionToProject(collapsedLoop, projectDurationTicks)
+    : createFallbackLoopRegion(
+        removalStartTick,
+        transport.loop.endTick - transport.loop.startTick,
+        projectDurationTicks,
+      );
 
   if (
     anchorTick === transport.anchorTick

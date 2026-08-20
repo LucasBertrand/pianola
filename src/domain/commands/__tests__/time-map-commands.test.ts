@@ -54,9 +54,9 @@ describe("meter marker commands", () => {
     });
 
     expect(activeTimeline(store).timeMap.meterMarkers).toHaveLength(2);
-    // The measure count is preserved: 2 × 4/4 then 2 × 7/8.
+    // The old end is rounded forward to the next complete 7/8 measure.
     expect(activeTimeline(store).durationTicks)
-      .toBe(2 * MEASURE_TICKS + 2 * 3_360);
+      .toBe(2 * MEASURE_TICKS + 3 * 3_360);
 
     // Measure index 3 starts at tick 11_040 on the current map.
     dispatch(store, {
@@ -66,7 +66,7 @@ describe("meter marker commands", () => {
       targetTick: 11_040,
     });
 
-    // Anchored to measure index 3, its tick is recomputed on the 4/4 grid.
+    // The requested tick is projected forward onto the preceding 4/4 grid.
     expect(
       activeTimeline(store).timeMap.meterMarkers[1]?.startTick,
     ).toBe(3 * MEASURE_TICKS);
@@ -77,7 +77,6 @@ describe("meter marker commands", () => {
       startTick: 3 * MEASURE_TICKS,
       timeSignature: { numerator: 3, denominator: 4 },
     });
-
     expect(
       activeTimeline(store).timeMap.meterMarkers[1]?.timeSignature.numerator,
     ).toBe(3);
@@ -201,6 +200,19 @@ describe("tempo marker commands", () => {
 });
 
 describe("measure operations across meter markers", () => {
+  test("rejects non-positive or fractional insertion counts", () => {
+    for (const count of [0, -1, 1.5, Number.NaN]) {
+      const store = new ProjectStore(createTestProject());
+
+      expect(() => dispatch(store, {
+        type: "InsertMeasure",
+        clipId: TEST_CLIP_ID,
+        measureIndex: 0,
+        count,
+      })).toThrow(CommandRejectedError);
+    }
+  });
+
   test("inserts a measure with the meter of the targeted span", () => {
     const store = new ProjectStore(createTestProject());
 
@@ -210,7 +222,8 @@ describe("measure operations across meter markers", () => {
       startTick: 2 * MEASURE_TICKS,
       timeSignature: { numerator: 3, denominator: 4 },
     });
-    // 2 × 4/4 + 2 × 3/4 = 13_440 ticks.
+    // The meter edit has rounded the old end forward: 2 × 4/4 followed
+    // by 3 × 3/4 = 16_320 ticks.
     dispatch(store, {
       type: "InsertMeasure",
       clipId: TEST_CLIP_ID,
@@ -222,12 +235,12 @@ describe("measure operations across meter markers", () => {
 
     // The inserted measure reuses the 3/4 meter (2_880 ticks): the marker
     // at the insertion boundary now starts the inserted measure.
-    expect(timeline.durationTicks).toBe(13_440 + 2_880);
+    expect(timeline.durationTicks).toBe(16_320 + 2_880);
     expect(timeline.timeMap.meterMarkers[1]?.startTick)
       .toBe(2 * MEASURE_TICKS);
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),
-    ).toBe(5);
+    ).toBe(6);
   });
 
   test("inserting before every marker keeps tick 0 immovable", () => {
@@ -248,16 +261,16 @@ describe("measure operations across meter markers", () => {
 
     const timeline = activeTimeline(store);
 
-    expect(timeline.durationTicks).toBe(13_440 + MEASURE_TICKS);
+    expect(timeline.durationTicks).toBe(16_320 + MEASURE_TICKS);
     expect(timeline.timeMap.meterMarkers[0]?.startTick).toBe(0);
     expect(timeline.timeMap.meterMarkers[1]?.startTick)
       .toBe(3 * MEASURE_TICKS);
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),
-    ).toBe(5);
+    ).toBe(6);
   });
 
-  test("removing a measure drops its inner markers and shifts the rest", () => {
+  test("removing a measure restores the right-side state at the seam", () => {
     const store = new ProjectStore(createTestProject());
 
     dispatch(store, {
@@ -280,14 +293,19 @@ describe("measure operations across meter markers", () => {
 
     const timeline = activeTimeline(store);
 
-    // The 3/4 marker was placed on the removed measure, so it is entirely dropped.
-    // The remaining measures revert to the previous active meter (4/4).
-    expect(timeline.durationTicks).toBe(3 * MEASURE_TICKS);
-    expect(timeline.timeMap.meterMarkers).toHaveLength(1);
-    expect(timeline.timeMap.tempoMarkers).toHaveLength(1);
+    // The marker inside the cut disappears, then the 3/4 state active on the
+    // right is restored at the seam together with the tempo state.
+    expect(timeline.durationTicks).toBe(16_320 - 2_880);
+    expect(timeline.timeMap.meterMarkers).toHaveLength(2);
+    expect(timeline.timeMap.meterMarkers[1]?.startTick)
+      .toBe(2 * MEASURE_TICKS);
+    expect(timeline.timeMap.tempoMarkers).toEqual([
+      { startTick: 0, bpm: 120 },
+      { startTick: 2 * MEASURE_TICKS, bpm: 90 },
+    ]);
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),
-    ).toBe(3);
+    ).toBe(4);
   });
 
   test("appending measures uses the last active meter", () => {
@@ -308,13 +326,13 @@ describe("measure operations across meter markers", () => {
     const timeline = activeTimeline(store);
 
     expect(timeline.durationTicks)
-      .toBe(2 * MEASURE_TICKS + 4 * 2_880);
+      .toBe(2 * MEASURE_TICKS + 5 * 2_880);
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),
-    ).toBe(6);
+    ).toBe(7);
   });
 
-  test("updating the initial meter preserves measure count and trims notes", () => {
+  test("updating the initial meter advances meters without moving notes", () => {
     const store = new ProjectStore(createTestProject());
 
     dispatch(store, {
@@ -322,6 +340,22 @@ describe("measure operations across meter markers", () => {
       clipId: TEST_CLIP_ID,
       startTick: 2 * MEASURE_TICKS,
       timeSignature: { numerator: 3, denominator: 4 },
+    });
+    dispatch(store, {
+      type: "AddTempoMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: 2 * MEASURE_TICKS,
+      bpm: 90,
+    });
+    dispatch(store, {
+      type: "AddScaleMarker",
+      clipId: TEST_CLIP_ID,
+      marker: {
+        startTick: 2 * MEASURE_TICKS,
+        rootNote: "D",
+        patternType: "scale",
+        patternId: "dorian",
+      },
     });
     dispatch(store, {
       type: "AddNotes",
@@ -340,15 +374,37 @@ describe("measure operations across meter markers", () => {
 
     const timeline = activeTimeline(store);
 
-    // 4 measures: 2 × 6/8 (2_880) then 2 × 3/4 (2_880).
-    expect(timeline.durationTicks).toBe(4 * 2_880);
+    // The old 7_680 marker advances to 8_640, a valid 6/8 boundary. The clip
+    // end advances as well; absolute point events and notes do not move.
+    expect(timeline.durationTicks).toBe(17_280);
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),
-    ).toBe(4);
-    expect(timeline.timeMap.meterMarkers[1]?.startTick).toBe(2 * 2_880);
-    // The note past the new duration was trimmed.
+    ).toBe(6);
+    expect(timeline.timeMap.meterMarkers[1]?.startTick).toBe(3 * 2_880);
+    expect(timeline.timeMap.tempoMarkers).toEqual([
+      { startTick: 0, bpm: 120 },
+      { startTick: 2 * MEASURE_TICKS, bpm: 90 },
+    ]);
+    expect(timeline.timeMap.scaleMarkers[1]?.startTick)
+      .toBe(2 * MEASURE_TICKS);
     expect(store.getState()
       .clipsById[TEST_CLIP_ID]?.tracksByInstrumentId[TEST_INSTRUMENT_ID]
-      ?.notesById["late-note"]).toBeUndefined();
+      ?.notesById["late-note"]?.startTick).toBe(12_000);
+  });
+
+  test("rejects a meter edit that would exceed the measure limit", () => {
+    const store = new ProjectStore(createTestProject());
+
+    dispatch(store, {
+      type: "AppendMeasures",
+      clipId: TEST_CLIP_ID,
+      count: 240,
+    });
+
+    expect(() => dispatch(store, {
+      type: "UpdateTimeSignature",
+      clipId: TEST_CLIP_ID,
+      timeSignature: { numerator: 1, denominator: 32 },
+    })).toThrow(CommandRejectedError);
   });
 });

@@ -10,8 +10,8 @@ import {
   MINIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
-  getMeasureCount,
   getMeasureSpanAtTick,
+  getMeasureSpans,
 } from "../../domain/transport/time-map";
 import {
   type LoopRegion,
@@ -55,11 +55,12 @@ export function useTransportWorkflow({
   const insertMeasuresAtPlayhead = useCallback((count: number, position: "before" | "after"): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
-    const measureCount = getMeasureCount(
+    const spans = getMeasureSpans(
       state.clock.ppqn,
       activeClip.timeline.timeMap,
       activeClip.timeline.durationTicks,
     );
+    const measureCount = spans.length;
 
     if (measureCount + count > MAXIMUM_MEASURE_COUNT) {
       return;
@@ -73,9 +74,21 @@ export function useTransportWorkflow({
     );
 
     const measureIndex = position === "before" ? span.index : span.index + 1;
+    const referenceSpan = spans[measureIndex] ?? spans[spans.length - 1];
+
+    if (referenceSpan === undefined) {
+      return;
+    }
+
+    const insertionTick = measureIndex === spans.length
+      ? referenceSpan.endTick
+      : referenceSpan.startTick;
+    const insertedTicks =
+      (referenceSpan.endTick - referenceSpan.startTick) * count;
+    const currentPlayheadTick = runtime.playheadTick.get();
 
     prepareStructuralEdit();
-    runtime.editorCommands.dispatch(
+    const nextState = runtime.editorCommands.dispatch(
       [{
         type: "InsertMeasure",
         clipId: activeClip.id,
@@ -84,27 +97,37 @@ export function useTransportWorkflow({
       }],
       `Insert ${count} measure(s) ${position} measure ${span.index + 1}`,
     );
-  }, [prepareStructuralEdit, runtime]);
+
+    if (
+      nextState !== null
+      && currentPlayheadTick >= insertionTick
+    ) {
+      seekPlayback(currentPlayheadTick + insertedTicks);
+    }
+  }, [prepareStructuralEdit, runtime, seekPlayback]);
 
   const removeMeasureAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
-    const measureCount = getMeasureCount(
+    const measureCount = getMeasureSpans(
       state.clock.ppqn,
       activeClip.timeline.timeMap,
       activeClip.timeline.durationTicks,
-    );
+    ).length;
 
     if (measureCount <= MINIMUM_MEASURE_COUNT) {
       return;
     }
 
-    const measureIndex = getMeasureSpanAtTick(
+    const span = getMeasureSpanAtTick(
       state.clock.ppqn,
       activeClip.timeline.timeMap,
       activeClip.timeline.durationTicks,
       runtime.playheadTick.get(),
-    ).index;
+    );
+    const measureIndex = span.index;
+    const removalStartTick = span.startTick;
+    const removalEndTick = span.endTick;
     const currentPlayheadTick = runtime.playheadTick.get();
 
     prepareStructuralEdit();
@@ -118,8 +141,13 @@ export function useTransportWorkflow({
     );
 
     if (nextState !== null) {
+      const collapsedPlayheadTick = currentPlayheadTick <= removalStartTick
+        ? currentPlayheadTick
+        : currentPlayheadTick >= removalEndTick
+          ? currentPlayheadTick - removalEndTick + removalStartTick
+          : removalStartTick;
       const boundedPlayheadTick = Math.min(
-        currentPlayheadTick,
+        collapsedPlayheadTick,
         getClipDurationTicks(getActiveClip(nextState)),
       );
 

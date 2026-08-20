@@ -37,7 +37,7 @@ describe("validateClipTimeline", () => {
           timeSignature: { numerator: 4, denominator: 4 },
         }],
         tempoMarkers: [],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
@@ -58,7 +58,7 @@ scaleMarkers: [],
           { startTick: 7_680, timeSignature: { numerator: 5, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
@@ -77,7 +77,7 @@ scaleMarkers: [],
           { startTick: 4_000, timeSignature: { numerator: 3, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
@@ -96,7 +96,7 @@ scaleMarkers: [],
           { startTick: 3_840, timeSignature: { numerator: 4, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
@@ -115,7 +115,7 @@ scaleMarkers: [],
           { startTick: 7_680, timeSignature: { numerator: 3, denominator: 4 } },
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
@@ -138,7 +138,7 @@ scaleMarkers: [],
           },
         }],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
@@ -157,7 +157,7 @@ scaleMarkers: [],
             },
           }],
           tempoMarkers: [{ startTick: 0, bpm: 120 }],
-scaleMarkers: [],
+          scaleMarkers: createDefaultTimeMap().scaleMarkers,
         },
         4 * 3_360,
       ),
@@ -178,13 +178,36 @@ scaleMarkers: [],
           { startTick: 0, bpm: 120 },
           { startTick: 3_840, bpm: 999 },
         ],
-scaleMarkers: [],
+        scaleMarkers: createDefaultTimeMap().scaleMarkers,
       }),
       CLOCK,
     );
 
     expect(result.valid).toBe(false);
     expect(result.issues.some((issue) => issue.code === "INVALID_TEMPO"))
+      .toBe(true);
+  });
+
+  test("requires valid, ordered scale markers starting at tick 0", () => {
+    const result = validateClipTimeline(
+      createTimeline({
+        meterMarkers: [{
+          startTick: 0,
+          timeSignature: { numerator: 4, denominator: 4 },
+        }],
+        tempoMarkers: [{ startTick: 0, bpm: 120 }],
+        scaleMarkers: [{
+          startTick: 0,
+          rootNote: "H",
+          patternType: "scale",
+          patternId: "unknown",
+        }],
+      }),
+      CLOCK,
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.code === "INVALID_SCALE"))
       .toBe(true);
   });
 });

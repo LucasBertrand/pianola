@@ -270,20 +270,46 @@ describe("planMarkerMoveCommands", () => {
         state,
         TEST_CLIP_ID,
         2 * MEASURE_TICKS,
-        3_360,
+        MEASURE_TICKS,
       ),
     ).toEqual([
       {
         type: "MoveMeterMarker",
         clipId: TEST_CLIP_ID,
         startTick: 2 * MEASURE_TICKS,
-        targetTick: 3_360,
+        targetTick: MEASURE_TICKS,
       },
       {
         type: "MoveTempoMarker",
         clipId: TEST_CLIP_ID,
         startTick: 2 * MEASURE_TICKS,
-        targetTick: 3_360,
+        targetTick: MEASURE_TICKS,
+      },
+    ]);
+  });
+
+  test("moves companions to the meter's projected boundary", () => {
+    const state = createProjectWithMarkers();
+
+    expect(
+      planMarkerMoveCommands(
+        state,
+        TEST_CLIP_ID,
+        2 * MEASURE_TICKS,
+        11_040,
+      ),
+    ).toEqual([
+      {
+        type: "MoveMeterMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 2 * MEASURE_TICKS,
+        targetTick: 11_040,
+      },
+      {
+        type: "MoveTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 2 * MEASURE_TICKS,
+        targetTick: 3 * MEASURE_TICKS,
       },
     ]);
   });

@@ -12,6 +12,7 @@ export type ValidationCode =
   | "INVALID_PRESET"
   | "INVALID_BPM"
   | "INVALID_TEMPO"
+  | "INVALID_SCALE"
   | "INVALID_PPQN"
   | "INVALID_TIME_SIGNATURE"
   | "INVALID_LOOP"
@@ -44,4 +45,3 @@ export function assertValidationResult(result: ValidationResult): void {
     throw new DomainValidationError(result.issues);
   }
 }
-

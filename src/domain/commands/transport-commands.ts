@@ -57,7 +57,6 @@ import {
   removeTimeFromTransport,
   transformTracksForInsertedTime,
   transformTracksForRemovedTime,
-  trimProjectToDuration,
 } from "./active-clip-command-helpers";
 import {
   assertTransportWithinProjectDuration,
@@ -82,6 +81,14 @@ export function applyInsertMeasure(
     reject(
       "INVALID_COMMAND",
       `Measure index must be between 0 and ${spans.length}.`,
+      command.type,
+    );
+  }
+
+  if (!Number.isSafeInteger(command.count) || command.count <= 0) {
+    reject(
+      "INVALID_COMMAND",
+      "The inserted measure count must be a positive safe integer.",
       command.type,
     );
   }
@@ -290,9 +297,8 @@ export function applyUpdateTempo(
 }
 
 /**
- * Edits the meter marker at tick 0. Other markers keep their measure index
- * and the total measure count is preserved; notes past the new duration are
- * trimmed.
+ * Edits the meter marker at tick 0. Point events keep their absolute ticks;
+ * following meter markers and the clip end advance to valid boundaries.
  */
 export function applyUpdateTimeSignature(
   state: ActiveClipProjectState,
@@ -320,13 +326,12 @@ export function applyUpdateTimeSignature(
       state.timeline.durationTicks,
       command.timeSignature,
     ));
-  const timeline = { durationTicks, timeMap };
-  assertValidClipTimeline(timeline, state.clock);
 
-  return trimProjectToDuration({
-    ...state,
-    timeline,
-  });
+  return withMeterEdit(
+    state,
+    { durationTicks, timeMap },
+    command,
+  );
 }
 
 export function applyAddMeterMarker(
@@ -344,7 +349,7 @@ export function applyAddMeterMarker(
       },
     ));
 
-  return withMeterEdit(state, edit);
+  return withMeterEdit(state, edit, command);
 }
 
 export function applyMoveMeterMarker(
@@ -364,7 +369,7 @@ export function applyMoveMeterMarker(
       command.targetTick,
     ));
 
-  return withMeterEdit(state, edit);
+  return withMeterEdit(state, edit, command);
 }
 
 export function applyUpdateMeterMarker(
@@ -380,7 +385,7 @@ export function applyUpdateMeterMarker(
       command.timeSignature,
     ));
 
-  return withMeterEdit(state, edit);
+  return withMeterEdit(state, edit, command);
 }
 
 export function applyDeleteMeterMarker(
@@ -395,7 +400,7 @@ export function applyDeleteMeterMarker(
       command.startTick,
     ));
 
-  return withMeterEdit(state, edit);
+  return withMeterEdit(state, edit, command);
 }
 
 export function applyAddTempoMarker(
@@ -588,12 +593,13 @@ function applyMarkerOperation<T>(
 }
 
 /**
- * Applies a meter edit: the recomputed duration replaces the clip duration
- * and content past it is trimmed, mirroring the time-signature control.
+ * Applies a meter edit after following meter markers and the clip end have
+ * advanced to complete boundaries. Point events remain tick-anchored.
  */
 function withMeterEdit(
   state: ActiveClipProjectState,
   edit: MeterMarkerEdit,
+  command: PianoRollCommand,
 ): ActiveClipProjectState {
   const timeline = {
     durationTicks: edit.durationTicks,
@@ -602,10 +608,24 @@ function withMeterEdit(
 
   assertValidClipTimeline(timeline, state.clock);
 
-  return trimProjectToDuration({
+  const measureCount = getMeasureCount(
+    state.clock.ppqn,
+    timeline.timeMap,
+    timeline.durationTicks,
+  );
+
+  if (measureCount > MAXIMUM_MEASURE_COUNT) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_MEASURE_COUNT} measures.`,
+      command.type,
+    );
+  }
+
+  return {
     ...state,
     timeline,
-  });
+  };
 }
 
 function withTimeMap(

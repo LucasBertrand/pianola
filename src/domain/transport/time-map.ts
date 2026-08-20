@@ -521,185 +521,83 @@ export function getDurationForMeasureCount(
   return durationTicks;
 }
 
-function remapMarkerTicks<T extends { readonly startTick: Tick }>(
-  ppqn: number,
-  markers: readonly T[],
-  oldSpans: readonly MeasureSpan[],
-  newSpans: readonly MeasureSpan[],
-): T[] {
-  return markers.map((marker) => {
-    if (marker.startTick === 0) {
-      return marker;
-    }
-
-    const oldSpanIndex = oldSpans.findIndex((span, index) => {
-      const nextSpan = oldSpans[index + 1];
-      return marker.startTick >= span.startTick && (nextSpan === undefined || marker.startTick < nextSpan.startTick);
-    });
-
-    if (oldSpanIndex < 0) {
-      return marker;
-    }
-
-    const oldSpan = oldSpans[oldSpanIndex];
-    const newSpan = newSpans[oldSpanIndex];
-
-    if (oldSpan === undefined || newSpan === undefined) {
-      return marker;
-    }
-
-    const offset = marker.startTick - oldSpan.startTick;
-    const newMeasureTicks = getTicksPerMeasure(ppqn, newSpan.timeSignature);
-    const newTick = newSpan.startTick + Math.min(offset, newMeasureTicks);
-
-    return { ...marker, startTick: newTick };
-  });
-}
-
-interface MeterAnchor {
-  readonly measureIndex: number;
-  readonly timeSignature: TimeSignature;
-}
-
 /**
- * Rebuilds meter marker ticks from measure indices: markers are anchored to
- * measure positions, so any meter change recomputes the ticks of every
- * following marker. Tempo markers stay tick-anchored; markers past the new
- * duration are dropped. Returns the rebuilt map and the clip duration.
+ * Projects meter markers onto complete measure boundaries without moving
+ * them backwards. Each marker keeps its requested absolute tick when that
+ * tick is already a boundary; otherwise it advances to the first boundary
+ * produced by the preceding meter. Point events remain tick-anchored.
+ *
+ * The clip end follows the same policy. It never shrinks during a meter edit
+ * and grows only when required to end on a complete measure.
  */
 function rebuildMeterStructure(
   ppqn: number,
-  anchors: readonly MeterAnchor[],
+  requestedMarkers: readonly MeterMarker[],
   tempoMarkers: readonly TempoMarker[],
-  measureCount: number,
-  scaleMarkers?: readonly ScaleMarker[],
-  oldSpans?: readonly MeasureSpan[],
+  scaleMarkers: readonly ScaleMarker[],
+  minimumDurationTicks: Tick,
 ): {
   readonly timeMap: TimeMap;
   readonly durationTicks: Tick;
 } {
-  const sorted = mergeAdjacentIdenticalAnchors(
-    [...anchors].sort((left, right) => left.measureIndex - right.measureIndex),
-  );
+  const sorted = normalizeMeterMarkers(requestedMarkers);
   const first = sorted[0];
 
-  if (first === undefined || first.measureIndex !== 0) {
-    throw new RangeError("Meter anchors must start at measure 0.");
+  if (first === undefined || first.startTick !== 0) {
+    throw new RangeError("Meter markers must start at tick 0.");
   }
 
   const meterMarkers: MeterMarker[] = [{
     startTick: 0,
     timeSignature: first.timeSignature,
   }];
-  let tick = 0;
 
   for (let index = 1; index < sorted.length; index += 1) {
-    const previous = sorted[index - 1];
-    const anchor = sorted[index];
+    const previous = meterMarkers[meterMarkers.length - 1];
+    const marker = sorted[index];
 
-    if (previous === undefined || anchor === undefined) {
+    if (previous === undefined || marker === undefined) {
       continue;
     }
 
-    tick +=
-      (anchor.measureIndex - previous.measureIndex)
-      * getTicksPerMeasure(ppqn, previous.timeSignature);
+    const measureTicks = getTicksPerMeasure(ppqn, previous.timeSignature);
+    const distance = marker.startTick - previous.startTick;
+    const measureOffset = Math.max(1, Math.ceil(distance / measureTicks));
+
     meterMarkers.push({
-      startTick: tick,
-      timeSignature: anchor.timeSignature,
+      ...marker,
+      startTick: previous.startTick + measureOffset * measureTicks,
     });
   }
 
-  const last = sorted[sorted.length - 1];
+  const last = meterMarkers[meterMarkers.length - 1];
+
+  if (last === undefined) {
+    throw new RangeError("A meter map must contain an initial marker.");
+  }
+
+  const lastMeasureTicks = getTicksPerMeasure(ppqn, last.timeSignature);
+  const remainingTicks = minimumDurationTicks - last.startTick;
+  const remainingMeasureCount = Math.max(
+    1,
+    Math.ceil(remainingTicks / lastMeasureTicks),
+  );
   const durationTicks =
-    tick
-    + (measureCount - (last?.measureIndex ?? 0))
-      * getTicksPerMeasure(ppqn, last?.timeSignature ?? first.timeSignature);
-
-  const newTimeMap: TimeMap = {
-    meterMarkers,
-    tempoMarkers: [],
-    scaleMarkers: [],
-  };
-
-  const newSpans = oldSpans !== undefined
-    ? getMeasureSpans(ppqn, newTimeMap, durationTicks)
-    : [];
-
-  const shiftedTempoMarkers = oldSpans !== undefined
-    ? remapMarkerTicks(ppqn, tempoMarkers, oldSpans, newSpans)
-    : tempoMarkers;
-
-  const shiftedScaleMarkers = oldSpans !== undefined
-    ? remapMarkerTicks(ppqn, scaleMarkers ?? [], oldSpans, newSpans)
-    : (scaleMarkers ?? []);
+    last.startTick + remainingMeasureCount * lastMeasureTicks;
 
   return {
     timeMap: {
       meterMarkers,
-      tempoMarkers: shiftedTempoMarkers.filter(
-        (marker) => marker.startTick < durationTicks,
-      ),
-      scaleMarkers: shiftedScaleMarkers.filter(
-        (marker) => marker.startTick < durationTicks,
-      ),
+      tempoMarkers,
+      scaleMarkers,
     },
     durationTicks,
   };
 }
 
-function mergeAdjacentIdenticalAnchors(
-  anchors: MeterAnchor[],
-): MeterAnchor[] {
-  const merged: MeterAnchor[] = [];
-
-  for (const anchor of anchors) {
-    const previous = merged[merged.length - 1];
-
-    if (
-      previous !== undefined
-      && areTimeSignaturesEqual(
-        previous.timeSignature,
-        anchor.timeSignature,
-      )
-    ) {
-      continue;
-    }
-
-    merged.push(anchor);
-  }
-
-  return merged;
-}
-
-function getMeterAnchors(
-  ppqn: number,
-  timeMap: TimeMap,
-  durationTicks: Tick,
-): MeterAnchor[] {
-  const spans = getMeasureSpans(ppqn, timeMap, durationTicks);
-
-  return timeMap.meterMarkers.map((marker) => {
-    const span = spans.find(
-      (candidate) => candidate.startTick === marker.startTick,
-    );
-
-    if (span === undefined) {
-      throw new RangeError(
-        "Every meter marker must start on a measure boundary.",
-      );
-    }
-
-    return {
-      measureIndex: span.index,
-      timeSignature: marker.timeSignature,
-    };
-  });
-}
-
 /**
- * Replaces the tick-0 meter while keeping every other marker at its current
- * measure index and preserving the total measure count.
+ * Replaces the tick-0 meter. Following meter markers advance to the first
+ * compatible boundary when necessary; point events keep their ticks.
  */
 export function replaceInitialMeter(
   ppqn: number,
@@ -710,15 +608,13 @@ export function replaceInitialMeter(
   readonly timeMap: TimeMap;
   readonly durationTicks: Tick;
 } {
-  const anchors = getMeterAnchors(ppqn, timeMap, durationTicks);
-
   return rebuildMeterStructure(
     ppqn,
-    anchors.map((anchor, index) =>
-      index === 0 ? { ...anchor, timeSignature } : anchor),
+    timeMap.meterMarkers.map((marker, index) =>
+      index === 0 ? { ...marker, timeSignature } : marker),
     timeMap.tempoMarkers,
-    getMeasureSpans(ppqn, timeMap, durationTicks).length,
     timeMap.scaleMarkers,
+    durationTicks,
   );
 }
 
@@ -811,10 +707,15 @@ export interface MeterMarkerEdit {
   readonly durationTicks: Tick;
 }
 
+export interface MeterMarkerMoveEdit extends MeterMarkerEdit {
+  /** Actual tick after forward projection onto the preceding meter grid. */
+  readonly movedMarkerTick: Tick;
+}
+
 /**
- * Adds a meter marker on the measure boundary containing `marker.startTick`.
- * The measure count is preserved; following markers keep their measure index
- * and their ticks are recomputed.
+ * Adds a meter marker on an existing measure boundary. Following meter
+ * markers advance only when needed to remain on complete boundaries. Point
+ * events and the existing clip extent remain absolute lower bounds.
  */
 export function insertMeterMarker(
   ppqn: number,
@@ -845,9 +746,9 @@ export function insertMeterMarker(
     );
   }
 
-  const anchors = getMeterAnchors(ppqn, timeMap, durationTicks);
-
-  if (anchors.some((anchor) => anchor.measureIndex === span.index)) {
+  if (timeMap.meterMarkers.some(
+    (candidate) => candidate.startTick === marker.startTick,
+  )) {
     throw new RangeError(
       "A meter marker already starts this measure.",
     );
@@ -856,16 +757,12 @@ export function insertMeterMarker(
   return rebuildMeterStructure(
     ppqn,
     [
-      ...anchors,
-      {
-        measureIndex: span.index,
-        timeSignature: marker.timeSignature,
-      },
+      ...timeMap.meterMarkers,
+      marker,
     ],
     timeMap.tempoMarkers,
-    spans.length,
     timeMap.scaleMarkers,
-    spans,
+    durationTicks,
   );
 }
 
@@ -879,9 +776,8 @@ export function moveMeterMarker(
   durationTicks: Tick,
   startTick: Tick,
   targetTick: Tick,
-): MeterMarkerEdit {
+): MeterMarkerMoveEdit {
   const spans = getMeasureSpans(ppqn, timeMap, durationTicks);
-  const anchors = getMeterAnchors(ppqn, timeMap, durationTicks);
   const markerIndex = timeMap.meterMarkers.findIndex(
     (marker) => marker.startTick === startTick,
   );
@@ -906,24 +802,43 @@ export function moveMeterMarker(
     );
   }
 
-  return rebuildMeterStructure(
-    ppqn,
-    anchors.map((anchor, index) =>
-      index === markerIndex
-        ? { ...anchor, measureIndex: targetSpan.index }
-        : anchor,
-    ),
-    timeMap.tempoMarkers,
-    spans.length,
-    timeMap.scaleMarkers,
-    spans,
+  if (timeMap.meterMarkers.some(
+    (marker, index) =>
+      index !== markerIndex && marker.startTick === targetTick,
+  )) {
+    throw new RangeError(
+      "A meter marker already starts this measure.",
+    );
+  }
+
+  const movedMarker: MeterMarker = {
+    ...timeMap.meterMarkers[markerIndex]!,
+    startTick: targetSpan.startTick,
+  };
+  const requestedMarkers = timeMap.meterMarkers.map((marker, index) =>
+    index === markerIndex ? movedMarker : marker,
   );
+  const normalizedMarkers = normalizeMeterMarkers(requestedMarkers);
+  const movedMarkerIndex = normalizedMarkers.indexOf(movedMarker);
+  const edit = rebuildMeterStructure(
+    ppqn,
+    normalizedMarkers,
+    timeMap.tempoMarkers,
+    timeMap.scaleMarkers,
+    durationTicks,
+  );
+
+  return {
+    ...edit,
+    movedMarkerTick: movedMarkerIndex >= 0
+      ? edit.timeMap.meterMarkers[movedMarkerIndex]!.startTick
+      : targetSpan.startTick,
+  };
 }
 
 /**
- * Changes the signature of a marker. Following markers keep their measure
- * index; when the marker becomes identical to its predecessor it is merged
- * away.
+ * Changes the signature of a marker. Following meter markers advance to the
+ * first compatible boundary when necessary. Point events keep their ticks.
  */
 export function updateMeterMarker(
   ppqn: number,
@@ -932,7 +847,6 @@ export function updateMeterMarker(
   startTick: Tick,
   timeSignature: TimeSignature,
 ): MeterMarkerEdit {
-  const anchors = getMeterAnchors(ppqn, timeMap, durationTicks);
   const markerIndex = timeMap.meterMarkers.findIndex(
     (marker) => marker.startTick === startTick,
   );
@@ -945,18 +859,17 @@ export function updateMeterMarker(
 
   return rebuildMeterStructure(
     ppqn,
-    anchors.map((anchor, index) =>
-      index === markerIndex ? { ...anchor, timeSignature } : anchor),
+    timeMap.meterMarkers.map((marker, index) =>
+      index === markerIndex ? { ...marker, timeSignature } : marker),
     timeMap.tempoMarkers,
-    getMeasureSpans(ppqn, timeMap, durationTicks).length,
     timeMap.scaleMarkers,
-    getMeasureSpans(ppqn, timeMap, durationTicks),
+    durationTicks,
   );
 }
 
 /**
  * Removes a meter marker. The initial marker cannot be removed. Following
- * markers keep their measure index and their ticks are recomputed.
+ * markers advance only when required by the preceding meter.
  */
 export function removeMeterMarker(
   ppqn: number,
@@ -978,15 +891,12 @@ export function removeMeterMarker(
     throw new RangeError("The initial meter marker cannot be removed.");
   }
 
-  const anchors = getMeterAnchors(ppqn, timeMap, durationTicks);
-
   return rebuildMeterStructure(
     ppqn,
-    anchors.filter((_, index) => index !== markerIndex),
+    timeMap.meterMarkers.filter((_, index) => index !== markerIndex),
     timeMap.tempoMarkers,
-    getMeasureSpans(ppqn, timeMap, durationTicks).length,
     timeMap.scaleMarkers,
-    getMeasureSpans(ppqn, timeMap, durationTicks),
+    durationTicks,
   );
 }
 
@@ -1165,17 +1075,27 @@ export function removeScaleMarker(
   };
 }
 
-/** Shifts every marker strictly after `insertionTick` by `insertedTicks`.
- * A marker exactly at `insertionTick` stays: it now starts the inserted
- * measure, which inherits its meter. */
+/**
+ * Inserts time before a measure boundary. Point events at the boundary
+ * belong to the material on the right and move with it. A meter marker at
+ * the boundary stays so the inserted measure inherits the target meter;
+ * following meter markers move with the original material.
+ */
 export function insertTimeIntoTimeMap(
   timeMap: TimeMap,
   insertionTick: Tick,
   insertedTicks: number,
 ): TimeMap {
-  const shiftMarker = <T extends { readonly startTick: Tick }>(
+  const shiftPointMarker = <T extends { readonly startTick: Tick }>(
     marker: T,
   ): T => ({
+    ...marker,
+    startTick: marker.startTick >= insertionTick && marker.startTick !== 0
+      ? marker.startTick + insertedTicks
+      : marker.startTick,
+  });
+
+  const shiftMeterMarker = (marker: MeterMarker): MeterMarker => ({
     ...marker,
     startTick: marker.startTick > insertionTick
       ? marker.startTick + insertedTicks
@@ -1183,19 +1103,21 @@ export function insertTimeIntoTimeMap(
   });
 
   return {
-    meterMarkers: timeMap.meterMarkers.map(shiftMarker),
-    tempoMarkers: timeMap.tempoMarkers.map(shiftMarker),
-    scaleMarkers: timeMap.scaleMarkers.map(shiftMarker),
+    meterMarkers: timeMap.meterMarkers.map(shiftMeterMarker),
+    tempoMarkers: normalizeTempoMarkers(
+      timeMap.tempoMarkers.map(shiftPointMarker),
+    ),
+    scaleMarkers: normalizeScaleMarkers(
+      timeMap.scaleMarkers.map(shiftPointMarker),
+    ),
   };
 }
 
 /**
- * Removes whole measures spanning `[removalStartTick, removalEndTick)`.
- * Meter markers are anchored to measure indices: markers inside the range
- * are dropped (the marker starting the range survives when its segment
- * extends past it), following markers shift left by the removed measure
- * count and every tick is recomputed. Tempo markers stay tick-anchored:
- * markers inside the range are dropped and later markers shift left.
+ * Removes whole measures spanning `[removalStartTick, removalEndTick)` as a
+ * literal time splice. Markers inside the range are removed, later markers
+ * shift left by the exact removed duration, and the state active at the
+ * right edge is restored at the seam when needed.
  */
 export function removeTimeFromTimeMap(
   ppqn: number,
@@ -1224,58 +1146,11 @@ export function removeTimeFromTimeMap(
     );
   }
 
-  const firstIndex = firstRemoved.index;
-  const lastIndex = lastRemoved.index;
-  const removedCount = lastIndex - firstIndex + 1;
   const removedTicks = removalEndTick - removalStartTick;
-  const anchors = getMeterAnchors(ppqn, timeMap, durationTicks);
-  const keptAnchors: MeterAnchor[] = [];
-
-  for (
-    let anchorIndex = 0;
-    anchorIndex < anchors.length;
-    anchorIndex += 1
-  ) {
-    const anchor = anchors[anchorIndex];
-
-    if (anchor === undefined) {
-      continue;
-    }
-
-    if (anchor.measureIndex < firstIndex) {
-      keptAnchors.push(anchor);
-      continue;
-    }
-
-    if (anchor.measureIndex > lastIndex) {
-      keptAnchors.push({
-        ...anchor,
-        measureIndex: anchor.measureIndex - removedCount,
-      });
-      continue;
-    }
-
-
-  }
-
-  if (keptAnchors[0]?.measureIndex !== 0) {
-    const activeAnchor = anchors.reduce(
-      (selected, anchor) =>
-        anchor.measureIndex <= lastIndex + 1 ? anchor : selected,
-      anchors[0],
-    );
-
-    if (activeAnchor === undefined) {
-      throw new RangeError("A clip meter map must start at measure 0.");
-    }
-
-    keptAnchors.unshift({
-      measureIndex: 0,
-      timeSignature: activeAnchor.timeSignature,
-    });
-  }
-
-  const tempoMarkers = timeMap.tempoMarkers.flatMap((marker) => {
+  const durationAfterRemoval = durationTicks - removedTicks;
+  const shiftMarkers = <T extends { readonly startTick: Tick }>(
+    markers: readonly T[],
+  ): T[] => markers.flatMap((marker) => {
     if (
       marker.startTick >= removalStartTick
       && marker.startTick < removalEndTick
@@ -1293,45 +1168,56 @@ export function removeTimeFromTimeMap(
     return [marker];
   });
 
-  if (tempoMarkers[0]?.startTick !== 0) {
-    tempoMarkers.unshift({
-      startTick: 0,
-      bpm: getTempoAtTick(timeMap, removalEndTick),
-    });
-  }
-
-  const scaleMarkers = timeMap.scaleMarkers.flatMap((marker) => {
-    if (
-      marker.startTick >= removalStartTick
-      && marker.startTick < removalEndTick
-    ) {
-      return [];
-    }
-
-    if (marker.startTick >= removalEndTick) {
-      return [{
-        ...marker,
-        startTick: marker.startTick - removedTicks,
-      }];
-    }
-
-    return [marker];
-  });
-
-  if (scaleMarkers[0]?.startTick !== 0) {
-    scaleMarkers.unshift({
-      ...getScaleMarkerAtTick(timeMap, removalEndTick),
-      startTick: 0,
-    });
-  }
-
-  return rebuildMeterStructure(
-    ppqn,
-    keptAnchors,
-    tempoMarkers,
-    spans.length - removedCount,
-    scaleMarkers,
+  const shouldRestoreSeam = removalStartTick < durationAfterRemoval;
+  const meterBeforeSeam = getMeterAtTick(
+    timeMap,
+    Math.max(0, removalStartTick - 1),
   );
+  const meterAfterRemoval = getMeterAtTick(timeMap, removalEndTick);
+  const shiftedMeterMarkers = shiftMarkers(timeMap.meterMarkers);
+  const meterMarkers = normalizeMeterMarkers([
+    ...shiftedMeterMarkers,
+    ...(shouldRestoreSeam && (
+      removalStartTick === 0
+      || !areTimeSignaturesEqual(meterBeforeSeam, meterAfterRemoval)
+    ) ? [{
+        startTick: removalStartTick,
+        timeSignature: meterAfterRemoval,
+      }] : []),
+  ]);
+
+  const tempoBeforeSeam = getTempoAtTick(
+    timeMap,
+    Math.max(0, removalStartTick - 1),
+  );
+  const tempoAfterRemoval = getTempoAtTick(timeMap, removalEndTick);
+  const tempoMarkers = normalizeTempoMarkers([
+    ...shiftMarkers(timeMap.tempoMarkers),
+    ...(shouldRestoreSeam && (
+      removalStartTick === 0 || tempoBeforeSeam !== tempoAfterRemoval
+    ) ? [{ startTick: removalStartTick, bpm: tempoAfterRemoval }] : []),
+  ]);
+
+  const scaleBeforeSeam = getScaleMarkerAtTick(
+    timeMap,
+    Math.max(0, removalStartTick - 1),
+  );
+  const scaleAfterRemoval = getScaleMarkerAtTick(timeMap, removalEndTick);
+  const scaleChangesAtSeam =
+    scaleBeforeSeam.rootNote !== scaleAfterRemoval.rootNote
+    || scaleBeforeSeam.patternType !== scaleAfterRemoval.patternType
+    || scaleBeforeSeam.patternId !== scaleAfterRemoval.patternId;
+  const scaleMarkers = normalizeScaleMarkers([
+    ...shiftMarkers(timeMap.scaleMarkers),
+    ...(shouldRestoreSeam && (
+      removalStartTick === 0 || scaleChangesAtSeam
+    ) ? [{ ...scaleAfterRemoval, startTick: removalStartTick }] : []),
+  ]);
+
+  return {
+    timeMap: { meterMarkers, tempoMarkers, scaleMarkers },
+    durationTicks: durationAfterRemoval,
+  };
 }
 
 function getMarkerAtTick<T extends { readonly startTick: Tick }>(

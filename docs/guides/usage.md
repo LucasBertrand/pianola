@@ -51,6 +51,12 @@ Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
 Undo/Redo.
 La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme).
 
+Changer une métrique ne déplace ni les notes ni les marqueurs de tempo ou de
+gamme. Si un marqueur métrique ultérieur ne tombe plus sur une barre de mesure,
+il avance automatiquement jusqu'à la prochaine barre valide. L'ajout ou la
+suppression d'une mesure décale en revanche le contenu suivant, puisqu'il
+ajoute ou retire réellement du temps.
+
 ## Sauvegarde et échange
 
 Save télécharge un fichier `.pianola`. Open remplace le projet courant après

@@ -117,6 +117,11 @@ export function useTimeMapMarkerGesture({
     let targetTick = originTick;
     let dragging = false;
 
+    const setDraggingVisual = (active: boolean): void => {
+      handle.classList.toggle("is-dragging", active);
+      getBoundaryElement(originTick)?.classList.toggle("is-active", active);
+    };
+
     handle.setPointerCapture(pointerId);
 
     const pointerTick = (clientX: number): number => {
@@ -130,7 +135,9 @@ export function useTimeMapMarkerGesture({
 
     const applyDraftPosition = (tick: Tick): void => {
       const currentViewport = viewport.get();
-      const x = tick * currentViewport.zoomX / currentViewport.ticksPerPixel - currentViewport.scrollX;
+      const x =
+        tick * currentViewport.zoomX / currentViewport.ticksPerPixel
+        - currentViewport.scrollX;
       
       const flagEl = getFlagElement(originTick);
       const boundaryEl = getBoundaryElement(originTick);
@@ -153,7 +160,10 @@ export function useTimeMapMarkerGesture({
         return;
       }
 
-      dragging = true;
+      if (!dragging) {
+        dragging = true;
+        setDraggingVisual(true);
+      }
 
       const rawTick = pointerTick(event.clientX);
 
@@ -195,6 +205,7 @@ export function useTimeMapMarkerGesture({
       handle.removeEventListener("pointerup", finish);
       handle.removeEventListener("pointercancel", cancel);
       handle.removeEventListener("lostpointercapture", cancel);
+      setDraggingVisual(false);
       
       resetPositions();
 
@@ -221,6 +232,7 @@ export function useTimeMapMarkerGesture({
       handle.removeEventListener("pointerup", finish);
       handle.removeEventListener("pointercancel", cancel);
       handle.removeEventListener("lostpointercapture", cancel);
+      setDraggingVisual(false);
       resetPositions();
     };
 

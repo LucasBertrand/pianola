@@ -17,6 +17,7 @@ import {
 } from "../../../domain/transport/transport";
 import {
   type MeterMarker,
+  type ScaleMarker,
   type TempoMarker,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
@@ -46,7 +47,6 @@ import {
   readPositiveSafeInteger,
   readRecord,
   readSafeInteger,
-  readString,
 } from "./json-readers";
 import { parseClipInstrumentStates } from "./parse-instruments";
 
@@ -296,7 +296,7 @@ function parseTempoMarkers(
 function parseScaleMarkers(
   source: unknown,
   path: string,
-): any[] {
+): ScaleMarker[] {
   if (source === undefined) {
     return [{
       startTick: 0,
@@ -315,11 +315,28 @@ function parseScaleMarkers(
   return sourceMarkers.map((sourceMarker, index) => {
     const markerPath = `${path}[${String(index)}]`;
     const marker = readRecord(sourceMarker, markerPath);
-    
-    // Default patternType for backwards compatibility
-    let patternType = "scale";
-    if (marker["patternType"] !== undefined) {
-      patternType = marker["patternType"] as string;
+    const hasPatternType = "patternType" in marker;
+    assertExactRecordKeys(
+      marker,
+      hasPatternType
+        ? ["startTick", "rootNote", "patternType", "patternId"]
+        : ["startTick", "rootNote", "patternId"],
+      markerPath,
+    );
+    const patternType = hasPatternType
+      ? readNonEmptyString(
+          marker["patternType"],
+          `${markerPath}.patternType`,
+          16,
+        )
+      : "scale";
+
+    if (patternType !== "scale" && patternType !== "chord") {
+      fail(
+        "INVALID_DATA",
+        `${markerPath}.patternType`,
+        "Scale marker pattern type must be scale or chord.",
+      );
     }
 
     return {
@@ -327,9 +344,17 @@ function parseScaleMarkers(
         marker["startTick"],
         `${markerPath}.startTick`,
       ),
-      rootNote: readString(marker["rootNote"] ?? "C", `${markerPath}.rootNote`, 10),
+      rootNote: readNonEmptyString(
+        marker["rootNote"] ?? "C",
+        `${markerPath}.rootNote`,
+        10,
+      ),
       patternType,
-      patternId: readNonEmptyString(marker["patternId"], `${markerPath}.patternId`, 64) as any,
+      patternId: readNonEmptyString(
+        marker["patternId"],
+        `${markerPath}.patternId`,
+        64,
+      ),
     };
   });
 }

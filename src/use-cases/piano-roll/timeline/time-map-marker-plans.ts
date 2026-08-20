@@ -14,7 +14,6 @@ import {
 } from "../../../domain/project/project-document";
 import {
   getMeasureSpanAtTick,
-  getMeasureSpans,
   getMeterAtTick,
   getTempoAtTick,
   getScaleMarkerAtTick,
@@ -334,21 +333,13 @@ export function planMarkerMoveCommands(
   const commands: PianoRollCommand[] = [];
 
   const hasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === fromTick);
-  let tempoTargetTick = toTick;
-  let tempoFromTick = fromTick;
+  let groupTargetTick = toTick;
 
   if (hasMeter) {
     const targetHasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === toTick);
     if (targetHasMeter) {
       throw new Error("A meter marker already exists at this position.");
     }
-
-    commands.push({
-      type: "MoveMeterMarker",
-      clipId,
-      startTick: fromTick,
-      targetTick: toTick,
-    });
 
     try {
       const edit = moveMeterMarker(
@@ -358,69 +349,53 @@ export function planMarkerMoveCommands(
         fromTick,
         toTick,
       );
-      const oldSpans = getMeasureSpans(
-        state.clock.ppqn,
-        timeMap,
-        durationTicks,
+      groupTargetTick = edit.movedMarkerTick;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "The meter marker cannot be moved.",
       );
-      const targetSpanIndex = oldSpans.find(
-        (s) => s.startTick === toTick,
-      )?.index;
-      const fromSpanIndex = oldSpans.find(
-        (s) => s.startTick === fromTick,
-      )?.index;
-      const nextSpans = getMeasureSpans(
-        state.clock.ppqn,
-        edit.timeMap,
-        edit.durationTicks,
-      );
-      const newSpan = nextSpans.find((s) => s.index === targetSpanIndex);
-      const newFromSpan = nextSpans.find((s) => s.index === fromSpanIndex);
-
-      if (newSpan !== undefined) {
-        tempoTargetTick = newSpan.startTick;
-      }
-
-      if (newFromSpan !== undefined) {
-        tempoFromTick = newFromSpan.startTick;
-      }
-    } catch {
-      // Ignored
     }
+
+    commands.push({
+      type: "MoveMeterMarker",
+      clipId,
+      startTick: fromTick,
+      targetTick: toTick,
+    });
   }
 
   const isMovingTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === fromTick);
-  const targetHasTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === tempoTargetTick);
+  const targetHasTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === groupTargetTick);
 
   if (isMovingTempo) {
-    if (targetHasTempo && tempoFromTick !== tempoTargetTick) {
+    if (targetHasTempo && fromTick !== groupTargetTick) {
       throw new Error("A tempo marker already exists at this position.");
     }
 
-    if (tempoFromTick !== tempoTargetTick) {
+    if (fromTick !== groupTargetTick) {
       commands.push({
         type: "MoveTempoMarker",
         clipId,
-        startTick: tempoFromTick,
-        targetTick: tempoTargetTick,
+        startTick: fromTick,
+        targetTick: groupTargetTick,
       });
     }
   }
 
   const isMovingScale = timeMap.scaleMarkers.some((marker) => marker.startTick === fromTick);
-  const targetHasScale = timeMap.scaleMarkers.some((marker) => marker.startTick === tempoTargetTick);
+  const targetHasScale = timeMap.scaleMarkers.some((marker) => marker.startTick === groupTargetTick);
 
   if (isMovingScale) {
-    if (targetHasScale && tempoFromTick !== tempoTargetTick) {
+    if (targetHasScale && fromTick !== groupTargetTick) {
       throw new Error("A scale marker already exists at this position.");
     }
 
-    if (tempoFromTick !== tempoTargetTick) {
+    if (fromTick !== groupTargetTick) {
       commands.push({
         type: "MoveScaleMarker",
         clipId,
-        startTick: tempoFromTick,
-        targetTick: tempoTargetTick,
+        startTick: fromTick,
+        targetTick: groupTargetTick,
       });
     }
   }

@@ -11,6 +11,7 @@ import {
   type TransportState,
 } from "../../src/domain/transport/transport";
 import {
+  createDefaultTimeMap,
   getTicksPerMeasure,
   type TimeSignature,
 } from "../../src/domain/transport/time-map";
@@ -206,7 +207,7 @@ export function createAudioTestProject({
               bpm: transportChanges.bpm
                 ?? PROJECT_CONSTANTS.defaultTempoBpm,
             }],
-scaleMarkers: [],
+            scaleMarkers: createDefaultTimeMap().scaleMarkers,
           },
         },
         tracksByInstrumentId,

@@ -8,10 +8,12 @@ import {
 import {
   areTimeSignaturesEqual,
   getTicksPerMeasure,
+  type ScaleMarker,
   type TempoMarker,
   type TimeSignature,
 } from "../transport/time-map";
 import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
 import { isValidTick } from "./note-validation";
 import {
   assertValidationResult,
@@ -99,6 +101,7 @@ export function validateClipTimeline(
 
   validateMeterMarkers(timeline, clock, issues);
   validateTempoMarkers(timeline, issues);
+  validateScaleMarkers(timeline, issues);
 
   return {
     valid: issues.length === 0,
@@ -299,6 +302,70 @@ function isValidTempoBpm(marker: TempoMarker): boolean {
   return Number.isFinite(marker.bpm)
     && marker.bpm >= PROJECT_CONSTANTS.minimumTempoBpm
     && marker.bpm <= PROJECT_CONSTANTS.maximumTempoBpm;
+}
+
+function validateScaleMarkers(
+  timeline: ClipTimeline,
+  issues: ValidationIssue[],
+): void {
+  const markers = timeline.timeMap.scaleMarkers;
+  const path = "timeMap.scaleMarkers";
+
+  if (markers.length === 0 || markers[0]?.startTick !== 0) {
+    issues.push({
+      code: "INVALID_SCALE",
+      path,
+      message: "Scale markers must start with a marker at tick 0.",
+    });
+    return;
+  }
+
+  for (let index = 0; index < markers.length; index += 1) {
+    const marker = markers[index];
+
+    if (marker === undefined) {
+      continue;
+    }
+
+    if (
+      !isValidTick(marker.startTick)
+      || (index > 0
+        && marker.startTick <= (markers[index - 1]?.startTick ?? -1))
+      || marker.startTick >= timeline.durationTicks
+    ) {
+      issues.push({
+        code: "INVALID_SCALE",
+        path: `${path}[${String(index)}].startTick`,
+        message: "Scale markers must be strictly ordered within the clip duration.",
+      });
+    }
+
+    if (!isValidScaleMarker(marker)) {
+      issues.push({
+        code: "INVALID_SCALE",
+        path: `${path}[${String(index)}]`,
+        message: "Scale marker tonal pattern is not supported.",
+      });
+    }
+  }
+}
+
+function isValidScaleMarker(marker: ScaleMarker): boolean {
+  if (!(TONAL_SNAP_CONSTANTS.rootOptions as readonly string[])
+    .includes(marker.rootNote)) {
+    return false;
+  }
+
+  if (marker.rootNote === "none") {
+    return marker.patternType === "scale" && marker.patternId === "chromatic";
+  }
+
+  return marker.patternType === "scale"
+    ? (TONAL_SNAP_CONSTANTS.supportedScales as readonly string[])
+      .includes(marker.patternId)
+    : marker.patternType === "chord"
+      && (TONAL_SNAP_CONSTANTS.supportedChords as readonly string[])
+        .includes(marker.patternId);
 }
 
 function isValidTimeSignature(timeSignature: TimeSignature): boolean {

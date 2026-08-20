@@ -186,8 +186,8 @@ describe("meter marker operations", () => {
 
     expect(edit.timeMap.meterMarkers).toHaveLength(2);
     expect(edit.timeMap.meterMarkers[1]?.startTick).toBe(7_680);
-    // The measure count is preserved: 2 × 4/4 then 2 × 3/4.
-    expect(edit.durationTicks).toBe(7_680 + 2 * 2_880);
+    // The old end is rounded forward to the next complete 3/4 measure.
+    expect(edit.durationTicks).toBe(7_680 + 3 * 2_880);
   });
 
   test("rejects insertion off a boundary, at tick 0, or identical to the active meter", () => {
@@ -211,7 +211,7 @@ describe("meter marker operations", () => {
     )).toThrow(RangeError);
   });
 
-  test("moves a marker between its neighbours in measure order", () => {
+  test("moves a marker onto a requested boundary", () => {
     const edit = moveMeterMarker(
       PPQN,
       createMixedTimeMap(),
@@ -220,10 +220,10 @@ describe("meter marker operations", () => {
       11_040,
     );
 
-    // The 3/4 marker moves to measure index 3; ticks are recomputed.
+    // 11_040 is already a boundary in the preceding 7/8 segment.
     expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
       .toEqual([0, 7_680, 11_040]);
-    expect(edit.durationTicks).toBe(11_040 + 2_880 + 2_880);
+    expect(edit.durationTicks).toBe(11_040 + 3 * 2_880);
     expect(() => moveMeterMarker(
       PPQN,
       createMixedTimeMap(),
@@ -251,7 +251,44 @@ describe("meter marker operations", () => {
     expect(edit.durationTicks).toBe(7_680 + 3 * 3_360);
   });
 
-  test("removes a marker and recomputes following ticks", () => {
+  test("advances later meters without remapping tempo or scale markers", () => {
+    const source: TimeMap = {
+      ...createMixedTimeMap(),
+      tempoMarkers: [
+        { startTick: 0, bpm: 120 },
+        { startTick: 10_000, bpm: 90 },
+      ],
+      scaleMarkers: [
+        {
+          startTick: 0,
+          rootNote: "C",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+        {
+          startTick: 12_000,
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "dorian",
+        },
+      ],
+    };
+    const edit = updateMeterMarker(
+      PPQN,
+      source,
+      MIXED_DURATION,
+      7_680,
+      { numerator: 5, denominator: 4 },
+    );
+
+    expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 7_680, 17_280]);
+    expect(edit.timeMap.tempoMarkers).toBe(source.tempoMarkers);
+    expect(edit.timeMap.scaleMarkers).toBe(source.scaleMarkers);
+    expect(edit.durationTicks).toBe(20_160);
+  });
+
+  test("removes a marker and advances a now-invalid following marker", () => {
     const edit = removeMeterMarker(
       PPQN,
       createMixedTimeMap(),
@@ -259,7 +296,7 @@ describe("meter marker operations", () => {
       7_680,
     );
 
-    // The 3/4 marker keeps its measure index 4 and moves to tick 15_360.
+    // Tick 14_400 is not on the restored 4/4 grid, so it advances.
     expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
       .toEqual([0, 15_360]);
     expect(edit.durationTicks).toBe(15_360 + 2_880);
@@ -354,20 +391,73 @@ describe("structural time edits", () => {
       .toEqual([0, 11_520, 18_240]);
   });
 
-  test("removing a measure drops its meter marker even if the segment continued", () => {
+  test("inserting at a marker boundary moves point events with right-side material", () => {
+    const source: TimeMap = {
+      ...createMixedTimeMap(),
+      scaleMarkers: [
+        {
+          startTick: 0,
+          rootNote: "C",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+        {
+          startTick: 7_680,
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "dorian",
+        },
+      ],
+    };
+    const shifted = insertTimeIntoTimeMap(source, 7_680, 3_360);
+
+    expect(shifted.meterMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 7_680, 17_760]);
+    expect(shifted.tempoMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 11_040]);
+    expect(shifted.scaleMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 11_040]);
+  });
+
+  test("removing a measure preserves the meter active after the cut", () => {
+    const source: TimeMap = {
+      ...createMixedTimeMap(),
+      scaleMarkers: [
+        {
+          startTick: 0,
+          rootNote: "C",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+        {
+          startTick: 9_000,
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "dorian",
+        },
+      ],
+    };
     // Remove the first 7/8 measure [7_680, 11_040).
     const edit = removeTimeFromTimeMap(
       PPQN,
-      createMixedTimeMap(),
+      source,
       MIXED_DURATION,
       7_680,
       11_040,
     );
 
     expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
-      .toEqual([0, 11_520]);
-    expect(edit.timeMap.meterMarkers[1]?.timeSignature.numerator).toBe(3);
-    expect(edit.durationTicks).toBe(14_400);
+      .toEqual([0, 7_680, 11_040]);
+    expect(edit.timeMap.meterMarkers[1]?.timeSignature.numerator).toBe(7);
+    expect(edit.timeMap.meterMarkers[2]?.timeSignature.numerator).toBe(3);
+    expect(edit.timeMap.tempoMarkers).toEqual([
+      { startTick: 0, bpm: 120 },
+      { startTick: 7_680, bpm: 60 },
+    ]);
+    expect(edit.timeMap.scaleMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 7_680]);
+    expect(edit.timeMap.scaleMarkers[1]?.rootNote).toBe("D");
+    expect(edit.durationTicks).toBe(13_920);
     expect(getMeasureCount(PPQN, edit.timeMap, edit.durationTicks)).toBe(4);
   });
 
@@ -387,7 +477,7 @@ describe("structural time edits", () => {
     expect(edit.durationTicks).toBe(7_680 + 2_880);
   });
 
-  test("replaceInitialMeter preserves measure indices and count", () => {
+  test("replaceInitialMeter advances meters and keeps point events fixed", () => {
     const { timeMap, durationTicks } = replaceInitialMeter(
       PPQN,
       createMixedTimeMap(),
@@ -397,10 +487,12 @@ describe("structural time edits", () => {
 
     // 6/8 measures are 2_880 ticks: 2 × 2_880 = 5_760 before the 7/8 marker.
     expect(timeMap.meterMarkers[0]?.timeSignature.numerator).toBe(6);
-    expect(timeMap.meterMarkers[1]?.startTick).toBe(5_760);
-    expect(timeMap.meterMarkers[2]?.startTick).toBe(5_760 + 2 * 3_360);
-    expect(durationTicks).toBe(5_760 + 2 * 3_360 + 2_880);
-    expect(getMeasureCount(PPQN, timeMap, durationTicks)).toBe(5);
+    expect(timeMap.meterMarkers[1]?.startTick).toBe(8_640);
+    expect(timeMap.meterMarkers[2]?.startTick).toBe(15_360);
+    expect(timeMap.tempoMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 7_680]);
+    expect(durationTicks).toBe(18_240);
+    expect(getMeasureCount(PPQN, timeMap, durationTicks)).toBe(6);
   });
 
   test("counting helpers cover partial measures", () => {
