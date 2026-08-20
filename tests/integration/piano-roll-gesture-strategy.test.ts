@@ -30,10 +30,7 @@ function createPointerSample(changes: Partial<PointerSample>): PointerSample {
     clientX: 0,
     clientY: 0,
     button: 0,
-    buttons: 1,
-    altKey: false,
-    ctrlKey: false,
-    metaKey: false,
+    timeStamp: 0,
     shiftKey: false,
     ...changes,
   };
@@ -61,12 +58,15 @@ describe("PianoRollGestureStrategy pitch highlight during selection drag", () =>
       viewport: runtime.viewport,
       editorCommands: runtime.editorCommands,
       getVisuals: () => null,
+      onSelectionChange: () => undefined,
     });
 
     const workflow = new NoteGestureWorkflowAdapter({
       editorCommands: runtime.editorCommands,
       selection: session.selection,
       onSelectionChanged: () => undefined,
+      onCollision: undefined,
+      onTransactionRejected: undefined,
     });
 
     const publishedPitches: Array<number | null> = [];
@@ -171,6 +171,7 @@ describe("PianoRollGestureStrategy pitch highlight during selection drag", () =>
       viewport: runtime.viewport,
       editorCommands: runtime.editorCommands,
       getVisuals: () => null,
+      onSelectionChange: () => undefined,
     });
 
     // Pre-select both notes
@@ -180,6 +181,8 @@ describe("PianoRollGestureStrategy pitch highlight during selection drag", () =>
       editorCommands: runtime.editorCommands,
       selection: session.selection,
       onSelectionChanged: () => undefined,
+      onCollision: undefined,
+      onTransactionRejected: undefined,
     });
 
     const publishedPitches: Array<number | null> = [];
