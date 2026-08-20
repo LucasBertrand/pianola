@@ -23,7 +23,6 @@ import type {
   Rect,
 } from "../../../editor/geometry/rect";
 import {
-  getPitchScaleDegreeColorIndex,
   getPitchSnapRootPitchClass,
   isPitchAllowedByTonalPattern,
   type PitchSnapSettings,
@@ -48,12 +47,10 @@ const MIN_GRID_LINE_SPACING_CSS_PIXELS =
   RENDERING_CONSTANTS.minimumGridLineSpacingCssPixels;
 const MAX_GRID_LINES_PER_PASS =
   RENDERING_CONSTANTS.maximumGridLinesPerPass;
-const TONAL_SNAP_PITCH_ROW_COLOR =
-  RENDERING_CONSTANTS.tonalSnapPitchRowColor;
-const TONAL_SNAP_TONIC_ROW_COLOR =
-  RENDERING_CONSTANTS.tonalSnapTonicRowColor;
 const ACTIVE_PITCH_LANE_COLOR =
   RENDERING_CONSTANTS.activePitchLaneColor;
+const PITCH_ROW_OPACITY = 0.1;
+const ROOT_PITCH_ROW_OPACITY = 0.24;
 
 /** Complete immutable input required by the grid painter. */
 export interface GridPaintSnapshot {
@@ -156,26 +153,18 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
         const y = converter.pitchToCssPixelY(pitch);
         const nextY = converter.pitchToCssPixelY(pitch - 1);
         const pitchClass = ((pitch % 12) + 12) % 12;
-        const degreeColorIndex = getPitchScaleDegreeColorIndex(
-          pitch,
-          segmentSettings,
-        );
-        const degreePitchRowColor = degreeColorIndex === null
-          ? undefined
-          : APPLICATION_COLORS.pianoRoll.degreePitchRows[
-          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreePitchRows.length
-          ];
-        const degreeRootRowColor = degreeColorIndex === null
-          ? undefined
-          : APPLICATION_COLORS.pianoRoll.degreeRootRows[
-          degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreeRootRows.length
-          ];
+        const previousAlpha = context.globalAlpha;
 
-        context.fillStyle = pitchClass
-          === getPitchSnapRootPitchClass(segmentSettings)
-          ? degreeRootRowColor ?? TONAL_SNAP_TONIC_ROW_COLOR
-          : degreePitchRowColor ?? TONAL_SNAP_PITCH_ROW_COLOR;
+        context.fillStyle =
+          APPLICATION_COLORS.notes.pitchClassPalette[pitchClass]
+          ?? APPLICATION_COLORS.notes.default;
+        context.globalAlpha =
+          segmentSettings.rootNote !== "none"
+          && pitchClass === getPitchSnapRootPitchClass(segmentSettings)
+            ? ROOT_PITCH_ROW_OPACITY
+            : PITCH_ROW_OPACITY;
         context.fillRect(startX, y, endX - startX, nextY - y);
+        context.globalAlpha = previousAlpha;
       }
     }
   }

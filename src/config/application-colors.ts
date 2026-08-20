@@ -115,22 +115,6 @@ interface PianoRollThemeColors {
   readonly rulerBeat: string;
   readonly rulerBar: string;
   readonly rulerText: string;
-  /**
-   * Seven solid accents for diatonic degree families I through VII.
-   * Minor/major variants share a family: bIII and III use the same entry.
-   */
-  readonly degreeAccents: readonly string[];
-  /** Translucent degree-family fills used on ordinary tonal grid rows. */
-  readonly degreePitchRows: readonly string[];
-  /** Stronger degree-family fills used on tonic or selected-root rows. */
-  readonly degreeRootRows: readonly string[];
-  /** Fill for every pitch allowed by the selected mode or degree. */
-  readonly tonalSnapPitchRow: string;
-  /**
-   * Fill for the tonic or selected degree root.
-   * Change this value to customize the tonic highlight in the grid.
-   */
-  readonly tonalSnapRootRow: string;
   /** Temporary full-width lane highlight after piano-key interaction. */
   readonly activePitchLane: string;
   /** Hatch stroke rendered over notes belonging to a locked instrument. */
@@ -270,35 +254,6 @@ const DARK_APPLICATION_THEME = Object.freeze({
     rulerBeat: "#4a5464",
     rulerBar: "#667388",
     rulerText: "#8b96a7",
-    degreeAccents: Object.freeze([
-      "#5b9cff",
-      "#ff8c42",
-      "#d6d94a",
-      "#4fd17a",
-      "#35ced0",
-      "#ff5d73",
-      "#b277f2",
-    ] as const),
-    degreePitchRows: Object.freeze([
-      "rgba(91, 156, 255, 0.1)",
-      "rgba(255, 140, 66, 0.1)",
-      "rgba(214, 217, 74, 0.1)",
-      "rgba(79, 209, 122, 0.1)",
-      "rgba(53, 206, 208, 0.1)",
-      "rgba(255, 93, 115, 0.1)",
-      "rgba(178, 119, 242, 0.1)",
-    ] as const),
-    degreeRootRows: Object.freeze([
-      "rgba(91, 156, 255, 0.24)",
-      "rgba(255, 140, 66, 0.24)",
-      "rgba(214, 217, 74, 0.24)",
-      "rgba(79, 209, 122, 0.24)",
-      "rgba(53, 206, 208, 0.24)",
-      "rgba(255, 93, 115, 0.24)",
-      "rgba(178, 119, 242, 0.24)",
-    ] as const),
-    tonalSnapPitchRow: "rgba(91, 156, 255, 0.1)",
-    tonalSnapRootRow: "rgba(91, 156, 255, 0.24)",
     activePitchLane: "rgba(121, 167, 255, 0.08)",
     lockedNoteHatch: "rgba(8, 10, 14, 0.72)",
   }),
@@ -315,18 +270,18 @@ const DARK_APPLICATION_THEME = Object.freeze({
       "#f17ca8",
     ] as const),
     pitchClassPalette: Object.freeze([
-      "#ef5c65",
-      "#f07c5d",
-      "#eaa64f",
-      "#d3c958",
-      "#8bcf63",
-      "#55c89e",
-      "#4bc2d1",
-      "#5797ea",
-      "#7775e8",
-      "#a66fdc",
-      "#d56dbc",
-      "#ea6f8d",
+      "#99d65c",
+      "#5cd65c",
+      "#5cd699",
+      "#5cd6d6",
+      "#5c99d6",
+      "#5c5cd6",
+      "#995cd6",
+      "#d65cd6",
+      "#d65c99",
+      "#d65c5c",
+      "#d6995c",
+      "#d6d65c",
     ] as const),
   }),
   interaction: Object.freeze({
@@ -440,35 +395,6 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
     rulerBeat: "#b59f78",
     rulerBar: "#826f4f",
     rulerText: "#6d5f4c",
-    degreeAccents: Object.freeze([
-      "#b6524e",
-      "#bd7042",
-      "#9b8b3f",
-      "#527a60",
-      "#497f83",
-      "#4f7194",
-      "#7c6687",
-    ] as const),
-    degreePitchRows: Object.freeze([
-      "rgba(182, 82, 78, 0.1)",
-      "rgba(189, 112, 66, 0.1)",
-      "rgba(155, 139, 63, 0.1)",
-      "rgba(82, 122, 96, 0.1)",
-      "rgba(73, 127, 131, 0.1)",
-      "rgba(79, 113, 148, 0.1)",
-      "rgba(124, 102, 135, 0.1)",
-    ] as const),
-    degreeRootRows: Object.freeze([
-      "rgba(182, 82, 78, 0.22)",
-      "rgba(189, 112, 66, 0.22)",
-      "rgba(155, 139, 63, 0.22)",
-      "rgba(82, 122, 96, 0.22)",
-      "rgba(73, 127, 131, 0.22)",
-      "rgba(79, 113, 148, 0.22)",
-      "rgba(124, 102, 135, 0.22)",
-    ] as const),
-    tonalSnapPitchRow: "rgba(79, 137, 132, 0.1)",
-    tonalSnapRootRow: "rgba(181, 121, 53, 0.2)",
     activePitchLane: "rgba(85, 125, 120, 0.09)",
     lockedNoteHatch: "rgba(51, 43, 34, 0.5)",
   }),
@@ -485,18 +411,18 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
       "#a85d70",
     ] as const),
     pitchClassPalette: Object.freeze([
-      "#b6524e",
-      "#bd6449",
-      "#b77b3f",
-      "#9b8b3f",
-      "#668545",
-      "#4f8066",
-      "#497f83",
-      "#4f7194",
-      "#656595",
-      "#7c6687",
-      "#985f7c",
-      "#aa5d68",
+      "#99d65c",
+      "#5cd65c",
+      "#5cd699",
+      "#5cd6d6",
+      "#5c99d6",
+      "#5c5cd6",
+      "#995cd6",
+      "#d65cd6",
+      "#d65c99",
+      "#d65c5c",
+      "#d6995c",
+      "#d6d65c",
     ] as const),
   }),
   interaction: Object.freeze({

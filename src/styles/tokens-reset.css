@@ -12,9 +12,8 @@
  * 2. If none exists, add a documented token to application-colors.ts.
  * 3. Reference the new token here with var(--color-name).
  *
- * Piano-roll degree colors are Canvas colors. Change degreeAccents,
- * degreePitchRows, and degreeRootRows in application-colors.ts. The tonic is
- * degree I, so its root highlight is degreeRootRows[0].
+ * Piano-roll pitch colors are Canvas colors. Change pitchClassPalette in
+ * application-colors.ts; notes and tonal grid guides share that palette.
  */
 :root {
   color-scheme: var(--color-browser-scheme);
@@ -60,5 +59,4 @@ input:focus-visible {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
 }
-
 

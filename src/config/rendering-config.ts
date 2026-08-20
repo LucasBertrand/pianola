@@ -8,10 +8,6 @@ export const RENDERING_CONSTANTS = Object.freeze({
   noteLabelHorizontalPaddingCssPixels: 2,
   noteLabelFontSizeCssPixels: 9,
   noteLabelColor: APPLICATION_COLORS.notes.label,
-  tonalSnapPitchRowColor:
-    APPLICATION_COLORS.pianoRoll.tonalSnapPitchRow,
-  tonalSnapTonicRowColor:
-    APPLICATION_COLORS.pianoRoll.tonalSnapRootRow,
   activePitchLaneColor:
     APPLICATION_COLORS.pianoRoll.activePitchLane,
   gridBlackKeyRowColor:

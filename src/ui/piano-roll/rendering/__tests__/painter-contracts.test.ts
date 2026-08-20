@@ -15,12 +15,19 @@ import {
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../../../music/pitch-snap";
+import {
+  APPLICATION_COLORS,
+} from "../../../../config/application-colors";
 import { paintGrid } from "../grid-painter";
 import { paintNotes } from "../note-painter";
 import { paintRuler } from "../ruler-painter";
 
 interface PaintRecorder {
   readonly fillRects: Array<readonly [number, number, number, number]>;
+  readonly fillOperations: Array<{
+    readonly color: string;
+    readonly alpha: number;
+  }>;
   readonly labels: string[];
   readonly labelPositions: Array<readonly [number, number]>;
   readonly context: CanvasRenderingContext2D;
@@ -62,6 +69,88 @@ describe("P3 Canvas painter contracts", () => {
 
     expect(recorder.fillRects.length).toBeGreaterThan(20);
     expect(recorder.fillRects[0]).toEqual([0, 0, 480, 240]);
+  });
+
+  test("uses pitch-class colors for a rootless chromatic grid", () => {
+    const recorder = createPaintRecorder();
+
+    paintGrid({
+      context: recorder.context,
+      widthCssPixels: 480,
+      heightCssPixels: 144,
+      devicePixelRatio: 1,
+      converter: new CoordinateConverter(VIEWPORT),
+      visibleRegion: {
+        startTick: 0,
+        endTick: 1_920,
+        minPitch: 60,
+        maxPitch: 71,
+      },
+      gridResolutionTicks: 240,
+      pitchSnapSettings: {
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        visualGuideEnabled: true,
+      },
+      highlightedPitch: null,
+      clock: createDefaultProjectClock(),
+      timeMap: createDefaultTimeMap(),
+      durationTicks: 3_840,
+    });
+
+    for (const color of APPLICATION_COLORS.notes.pitchClassPalette) {
+      expect(recorder.fillOperations).toContainEqual({
+        color,
+        alpha: 0.1,
+      });
+    }
+  });
+
+  test("uses absolute pitch-class colors in a rooted tonal grid", () => {
+    const recorder = createPaintRecorder();
+
+    paintGrid({
+      context: recorder.context,
+      widthCssPixels: 480,
+      heightCssPixels: 144,
+      devicePixelRatio: 1,
+      converter: new CoordinateConverter(VIEWPORT),
+      visibleRegion: {
+        startTick: 0,
+        endTick: 1_920,
+        minPitch: 60,
+        maxPitch: 71,
+      },
+      gridResolutionTicks: 240,
+      pitchSnapSettings: {
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        visualGuideEnabled: true,
+      },
+      highlightedPitch: null,
+      clock: createDefaultProjectClock(),
+      timeMap: {
+        ...createDefaultTimeMap(),
+        scaleMarkers: [{
+          startTick: 0,
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "ionian",
+        }],
+      },
+      durationTicks: 3_840,
+    });
+
+    expect(recorder.fillOperations).toContainEqual({
+      color: APPLICATION_COLORS.notes.pitchClassPalette[2] ?? "",
+      alpha: 0.24,
+    });
+    expect(recorder.fillOperations).toContainEqual({
+      color: APPLICATION_COLORS.notes.pitchClassPalette[4] ?? "",
+      alpha: 0.1,
+    });
+    expect(recorder.fillOperations).not.toContainEqual({
+      color: APPLICATION_COLORS.notes.pitchClassPalette[5] ?? "",
+      alpha: 0.1,
+    });
   });
 
   test("paints notes from a pre-culled projection", () => {
@@ -201,16 +290,33 @@ function createNote(id: string, pitch: number, startTick: number): Note {
 
 function createPaintRecorder(): PaintRecorder {
   const fillRects: Array<readonly [number, number, number, number]> = [];
+  const fillOperations: Array<{ color: string; alpha: number }> = [];
   const labels: string[] = [];
   const labelPositions: Array<readonly [number, number]> = [];
+  let currentFillStyle: string | CanvasGradient | CanvasPattern = "";
+  let currentGlobalAlpha = 1;
   const context = {
-    fillStyle: "",
+    get fillStyle(): string | CanvasGradient | CanvasPattern {
+      return currentFillStyle;
+    },
+    set fillStyle(value: string | CanvasGradient | CanvasPattern) {
+      currentFillStyle = value;
+    },
     font: "",
-    globalAlpha: 1,
+    get globalAlpha(): number {
+      return currentGlobalAlpha;
+    },
+    set globalAlpha(value: number) {
+      currentGlobalAlpha = value;
+    },
     textAlign: "left",
     textBaseline: "alphabetic",
     fillRect(x: number, y: number, width: number, height: number): void {
       fillRects.push([x, y, width, height]);
+      fillOperations.push({
+        color: String(currentFillStyle),
+        alpha: currentGlobalAlpha,
+      });
     },
     strokeRect(): void {},
     fillText(label: string, x: number, y: number): void {
@@ -225,5 +331,5 @@ function createPaintRecorder(): PaintRecorder {
     },
   } as unknown as CanvasRenderingContext2D;
 
-  return { fillRects, labels, labelPositions, context };
+  return { fillRects, fillOperations, labels, labelPositions, context };
 }

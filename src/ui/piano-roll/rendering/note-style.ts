@@ -94,9 +94,12 @@ export function getPitchNoteColor(
     pitchSnapSettings,
   );
 
-  return degreeColorIndex === null
-    ? APPLICATION_COLORS.notes.outOfScale
-    : APPLICATION_COLORS.pianoRoll.degreeAccents[
-        degreeColorIndex % APPLICATION_COLORS.pianoRoll.degreeAccents.length
-      ] ?? DEFAULT_NOTE_COLOR;
+  if (degreeColorIndex === null) {
+    return APPLICATION_COLORS.notes.outOfScale;
+  }
+
+  const pitchClass = ((pitch % 12) + 12) % 12;
+
+  return APPLICATION_COLORS.notes.pitchClassPalette[pitchClass]
+    ?? DEFAULT_NOTE_COLOR;
 }
