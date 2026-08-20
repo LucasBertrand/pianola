@@ -129,6 +129,12 @@ export function PianoRollTimeMapOverlay({
             onPointerDown={(event) => {
               markerGesture.begin(flag, event);
             }}
+            onPointerEnter={() => {
+              getBoundaryElement(flag.startTick)?.classList.add("is-hovered");
+            }}
+            onPointerLeave={() => {
+              getBoundaryElement(flag.startTick)?.classList.remove("is-hovered");
+            }}
           >
             <span>{formatMarkerFlagLabel(flag)}</span>
           </button>

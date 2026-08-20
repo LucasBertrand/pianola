@@ -299,7 +299,7 @@ const DARK_APPLICATION_THEME = Object.freeze({
     ] as const),
     tonalSnapPitchRow: "rgba(91, 156, 255, 0.1)",
     tonalSnapRootRow: "rgba(91, 156, 255, 0.24)",
-    activePitchLane: "rgba(121, 167, 255, 0.16)",
+    activePitchLane: "rgba(121, 167, 255, 0.08)",
     lockedNoteHatch: "rgba(8, 10, 14, 0.72)",
   }),
   notes: Object.freeze({
@@ -469,7 +469,7 @@ const SCORE_PAPER_APPLICATION_THEME = Object.freeze({
     ] as const),
     tonalSnapPitchRow: "rgba(79, 137, 132, 0.1)",
     tonalSnapRootRow: "rgba(181, 121, 53, 0.2)",
-    activePitchLane: "rgba(85, 125, 120, 0.18)",
+    activePitchLane: "rgba(85, 125, 120, 0.09)",
     lockedNoteHatch: "rgba(51, 43, 34, 0.5)",
   }),
   notes: Object.freeze({
