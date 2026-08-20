@@ -29,6 +29,7 @@ import type {
   NoteColorMode,
 } from "../../editor/model/note-color-mode";
 import type {
+  MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";
 
@@ -48,7 +49,7 @@ export interface PianoRollRuntimePort {
     Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
-  readonly highlightedPitch: ReadonlyRenderSignal<number | null>;
+  readonly highlightedPitch: MutableRenderSignal<number | null>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
 }

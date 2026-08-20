@@ -11,6 +11,9 @@ import {
   type InstrumentId,
 } from "../../../domain/identifiers";
 import type {
+  Note,
+} from "../../../domain/notes/note";
+import type {
   ViewportState,
 } from "../../../editor/geometry/converter";
 import type {
@@ -19,6 +22,7 @@ import type {
 import {
   calculateResizeDeltaBounds,
   measureNoteSelection,
+  resolveRepositionedPitch,
 } from "../../../editor/interactions/gestures/note-gesture-math";
 import type {
   PianoRollInteractionSession,
@@ -92,6 +96,7 @@ export interface PianoRollGestureStrategyOptions {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly onGridSeek: ((tick: number) => void) | undefined;
+  readonly onPitchHighlightChange?: ((pitch: number | null) => void) | undefined;
 }
 
 const TAP_MOVEMENT_TOLERANCE_CSS_PIXELS =
@@ -126,9 +131,11 @@ export function createPianoRollGestureStrategy(
     gridResolutionTicks,
     pitchSnapSettings,
     onGridSeek,
+    onPitchHighlightChange,
   } = options;
   const { converter, draft, gesture, lassoBuffer, tapState } = session;
   const { selection } = selectionController;
+  let handledDragNote: Note | null = null;
   const updateConverter = (): void => {
     session.synchronizeConverter(
       viewport.get(),
@@ -139,6 +146,10 @@ export function createPianoRollGestureStrategy(
   const endGestureVisual = (): void => {
     if (draft.mode === "DRAGGING") {
       getVisuals()?.endDrag();
+      if (handledDragNote !== null) {
+        handledDragNote = null;
+        onPitchHighlightChange?.(null);
+      }
     } else if (
       draft.mode === "RESIZING_START"
       || draft.mode === "RESIZING_END"
@@ -152,6 +163,10 @@ export function createPianoRollGestureStrategy(
   };
   const cancelGesture = (): void => {
     endGestureVisual();
+    if (handledDragNote !== null) {
+      handledDragNote = null;
+      onPitchHighlightChange?.(null);
+    }
     session.resetDraft();
     selectionController.showSelection();
   };
@@ -259,6 +274,7 @@ export function createPianoRollGestureStrategy(
     const resizeEdge = edgeHit?.edge ?? null;
 
     if (resizeEdge === null) {
+      handledDragNote = targetNote;
       gesture.beginDrag(selectionBounds);
       getVisuals()?.beginDrag(
         selection.notes,
@@ -267,6 +283,16 @@ export function createPianoRollGestureStrategy(
         draft.getSnapSettingsAtTick,
         gestureClip.timeline.timeMap.scaleMarkers,
       );
+      if (handledDragNote !== null) {
+        const referencePitch = resolveRepositionedPitch(
+          handledDragNote.pitch,
+          handledDragNote.startTick,
+          0,
+          0,
+          draft.getSnapSettingsAtTick,
+        ).pitch;
+        onPitchHighlightChange?.(referencePitch);
+      }
       return;
     }
 
@@ -340,6 +366,17 @@ export function createPianoRollGestureStrategy(
         draft.deltaPitch,
         draft.getSnapSettingsAtTick,
       );
+
+      if (handledDragNote !== null) {
+        const referencePitch = resolveRepositionedPitch(
+          handledDragNote.pitch,
+          handledDragNote.startTick,
+          draft.deltaTicks,
+          draft.deltaPitch,
+          draft.getSnapSettingsAtTick,
+        ).pitch;
+        onPitchHighlightChange?.(referencePitch);
+      }
     } else if (updateKind === "updateResize") {
       const deltaX = converter.tickToCssPixelX(draft.deltaTicks)
         - converter.tickToCssPixelX(0);
@@ -379,6 +416,10 @@ export function createPianoRollGestureStrategy(
     if (mode === "DRAGGING") {
       workflow.commitMove(completion);
       getVisuals()?.endDrag();
+      if (handledDragNote !== null) {
+        handledDragNote = null;
+        onPitchHighlightChange?.(null);
+      }
       selectionController.showSelection();
     } else if (mode === "RESIZING_START" || mode === "RESIZING_END") {
       workflow.commitResize(completion);

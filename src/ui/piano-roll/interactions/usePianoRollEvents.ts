@@ -29,6 +29,7 @@ import type {
   InstrumentRenderStyle,
 } from "../../../editor/model/instrument-render-style";
 import type {
+  MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../../editor/model/render-signal";
 import type {
@@ -72,6 +73,7 @@ export interface UsePianoRollEventsOptions {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly selectionRequests: EditorSelectionRequests;
+  readonly highlightedPitch: MutableRenderSignal<number | null>;
   readonly onGridSeek?: (tick: number) => void;
   readonly onSelectionChange?: (
     hasSelection: boolean,
@@ -101,6 +103,7 @@ export function usePianoRollEvents(
     gridResolutionTicks,
     pitchSnapSettings,
     selectionRequests,
+    highlightedPitch,
     onGridSeek,
     onSelectionChange,
     onNoteCollision,
@@ -167,6 +170,9 @@ export function usePianoRollEvents(
       gridResolutionTicks,
       pitchSnapSettings,
       onGridSeek,
+      onPitchHighlightChange: (pitch) => {
+        highlightedPitch.set(pitch);
+      },
     });
     const unsubscribeViewport = viewport.subscribe(
       () => selectionController.showSelection(),
@@ -190,6 +196,7 @@ export function usePianoRollEvents(
   }, [
     editorCommands,
     gridResolutionTicks,
+    highlightedPitch,
     instrumentStyles,
     onGridSeek,
     onNoteCollision,

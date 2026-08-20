@@ -126,6 +126,7 @@ export function InteractionOverlay(
     gridResolutionTicks,
     pitchSnapSettings,
     selectionRequests,
+    highlightedPitch,
   } = runtime;
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const visualsRef = useRef<DomInteractionVisualController | null>(null);
@@ -167,6 +168,7 @@ export function InteractionOverlay(
     gridResolutionTicks,
     pitchSnapSettings,
     selectionRequests,
+    highlightedPitch,
     onGridSeek,
     onSelectionChange,
     onNoteCollision,
