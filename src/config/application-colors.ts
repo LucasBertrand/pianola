@@ -643,6 +643,7 @@ export const APPLICATION_CSS_COLOR_VARIABLES = Object.freeze({
   "--color-tonal-faint": APPLICATION_COLORS.effects.tonalFaint,
   "--color-tonal-soft": APPLICATION_COLORS.effects.tonalSoft,
   "--color-tonal-medium": APPLICATION_COLORS.effects.tonalMedium,
+  "--color-grid-bar-line": APPLICATION_COLORS.pianoRoll.barLine,
   "--color-piano-white-start":
     APPLICATION_COLORS.pianoKeyboard.whiteKeyStart,
   "--color-piano-white-end": APPLICATION_COLORS.pianoKeyboard.whiteKeyEnd,

@@ -189,11 +189,10 @@
 .bar-ruler-marker-flag::before {
   position: absolute;
   top: 0px;
-  bottom: -14px;
+  bottom: -15px;
   left: 0px;
-  width: 1px;
-  background: #465164;
-
+  width: 0.5px;
+  background: var(--color-grid-bar-line);
   content: "";
 }
 
@@ -230,7 +229,7 @@
   width: 1px;
   margin-left: -0.5px;
   background: var(--color-accent-primary);
-  opacity: 0.2;
+  opacity: 0;
   will-change: transform;
 }
 

@@ -5,6 +5,8 @@ import {
   EDITOR_CONSTANTS,
   VIEWPORT_CONSTANTS,
 } from "../../config/editor-config";
+import { detectChordsFromNotes } from "../../music/chord-recognition";
+import type { Note } from "../../domain/notes/note";
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
@@ -22,6 +24,7 @@ import type {
 } from "../../editor/model/render-signal";
 
 export interface PianoRollViewportControlsProps {
+  readonly selectedNotes: readonly Note[];
   readonly timelinePositionRef: RefObject<HTMLOutputElement | null>;
   readonly timelineTimeRef: RefObject<HTMLOutputElement | null>;
   readonly horizontalScrollRef: RefObject<HTMLInputElement | null>;
@@ -36,6 +39,7 @@ export interface PianoRollViewportControlsProps {
 }
 
 export function PianoRollViewportControls({
+  selectedNotes,
   timelinePositionRef,
   timelineTimeRef,
   horizontalScrollRef,
@@ -46,6 +50,11 @@ export function PianoRollViewportControls({
   pitchSnapSettings,
   onPitchSnapSettingsChange,
 }: PianoRollViewportControlsProps): React.JSX.Element {
+  const chordName = React.useMemo(
+    () => detectChordsFromNotes(selectedNotes),
+    [selectedNotes],
+  );
+
   return (
     <div className="view-controls">
       <div className="view-controls-left">
@@ -124,6 +133,11 @@ export function PianoRollViewportControls({
         </div>
       </div>
       <div className="view-controls-right">
+        {chordName && (
+          <div className="timeline-position chord-recognition">
+            <output>{chordName}</output>
+          </div>
+        )}
         <GridAndSnapControls
           settings={pitchSnapSettings}
           gridSettings={gridSettings}

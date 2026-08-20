@@ -14,6 +14,9 @@ import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
 import type {
+  Note,
+} from "../../domain/notes/note";
+import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
 
@@ -21,6 +24,7 @@ export interface PianoRollProjectState {
   readonly project: ProjectState;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly selectionAvailable: boolean;
+  readonly selectedNotes: readonly Note[];
   readonly selectInstrument: (instrumentId: InstrumentId | null) => void;
   readonly setSelectionAvailable: (available: boolean) => void;
   readonly handleSelectionChange: (
@@ -43,6 +47,7 @@ export function usePianoRollProjectState(
       () => runtime.projectStore.getState().instrumentOrder[0] ?? null,
     );
   const [selectionAvailable, setSelectionAvailable] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<readonly Note[]>([]);
   const clearInteractionSelection = useCallback((): void => {
     const controller = controllerRef.current;
 
@@ -50,17 +55,19 @@ export function usePianoRollProjectState(
     controller?.clearSelection();
     runtime.selectionRequests.clear();
     setSelectionAvailable(false);
+    setSelectedNotes([]);
   }, [controllerRef, runtime]);
   const handleSelectionChange = useCallback((
     hasSelection: boolean,
     soleInstrumentId: InstrumentId | null,
   ): void => {
     setSelectionAvailable(hasSelection);
+    setSelectedNotes(controllerRef.current?.getSelectedNotes() ?? []);
 
     if (soleInstrumentId !== null) {
       selectInstrument(soleInstrumentId);
     }
-  }, []);
+  }, [controllerRef]);
 
   useEffect(
     () => runtime.projectStore.subscribe((state, previousState) => {
@@ -87,6 +94,7 @@ export function usePianoRollProjectState(
     project,
     selectedInstrumentId,
     selectionAvailable,
+    selectedNotes,
     selectInstrument,
     setSelectionAvailable,
     handleSelectionChange,

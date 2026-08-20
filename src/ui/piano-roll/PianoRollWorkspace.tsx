@@ -143,6 +143,7 @@ export function PianoRollWorkspace({
     project: projectState,
     selectedInstrumentId,
     selectionAvailable,
+    selectedNotes,
     selectInstrument: setSelectedInstrumentId,
     setSelectionAvailable,
     handleSelectionChange,
@@ -615,6 +616,7 @@ export function PianoRollWorkspace({
           </div>
 
           <PianoRollViewportControls
+            selectedNotes={selectedNotes}
             timelinePositionRef={barLabelRef}
             timelineTimeRef={timelineTimeRef}
             horizontalScrollRef={scrollInputRef}
