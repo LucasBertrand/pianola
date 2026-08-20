@@ -24,7 +24,7 @@ export const TONAL_SNAP_CONSTANTS = Object.freeze({
     "minor pentatonic",
     "blues",
     "hirajoshi",
-    "in sen",
+    "in-sen",
     "whole tone",
     "diminished",
   ] as const),

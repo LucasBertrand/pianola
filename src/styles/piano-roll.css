@@ -190,9 +190,10 @@
   position: absolute;
   top: 0px;
   bottom: -14px;
-  left: 0;
+  left: 0px;
   width: 1px;
-  background: var(--color-accent-primary);
+  background: #465164;
+
   content: "";
 }
 
@@ -229,7 +230,7 @@
   width: 1px;
   margin-left: -0.5px;
   background: var(--color-accent-primary);
-  opacity: 0.45;
+  opacity: 0.2;
   will-change: transform;
 }
 

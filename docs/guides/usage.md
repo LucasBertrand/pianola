@@ -19,12 +19,13 @@ le viewport ne consomme pas l’historique.
 
 Une opération qui crée des chevauchements ouvre un choix : Merge crée des notes
 continues, Slice conserve les notes éditées et coupe les notes existantes aux
-ancres.
+ancres. Le déplacement et le redimensionnement obéissent au système de magnétisme (snap) actif (grille, gamme chromatique).
 
 ## Instruments
 
 L’inspecteur projet ajoute, édite, réordonne et supprime les instruments
 globaux. Gain, mute, solo et verrouillage s’appliquent selon leur propriétaire.
+Les notes des instruments non réglés sur « solo » apparaissent grisées pour faciliter la lecture.
 Une note appartient toujours à un instrument ; une sélection peut être
 transférée vers un instrument déverrouillé.
 
@@ -41,13 +42,14 @@ instrument. Ajouter, dupliquer, renommer, réordonner ou supprimer un clip passe
 par l’inspecteur. Changer de clip arrête la lecture et vide la sélection de
 notes.
 
-## Transport et viewport
+## Transport, timeline et viewport
 
 Lecture/Pause démarre ou suspend le transport du processeur audio. Stop libère
 les voix actives avec une transition courte.
 Le bouton de retour replace le playhead et le scroll horizontal au début.
 Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
 Undo/Redo.
+La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme).
 
 ## Sauvegarde et échange
 

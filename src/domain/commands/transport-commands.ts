@@ -74,7 +74,17 @@ export function applyInsertMeasure(
     state.timeline.timeMap,
     state.timeline.durationTicks,
   );
-  assertMeasureIndex(command.measureIndex, spans.length, command.type);
+  if (
+    !Number.isSafeInteger(command.measureIndex)
+    || command.measureIndex < 0
+    || command.measureIndex > spans.length
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Measure index must be between 0 and ${spans.length}.`,
+      command.type,
+    );
+  }
 
   if (spans.length + command.count > MAXIMUM_MEASURE_COUNT) {
     reject(
@@ -84,18 +94,21 @@ export function applyInsertMeasure(
     );
   }
 
-  const span = spans[command.measureIndex];
+  const isAppend = command.measureIndex === spans.length;
+  const referenceSpan = isAppend
+    ? spans[spans.length - 1]
+    : spans[command.measureIndex];
 
-  if (span === undefined) {
+  if (referenceSpan === undefined) {
     reject(
       "INVALID_COMMAND",
-      `Measure ${String(command.measureIndex + 1)} does not exist.`,
+      `Measure reference does not exist.`,
       command.type,
     );
   }
 
-  const insertionTick = span.startTick;
-  const insertedTicks = (span.endTick - span.startTick) * command.count;
+  const insertionTick = isAppend ? referenceSpan.endTick : referenceSpan.startTick;
+  const insertedTicks = (referenceSpan.endTick - referenceSpan.startTick) * command.count;
   const tracksByInstrumentId = transformTracksForInsertedTime(
     state,
     insertionTick,
