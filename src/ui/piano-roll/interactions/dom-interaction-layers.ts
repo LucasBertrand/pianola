@@ -10,22 +10,25 @@ import type {
 import type {
   ResizeEdge,
 } from "../../../editor/interactions/gestures/gesture-draft";
+import {
+  resolveRepositionedPitch,
+} from "../../../editor/interactions/gestures/note-gesture-math";
 import type {
   InstrumentRenderStyle,
 } from "../../../editor/model/instrument-render-style";
 import type {
   NoteColorMode,
 } from "../../../editor/model/note-color-mode";
-import {
-  snapPitchToTonalPattern,
-  type PitchSnapSettings,
+import type {
+  PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import {
   getNoteFillStyle,
   getPitchNoteColor,
 } from "../rendering/note-style";
 import {
-  getMidiNoteLabel,
+  getMidiNoteLabelSegments,
+  type TonalBoundary,
 } from "../rendering/pitch-label";
 
 export interface LayerGeometry {
@@ -33,7 +36,15 @@ export interface LayerGeometry {
   readonly width: Float64Array;
   readonly pitch: Int16Array;
   readonly startTick: Int32Array;
+  readonly durationTicks: Int32Array;
 }
+
+export interface GhostNoteLabelLayout {
+  readonly label: string;
+  readonly leftCssPixels: number;
+  readonly widthCssPixels: number;
+}
+
 export function populateGhostLayer(
   ghostLayer: HTMLDivElement | null,
   notes: readonly Note[],
@@ -43,6 +54,7 @@ export function populateGhostLayer(
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   resizeEdge: ResizeEdge | null,
   elements: HTMLElement[],
+  tonalBoundaries: readonly TonalBoundary[] = [],
 ): LayerGeometry | null {
   if (ghostLayer === null) {
     return null;
@@ -55,6 +67,7 @@ export function populateGhostLayer(
   const width = new Float64Array(notes.length);
   const pitch = new Int16Array(notes.length);
   const startTick = new Int32Array(notes.length);
+  const durationTicks = new Int32Array(notes.length);
   const fragment = document.createDocumentFragment();
 
   for (
@@ -107,21 +120,32 @@ export function populateGhostLayer(
       (stylesByInstrumentId[note.instrumentId]?.opacity ?? 1)
       * (note.enabled ? 1 : 0.36),
     );
-    element.textContent = getMidiNoteLabel(
-      note.pitch,
-      noteSnapSettings,
+    renderGhostNoteLabels(
+      element,
+      getGhostNoteLabelLayout(
+        note.pitch,
+        note.startTick,
+        note.durationTicks,
+        x,
+        noteWidth,
+        tonalBoundaries,
+        getSnapSettingsAtTick,
+      ),
     );
+    const geometryIndex = elements.length;
+
     elements.push(element);
     fragment.appendChild(element);
-    left[noteIndex] = x;
-    width[noteIndex] = noteWidth;
-    pitch[noteIndex] = note.pitch;
-    startTick[noteIndex] = note.startTick;
+    left[geometryIndex] = x;
+    width[geometryIndex] = noteWidth;
+    pitch[geometryIndex] = note.pitch;
+    startTick[geometryIndex] = note.startTick;
+    durationTicks[geometryIndex] = note.durationTicks;
   }
 
   ghostLayer.appendChild(fragment);
 
-  return { left, width, pitch, startTick };
+  return { left, width, pitch, startTick, durationTicks };
 }
 
 export function populateSelectionLayer(
@@ -141,6 +165,7 @@ export function populateSelectionLayer(
   const width = new Float64Array(notes.length);
   const pitch = new Int16Array(notes.length);
   const startTick = new Int32Array(notes.length);
+  const durationTicks = new Int32Array(notes.length);
   const fragment = document.createDocumentFragment();
 
   for (
@@ -178,46 +203,71 @@ export function populateSelectionLayer(
     element.style.top = `${y}px`;
     element.style.width = `${noteWidth}px`;
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
+    const geometryIndex = elements.length;
+
     elements.push(element);
     fragment.appendChild(element);
-    left[noteIndex] = x;
-    width[noteIndex] = noteWidth;
-    pitch[noteIndex] = note.pitch;
-    startTick[noteIndex] = note.startTick;
+    left[geometryIndex] = x;
+    width[geometryIndex] = noteWidth;
+    pitch[geometryIndex] = note.pitch;
+    startTick[geometryIndex] = note.startTick;
+    durationTicks[geometryIndex] = note.durationTicks;
   }
 
   selectionLayer.appendChild(fragment);
 
-  return { left, width, pitch, startTick };
+  return { left, width, pitch, startTick, durationTicks };
 }
 
 export function updateGhostPitchPresentation(
   elements: readonly HTMLElement[],
-  basePitches: Int16Array | null,
-  baseTicks: Int32Array | null,
+  geometry: LayerGeometry | null,
   deltaPitch: number,
   deltaTicks: number,
+  deltaXCssPixels: number,
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+  tonalBoundaries: readonly TonalBoundary[],
   updatePitchColor: boolean,
 ): void {
-  if (basePitches === null) {
+  if (geometry === null) {
     return;
   }
 
   for (let index = 0; index < elements.length; index += 1) {
     const element = elements[index];
-    const basePitch = basePitches[index];
+    const basePitch = geometry.pitch[index];
+    const baseTick = geometry.startTick[index];
+    const durationTicks = geometry.durationTicks[index];
+    const left = geometry.left[index];
+    const width = geometry.width[index];
 
-    const baseTick = baseTicks?.[index];
-
-    if (element === undefined || basePitch === undefined || baseTick === undefined) {
+    if (
+      element === undefined
+      || basePitch === undefined
+      || baseTick === undefined
+      || durationTicks === undefined
+      || left === undefined
+      || width === undefined
+    ) {
       continue;
     }
 
     const pitch = basePitch + deltaPitch;
-    const snapSettings = getSnapSettingsAtTick(Math.max(0, baseTick + deltaTicks));
+    const destinationTick = Math.max(0, baseTick + deltaTicks);
+    const snapSettings = getSnapSettingsAtTick(destinationTick);
 
-    element.textContent = getMidiNoteLabel(pitch, snapSettings);
+    renderGhostNoteLabels(
+      element,
+      getGhostNoteLabelLayout(
+        pitch,
+        destinationTick,
+        durationTicks,
+        left + deltaXCssPixels,
+        width,
+        tonalBoundaries,
+        getSnapSettingsAtTick,
+      ),
+    );
 
     if (updatePitchColor) {
       element.style.background = getPitchNoteColor(
@@ -230,39 +280,51 @@ export function updateGhostPitchPresentation(
 
 export function updatePitchSnappedDrag(
   elements: readonly HTMLElement[],
-  basePitches: Int16Array | null,
-  baseTicks: Int32Array | null,
+  geometry: LayerGeometry | null,
   deltaXCssPixels: number,
   pitchStepCssPixels: number,
   deltaTicks: number,
   deltaPitch: number,
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+  tonalBoundaries: readonly TonalBoundary[],
   updatePitchLabel: boolean,
   updatePitchColor: boolean,
 ): void {
-  if (basePitches === null) {
+  if (geometry === null) {
     return;
   }
 
   for (let index = 0; index < elements.length; index += 1) {
     const element = elements[index];
-    const basePitch = basePitches[index];
-    const baseTick = baseTicks?.[index];
+    const basePitch = geometry.pitch[index];
+    const baseTick = geometry.startTick[index];
+    const durationTicks = geometry.durationTicks[index];
+    const left = geometry.left[index];
+    const width = geometry.width[index];
 
-    if (element === undefined || basePitch === undefined || baseTick === undefined) {
+    if (
+      element === undefined
+      || basePitch === undefined
+      || baseTick === undefined
+      || durationTicks === undefined
+      || left === undefined
+      || width === undefined
+    ) {
       continue;
     }
 
-    const destinationTick = Math.max(0, baseTick + deltaTicks);
-    const snapSettings = getSnapSettingsAtTick(destinationTick);
-    const snappedPitch =
-      deltaPitch === 0
-        ? basePitch
-        : snapPitchToTonalPattern(
-            basePitch + deltaPitch,
-            snapSettings,
-            deltaPitch,
-          );
+    const repositionedPitch = resolveRepositionedPitch(
+      basePitch,
+      baseTick,
+      deltaTicks,
+      deltaPitch,
+      getSnapSettingsAtTick,
+    );
+    const {
+      destinationTick,
+      pitch: snappedPitch,
+      snapSettings,
+    } = repositionedPitch;
     const deltaYCssPixels =
       -(snappedPitch - basePitch) * pitchStepCssPixels;
 
@@ -270,9 +332,17 @@ export function updatePitchSnappedDrag(
       `translate3d(${deltaXCssPixels}px, ${deltaYCssPixels}px, 0)`;
 
     if (updatePitchLabel) {
-      element.textContent = getMidiNoteLabel(
-        snappedPitch,
-        snapSettings,
+      renderGhostNoteLabels(
+        element,
+        getGhostNoteLabelLayout(
+          snappedPitch,
+          destinationTick,
+          durationTicks,
+          left + deltaXCssPixels,
+          width,
+          tonalBoundaries,
+          getSnapSettingsAtTick,
+        ),
       );
     }
 
@@ -282,6 +352,80 @@ export function updatePitchSnappedDrag(
         snapSettings,
       );
     }
+  }
+}
+
+export function getGhostNoteLabelLayout(
+  pitch: number,
+  startTick: number,
+  durationTicks: number,
+  noteLeftCssPixels: number,
+  noteWidthCssPixels: number,
+  tonalBoundaries: readonly TonalBoundary[],
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+): readonly GhostNoteLabelLayout[] {
+  if (durationTicks <= 0 || noteWidthCssPixels <= 0) {
+    return [];
+  }
+
+  const visibleNoteLeftCssPixels = Math.max(0, -noteLeftCssPixels);
+  const pixelsPerTick = noteWidthCssPixels / durationTicks;
+  const endTick = startTick + durationTicks;
+
+  return getMidiNoteLabelSegments(
+    pitch,
+    startTick,
+    endTick,
+    tonalBoundaries,
+    getSnapSettingsAtTick,
+  ).flatMap((segment) => {
+    const segmentLeftCssPixels =
+      (segment.startTick - startTick) * pixelsPerTick;
+    const segmentEndCssPixels =
+      (segment.endTick - startTick) * pixelsPerTick;
+    const labelLeftCssPixels = Math.max(
+      segmentLeftCssPixels,
+      visibleNoteLeftCssPixels,
+    );
+    const labelWidthCssPixels =
+      segmentEndCssPixels - labelLeftCssPixels;
+
+    return labelWidthCssPixels <= 0
+      ? []
+      : [{
+          label: segment.label,
+          leftCssPixels: labelLeftCssPixels,
+          widthCssPixels: labelWidthCssPixels,
+        }];
+  });
+}
+
+function renderGhostNoteLabels(
+  element: HTMLElement,
+  layouts: readonly GhostNoteLabelLayout[],
+): void {
+  for (let index = 0; index < layouts.length; index += 1) {
+    const layout = layouts[index];
+
+    if (layout === undefined) {
+      continue;
+    }
+
+    let labelElement = element.children.item(index) as HTMLElement | null;
+
+    if (labelElement === null) {
+      labelElement = element.ownerDocument.createElement("span");
+      labelElement.className = "interaction-note-label";
+      element.appendChild(labelElement);
+    }
+
+    labelElement.textContent = layout.label;
+    labelElement.style.left = `${layout.leftCssPixels}px`;
+    labelElement.style.width = `${layout.widthCssPixels}px`;
+  }
+
+  while (element.children.length > layouts.length) {
+    element.lastElementChild?.remove();
   }
 }
 

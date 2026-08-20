@@ -1224,17 +1224,28 @@ function getMarkerAtTick<T extends { readonly startTick: Tick }>(
   markers: readonly T[],
   tick: Tick,
 ): T {
-  let selected = requireMarkerAtZero(markers, "timeline");
+  const initialMarker = requireMarkerAtZero(markers, "timeline");
+  let lowerIndex = 0;
+  let upperIndex = markers.length - 1;
+  let selectedIndex = 0;
 
-  for (const marker of markers) {
-    if (marker.startTick > tick) {
+  while (lowerIndex <= upperIndex) {
+    const middleIndex = Math.floor((lowerIndex + upperIndex) / 2);
+    const marker = markers[middleIndex];
+
+    if (marker === undefined) {
       break;
     }
 
-    selected = marker;
+    if (marker.startTick <= tick) {
+      selectedIndex = middleIndex;
+      lowerIndex = middleIndex + 1;
+    } else {
+      upperIndex = middleIndex - 1;
+    }
   }
 
-  return selected;
+  return markers[selectedIndex] ?? initialMarker;
 }
 
 function requireMarkerAtZero<T extends { readonly startTick: Tick }>(

@@ -496,6 +496,9 @@ function getActiveTestMeasureCount(state) {
       () => ({
         ...DEFAULT_PITCH_SNAP_SETTINGS,
         enabled: true,
+        rootNote: "C",
+        patternType: "scale",
+        patternId: "ionian",
       }),
     );
 
@@ -885,7 +888,7 @@ function getActiveTestMeasureCount(state) {
     const pasted = createPastedNotes(clipboard, 600, 100, 2);
 
     assert.equal(pasted[0].startTick, 600);
-    assert.equal(pasted[0].id, "source-copy-100-2-0");
+    assert.equal(pasted[0].id, "note-copy-100-2-0");
     assert.equal(canPlacePastedNotes(state, "clip-test", pasted), true);
     assert.deepEqual(findNotesByIds(state, "clip-test", ["target", "source"]), [
       target,

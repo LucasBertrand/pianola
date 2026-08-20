@@ -16,6 +16,9 @@ import type {
 import type {
   ResizeEdge,
 } from "../../../editor/interactions/gestures/gesture-draft";
+import type {
+  ScaleMarker,
+} from "../../../domain/transport/time-map";
 
 export interface InteractionVisualController {
   beginDrag(
@@ -23,6 +26,7 @@ export interface InteractionVisualController {
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+    scaleMarkers: readonly ScaleMarker[],
   ): void;
   updateDrag(
     deltaXCssPixels: number,

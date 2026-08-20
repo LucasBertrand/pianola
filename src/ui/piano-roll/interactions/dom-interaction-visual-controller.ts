@@ -37,6 +37,9 @@ import type {
 import type {
   ResizeEdge,
 } from "../../../editor/interactions/gestures/gesture-draft";
+import type {
+  ScaleMarker,
+} from "../../../domain/transport/time-map";
 
 import {
   clearLayer,
@@ -58,6 +61,7 @@ export class DomInteractionVisualController
   private ghostGeometry: LayerGeometry | null = null;
   private selectionGeometry: LayerGeometry | null = null;
   private drawGhostElement: HTMLElement | null = null;
+  private dragScaleMarkers: readonly ScaleMarker[] = [];
 
   public constructor(
     private readonly editingNoteMask: EditingNoteMask,
@@ -82,8 +86,10 @@ export class DomInteractionVisualController
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+    scaleMarkers: readonly ScaleMarker[],
   ): void {
     this.editingNoteMask.replace(notes);
+    this.dragScaleMarkers = scaleMarkers;
     resetLayerTransform(this.selectionLayer);
     this.ghostGeometry = populateGhostLayer(
       this.ghostLayer,
@@ -94,6 +100,7 @@ export class DomInteractionVisualController
       getSnapSettingsAtTick,
       null,
       this.ghostElements,
+      scaleMarkers,
     );
   }
 
@@ -109,25 +116,25 @@ export class DomInteractionVisualController
       resetLayerTransform(this.selectionLayer);
       updatePitchSnappedDrag(
         this.ghostElements,
-        this.ghostGeometry?.pitch ?? null,
-        this.ghostGeometry?.startTick ?? null,
+        this.ghostGeometry,
         deltaXCssPixels,
         pitchStepCssPixels,
         deltaTicks,
         deltaPitch,
         getSnapSettingsAtTick,
+        this.dragScaleMarkers,
         true,
         this.noteColorMode.get() === "pitch",
       );
       updatePitchSnappedDrag(
         this.selectionElements,
-        this.selectionGeometry?.pitch ?? null,
-        this.selectionGeometry?.startTick ?? null,
+        this.selectionGeometry,
         deltaXCssPixels,
         pitchStepCssPixels,
         deltaTicks,
         deltaPitch,
         getSnapSettingsAtTick,
+        this.dragScaleMarkers,
         false,
         false,
       );
@@ -148,11 +155,12 @@ export class DomInteractionVisualController
 
     updateGhostPitchPresentation(
       this.ghostElements,
-      this.ghostGeometry?.pitch ?? null,
-      this.ghostGeometry?.startTick ?? null,
+      this.ghostGeometry,
       deltaPitch,
       deltaTicks,
+      deltaXCssPixels,
       getSnapSettingsAtTick,
+      this.dragScaleMarkers,
       this.noteColorMode.get() === "pitch",
     );
   }
@@ -162,6 +170,7 @@ export class DomInteractionVisualController
     resetLayerTransform(this.selectionLayer);
     clearLayer(this.ghostLayer, this.ghostElements);
     this.ghostGeometry = null;
+    this.dragScaleMarkers = [];
   }
 
   public beginResize(
@@ -249,10 +258,15 @@ export class DomInteractionVisualController
             getSnapSettingsAtTick(startTick),
           )
         : style?.fillStyle ?? APPLICATION_COLORS.accent.primary;
-    element.textContent = getMidiNoteLabel(
+    const labelElement = document.createElement("span");
+
+    labelElement.className = "interaction-note-label";
+    labelElement.style.insetInline = "0";
+    labelElement.textContent = getMidiNoteLabel(
       pitch,
       getSnapSettingsAtTick(startTick),
     );
+    element.appendChild(labelElement);
     this.drawGhostElement = element;
     this.ghostLayer.appendChild(element);
   }

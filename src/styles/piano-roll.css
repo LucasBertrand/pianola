@@ -415,8 +415,6 @@
 
 .interaction-note-ghost {
   position: absolute;
-  display: flex;
-  padding: 0 2px;
   overflow: hidden;
   border: 1px solid var(--color-white-strong);
   border-radius: 2px;
@@ -428,10 +426,21 @@
   line-height: 1;
   white-space: nowrap;
   box-sizing: border-box;
-  align-items: center;
   box-shadow:
     0 0 0 1px var(--color-note-outline),
     0 5px 14px var(--color-shadow-soft);
+}
+
+.interaction-note-label {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  overflow: hidden;
+  padding: 0 2px;
+  white-space: nowrap;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .interaction-overlay {

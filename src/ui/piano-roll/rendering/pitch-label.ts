@@ -8,6 +8,16 @@ import {
 } from "../../../music/pitch-snap";
 import { Note, Scale, Chord } from "@tonaljs/tonal";
 
+export interface MidiNoteLabelSegment {
+  readonly startTick: number;
+  readonly endTick: number;
+  readonly label: string;
+}
+
+export interface TonalBoundary {
+  readonly startTick: number;
+}
+
 export function getMidiNoteLabel(
   pitch: number,
   settings: PitchSnapSettings = DEFAULT_PITCH_SNAP_SETTINGS,
@@ -65,4 +75,53 @@ export function getPitchLabelContextKey(
   settings: PitchSnapSettings,
 ): string {
   return `${settings.rootNote}:${settings.patternType}:${settings.patternId}`;
+}
+
+export function getMidiNoteLabelSegments(
+  pitch: number,
+  startTick: number,
+  endTick: number,
+  tonalBoundaries: readonly TonalBoundary[],
+  getSettingsAtTick: (tick: number) => PitchSnapSettings,
+): readonly MidiNoteLabelSegment[] {
+  const changes: Array<{
+    readonly startTick: number;
+    readonly label: string;
+  }> = [];
+  let currentLabel = getMidiNoteLabel(
+    pitch,
+    getSettingsAtTick(startTick),
+  );
+
+  changes.push({ startTick, label: currentLabel });
+
+  for (const boundary of tonalBoundaries) {
+    if (boundary.startTick <= startTick) {
+      continue;
+    }
+
+    if (boundary.startTick >= endTick) {
+      break;
+    }
+
+    const nextLabel = getMidiNoteLabel(
+      pitch,
+      getSettingsAtTick(boundary.startTick),
+    );
+
+    if (nextLabel === currentLabel) {
+      continue;
+    }
+
+    changes.push({
+      startTick: boundary.startTick,
+      label: nextLabel,
+    });
+    currentLabel = nextLabel;
+  }
+
+  return changes.map((change, index) => ({
+    ...change,
+    endTick: changes[index + 1]?.startTick ?? endTick,
+  }));
 }

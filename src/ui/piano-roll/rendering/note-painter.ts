@@ -29,7 +29,7 @@ import {
 import {
   type TimeMap,
 } from "../../../domain/transport/time-map";
-import { getMidiNoteLabel } from "./pitch-label";
+import { getMidiNoteLabelSegments } from "./pitch-label";
 import { resolvePitchSnapSettings } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 
 const NOTE_LABEL_MINIMUM_HEIGHT =
@@ -178,29 +178,11 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
       continue;
     }
 
-    const noteSnapSettings = resolvePitchSnapSettings(
-      timeMap,
-      globalPitchSnapSettings,
-      note.startTick,
-    );
-
-    const x = converter.tickToCssPixelX(note.startTick);
-    const endX = converter.tickToCssPixelX(
-      note.startTick + note.durationTicks,
-    );
     const y = converter.pitchToCssPixelY(note.pitch);
     const nextRowY = converter.pitchToCssPixelY(note.pitch - 1);
-    const width = Math.max(1, endX - x - 1);
     const height = Math.max(1, nextRowY - y - 1);
-    const label = getMidiNoteLabel(note.pitch, noteSnapSettings);
-    // Dynamically calculate width instead of caching, since settings may vary per note
-    const labelWidth = context.measureText(label).width;
 
-    if (
-      label.length === 0
-      || width < labelWidth + NOTE_LABEL_HORIZONTAL_PADDING * 2
-      || height < NOTE_LABEL_MINIMUM_HEIGHT
-    ) {
+    if (height < NOTE_LABEL_MINIMUM_HEIGHT) {
       continue;
     }
 
@@ -208,11 +190,41 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
 
     context.globalAlpha =
       (instrumentStyle?.opacity ?? 1) * (note.enabled ? 1 : 0.36);
-    context.fillText(
-      label,
-      x + NOTE_LABEL_HORIZONTAL_PADDING,
-      y + height / 2,
-    );
+
+    for (
+      const segment of getMidiNoteLabelSegments(
+        note.pitch,
+        note.startTick,
+        note.startTick + note.durationTicks,
+        timeMap.scaleMarkers,
+        (tick) => resolvePitchSnapSettings(
+          timeMap,
+          globalPitchSnapSettings,
+          tick,
+        ),
+      )
+    ) {
+      const startX = Math.max(
+        0,
+        converter.tickToCssPixelX(segment.startTick),
+      );
+      const endX = converter.tickToCssPixelX(segment.endTick);
+      const labelWidth = context.measureText(segment.label).width;
+
+      if (
+        segment.label.length === 0
+        || endX - startX
+          < labelWidth + NOTE_LABEL_HORIZONTAL_PADDING * 2
+      ) {
+        continue;
+      }
+
+      context.fillText(
+        segment.label,
+        startX + NOTE_LABEL_HORIZONTAL_PADDING,
+        y + height / 2,
+      );
+    }
   }
 }
 

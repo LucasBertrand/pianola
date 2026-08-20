@@ -21,6 +21,12 @@ export interface ResizeDeltaBounds {
   readonly maximumDeltaTicks: number;
 }
 
+export interface RepositionedPitch {
+  readonly destinationTick: number;
+  readonly pitch: number;
+  readonly snapSettings: PitchSnapSettings;
+}
+
 export function quantizeTick(
   tick: number,
   resolutionTicks: number,
@@ -152,20 +158,65 @@ export function buildRepositionedNotes(
   const repositionedNotes: Note[] = [];
 
   for (const note of notes) {
-    const destinationTick = Math.max(0, note.startTick + deltaTicks);
+    const repositionedPitch = resolveRepositionedPitch(
+      note.pitch,
+      note.startTick,
+      deltaTicks,
+      deltaPitch,
+      getSnapSettingsAtTick,
+    );
+
     repositionedNotes.push({
       ...note,
-      startTick: destinationTick,
-      pitch:
-        deltaPitch === 0
-          ? note.pitch
-          : snapPitchToTonalPattern(
-              note.pitch + deltaPitch,
-              getSnapSettingsAtTick(destinationTick),
-              deltaPitch,
-            ),
+      startTick: repositionedPitch.destinationTick,
+      pitch: repositionedPitch.pitch,
     });
   }
 
   return repositionedNotes;
+}
+
+/**
+ * Resolves one selected note against the tonal pattern at its destination.
+ * A horizontal move only changes pitch when it crosses into another tonal
+ * segment; vertical moves always apply the destination pattern.
+ */
+export function resolveRepositionedPitch(
+  basePitch: number,
+  baseTick: number,
+  deltaTicks: number,
+  deltaPitch: number,
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+): RepositionedPitch {
+  const destinationTick = Math.max(0, baseTick + deltaTicks);
+  const snapSettings = getSnapSettingsAtTick(destinationTick);
+  const shouldSnapForTonalChange =
+    deltaPitch === 0
+    && snapSettings.enabled
+    && !haveSameTonalPattern(
+      getSnapSettingsAtTick(baseTick),
+      snapSettings,
+    );
+  const pitch = deltaPitch !== 0 || shouldSnapForTonalChange
+    ? snapPitchToTonalPattern(
+        basePitch + deltaPitch,
+        snapSettings,
+        deltaPitch,
+      )
+    : basePitch;
+
+  return {
+    destinationTick,
+    pitch,
+    snapSettings,
+  };
+}
+
+function haveSameTonalPattern(
+  first: PitchSnapSettings,
+  second: PitchSnapSettings,
+): boolean {
+  return first.rootNote === second.rootNote
+    && first.patternType === second.patternType
+    && first.patternId === second.patternId;
 }

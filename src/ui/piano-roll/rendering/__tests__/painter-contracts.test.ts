@@ -22,6 +22,7 @@ import { paintRuler } from "../ruler-painter";
 interface PaintRecorder {
   readonly fillRects: Array<readonly [number, number, number, number]>;
   readonly labels: string[];
+  readonly labelPositions: Array<readonly [number, number]>;
   readonly context: CanvasRenderingContext2D;
 }
 
@@ -93,6 +94,79 @@ describe("P3 Canvas painter contracts", () => {
     expect(recorder.labels).toHaveLength(2);
   });
 
+  test("keeps a note label visible when its beginning is left of the viewport", () => {
+    const recorder = createPaintRecorder();
+
+    paintNotes({
+      context: recorder.context,
+      converter: new CoordinateConverter({
+        ...VIEWPORT,
+        scrollX: 60,
+      }),
+      visibleNotes: [createNote("continued", 60, 0)],
+      editingNoteIds: new Set(),
+      stylesByInstrumentId: {
+        instrument: {
+          fillStyle: "#abcdef",
+          opacity: 1,
+          locked: false,
+        },
+      },
+      instrumentOrder: ["instrument"],
+      colorMode: "instrument",
+      globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      timeMap: createDefaultTimeMap(),
+    });
+
+    expect(recorder.labels).toEqual(["C4"]);
+    expect(recorder.labelPositions[0]?.[0]).toBe(2);
+  });
+
+  test("paints a new note spelling across an enharmonic scale boundary", () => {
+    const recorder = createPaintRecorder();
+    const note = {
+      ...createNote("enharmonic", 61, 0),
+      durationTicks: 960,
+    };
+
+    paintNotes({
+      context: recorder.context,
+      converter: new CoordinateConverter(VIEWPORT),
+      visibleNotes: [note],
+      editingNoteIds: new Set(),
+      stylesByInstrumentId: {
+        instrument: {
+          fillStyle: "#abcdef",
+          opacity: 1,
+          locked: false,
+        },
+      },
+      instrumentOrder: ["instrument"],
+      colorMode: "instrument",
+      globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      timeMap: {
+        ...createDefaultTimeMap(),
+        scaleMarkers: [
+          {
+            startTick: 0,
+            rootNote: "C#",
+            patternType: "scale",
+            patternId: "ionian",
+          },
+          {
+            startTick: 480,
+            rootNote: "Db",
+            patternType: "scale",
+            patternId: "ionian",
+          },
+        ],
+      },
+    });
+
+    expect(recorder.labels).toEqual(["C#4", "Db4"]);
+    expect(recorder.labelPositions.map(([x]) => x)).toEqual([2, 122]);
+  });
+
   test("paints ruler labels from clock and timeline inputs", () => {
     const recorder = createPaintRecorder();
 
@@ -128,6 +202,7 @@ function createNote(id: string, pitch: number, startTick: number): Note {
 function createPaintRecorder(): PaintRecorder {
   const fillRects: Array<readonly [number, number, number, number]> = [];
   const labels: string[] = [];
+  const labelPositions: Array<readonly [number, number]> = [];
   const context = {
     fillStyle: "",
     font: "",
@@ -138,8 +213,9 @@ function createPaintRecorder(): PaintRecorder {
       fillRects.push([x, y, width, height]);
     },
     strokeRect(): void {},
-    fillText(label: string): void {
+    fillText(label: string, x: number, y: number): void {
       labels.push(label);
+      labelPositions.push([x, y]);
     },
     measureText(): TextMetrics {
       return { width: 8 } as TextMetrics;
@@ -149,5 +225,5 @@ function createPaintRecorder(): PaintRecorder {
     },
   } as unknown as CanvasRenderingContext2D;
 
-  return { fillRects, labels, context };
+  return { fillRects, labels, labelPositions, context };
 }

@@ -265,6 +265,7 @@ export function createPianoRollGestureStrategy(
         converter,
         instrumentStyles.get(),
         draft.getSnapSettingsAtTick,
+        gestureClip.timeline.timeMap.scaleMarkers,
       );
       return;
     }

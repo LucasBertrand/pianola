@@ -13,6 +13,7 @@ import {
   getMeasureSpans,
   getMeasureSubdivisionTicks,
   getMeterAtTick,
+  getScaleMarkerAtTick,
   getTempoAtTick,
   getTicksPerMeasure,
   insertMeterMarker,
@@ -249,6 +250,37 @@ describe("meter marker operations", () => {
     expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
       .toEqual([0, 7_680]);
     expect(edit.durationTicks).toBe(7_680 + 3 * 3_360);
+  });
+
+  test("resolves the active scale marker at and between boundaries", () => {
+    const timeMap: TimeMap = {
+      ...createMixedTimeMap(),
+      scaleMarkers: [
+        {
+          startTick: 0,
+          rootNote: "C",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+        {
+          startTick: 4_000,
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "dorian",
+        },
+        {
+          startTick: 10_000,
+          rootNote: "E",
+          patternType: "scale",
+          patternId: "phrygian",
+        },
+      ],
+    };
+
+    expect(getScaleMarkerAtTick(timeMap, 3_999).rootNote).toBe("C");
+    expect(getScaleMarkerAtTick(timeMap, 4_000).rootNote).toBe("D");
+    expect(getScaleMarkerAtTick(timeMap, 9_999).rootNote).toBe("D");
+    expect(getScaleMarkerAtTick(timeMap, 99_999).rootNote).toBe("E");
   });
 
   test("advances later meters without remapping tempo or scale markers", () => {

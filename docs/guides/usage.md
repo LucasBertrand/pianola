@@ -19,7 +19,9 @@ le viewport ne consomme pas l’historique.
 
 Une opération qui crée des chevauchements ouvre un choix : Merge crée des notes
 continues, Slice conserve les notes éditées et coupe les notes existantes aux
-ancres. Le déplacement et le redimensionnement obéissent au système de magnétisme (snap) actif (grille, gamme chromatique).
+ancres. Le déplacement et le redimensionnement obéissent au système de
+magnétisme actif. Lorsqu'une sélection franchit un marqueur de gamme, chaque
+note est ajustée avec la gamme active à sa nouvelle position.
 
 ## Instruments
 
