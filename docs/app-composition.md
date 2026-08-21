@@ -13,7 +13,8 @@ héberger les protocoles détaillés.
 | sélection | mode et presse-papier | workflow sélection + `usePianoRollClipboard` | état transitoire du piano roll |
 | rendu | mode couleur et pitch preview | `PianoRollWorkspace` + signaux runtime | préférence visible non musicale |
 | snap | réglages actifs | runtime, reflété dans le workspace | partagé par contrôles et gestes |
-| dialogues | dialogue global | `useApplicationDialogs` | protocole alert/confirm unique |
+| dialogues métier | alerte, confirmation ou choix alternatif | `useApplicationDialogs` | protocole alert/confirm du workspace |
+| diagnostics navigateur | erreurs console, JavaScript, promesses et rendu React | `BrowserErrorReporter`, `BrowserErrorBoundary` et `BrowserErrorDialog` | file globale dédupliquée qui reste visible si le piano roll ne peut plus être rendu |
 | instrument | nom, couleur, preset et synthé en brouillon | `useInstrumentDialogWorkflow` | validation complète avant transaction |
 | collisions | choix merge/slice et séquence | `useNoteCollisionDialogWorkflow` | transforme une décision utilisateur en transaction |
 | marqueurs tempo/métrique | brouillon de la modale et gestes du ruler | `useTimeMapMarkerWorkflow` | une intention validée produit au plus une transaction |
@@ -34,4 +35,6 @@ un brouillon métier complet.
 `src/app/App.tsx` a moins de 350 lignes et 20 imports. Le contrôle structurel
 rend ces deux limites exécutables. La création du runtime reste volontairement
 dans cette couche ; `src/ui/piano-roll/PianoRollWorkspace.tsx` possède
-l’assemblage de l’espace de travail.
+l’assemblage de l’espace de travail. La frontière d’erreur et la modale de
+diagnostic entourent cette surface afin de rester disponibles après une erreur
+de rendu React.

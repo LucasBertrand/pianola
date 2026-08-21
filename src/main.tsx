@@ -11,9 +11,13 @@ import {
 import {
   APPLICATION_CSS_COLOR_VARIABLES,
 } from "./config/application-colors";
+import {
+  installBrowserErrorCapture,
+} from "./ui/diagnostics/browser-error-reporter";
 import "./styles.css";
 
 document.title = APPLICATION_CONSTANTS.productName;
+installBrowserErrorCapture();
 
 /*
  * Install the centralized theme before React renders. Defining the custom

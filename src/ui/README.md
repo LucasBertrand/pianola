@@ -3,7 +3,7 @@
 ## Que possède cette zone ?
 
 Les surfaces React, les hooks de capacité et les adaptateurs navigateur :
-dialogs, toolbar, inspecteur, piano roll, fichiers et transport.
+dialogs, diagnostics, toolbar, inspecteur, piano roll, fichiers et transport.
 
 ## Quel fichier lire en premier ?
 

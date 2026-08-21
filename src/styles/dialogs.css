@@ -135,6 +135,88 @@
   background: var(--color-surface-danger-strong);
 }
 
+/* Global browser diagnostics */
+
+.browser-error-backdrop {
+  z-index: 2000;
+}
+
+.browser-error-dialog {
+  width: min(100%, 620px);
+}
+
+.browser-error-metadata {
+  display: flex;
+  margin: -10px 0 16px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.browser-error-details {
+  margin-bottom: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface-deep);
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.browser-error-details summary {
+  padding: 11px 12px;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.browser-error-details pre {
+  max-height: min(42dvh, 360px);
+  margin: 0;
+  padding: 0 12px 12px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  user-select: text;
+  white-space: pre-wrap;
+}
+
+.application-dialog p.browser-error-copy-status {
+  margin: -8px 0 16px;
+  color: var(--color-accent-danger);
+  font-size: 11px;
+}
+
+.fatal-error-fallback {
+  display: grid;
+  min-height: 100dvh;
+  padding: 24px;
+  background: var(--color-surface-deep);
+  color: var(--color-text-primary);
+  place-content: center;
+  text-align: center;
+}
+
+.fatal-error-fallback h1 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.fatal-error-fallback p {
+  max-width: 440px;
+  margin: 0 0 20px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.fatal-error-fallback button {
+  width: min(100%, 240px);
+  justify-self: center;
+}
+
 
 .instrument-preset-dialog-control {
   display: grid;
@@ -315,5 +397,4 @@
   width: 100%;
   text-align: center;
 }
-
 
