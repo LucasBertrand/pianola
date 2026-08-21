@@ -35,7 +35,7 @@ export interface EditorToolbarProps {
   readonly onPaste: () => void;
   readonly onSelectionModeChange: (mode: SelectionMode) => void;
   readonly onNoteColorModeToggle: () => void;
-  readonly onSliceSelectionAtPlayhead: () => void;
+  readonly onOpenSliceSelection: () => void;
   readonly onAddMarkerAtPlayhead: () => void;
   readonly onTransformSelection: (
     kind: SelectionTransformationKind,
@@ -65,7 +65,7 @@ export function EditorToolbar({
   onPaste,
   onSelectionModeChange,
   onNoteColorModeToggle,
-  onSliceSelectionAtPlayhead,
+  onOpenSliceSelection,
   onAddMarkerAtPlayhead,
   onTransformSelection,
 }: EditorToolbarProps): React.JSX.Element {
@@ -266,7 +266,14 @@ export function EditorToolbar({
           onClick={() => onSelectionModeChange("replace")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <rect
+              className="selection-mode-boundary"
+              x="4"
+              y="4"
+              width="16"
+              height="16"
+              rx="2"
+            />
             <rect x="8" y="8" width="8" height="8" rx="1" />
           </svg>
         </button>
@@ -285,7 +292,14 @@ export function EditorToolbar({
           onClick={() => onSelectionModeChange("add")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <rect
+              className="selection-mode-boundary"
+              x="4"
+              y="4"
+              width="16"
+              height="16"
+              rx="2"
+            />
             <path d="M12 8v8M8 12h8" />
           </svg>
         </button>
@@ -304,21 +318,34 @@ export function EditorToolbar({
           onClick={() => onSelectionModeChange("subtract")}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <rect
+              className="selection-mode-boundary"
+              x="4"
+              y="4"
+              width="16"
+              height="16"
+              rx="2"
+            />
             <path d="M8 12h8" />
           </svg>
         </button>
         <button
           type="button"
-          title="Slice selected notes at the playhead"
-          aria-label="Slice selected notes at the playhead"
+          title="Slice selected notes..."
+          aria-label="Choose how to slice selected notes"
           disabled={!selectionAvailable}
-          onClick={onSliceSelectionAtPlayhead}
+          onClick={onOpenSliceSelection}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m4 16 11-11 5 5L9 21H4Z" />
-            <path d="m12.5 7.5 4 4M4 16h5v5" />
-            <path d="M15 5 17.5 2.5 22 7l-2 3" />
+          <svg
+            className="slice-tool-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M2.5 21.5 11 10l4 4-12.5 7.5Z" />
+            <path
+              className="slice-tool-handle"
+              d="m10.3 9.3 6.1-6.1a1.5 1.5 0 0 1 2.1 0l2.3 2.3a1.5 1.5 0 0 1 0 2.1l-6.1 6.1Z"
+            />
           </svg>
         </button>
         <button
@@ -334,11 +361,18 @@ export function EditorToolbar({
           }}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 7v9M14 4v8M20 7v8" />
-            <circle cx="6.5" cy="16" r="2" />
-            <circle cx="12.5" cy="12" r="2" />
-            <circle cx="18.5" cy="15" r="2" />
-            <path d="M3 5v14M1 8l2-3 2 3M1 16l2 3 2-3" />
+            <path
+              className="horizontal-symmetry-triangle"
+              d="M5 3h14l-7 7Z"
+            />
+            <path
+              className="horizontal-symmetry-axis"
+              d="M3 12h18"
+            />
+            <path
+              className="horizontal-symmetry-triangle"
+              d="M5 21h14l-7-7Z"
+            />
           </svg>
         </button>
         <button
@@ -354,11 +388,20 @@ export function EditorToolbar({
           }}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 6v8M11 4v8M17 7v8" />
-            <circle cx="3.5" cy="14" r="2" />
-            <circle cx="9.5" cy="12" r="2" />
-            <circle cx="15.5" cy="15" r="2" />
-            <path d="M20 20H5M8 17l-3 3 3 3" />
+            <g transform="rotate(90 12 12)">
+              <path
+                className="horizontal-symmetry-triangle"
+                d="M5 3h14l-7 7Z"
+              />
+              <path
+                className="horizontal-symmetry-axis"
+                d="M3 12h18"
+              />
+              <path
+                className="horizontal-symmetry-triangle"
+                d="M5 21h14l-7-7Z"
+              />
+            </g>
           </svg>
         </button>
         <button
@@ -373,9 +416,17 @@ export function EditorToolbar({
             );
           }}
         >
-          <svg className="transformation-factor-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 7l7 10M10 7 3 17" />
-            <path d="M14 9c.6-2 5.5-2.4 6.2.3.8 3-5.8 4.1-6.2 7.7h7" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 11.5H2M2 11.5l2.5-2.5M2 11.5 4.5 14M18 11.5h5M23 11.5 20.5 9M23 11.5 20.5 14" />
+            <path d="M15 4.5v10.2" />
+            <ellipse
+              className="transformation-note-head"
+              cx="11.8"
+              cy="16"
+              rx="3.2"
+              ry="2.2"
+              transform="rotate(-20 11.8 16)"
+            />
           </svg>
         </button>
         <button
@@ -390,11 +441,17 @@ export function EditorToolbar({
             );
           }}
         >
-          <svg className="transformation-factor-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="6" cy="7" r="1" />
-            <path d="M2.5 12h7" />
-            <circle cx="6" cy="17" r="1" />
-            <path d="M14 9c.6-2 5.5-2.4 6.2.3.8 3-5.8 4.1-6.2 7.7h7" />
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 11.5h5M4.5 9 7 11.5 4.5 14M23 11.5h-5M20.5 9 18 11.5l2.5 2.5" />
+            <path d="M15 4.5v10.2" />
+            <ellipse
+              className="transformation-note-head"
+              cx="11.8"
+              cy="16"
+              rx="3.2"
+              ry="2.2"
+              transform="rotate(-20 11.8 16)"
+            />
           </svg>
         </button>
         <button
@@ -413,11 +470,13 @@ export function EditorToolbar({
           aria-pressed={noteColorMode === "instrument"}
           onClick={onNoteColorModeToggle}
         >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M10 2a8 8 0 1 0 0 16h1.2a1.8 1.8 0 0 0 0-3.6h-.6a1.3 1.3 0 0 1 0-2.6H13A5 5 0 0 0 18 7c0-2.8-3.6-5-8-5Z" />
-            <circle cx="6" cy="7" r="1" />
-            <circle cx="9.5" cy="5" r="1" />
-            <circle cx="13" cy="6.5" r="1" />
+          <svg
+            className="note-color-brush-icon"
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+          >
+            <path d="M9.44444 4.44444L12.3917 0.760432C12.7762 0.279794 13.3583 0 13.9738 0C15.0929 0 16 0.907148 16 2.02617C16 2.64169 15.7202 3.22383 15.2396 3.60835L11.5556 6.55556L12.2454 7.24538C12.7286 7.72855 13 8.38388 13 9.0672C13 9.66992 12.7887 10.2536 12.4028 10.7166L11.8246 11.4104L4.58957 4.17536L5.2834 3.59717C5.74643 3.21131 6.33008 3 6.9328 3C7.61612 3 8.27145 3.27145 8.75462 3.75462L9.44444 4.44444Z" />
+            <path d="M0 8L3.04679 5.46101L10.539 12.9532L8 16L0 8Z" />
           </svg>
         </button>
       </div>

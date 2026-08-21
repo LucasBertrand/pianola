@@ -13,7 +13,7 @@ import type {
   NoteCollisionResolutionRequest,
 } from "../../use-cases/piano-roll/notes/note-collision-resolution";
 import {
-  buildSliceCommandsForNotes,
+  buildSliceCommandsForNotesAtTicks,
   buildTransformCommandsForNotes,
   canPlacePastedNotes,
   createPastedNotes,
@@ -91,6 +91,7 @@ export interface PianoRollSelectionWorkflow {
     label: string,
   ) => void;
   readonly sliceAtPlayhead: () => void;
+  readonly sliceAtLoopAnchors: () => void;
   readonly paste: () => void;
   readonly transferToInstrument: (instrumentId: InstrumentId) => void;
 }
@@ -250,7 +251,11 @@ export function usePianoRollSelectionWorkflow({
     [alert, commands, getController, resolveCollision],
   );
 
-  const sliceAtPlayhead = useCallback((): void => {
+  const sliceAtTicks = useCallback((
+    sliceTicks: readonly number[],
+    label: string,
+    unavailableMessage: string,
+  ): void => {
     const controller = getController();
     const selectedNotes = controller?.getSelectedNotes() ?? [];
 
@@ -259,10 +264,10 @@ export function usePianoRollSelectionWorkflow({
     }
 
     const clipId = getActiveClip(commands.getState()).id;
-    const plan = buildSliceCommandsForNotes(
+    const plan = buildSliceCommandsForNotesAtTicks(
       clipId,
       selectedNotes,
-      Math.round(getPlayheadTick()),
+      sliceTicks,
       Date.now(),
       nextSequence(),
     );
@@ -270,7 +275,7 @@ export function usePianoRollSelectionWorkflow({
     if (plan.commands.length === 0) {
       alert(
         "Slice unavailable",
-        "The playhead must cross the interior of at least one selected note.",
+        unavailableMessage,
       );
       return;
     }
@@ -278,7 +283,7 @@ export function usePianoRollSelectionWorkflow({
     try {
       const nextState = commands.dispatch(
         plan.commands,
-        "Slice selected notes at playhead",
+        label,
       );
 
       if (nextState !== null) {
@@ -295,7 +300,25 @@ export function usePianoRollSelectionWorkflow({
         "danger",
       );
     }
-  }, [alert, commands, getController, getPlayheadTick, nextSequence]);
+  }, [alert, commands, getController, nextSequence]);
+
+  const sliceAtPlayhead = useCallback((): void => {
+    sliceAtTicks(
+      [Math.round(getPlayheadTick())],
+      "Slice selected notes at playhead",
+      "The playhead must cross the interior of at least one selected note.",
+    );
+  }, [getPlayheadTick, sliceAtTicks]);
+
+  const sliceAtLoopAnchors = useCallback((): void => {
+    const loop = getActiveClip(commands.getState()).transportSettings.loop;
+
+    sliceAtTicks(
+      [loop.startTick, loop.endTick],
+      "Slice selected notes at loop anchors",
+      "At least one loop anchor must cross the interior of a selected note.",
+    );
+  }, [commands, sliceAtTicks]);
 
   const paste = useCallback((): void => {
     const clipboard = getClipboard();
@@ -424,6 +447,7 @@ export function usePianoRollSelectionWorkflow({
     toggleEnabled,
     transform,
     sliceAtPlayhead,
+    sliceAtLoopAnchors,
     paste,
     transferToInstrument,
   };

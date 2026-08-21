@@ -96,50 +96,100 @@ export function buildSliceCommandsForNotes(
   timestamp: number,
   transactionSequence: number,
 ): SliceCommandPlan {
-  const slicesByInstrument = new Map<
-    InstrumentId,
-    Array<{ readonly noteId: NoteId; readonly rightNoteId: NoteId }>
+  return buildSliceCommandsForNotesAtTicks(
+    clipId,
+    notes,
+    [sliceTick],
+    timestamp,
+    transactionSequence,
+  );
+}
+
+/**
+ * Builds one atomic slice plan for any number of timeline anchors.
+ *
+ * Commands are ordered from left to right so a note crossing several anchors
+ * can slice the right-hand segment created by the preceding command.
+ */
+export function buildSliceCommandsForNotesAtTicks(
+  clipId: ClipId,
+  notes: readonly Note[],
+  sliceTicks: readonly number[],
+  timestamp: number,
+  transactionSequence: number,
+): SliceCommandPlan {
+  const orderedSliceTicks = [...new Set(sliceTicks)].sort(
+    (left, right) => left - right,
+  );
+  const slicesByTick = new Map<
+    number,
+    Map<
+      InstrumentId,
+      Array<{ readonly noteId: NoteId; readonly rightNoteId: NoteId }>
+    >
   >();
   const resultingNoteIds: NoteId[] = [];
   let sliceSequence = 0;
 
   for (const note of notes) {
-    if (
-      sliceTick <= note.startTick
-      || sliceTick >= note.startTick + note.durationTicks
-    ) {
-      resultingNoteIds.push(note.id);
-      continue;
+    const noteEndTick = note.startTick + note.durationTicks;
+    let currentSegmentId = note.id;
+
+    resultingNoteIds.push(note.id);
+
+    for (const sliceTick of orderedSliceTicks) {
+      if (
+        sliceTick <= note.startTick
+        || sliceTick >= noteEndTick
+      ) {
+        continue;
+      }
+
+      let slicesByInstrument = slicesByTick.get(sliceTick);
+
+      if (slicesByInstrument === undefined) {
+        slicesByInstrument = new Map();
+        slicesByTick.set(sliceTick, slicesByInstrument);
+      }
+
+      let slices = slicesByInstrument.get(note.instrumentId);
+
+      if (slices === undefined) {
+        slices = [];
+        slicesByInstrument.set(note.instrumentId, slices);
+      }
+
+      const rightNoteId =
+        `slice-${timestamp}-${transactionSequence}-${sliceSequence}`;
+
+      sliceSequence += 1;
+      slices.push({
+        noteId: currentSegmentId,
+        rightNoteId,
+      });
+      currentSegmentId = rightNoteId;
+      resultingNoteIds.push(rightNoteId);
     }
-
-    let slices = slicesByInstrument.get(note.instrumentId);
-
-    if (slices === undefined) {
-      slices = [];
-      slicesByInstrument.set(note.instrumentId, slices);
-    }
-
-    const rightNoteId =
-      `slice-${timestamp}-${transactionSequence}-${sliceSequence}`;
-
-    sliceSequence += 1;
-    slices.push({
-      noteId: note.id,
-      rightNoteId,
-    });
-    resultingNoteIds.push(note.id, rightNoteId);
   }
 
   const commands: PianoRollCommand[] = [];
 
-  for (const [instrumentId, slices] of slicesByInstrument) {
-    commands.push({
-      type: "SliceNotes",
-      clipId,
-      trackInstrumentId: instrumentId,
-      sliceTick,
-      slices,
-    });
+  for (const sliceTick of orderedSliceTicks) {
+    const slicesByInstrument = slicesByTick.get(sliceTick);
+
+    if (slicesByInstrument === undefined) {
+      continue;
+    }
+
+    for (const [instrumentId, slices] of slicesByInstrument) {
+      commands.push({
+        type: "SliceNotes",
+        clipId,
+        trackInstrumentId: instrumentId,
+        sliceTick,
+        slices,
+      });
+    }
   }
 
   return {

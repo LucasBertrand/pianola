@@ -15,7 +15,8 @@ le viewport ne consomme pas l’historique.
 - double-clic ou double-tap direct : supprimer ;
 - modes Replace/Add/Subtract : contrôler l’effet du prochain geste ;
 - Copy/Cut/Paste : utiliser le presse-papier transitoire ;
-- Slice : couper les notes sélectionnées au playhead.
+- Slice : couper les notes sélectionnées au playhead ou aux deux ancres de la
+  boucle, via la modale de choix.
 
 Une opération qui crée des chevauchements ouvre un choix : Merge crée des notes
 continues, Slice conserve les notes éditées et coupe les notes existantes aux

@@ -52,6 +52,14 @@
   stroke-width: 1.7;
 }
 
+.edit-tool-group .slice-tool-icon {
+  stroke-width: 1.55;
+}
+
+.edit-tool-group .slice-tool-handle {
+  fill: currentColor;
+}
+
 .edit-tool-group button:active:not(:disabled) {
   border-color: var(--color-border-active);
   background: var(--color-surface-raised-strong);
@@ -69,8 +77,33 @@
   color: var(--color-accent-primary-bright);
 }
 
+.selection-mode-boundary {
+  stroke-width: 1.15;
+  stroke-dasharray: 1.8 2;
+}
+
+.horizontal-symmetry-triangle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.horizontal-symmetry-axis {
+  stroke-width: 1.15;
+  stroke-dasharray: 2 2;
+}
+
+.transformation-note-head {
+  fill: currentColor;
+  stroke: none;
+}
+
 .note-color-toggle svg {
   stroke-width: 1.5;
+}
+
+.edit-tool-group .note-color-brush-icon {
+  fill: currentColor;
+  stroke: none;
 }
 
 .note-color-toggle.is-instrument-mode {

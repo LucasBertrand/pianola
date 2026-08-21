@@ -85,10 +85,10 @@ export function TransportControls({
         onClick={onToggleLoop}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 7h10a4 4 0 0 1 4 4v1" />
-          <path d="m17 9 3 3 3-3" />
-          <path d="M18 17H8a4 4 0 0 1-4-4v-1" />
-          <path d="m7 15-3-3-3 3" />
+          <path d="M20 11A8 8 0 0 0 5.4 6.5" />
+          <path d="M5.4 3v3.5h3.5" />
+          <path d="M4 13a8 8 0 0 0 14.6 4.5" />
+          <path d="M18.6 21v-3.5h-3.5" />
         </svg>
       </button>
     </div>

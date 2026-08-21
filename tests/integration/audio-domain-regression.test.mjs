@@ -21,6 +21,7 @@ import {
 } from "../../src/use-cases/piano-roll/notes/note-gesture-workflow";
 import {
   buildSliceCommandsForNotes,
+  buildSliceCommandsForNotesAtTicks,
   canPlacePastedNotes,
   createInstrumentTransferPlan,
   createPastedNotes,
@@ -909,6 +910,73 @@ function getActiveTestMeasureCount(state) {
       "slice-100-2-0",
       "target",
     ]);
+
+    const loopSlicePlan = buildSliceCommandsForNotesAtTicks(
+      "clip-test",
+      [source],
+      [300, 180],
+      100,
+      3,
+    );
+
+    assert.equal(loopSlicePlan.commands.length, 2);
+    assert.deepEqual(loopSlicePlan.commands, [
+      {
+        type: "SliceNotes",
+        clipId: "clip-test",
+        trackInstrumentId: "voice-a",
+        sliceTick: 180,
+        slices: [{
+          noteId: "source",
+          rightNoteId: "slice-100-3-0",
+        }],
+      },
+      {
+        type: "SliceNotes",
+        clipId: "clip-test",
+        trackInstrumentId: "voice-a",
+        sliceTick: 300,
+        slices: [{
+          noteId: "slice-100-3-0",
+          rightNoteId: "slice-100-3-1",
+        }],
+      },
+    ]);
+    assert.deepEqual(loopSlicePlan.resultingNoteIds, [
+      "source",
+      "slice-100-3-0",
+      "slice-100-3-1",
+    ]);
+    const stateAfterLoopSlice = projectReducer(state, {
+      transactionId: "slice-at-loop-anchors",
+      label: "Slice selected notes at loop anchors",
+      createdAt: 100,
+      commands: loopSlicePlan.commands,
+    });
+    const slicedSourceNotes =
+      getActiveTestClip(stateAfterLoopSlice)
+        .tracksByInstrumentId["voice-a"].notesById;
+
+    assert.deepEqual(
+      Object.values(slicedSourceNotes).map((note) => ({
+        id: note.id,
+        startTick: note.startTick,
+        durationTicks: note.durationTicks,
+      })),
+      [
+        { id: "source", startTick: 120, durationTicks: 60 },
+        {
+          id: "slice-100-3-0",
+          startTick: 180,
+          durationTicks: 120,
+        },
+        {
+          id: "slice-100-3-1",
+          startTick: 300,
+          durationTicks: 60,
+        },
+      ],
+    );
 
     const transferPlan = createInstrumentTransferPlan(
       state,

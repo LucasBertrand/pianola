@@ -357,6 +357,7 @@ export function PianoRollWorkspace({
     toggleEnabled: handleToggleSelectionEnabled,
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
+    sliceAtLoopAnchors: handleSliceSelectionAtLoopAnchors,
     paste: handlePaste,
     transferToInstrument: handleTransferSelectionToInstrument,
   } = usePianoRollSelectionWorkflow({
@@ -373,6 +374,22 @@ export function PianoRollWorkspace({
     resolveCollision: handleNoteCollision,
     alert: showApplicationAlert,
   });
+  const handleOpenSliceSelection = useCallback((): void => {
+    setApplicationDialog({
+      title: "Slice selected notes",
+      message: "Choose where to split the selected notes.",
+      confirmLabel: "At playhead",
+      alternateLabel: "At loop anchors",
+      cancelLabel: "Cancel",
+      tone: "default",
+      onConfirm: handleSliceSelectionAtPlayhead,
+      onAlternate: handleSliceSelectionAtLoopAnchors,
+    });
+  }, [
+    handleSliceSelectionAtLoopAnchors,
+    handleSliceSelectionAtPlayhead,
+    setApplicationDialog,
+  ]);
   const handleNoteColorModeToggle = useCallback((): void => {
     setNoteColorMode((currentMode) => {
       const nextMode: NoteColorMode =
@@ -550,7 +567,7 @@ export function PianoRollWorkspace({
             onPaste={handlePaste}
             onSelectionModeChange={setSelectionMode}
             onNoteColorModeToggle={handleNoteColorModeToggle}
-            onSliceSelectionAtPlayhead={handleSliceSelectionAtPlayhead}
+            onOpenSliceSelection={handleOpenSliceSelection}
             onAddMarkerAtPlayhead={timeMapMarkers.openMarkerAtPlayhead}
             onTransformSelection={handleTransformSelection}
           />,

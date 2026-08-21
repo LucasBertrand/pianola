@@ -261,9 +261,15 @@ function GridAndSnapControls({
             onSettingsChange({ visualGuideEnabled: !pitchSnapSettings.visualGuideEnabled });
           }}
         >
-          <svg className="pitch-snap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m9 11-6 6v3h9l3-3"></path>
-            <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path>
+          <svg
+            className="pitch-snap-icon"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path d="M10 2a8 8 0 1 0 0 16h1.2a1.8 1.8 0 0 0 0-3.6h-.6a1.3 1.3 0 0 1 0-2.6H13A5 5 0 0 0 18 7c0-2.8-3.6-5-8-5Z" />
+            <circle cx="6" cy="7" r="1" />
+            <circle cx="9.5" cy="5" r="1" />
+            <circle cx="13" cy="6.5" r="1" />
           </svg>
         </button>
         <button
