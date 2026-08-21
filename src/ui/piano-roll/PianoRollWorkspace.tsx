@@ -114,6 +114,9 @@ import {
   useTransportWorkflow,
 } from "../../ui/transport/useTransportWorkflow";
 import {
+  usePrimaryActionTrigger,
+} from "./interactions/usePrimaryActionTrigger";
+import {
   useViewportControls,
 } from "../../ui/piano-roll/useViewportControls";
 import {
@@ -240,6 +243,8 @@ export function PianoRollWorkspace({
     }),
     [runtime],
   );
+
+  usePrimaryActionTrigger(togglePlayback);
 
   const {
     appShellRef,
