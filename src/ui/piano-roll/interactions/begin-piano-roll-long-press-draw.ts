@@ -177,7 +177,7 @@ export function beginPianoRollLongPressDraw({
     resolutionTicks,
     activeInstrumentId,
   );
-  selectionController.clearSelection();
+  visuals?.clearSelection();
   visuals?.beginDraw(
     startTick,
     drawPitch,

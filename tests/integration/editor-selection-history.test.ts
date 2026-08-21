@@ -104,6 +104,51 @@ describe("editor selection history", () => {
 
     expect(selectedNoteIds(runtime)).toEqual([drawnNote.id]);
   });
+
+  test("restores the previous draw selection through undo and redo", () => {
+    const notes = [
+      createTestNote({ id: "drawn-a", startTick: 0 }),
+      createTestNote({ id: "drawn-b", startTick: 240 }),
+      createTestNote({ id: "drawn-c", startTick: 480 }),
+    ];
+    const runtime = createEditorRuntime(createTestProject());
+    const workflow = new NoteGestureWorkflow(
+      runtime.editorCommands,
+      runtime.selection,
+      {
+        onCollision: undefined,
+        onTransactionRejected: undefined,
+        onSelectionChanged: undefined,
+      },
+    );
+
+    for (const note of notes) {
+      expect(workflow.commitDraw(note)).toBe("committed");
+      expect(selectedNoteIds(runtime)).toEqual([note.id]);
+    }
+
+    runtime.editorCommands.undo();
+    expect(activeNoteIds(runtime)).toEqual(["drawn-a", "drawn-b"]);
+    expect(selectedNoteIds(runtime)).toEqual(["drawn-b"]);
+
+    runtime.editorCommands.undo();
+    expect(activeNoteIds(runtime)).toEqual(["drawn-a"]);
+    expect(selectedNoteIds(runtime)).toEqual(["drawn-a"]);
+
+    runtime.editorCommands.undo();
+    expect(activeNoteIds(runtime)).toEqual([]);
+    expect(selectedNoteIds(runtime)).toEqual([]);
+
+    runtime.editorCommands.redo();
+    expect(selectedNoteIds(runtime)).toEqual(["drawn-a"]);
+
+    runtime.editorCommands.redo();
+    expect(selectedNoteIds(runtime)).toEqual(["drawn-b"]);
+
+    runtime.editorCommands.redo();
+    expect(activeNoteIds(runtime)).toEqual(notes.map((note) => note.id));
+    expect(selectedNoteIds(runtime)).toEqual(["drawn-c"]);
+  });
 });
 
 function activeNoteIds(

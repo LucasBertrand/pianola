@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   createEditorRuntime,
 } from "../../src/app/create-app-runtime";
@@ -14,6 +14,9 @@ import {
 import {
   createPianoRollGestureStrategy,
 } from "../../src/ui/piano-roll/interactions/piano-roll-gesture-strategy";
+import type {
+  InteractionVisualController,
+} from "../../src/ui/piano-roll/interactions/interaction-visual-controller";
 import {
   PianoRollSelectionController,
 } from "../../src/ui/piano-roll/interactions/piano-roll-selection-controller";
@@ -253,3 +256,110 @@ describe("PianoRollGestureStrategy pitch highlight during selection drag", () =>
     expect(publishedPitches).toEqual([72, 69, null]);
   });
 });
+
+describe("PianoRollGestureStrategy draw selection history", () => {
+  test("hides the previous selection without clearing it before draw commit", () => {
+    const noteA = createTestNote({
+      id: "note-a",
+      pitch: 60,
+      startTick: 0,
+      durationTicks: 480,
+    });
+    const runtime = createEditorRuntime(createTestProject({
+      clips: [{ id: "clip-a", notes: [noteA] }],
+    }));
+    const session = new PianoRollInteractionSession(
+      runtime.viewport.get(),
+      runtime.viewport.version,
+      runtime.selection,
+    );
+    const visuals = createVisualControllerSpy();
+    const selectionController = new PianoRollSelectionController({
+      session,
+      viewport: runtime.viewport,
+      editorCommands: runtime.editorCommands,
+      getVisuals: () => visuals,
+      onSelectionChange: () => undefined,
+    });
+    const workflow = new NoteGestureWorkflowAdapter({
+      editorCommands: runtime.editorCommands,
+      selection: session.selection,
+      onSelectionChanged: () => undefined,
+      onCollision: undefined,
+      onTransactionRejected: undefined,
+    });
+    const overlay = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        right: 1000,
+        bottom: 800,
+        width: 1000,
+        height: 800,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const strategy = createPianoRollGestureStrategy({
+      overlay,
+      getVisuals: () => visuals,
+      session,
+      viewport: runtime.viewport,
+      selectionController,
+      workflow,
+      spatialIndex: runtime.spatialIndex,
+      instrumentStyles: runtime.instrumentStyles,
+      editorCommands: runtime.editorCommands,
+      getActiveInstrumentId: () => TEST_INSTRUMENT_ID,
+      getInstrumentOrder: () => [TEST_INSTRUMENT_ID],
+      totalTicks: 7680,
+      selectionMode: "replace",
+      gridResolutionTicks: runtime.gridResolutionTicks,
+      pitchSnapSettings: runtime.pitchSnapSettings,
+      onGridSeek: undefined,
+      onPitchHighlightChange: undefined,
+    });
+
+    selectionController.replaceSelection([noteA]);
+    const drawEvent = createPointerSample({
+      pointerId: 2,
+      pointerType: "touch",
+      clientX: session.converter.tickToCssPixelX(960),
+      clientY: session.converter.pitchToCssPixelY(72) + 5,
+    });
+
+    strategy.onPointerDown(drawEvent);
+    strategy.cancel();
+    strategy.onLongPress(drawEvent);
+
+    expect(visuals.clearSelection).toHaveBeenCalledOnce();
+    expect(session.selection.notes.map((note) => note.id)).toEqual([noteA.id]);
+
+    strategy.onPointerUp(drawEvent);
+    expect(session.selection.notes).toHaveLength(1);
+    expect(session.selection.notes[0]?.id).not.toBe(noteA.id);
+
+    runtime.editorCommands.undo();
+    expect(session.selection.notes.map((note) => note.id)).toEqual([noteA.id]);
+  });
+});
+
+function createVisualControllerSpy(): InteractionVisualController {
+  return {
+    beginDrag: vi.fn(),
+    updateDrag: vi.fn(),
+    endDrag: vi.fn(),
+    beginResize: vi.fn(),
+    updateResize: vi.fn(),
+    endResize: vi.fn(),
+    beginDraw: vi.fn(),
+    updateDraw: vi.fn(),
+    endDraw: vi.fn(),
+    beginLasso: vi.fn(),
+    updateLasso: vi.fn(),
+    endLasso: vi.fn(),
+    showSelection: vi.fn(),
+    clearSelection: vi.fn(),
+  };
+}
