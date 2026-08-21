@@ -74,7 +74,13 @@ export function EditorToolbar({
     <div className="editor-toolbar-actions">
       <div className="inspector-toggle-group">
         <button
-          className="project-inspector-toggle-button"
+          className={
+            `project-inspector-toggle-button${
+              projectInspectorOpen && inspectorSection === "instruments"
+                ? " is-active"
+                : ""
+            }`
+          }
           type="button"
           aria-label="Open instruments"
           title="Instruments"
@@ -85,7 +91,7 @@ export function EditorToolbar({
           onClick={() => onToggleInspector("instruments")}
         >
           <svg className="inspector-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <rect x="3" y="5" width="18" height="14" />
             <path d="M7.5 5v14M12 5v14M16.5 5v14" />
             <path
               className="keyboard-black-keys"
@@ -94,7 +100,13 @@ export function EditorToolbar({
           </svg>
         </button>
         <button
-          className="project-inspector-toggle-button"
+          className={
+            `project-inspector-toggle-button${
+              projectInspectorOpen && inspectorSection === "clips"
+                ? " is-active"
+                : ""
+            }`
+          }
           type="button"
           aria-label="Open clips"
           title="Clips"

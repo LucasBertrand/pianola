@@ -367,7 +367,6 @@ export function PianoRollWorkspace({
     getPlayheadTick() {
       return runtime.playheadTick.get();
     },
-    setPlayheadTick: seekPlayback,
     getGridResolutionTicks() {
       return runtime.gridResolutionTicks.get();
     },

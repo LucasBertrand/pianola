@@ -69,7 +69,6 @@ export interface PianoRollSelectionWorkflowOptions {
   readonly projectStore: ProjectStorePort;
   readonly getController: () => PianoRollControllerPort | null;
   readonly getPlayheadTick: () => number;
-  readonly setPlayheadTick: (tick: number) => void;
   readonly getGridResolutionTicks: () => number;
   readonly resolveCollision: (
     request: NoteCollisionResolutionRequest,
@@ -101,7 +100,6 @@ export function usePianoRollSelectionWorkflow({
   projectStore,
   getController,
   getPlayheadTick,
-  setPlayheadTick,
   getGridResolutionTicks,
   resolveCollision,
   alert,
@@ -391,7 +389,6 @@ export function usePianoRollSelectionWorkflow({
           );
 
           getController()?.replaceSelection(resolvedNotes);
-          movePlayheadToSelectionEnd(resolvedNotes, setPlayheadTick);
         },
       });
       return;
@@ -423,7 +420,6 @@ export function usePianoRollSelectionWorkflow({
     }
 
     getController()?.replaceSelection(selectedPastedNotes);
-    movePlayheadToSelectionEnd(selectedPastedNotes, setPlayheadTick);
   }, [
     alert,
     commands,
@@ -433,7 +429,6 @@ export function usePianoRollSelectionWorkflow({
     getPlayheadTick,
     nextSequence,
     resolveCollision,
-    setPlayheadTick,
   ]);
 
   return {
@@ -451,19 +446,4 @@ export function usePianoRollSelectionWorkflow({
     paste,
     transferToInstrument,
   };
-}
-
-function movePlayheadToSelectionEnd(
-  notes: readonly Note[],
-  setPlayheadTick: (tick: number) => void,
-): void {
-  let endTick = -1;
-
-  for (const note of notes) {
-    endTick = Math.max(endTick, note.startTick + note.durationTicks);
-  }
-
-  if (endTick >= 0) {
-    setPlayheadTick(endTick);
-  }
 }

@@ -16,6 +16,12 @@
   padding: 0;
 }
 
+.project-inspector-toggle-button.is-active {
+  border-color: var(--color-warm-strong);
+  background: var(--color-warm-soft);
+  color: var(--color-accent-warm);
+}
+
 .inspector-toggle-group {
   display: flex;
   gap: 6px;
