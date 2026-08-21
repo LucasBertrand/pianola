@@ -23,6 +23,7 @@ export interface NoteCollisionResolutionRequest
   readonly label: string;
   readonly collisionCount: number;
   readonly prefixCommands?: readonly PianoRollCommand[];
+  readonly retainedSelectionNoteIds?: readonly NoteId[];
   readonly onResolved: (
     state: ProjectState,
     selectedNoteIds: readonly NoteId[],

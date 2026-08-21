@@ -4,6 +4,9 @@ import type {
 import type {
   EditorSelectionRequests,
 } from "../../editor/selection/editor-selection-requests";
+import type {
+  EditorSelection,
+} from "../../editor/selection/editor-selection";
 import {
   type InstrumentId,
 } from "../../domain/identifiers";
@@ -41,6 +44,7 @@ import type {
 export interface PianoRollRuntimePort {
   readonly projectStore: ProjectStorePort;
   readonly editorCommands: EditorCommandPort;
+  readonly selection: EditorSelection;
   readonly selectionRequests: EditorSelectionRequests;
   readonly spatialIndex: SpatialIndex;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;

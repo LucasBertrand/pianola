@@ -96,12 +96,13 @@ export function usePianoRollInstrumentTransfer({
           intent,
         ),
         ...intent,
+        retainedSelectionNoteIds: retainedTargetNoteIds,
         onResolved(nextState, selectedNoteIds): void {
           controller.replaceSelection(
             findNotesByIds(
               nextState,
               activeClip.id,
-              selectedNoteIds.concat(retainedTargetNoteIds),
+              selectedNoteIds,
             ),
           );
         },
@@ -113,6 +114,10 @@ export function usePianoRollInstrumentTransfer({
       const nextState = commands.dispatch(
         transferPlan.commands,
         "Transfer notes to instrument",
+        {
+          clipId: activeClip.id,
+          noteIds: selectedNotes.map((note) => note.id),
+        },
       );
 
       if (nextState === null) {

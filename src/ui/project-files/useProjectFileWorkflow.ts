@@ -113,7 +113,7 @@ export function useProjectFileWorkflow({
       runtime.selectionRequests.clear();
       runtime.noteColorMode.set(restoredEditorState.noteColorMode);
       metadataRef.current = metadata;
-      runtime.projectStore.replaceState(project, label);
+      runtime.editorCommands.replaceState(project, label);
       const viewportBase = runtime.viewport.get();
       const clipRuntimeStates = Object.fromEntries(
         Object.entries(restoredEditorState.clipStatesById).map(

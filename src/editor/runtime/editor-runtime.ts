@@ -36,11 +36,15 @@ import type {
   MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../model/render-signal";
+import type {
+  EditorSelection,
+} from "../selection/editor-selection";
 
 /** Long-lived services and high-frequency signals owned by one editor tab. */
 export interface EditorRuntime {
   readonly projectStore: ProjectStorePort;
   readonly editorCommands: EditorCommandPort;
+  readonly selection: EditorSelection;
   readonly selectionRequests: EditorSelectionRequests;
   readonly spatialIndex: SpatialIndex;
   readonly viewport: MutableRenderSignal<ViewportState>;

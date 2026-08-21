@@ -48,6 +48,10 @@ export function useNoteCollisionDialogWorkflow({
         mode,
         `${timestamp}-${transactionSequenceRef.current + 1}`,
       );
+      const resultingSelectionNoteIds = [
+        ...plan.resultingSelectionNoteIds,
+        ...(request.retainedSelectionNoteIds ?? []),
+      ];
 
       try {
         transactionSequenceRef.current += 1;
@@ -59,12 +63,16 @@ export function useNoteCollisionDialogWorkflow({
           mode === "merge"
             ? `${request.label}: merge collisions`
             : `${request.label}: slice collisions`,
+          {
+            clipId: request.clipId,
+            noteIds: resultingSelectionNoteIds,
+          },
         );
 
         if (nextState !== null) {
           request.onResolved(
             nextState,
-            plan.resultingSelectionNoteIds,
+            resultingSelectionNoteIds,
           );
         }
       } catch (error: unknown) {

@@ -8,6 +8,7 @@ import {
 export interface PianoRollControllerPort {
   getSelectedNotes(): readonly Note[];
   replaceSelection(notes: readonly Note[]): void;
+  refreshSelection(): void;
   removeInstrumentFromSelection(instrumentId: InstrumentId): void;
   togglePitchSelection(pitch: number): void;
   cancel(): void;

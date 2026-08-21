@@ -153,6 +153,7 @@ export class NoteGestureWorkflow {
       nextState = this.commands.dispatch(
         buildDeleteNoteCommands(clipId, notes),
         label,
+        { clipId, noteIds: [] },
       );
     } catch (error: unknown) {
       this.callbacks.onTransactionRejected?.(error);
@@ -213,6 +214,14 @@ export class NoteGestureWorkflow {
       nextState = this.commands.dispatch(
         options.commands,
         options.label,
+        {
+          clipId: options.clipId,
+          noteIds: collectNoteIds(
+            options.selectionAfterCommit === "proposed"
+              ? options.proposedNotes
+              : options.originalNotes,
+          ),
+        },
       );
     } catch (error: unknown) {
       this.callbacks.onTransactionRejected?.(error);

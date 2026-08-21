@@ -40,9 +40,6 @@ import {
   countNoteEditCollisions,
   hasNoteEditCollisions,
 } from "../../domain/note-collision";
-import type {
-  ProjectStorePort,
-} from "../../domain/project-store";
 import {
   SelectionTransformationError,
   transformNoteSelection,
@@ -66,7 +63,6 @@ import {
 
 export interface PianoRollSelectionWorkflowOptions {
   readonly commands: EditorCommandPort;
-  readonly projectStore: ProjectStorePort;
   readonly getController: () => PianoRollControllerPort | null;
   readonly getPlayheadTick: () => number;
   readonly getGridResolutionTicks: () => number;
@@ -97,7 +93,6 @@ export interface PianoRollSelectionWorkflow {
 
 export function usePianoRollSelectionWorkflow({
   commands,
-  projectStore,
   getController,
   getPlayheadTick,
   getGridResolutionTicks,
@@ -119,7 +114,6 @@ export function usePianoRollSelectionWorkflow({
     toggleEnabled,
   } = usePianoRollSelectionCommands(
     commands,
-    projectStore,
     getController,
   );
   const transferToInstrument = usePianoRollInstrumentTransfer({
@@ -148,6 +142,10 @@ export function usePianoRollSelectionWorkflow({
           clipboard.notes,
         ),
         "Cut notes",
+        {
+          clipId: getActiveClip(commands.getState()).id,
+          noteIds: [],
+        },
       ) !== null
     ) {
       getController()?.clearSelection();
@@ -223,6 +221,10 @@ export function usePianoRollSelectionWorkflow({
         const nextState = commands.dispatch(
           buildTransformCommandsForNotes(activeClip.id, proposedNotes),
           label,
+          {
+            clipId: activeClip.id,
+            noteIds: proposedNotes.map((note) => note.id),
+          },
         );
 
         if (nextState !== null) {
@@ -282,6 +284,7 @@ export function usePianoRollSelectionWorkflow({
       const nextState = commands.dispatch(
         plan.commands,
         label,
+        { clipId, noteIds: plan.resultingNoteIds },
       );
 
       if (nextState !== null) {
@@ -400,6 +403,10 @@ export function usePianoRollSelectionWorkflow({
         ...buildAddNoteCommands(activeClip.id, pastedNotes),
       ],
       "Paste notes",
+      {
+        clipId: activeClip.id,
+        noteIds: pastedNotes.map((note) => note.id),
+      },
     );
 
     if (nextState === null) {

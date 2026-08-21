@@ -36,6 +36,9 @@ import type {
   EditorSelectionRequests,
 } from "../../../editor/selection/editor-selection-requests";
 import type {
+  EditorSelection,
+} from "../../../editor/selection/editor-selection";
+import type {
   PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import type {
@@ -67,6 +70,7 @@ export interface UsePianoRollEventsOptions {
     Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly editorCommands: EditorCommandPort;
+  readonly selection: EditorSelection;
   readonly activeInstrumentId: InstrumentId;
   readonly totalTicks: number;
   readonly selectionMode: SelectionMode;
@@ -97,6 +101,7 @@ export function usePianoRollEvents(
     spatialIndex,
     instrumentStyles,
     editorCommands,
+    selection,
     activeInstrumentId,
     totalTicks,
     selectionMode,
@@ -118,6 +123,7 @@ export function usePianoRollEvents(
     sessionRef.current = new PianoRollInteractionSession(
       viewport.get(),
       viewport.version,
+      selection,
     );
   }
 

@@ -149,6 +149,10 @@ implements PianoRollControllerPort {
     this.showSelection();
   }
 
+  public refreshSelection(): void {
+    this.showSelection();
+  }
+
   public removeInstrumentFromSelection(instrumentId: InstrumentId): void {
     this.selection.retain((note) => note.instrumentId !== instrumentId);
     this.showSelection();

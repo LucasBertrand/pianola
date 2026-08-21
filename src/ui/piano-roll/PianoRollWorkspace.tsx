@@ -367,7 +367,6 @@ export function PianoRollWorkspace({
     transferToInstrument: handleTransferSelectionToInstrument,
   } = usePianoRollSelectionWorkflow({
     commands: runtime.editorCommands,
-    projectStore: runtime.projectStore,
     getController: getPianoRollController,
     getPlayheadTick() {
       return runtime.playheadTick.get();
@@ -537,8 +536,8 @@ export function PianoRollWorkspace({
           <EditorToolbar
             inspectorOpen={projectInspectorOpen}
             inspectorSection={projectInspectorSection}
-            canUndo={runtime.projectStore.canUndo()}
-            canRedo={runtime.projectStore.canRedo()}
+            canUndo={runtime.editorCommands.canUndo()}
+            canRedo={runtime.editorCommands.canRedo()}
             measureCount={getMeasureCount(
               projectState.clock.ppqn,
               activeClip.timeline.timeMap,

@@ -36,7 +36,7 @@ export class PianoRollInteractionSession {
   public readonly gesture = new PianoRollGestureStateMachine(
     this.draft,
   );
-  public readonly selection = new EditorSelection();
+  public readonly selection: EditorSelection;
   public readonly lassoBuffer: Note[] = [];
   public readonly tapState: InteractionTapState = {
     noteId: null,
@@ -54,7 +54,9 @@ export class PianoRollInteractionSession {
   public constructor(
     initialViewport: ViewportState,
     initialViewportVersion: number,
+    selection: EditorSelection = new EditorSelection(),
   ) {
+    this.selection = selection;
     this.converter = new CoordinateConverter(initialViewport);
     this.converterVersion = initialViewportVersion;
   }

@@ -25,6 +25,9 @@ import {
 import {
   ProjectStore,
 } from "../domain/project-store";
+import {
+  EditorSelection,
+} from "../editor/selection/editor-selection";
 import type {
   ViewportState,
 } from "../editor/geometry/converter";
@@ -63,8 +66,9 @@ export function createEditorRuntime(
   const viewportState = createInitialViewportState();
   const spatialIndex = new SpatialIndex();
   const projectStore = new ProjectStore(initialProjectState);
+  const selection = new EditorSelection();
   const indexedNotesBuffer: Note[] = [];
-  const editorCommands = new EditorCommandService(projectStore);
+  const editorCommands = new EditorCommandService(projectStore, selection);
   const activeClip = getActiveClip(initialProjectState);
 
   rebuildSpatialIndex(
@@ -128,6 +132,7 @@ export function createEditorRuntime(
   const runtime: EditorRuntime = {
     projectStore,
     editorCommands,
+    selection,
     selectionRequests: new EditorSelectionRequests(),
     spatialIndex,
     viewport,

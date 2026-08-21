@@ -15,9 +15,6 @@ import type {
   NoteId,
 } from "../../domain/identifiers";
 import type {
-  ProjectStorePort,
-} from "../../domain/project-store";
-import type {
   EditorCommandPort,
 } from "../../use-cases/commands/editor-command-service";
 import type {
@@ -34,23 +31,26 @@ export interface PianoRollSelectionCommands {
 /** Owns history and direct commands for the current note selection. */
 export function usePianoRollSelectionCommands(
   commands: EditorCommandPort,
-  projectStore: ProjectStorePort,
   getController: () => PianoRollControllerPort | null,
 ): PianoRollSelectionCommands {
-  const clearInteraction = useCallback((): void => {
+  const prepareHistoryNavigation = useCallback((): PianoRollControllerPort | null => {
     const controller = getController();
 
     controller?.cancel();
-    controller?.clearSelection();
+    return controller;
   }, [getController]);
   const undo = useCallback((): void => {
-    clearInteraction();
-    projectStore.undo();
-  }, [clearInteraction, projectStore]);
+    const controller = prepareHistoryNavigation();
+
+    commands.undo();
+    controller?.refreshSelection();
+  }, [commands, prepareHistoryNavigation]);
   const redo = useCallback((): void => {
-    clearInteraction();
-    projectStore.redo();
-  }, [clearInteraction, projectStore]);
+    const controller = prepareHistoryNavigation();
+
+    commands.redo();
+    controller?.refreshSelection();
+  }, [commands, prepareHistoryNavigation]);
   const remove = useCallback((): void => {
     const controller = getController();
     const notes = controller?.getSelectedNotes() ?? [];
@@ -60,6 +60,10 @@ export function usePianoRollSelectionCommands(
       && commands.dispatch(
         buildDeleteNoteCommands(getActiveClip(commands.getState()).id, notes),
         "Delete notes",
+        {
+          clipId: getActiveClip(commands.getState()).id,
+          noteIds: [],
+        },
       ) !== null
     ) {
       controller?.clearSelection();
@@ -78,6 +82,7 @@ export function usePianoRollSelectionCommands(
     const nextState = commands.dispatch(
       buildSetNotesEnabledCommands(clipId, notes, enableNotes),
       enableNotes ? "Enable selected notes" : "Disable selected notes",
+      { clipId, noteIds: notes.map((note) => note.id) },
     );
 
     if (nextState !== null) {
