@@ -62,6 +62,13 @@ ajoute ou retire réellement du temps.
 
 ## Sauvegarde et échange
 
-Save télécharge un fichier `.pianola`. Open remplace le projet courant après
-confirmation. Import MIDI analyse le fichier avant remplacement ; Export MIDI
-projette le document musical sans état d’interface.
+L'accueil liste les projets conservés dans ce navigateur. L'édition active est
+sauvegardée automatiquement ; l'en-tête indique `Saved locally`, une écriture
+en cours, des changements non publiés ou un échec. Revenir à la bibliothèque
+force la dernière écriture et refuse de fermer la session si elle échoue.
+
+Export project télécharge une copie `.pianola` portable. Import `.pianola`
+depuis la bibliothèque crée toujours une entrée distincte et ne remplace pas les
+préférences locales. Import MIDI analyse le fichier avant de remplacer le
+document du projet actif ; Export MIDI projette uniquement les données
+musicales.

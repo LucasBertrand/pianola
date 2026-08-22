@@ -2,13 +2,15 @@
 
 ## Que possède cette zone ?
 
-Les surfaces React, les hooks de capacité et les adaptateurs navigateur :
-dialogs, diagnostics, toolbar, inspecteur, piano roll, fichiers et transport.
+Les surfaces React et les hooks de capacité : bibliothèque locale, dialogs,
+diagnostics, toolbar, inspecteur, piano roll, fichiers et transport. Les
+adaptateurs de stockage navigateur vivent sous `src/pwa/persistence/`.
 
 ## Quel fichier lire en premier ?
 
-Lire `piano-roll/PianoRollWorkspace.tsx` pour l’assemblage, puis descendre dans
-la surface concernée. Pour le Canvas, utiliser
+Lire `home/ApplicationHome.tsx` pour l'accueil et
+`piano-roll/PianoRollWorkspace.tsx` pour l’assemblage de l'éditeur, puis
+descendre dans la surface concernée. Pour le Canvas, utiliser
 [`piano-roll/rendering/README.md`](piano-roll/rendering/README.md).
 
 ## Quelles dépendances sont autorisées ?

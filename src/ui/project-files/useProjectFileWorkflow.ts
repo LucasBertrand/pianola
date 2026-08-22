@@ -1,273 +1,138 @@
 import {
   useCallback,
-  useRef,
-  type ChangeEvent,
-  type RefObject,
 } from "react";
-import {
-  type ProjectState,
-} from "../../domain/project/project-document";
-import {
-  downloadBrowserFile,
-} from "./download-browser-file";
-import {
-  createNativeProjectFileName,
-} from "../../project-io/native/native-project-metadata";
-import {
-  NativeProjectFileError,
-} from "../../project-io/native/native-project-error";
-import {
-  parseNativeProjectFile,
-} from "../../project-io/native/parse-native-project";
-import {
-  serializeNativeProjectFile,
-} from "../../project-io/native/serialize-native-project";
 import type {
-  NativeEditorState,
-  NativeProjectFileMetadata,
-} from "../../project-io/native/native-project-schema";
-import {
-  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
-} from "../../project-io/native/version";
-import {
-  createBlankProjectState,
-} from "../../use-cases/project-files/create-initial-project";
+  ProjectState,
+} from "../../domain/project/project-document";
 import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
 import type {
+  ProjectWorkspaceState,
+} from "../../persistence/project-persistence-model";
+import {
+  ProjectPersistenceError,
+} from "../../persistence/project-persistence-model";
+import {
+  createNativeProjectFileName,
+} from "../../project-io/native/native-project-metadata";
+import {
+  serializePortableProject,
+} from "../../project-io/portable/portable-project-codec";
+import {
+  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
+} from "../../project-io/native/version";
+import type {
   ShowApplicationAlert,
-  ShowApplicationConfirmation,
 } from "../../use-cases/dialogs/application-dialog-port";
 import {
-  createDefaultNativeEditorState,
-  createNativeProjectFileMetadata,
-  formatNativeProjectError,
-} from "../../use-cases/project-files/native-editor-state";
+  createDefaultProjectWorkspace,
+  createProjectState,
+  restoreProjectWorkspace,
+} from "../../use-cases/persistence/project-workspace";
+import {
+  downloadBrowserFile,
+} from "./download-browser-file";
 
 export interface ProjectFileWorkflowOptions {
   readonly runtime: EditorRuntime;
-  readonly getEditorState: () => NativeEditorState;
+  readonly documentId: string;
+  readonly captureWorkspace: () => ProjectWorkspaceState;
   readonly stopPlayback: () => void;
-  readonly seekPlayback: (tick: number) => void;
   readonly resetInteraction: () => void;
   readonly clearClipboard: () => void;
   readonly clearPendingMidiImport: () => void;
   readonly onSelectionCleared: () => void;
-  readonly onEditorStateRestored: (
-    project: ProjectState,
-    editorState: NativeEditorState,
+  readonly onWorkspaceRestored: (
+    workspace: ProjectWorkspaceState,
   ) => void;
   readonly alert: ShowApplicationAlert;
-  readonly confirm: ShowApplicationConfirmation;
 }
 
 export interface ProjectFileWorkflow {
-  readonly loadInputRef: RefObject<HTMLInputElement | null>;
-  readonly save: () => void;
-  readonly createNew: () => void;
-  readonly open: () => void;
-  readonly load: (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => Promise<void>;
+  readonly exportProject: () => void;
   readonly replaceActiveProject: (
     project: ProjectState,
-    metadata: NativeProjectFileMetadata,
     label: string,
-    editorState: NativeEditorState,
   ) => void;
 }
 
 export function useProjectFileWorkflow({
   runtime,
-  getEditorState,
+  documentId,
+  captureWorkspace,
   stopPlayback,
-  seekPlayback,
   resetInteraction,
   clearClipboard,
   clearPendingMidiImport,
   onSelectionCleared,
-  onEditorStateRestored,
+  onWorkspaceRestored,
   alert,
-  confirm,
 }: ProjectFileWorkflowOptions): ProjectFileWorkflow {
-  const loadInputRef = useRef<HTMLInputElement | null>(null);
-  const metadataRef = useRef<NativeProjectFileMetadata | null>(null);
+  const replaceActiveProject = useCallback((
+    project: ProjectState,
+    label: string,
+  ): void => {
+    stopPlayback();
+    resetInteraction();
+    clearClipboard();
+    clearPendingMidiImport();
+    onSelectionCleared();
+    runtime.selectionRequests.clear();
+    const workspace = createDefaultProjectWorkspace(project);
+    runtime.editorCommands.replaceState(
+      createProjectState(project, workspace),
+      label,
+    );
+    restoreProjectWorkspace(runtime, workspace);
+    onWorkspaceRestored(workspace);
+  }, [
+    clearClipboard,
+    clearPendingMidiImport,
+    onSelectionCleared,
+    onWorkspaceRestored,
+    resetInteraction,
+    runtime,
+    stopPlayback,
+  ]);
 
-  if (metadataRef.current === null) {
-    metadataRef.current = createNativeProjectFileMetadata();
-  }
-
-  const replaceActiveProject = useCallback(
-    (
-      project: ProjectState,
-      metadata: NativeProjectFileMetadata,
-      label: string,
-      restoredEditorState: NativeEditorState,
-    ): void => {
-      stopPlayback();
-      resetInteraction();
-      clearClipboard();
-      clearPendingMidiImport();
-      onSelectionCleared();
-      runtime.selectionRequests.clear();
-      runtime.noteColorMode.set(restoredEditorState.noteColorMode);
-      metadataRef.current = metadata;
-      runtime.editorCommands.replaceState(project, label);
-      const viewportBase = runtime.viewport.get();
-      const clipRuntimeStates = Object.fromEntries(
-        Object.entries(restoredEditorState.clipStatesById).map(
-          ([clipId, clipState]) => [
-            clipId,
-            {
-              ...clipState,
-              viewport: {
-                ...viewportBase,
-                ...clipState.viewport,
-              },
-            },
-          ],
-        ),
-      );
-
-      runtime.restoreClipEditorStates(clipRuntimeStates);
-      onEditorStateRestored(project, restoredEditorState);
-      seekPlayback(runtime.playheadTick.get());
-    },
-    [
-      clearClipboard,
-      clearPendingMidiImport,
-      onEditorStateRestored,
-      onSelectionCleared,
-      resetInteraction,
-      runtime,
-      seekPlayback,
-      stopPlayback,
-    ],
-  );
-
-  const save = useCallback((): void => {
+  const exportProject = useCallback((): void => {
     try {
-      const currentMetadata =
-        metadataRef.current ?? createNativeProjectFileMetadata();
-      const metadata: NativeProjectFileMetadata = {
-        ...currentMetadata,
-        savedAt: new Date().toISOString(),
-      };
-      const state = runtime.projectStore.getState();
-      const serialized = serializeNativeProjectFile(
-        state,
-        metadata,
-        getEditorState(),
-      );
-      const blob = new Blob(
-        [serialized],
-        {
-          type: "application/json;charset=utf-8",
-        },
-      );
+      const document = runtime.projectStore.getState();
+      const serialized = serializePortableProject({
+        sourceDocumentId: documentId,
+        exportedAt: new Date().toISOString(),
+        document,
+        workspace: captureWorkspace(),
+      });
+      const blob = new Blob([serialized], {
+        type: "application/json;charset=utf-8",
+      });
 
       if (blob.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
-        throw new NativeProjectFileError(
+        throw new ProjectPersistenceError(
           "INVALID_DATA",
-          "$",
-          "The project is too large to save as a native file.",
+          "The project is too large to export.",
         );
       }
 
-      metadataRef.current = metadata;
       downloadBrowserFile(
         blob,
-        createNativeProjectFileName(state.title),
+        createNativeProjectFileName(document.title),
       );
     } catch (error: unknown) {
       alert(
-        "Save failed",
-        formatNativeProjectError(
-          "Unable to save the project.",
-          error,
-        ),
+        "Export failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to export the project.",
         "danger",
       );
     }
-  }, [alert, getEditorState, runtime]);
-
-  const createNew = useCallback((): void => {
-    confirm({
-      title: "Create a new project?",
-      message: "Unsaved changes in the current project will be lost.",
-      confirmLabel: "Create project",
-      tone: "danger",
-      onConfirm(): void {
-        const project = createBlankProjectState();
-
-        replaceActiveProject(
-          project,
-          createNativeProjectFileMetadata(),
-          "Create project",
-          createDefaultNativeEditorState(project),
-        );
-      },
-    });
-  }, [confirm, replaceActiveProject]);
-
-  const open = useCallback((): void => {
-    const input = loadInputRef.current;
-
-    if (input !== null) {
-      input.value = "";
-      input.click();
-    }
-  }, []);
-
-  const load = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-      const input = event.currentTarget;
-      const file = input.files?.[0];
-
-      if (file === undefined) {
-        return;
-      }
-
-      try {
-        if (file.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
-          throw new NativeProjectFileError(
-            "INVALID_DATA",
-            "$",
-            "The selected project file is too large.",
-          );
-        }
-
-        const loadedProject = parseNativeProjectFile(await file.text());
-
-        replaceActiveProject(
-          loadedProject.projectState,
-          loadedProject.metadata,
-          "Load project",
-          loadedProject.editorState,
-        );
-      } catch (error: unknown) {
-        alert(
-          "Load failed",
-          formatNativeProjectError(
-            "Unable to load the project.",
-            error,
-          ),
-          "danger",
-        );
-      } finally {
-        input.value = "";
-      }
-    },
-    [alert, replaceActiveProject],
-  );
+  }, [alert, captureWorkspace, documentId, runtime]);
 
   return {
-    loadInputRef,
-    save,
-    createNew,
-    open,
-    load,
+    exportProject,
     replaceActiveProject,
   };
 }

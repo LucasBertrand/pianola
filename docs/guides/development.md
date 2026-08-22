@@ -32,7 +32,7 @@ Pour cibler un témoin sans redistribuer la suite actuelle :
 
 ```bash
 npm test -- tests/integration/critical-behavior.test.ts
-npm test -- src/project-io/native/__tests__/parse-native-project.test.ts
+npm test -- src/persistence/__tests__/project-repository-contract.test.ts
 ```
 
 ## Configurations TypeScript

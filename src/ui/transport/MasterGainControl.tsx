@@ -112,7 +112,7 @@ export function MasterGainControl(
   };
 
   return (
-    <section
+    <div
       className={
         muted
           ? "master-bus-control is-muted"
@@ -194,7 +194,7 @@ export function MasterGainControl(
           </svg>
         </button>
       </div>
-    </section>
+    </div>
   );
 }
 

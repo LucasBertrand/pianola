@@ -37,10 +37,6 @@ import {
   downloadBrowserFile,
 } from "./download-browser-file";
 import type {
-  NativeEditorState,
-  NativeProjectFileMetadata,
-} from "../../project-io/native/native-project-schema";
-import type {
   ApplicationDialogState,
   ShowApplicationAlert,
 } from "../../use-cases/dialogs/application-dialog-port";
@@ -53,19 +49,13 @@ import {
 import {
   getActiveClip,
 } from "../../domain/project/project-document";
-import {
-  createDefaultNativeEditorState,
-  createNativeProjectFileMetadata,
-} from "../../use-cases/project-files/native-editor-state";
 
 export interface MidiFileWorkflowOptions {
   readonly runtime: EditorRuntime;
   readonly pendingAnalysisRef: RefObject<MidiImportAnalysis | null>;
   readonly replaceActiveProject: (
     project: ProjectState,
-    metadata: NativeProjectFileMetadata,
     label: string,
-    editorState: NativeEditorState,
   ) => void;
   readonly showDialog: (dialog: ApplicationDialogState) => void;
   readonly alert: ShowApplicationAlert;
@@ -103,9 +93,7 @@ export function useMidiFileWorkflow({
         pendingAnalysisRef.current = null;
         replaceActiveProject(
           project,
-          createNativeProjectFileMetadata(),
           "Import MIDI project",
-          createDefaultNativeEditorState(project),
         );
       } catch (error: unknown) {
         pendingAnalysisRef.current = null;

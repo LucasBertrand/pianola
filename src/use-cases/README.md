@@ -3,13 +3,14 @@
 ## Que possède cette zone ?
 
 Les intentions indépendantes de React : service de commandes, ports de dialogue,
-création/projection de fichiers et workflows de notes/sélection du piano roll.
+autosave, projection du workspace et workflows de notes/sélection du piano roll.
 
 ## Quel fichier lire en premier ?
 
 Lire `commands/editor-command-service.ts` pour le port de mutation. Pour le
 piano roll, commencer par `piano-roll/notes/note-gesture-workflow.ts` ou
-`piano-roll/selection/selection-edit-plans.ts`.
+`piano-roll/selection/selection-edit-plans.ts`. La persistance de session part
+de `persistence/project-autosave.ts`.
 
 ## Quelles dépendances sont autorisées ?
 

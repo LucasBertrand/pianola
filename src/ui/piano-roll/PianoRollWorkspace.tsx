@@ -11,12 +11,6 @@ import {
   APPLICATION_CONSTANTS,
 } from "../../config/product-config";
 import {
-  EDITOR_CONSTANTS,
-} from "../../config/editor-config";
-import {
-  type ClipId,
-} from "../../domain/identifiers";
-import {
   getActiveClip,
 } from "../../domain/project/project-document";
 import {
@@ -37,15 +31,9 @@ import {
 import {
   ManageMeasuresDialog,
 } from "../../ui/dialogs/ManageMeasuresDialog";
-import type {
-  ViewportState,
-} from "../../editor/geometry/converter";
 import {
   type MidiImportAnalysis,
 } from "../../project-io/midi/midi-import-types";
-import {
-  type NativeClipEditorState,
-} from "../../project-io/native/native-project-schema";
 import {
   ApplicationDialogOverlay,
 } from "../../ui/dialogs/ApplicationDialogOverlay";
@@ -108,6 +96,9 @@ import {
   useProjectFileWorkflow,
 } from "../../ui/project-files/useProjectFileWorkflow";
 import {
+  useProjectAutosave,
+} from "../../ui/project-files/useProjectAutosave";
+import {
   useMidiFileWorkflow,
 } from "../../ui/project-files/useMidiFileWorkflow";
 import {
@@ -116,6 +107,9 @@ import {
 import {
   usePrimaryActionTrigger,
 } from "./interactions/usePrimaryActionTrigger";
+import {
+  useKeyboardShortcut,
+} from "./interactions/useKeyboardShortcut";
 import {
   useViewportControls,
 } from "../../ui/piano-roll/useViewportControls";
@@ -128,14 +122,41 @@ import {
 import {
   usePianoRollProjectState,
 } from "./usePianoRollProjectState";
+import type {
+  ProjectRepository,
+  ProjectWorkspaceState,
+} from "../../persistence/project-persistence-model";
+import type {
+  UserSettings,
+  UserSettingsRepository,
+} from "../../persistence/user-settings-model";
+import {
+  captureProjectWorkspace,
+} from "../../use-cases/persistence/project-workspace";
 
 export interface PianoRollWorkspaceProps {
   readonly runtime: EditorRuntime;
+  readonly documentId: string;
+  readonly storedRevision: number;
+  readonly initialWorkspace: ProjectWorkspaceState;
+  readonly projectRepository: ProjectRepository;
+  readonly initialUserSettings: UserSettings;
+  readonly userSettingsRepository: UserSettingsRepository;
+  readonly onUserSettingsChange: (settings: UserSettings) => void;
+  readonly onCloseProject: () => void | Promise<void>;
 }
 
 /** Coordinates the workflows that meet on the piano-roll workspace. */
 export function PianoRollWorkspace({
   runtime,
+  documentId,
+  storedRevision,
+  initialWorkspace,
+  projectRepository,
+  initialUserSettings,
+  userSettingsRepository,
+  onUserSettingsChange,
+  onCloseProject,
 }: PianoRollWorkspaceProps): React.JSX.Element {
   const pianoRollControllerRef =
     useRef<PianoRollControllerPort | null>(null);
@@ -163,20 +184,31 @@ export function PianoRollWorkspace({
     setGeneralInspectorToolbarHost,
   ] = useState<HTMLDivElement | null>(null);
   const [selectionMode, setSelectionMode] =
-    useState<SelectionMode>("replace");
+    useState<SelectionMode>(initialUserSettings.selectionMode);
   const [noteColorMode, setNoteColorMode] =
     useState<NoteColorMode>(
-      () => runtime.noteColorMode.get(),
+      initialUserSettings.noteColorMode,
     );
   const [pitchPreviewEnabled, setPitchPreviewEnabled] =
     useState<boolean>(
-      EDITOR_CONSTANTS.defaultPitchPreviewEnabled,
+      initialUserSettings.pitchPreviewEnabled,
     );
   const [pitchSnapSettings, setPitchSnapSettings] =
     useState<PitchSnapSettings>(
       () => runtime.pitchSnapSettings.get(),
     );
   const activeClip = getActiveClip(projectState);
+  const autosave = useProjectAutosave(
+    runtime,
+    documentId,
+    storedRevision,
+    projectRepository,
+    selectedInstrumentId,
+  );
+
+  useEffect(() => {
+    setSelectedInstrumentId(initialWorkspace.selectedInstrumentId);
+  }, [initialWorkspace.selectedInstrumentId, setSelectedInstrumentId]);
 
   const totalTicks = getClipDurationTicks(activeClip);
   const updatePitchSnapSettings = useCallback(
@@ -244,7 +276,10 @@ export function PianoRollWorkspace({
     [runtime],
   );
 
-  usePrimaryActionTrigger(togglePlayback);
+  usePrimaryActionTrigger(
+    togglePlayback,
+    initialUserSettings.shortcuts["transport.toggle"],
+  );
 
   const {
     appShellRef,
@@ -399,52 +434,74 @@ export function PianoRollWorkspace({
         currentMode === "instrument" ? "pitch" : "instrument";
 
       runtime.noteColorMode.set(nextMode);
+      void userSettingsRepository.update((current) => ({
+        ...current,
+        noteColorMode: nextMode,
+      })).then(onUserSettingsChange).catch((error: unknown) => {
+        showApplicationAlert(
+          "Settings not saved",
+          error instanceof Error ? error.message : "Unable to save settings.",
+          "danger",
+        );
+      });
       return nextMode;
     });
-  }, [runtime]);
+  }, [
+    onUserSettingsChange,
+    runtime,
+    showApplicationAlert,
+    userSettingsRepository,
+  ]);
+  const handleSelectionModeChange = useCallback((
+    nextMode: SelectionMode,
+  ): void => {
+    setSelectionMode(nextMode);
+    void userSettingsRepository.update((current) => ({
+      ...current,
+      selectionMode: nextMode,
+    })).then(onUserSettingsChange).catch((error: unknown) => {
+      showApplicationAlert(
+        "Settings not saved",
+        error instanceof Error ? error.message : "Unable to save settings.",
+        "danger",
+      );
+    });
+  }, [
+    onUserSettingsChange,
+    showApplicationAlert,
+    userSettingsRepository,
+  ]);
+  const handlePitchPreviewToggle = useCallback((): void => {
+    setPitchPreviewEnabled((enabled) => {
+      const nextEnabled = !enabled;
+      void userSettingsRepository.update((current) => ({
+        ...current,
+        pitchPreviewEnabled: nextEnabled,
+      })).then(onUserSettingsChange).catch((error: unknown) => {
+        showApplicationAlert(
+          "Settings not saved",
+          error instanceof Error ? error.message : "Unable to save settings.",
+          "danger",
+        );
+      });
+      return nextEnabled;
+    });
+  }, [
+    onUserSettingsChange,
+    showApplicationAlert,
+    userSettingsRepository,
+  ]);
   const {
-    loadInputRef: loadProjectInputRef,
-    save: handleSaveProject,
-    createNew: handleNewProject,
-    open: handleOpenProject,
-    load: handleProjectFileChange,
+    exportProject: handleExportProject,
     replaceActiveProject,
   } = useProjectFileWorkflow({
     runtime,
-    getEditorState() {
-      const runtimeStates = runtime.captureClipEditorStates();
-      const clipStatesById: Record<ClipId, NativeClipEditorState> = {};
-      const state = runtime.projectStore.getState();
-
-      for (const [clipId, clipState] of Object.entries(runtimeStates)) {
-        const clip = state.clipsById[clipId];
-
-        if (clip === undefined) {
-          continue;
-        }
-
-        clipStatesById[clipId] = {
-          playheadTick: Math.min(
-            getClipDurationTicks(clip),
-            Math.max(0, Math.round(clipState.playheadTick)),
-          ),
-          pitchSnapSettings: clipState.pitchSnapSettings,
-          gridSettings: clipState.gridSettings,
-          viewport: getNativeViewportState(clipState.viewport),
-        };
-      }
-
-      return {
-        activeClipId: state.workspace.activeClipId,
-        selectedInstrumentId,
-        selectionMode,
-        noteColorMode,
-        pitchPreviewEnabled,
-        clipStatesById,
-      };
-    },
+    documentId,
+    captureWorkspace: () => captureProjectWorkspace(
+      runtime,
+      selectedInstrumentId,
+    ),
     stopPlayback,
-    seekPlayback,
     resetInteraction() {
       const controller = pianoRollControllerRef.current;
 
@@ -458,21 +515,38 @@ export function PianoRollWorkspace({
     onSelectionCleared() {
       setSelectionAvailable(false);
     },
-    onEditorStateRestored(nextProject, editorState) {
-      setSelectionMode(editorState.selectionMode);
-      setNoteColorMode(editorState.noteColorMode);
-      setPitchPreviewEnabled(editorState.pitchPreviewEnabled);
-      setSelectedInstrumentId(editorState.selectedInstrumentId);
-      const activeEditorState =
-        editorState.clipStatesById[nextProject.workspace.activeClipId];
+    onWorkspaceRestored(workspace) {
+      setSelectedInstrumentId(workspace.selectedInstrumentId);
+      const activeState = workspace.clipStatesById[workspace.activeClipId];
 
-      if (activeEditorState !== undefined) {
-        setPitchSnapSettings(activeEditorState.pitchSnapSettings);
+      if (activeState !== undefined) {
+        setPitchSnapSettings(activeState.pitchSnapSettings);
       }
     },
     alert: showApplicationAlert,
-    confirm: showApplicationConfirmation,
   });
+  useKeyboardShortcut(
+    [initialUserSettings.shortcuts["editor.undo"]],
+    handleUndo,
+  );
+  useKeyboardShortcut(
+    [initialUserSettings.shortcuts["editor.redo"]],
+    handleRedo,
+  );
+  const handleCloseProject = useCallback(async (): Promise<void> => {
+    try {
+      await autosave.flush();
+      await onCloseProject();
+    } catch (error: unknown) {
+      showApplicationAlert(
+        "Project not closed",
+        error instanceof Error
+          ? `The latest changes could not be saved. ${error.message}`
+          : "The latest changes could not be saved.",
+        "danger",
+      );
+    }
+  }, [autosave, onCloseProject, showApplicationAlert]);
   const {
     inputRef: importMidiInputRef,
     openImport: handleOpenMidiImport,
@@ -495,14 +569,12 @@ export function PianoRollWorkspace({
       <EditorHeader
         projectState={projectState}
         playbackStatus={playbackStatus}
-        projectInputRef={loadProjectInputRef}
         midiInputRef={importMidiInputRef}
-        onNewProject={handleNewProject}
-        onSaveProject={handleSaveProject}
-        onOpenProject={handleOpenProject}
+        saveStatus={autosave.status}
+        onCloseProject={handleCloseProject}
+        onExportProject={handleExportProject}
         onOpenMidiImport={handleOpenMidiImport}
         onExportMidi={handleExportMidi}
-        onProjectFileChange={handleProjectFileChange}
         onMidiFileChange={handleMidiFileChange}
         onProjectTitleCommit={handleProjectTitleCommit}
         onReturnToStart={handleReturnToStart}
@@ -568,7 +640,7 @@ export function PianoRollWorkspace({
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={handlePaste}
-            onSelectionModeChange={setSelectionMode}
+            onSelectionModeChange={handleSelectionModeChange}
             onNoteColorModeToggle={handleNoteColorModeToggle}
             onOpenSliceSelection={handleOpenSliceSelection}
             onAddMarkerAtPlayhead={timeMapMarkers.openMarkerAtPlayhead}
@@ -584,9 +656,7 @@ export function PianoRollWorkspace({
               timeMap={activeClip.timeline.timeMap}
               previewEnabled={pitchPreviewEnabled}
               pitchSnapSettings={pitchSnapSettings}
-              onPreviewToggle={() => {
-                setPitchPreviewEnabled((enabled) => !enabled);
-              }}
+              onPreviewToggle={handlePitchPreviewToggle}
               onPitchAudition={handlePitchAudition}
               onPitchLongPress={handlePitchSelect}
               onPitchInteractionChange={(pitch) => {
@@ -727,17 +797,6 @@ export function PianoRollWorkspace({
       ) : null}
     </main>
   );
-}
-
-function getNativeViewportState(
-  viewport: ViewportState,
-): NativeClipEditorState["viewport"] {
-  return {
-    zoomX: viewport.zoomX,
-    zoomY: viewport.zoomY,
-    scrollX: viewport.scrollX,
-    scrollY: viewport.scrollY,
-  };
 }
 
 function formatAudioPlaybackError(error: unknown): string {

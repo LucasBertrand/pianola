@@ -2,27 +2,37 @@
 
 ## Format natif `.pianola`
 
-Le point d’entrée de lecture est
-`src/project-io/native/parse-native-project.ts`; celui d’écriture est
-`src/project-io/native/serialize-native-project.ts`. Le schéma JSON v1 vit dans
-`src/project-io/native/native-project-schema.ts` et reste distinct du domaine.
+Le point d’entrée unique du format portable est
+`src/project-io/portable/portable-project-codec.ts`. Le fichier porte
+`format: "app.pianola.project"`, sa propre `schemaVersion`, le document musical
+et un `ProjectWorkspaceState` séparé. Il ne contient aucune préférence
+utilisateur.
 
-Le parseur :
+Le lecteur traite toujours le JSON comme inconnu, reconnaît format et version,
+valide le document puis le workspace. Une version future est refusée sans être
+réécrite. L'import crée un nouveau `documentId` local même si le fichier vient
+d'un projet déjà présent dans la bibliothèque.
+
+Le format local est différent du format portable. L'enveloppe
+`app.pianola.stored-project` ajoute `documentId`, révision et `updatedAt`; elle
+est sérialisée dans le Web Worker puis conservée en deux générations par
+IndexedDB. Le catalogue ne contient que les résumés nécessaires à l'accueil.
+
+Le pipeline portable :
 
 1. reçoit une valeur JSON inconnue ;
-2. vérifie version, limites et sections ;
-3. construit instruments, clips, document et état d’éditeur ;
-4. retourne un agrégat prêt à remplacer le runtime.
+2. vérifie identité, version, limites et sections ;
+3. construit le document et le workspace ;
+4. crée une entrée locale distincte sans modifier `UserSettings`.
 
-Pour ajouter un champ persistant à un instrument, mettre à jour le type du
-domaine, le schéma natif, le sérialiseur, le lecteur d’instruments et leurs
-tests. Ne pas disperser la validation d’un même agrégat.
+L'ancien codec sous `src/project-io/native/` n'est plus relié au produit. La
+rupture avec son enveloppe v1 est volontaire.
 
 Tests ciblés :
 
 ```bash
-npm test -- src/project-io/native/__tests__/parse-native-project.test.ts
-npm test -- src/project-io/native/__tests__/serialize-native-project.test.ts
+npm test -- src/persistence/__tests__/persistence-codecs.test.ts
+npm test -- src/persistence/__tests__/project-repository-contract.test.ts
 ```
 
 ## MIDI
@@ -42,5 +52,5 @@ Test ciblé actuel :
 npm test -- tests/integration/midi-regression.test.mjs
 ```
 
-Le découpage interne des parseurs MIDI et natif n’appartient pas au chantier de
-navigabilité courant ; leurs façades et leurs tests restent inchangés.
+L'import MIDI remplace le document de l'entrée locale active, puis l'autosave
+publie cette nouvelle révision. Il ne modifie pas les préférences utilisateur.

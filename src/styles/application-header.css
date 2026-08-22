@@ -1,39 +1,70 @@
-.topbar {
+.app-header {
   position: relative;
   z-index: 15;
   display: grid;
+  overflow-x: auto;
+  overflow-y: visible;
   min-height: 72px;
   padding: 0 15px;
   background: var(--color-surface-app);
   box-shadow: none;
   grid-template-columns:
-    minmax(260px, 1fr)
-    auto
-    minmax(260px, 1fr);
-  grid-template-areas: "left center master";
+    minmax(0, 1fr)
+    minmax(160px, 320px)
+    minmax(0, 1fr);
+  grid-template-areas: "left center right";
   align-items: center;
   gap: 22px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  white-space: nowrap;
 }
 
-.topbar-left {
-  display: flex;
+.app-header::-webkit-scrollbar {
+  display: none;
+}
+
+/* Let the project popover escape the scrolling rail while it is open. */
+.app-header:has(.project-menu-trigger[aria-expanded="true"]) {
+  overflow: visible;
+}
+
+.app-header > section {
   min-width: 0;
+}
+
+.app-header > .left {
+  display: flex;
+  min-width: max-content;
   align-items: center;
   gap: 8px;
   grid-area: left;
+  justify-self: start;
 }
 
-.topbar-center {
+.app-header > .center {
   display: flex;
-  min-width: 0;
+  width: 100%;
   align-items: center;
   justify-content: center;
   grid-area: center;
+  justify-self: center;
+}
+
+.app-header > .right {
+  display: flex;
+  min-width: max-content;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  grid-area: right;
+  justify-self: end;
 }
 
 .project-title-input {
   display: block;
-  width: min(320px, 100%);
+  width: 100%;
   min-width: 0;
   padding: 4px 8px;
   border: 1px solid transparent;
@@ -52,10 +83,49 @@
   background: var(--color-surface-low);
 }
 
-.topbar-actions {
-  display: flex;
-  min-width: 0;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 6px;
+.project-save-status {
+  display: block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-accent-success);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 5px var(--color-accent-success);
+}
+
+.project-save-status.is-saving {
+  background: var(--color-accent-primary-bright);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 5px var(--color-accent-primary-bright);
+  animation: project-save-status-pulse 1.1s ease-in-out infinite;
+}
+
+.project-save-status.is-unsaved {
+  background: var(--color-accent-warm);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 5px var(--color-accent-warm);
+}
+
+.project-save-status.is-error {
+  background: var(--color-accent-danger);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 6px var(--color-accent-danger);
+}
+
+@keyframes project-save-status-pulse {
+  50% {
+    opacity: 0.42;
+    transform: scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-save-status.is-saving {
+    animation: none;
+  }
 }

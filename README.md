@@ -22,10 +22,10 @@ npm ci
 npm run dev
 ```
 
-Vite affiche l’URL locale, normalement `http://localhost:5173`. Un projet vierge
-est créé en mémoire à l’ouverture. Pour tester depuis une tablette du même
-réseau, ouvrez l’adresse réseau indiquée par Vite et autorisez le port dans le
-pare-feu local si nécessaire.
+Vite affiche l’URL locale, normalement `http://localhost:5173`. L’application
+ouvre la bibliothèque locale ; créez ou importez ensuite un projet. Pour tester
+depuis une tablette du même réseau, ouvrez l’adresse réseau indiquée par Vite et
+autorisez le port dans le pare-feu local si nécessaire.
 
 Avant de proposer un changement :
 
@@ -39,7 +39,7 @@ npm run verify
 | --- | --- |
 | `npm run dev` | lancer Vite sur le port 5173 |
 | `npm run build` | vérifier TypeScript puis produire `dist/` |
-| `npm test` | exécuter les 100 scénarios Vitest |
+| `npm test` | exécuter la suite Vitest |
 | `npm run test:worklet-build` | charger et faire rendre le module AudioWorklet produit |
 | `npm run typecheck` | vérifier les trois configurations TypeScript |
 | `npm run check:docs` | vérifier liens locaux et chemins documentés |
@@ -59,6 +59,7 @@ Les variantes de tests sont décrites dans le
 | trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
 | comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
 | savoir quel état persiste | [`docs/state-ownership.md`](docs/state-ownership.md) |
+| faire évoluer sauvegarde ou préférences | [`docs/persistence-strategy.md`](docs/persistence-strategy.md) |
 | installer et vérifier | [`docs/guides/development.md`](docs/guides/development.md) |
 | utiliser l’éditeur | [`docs/guides/usage.md`](docs/guides/usage.md) |
 | comprendre `.pianola` et MIDI | [`docs/guides/project-files.md`](docs/guides/project-files.md) |
@@ -75,6 +76,8 @@ src/
 ├── use-cases/piano-roll/        intentions notes et sélection
 ├── audio/                       timeline et moteur AudioWorklet
 ├── project-io/                  format natif et MIDI
+├── persistence/                 modèles, codecs et ports de stockage
+├── pwa/                         IndexedDB, Worker, StorageManager et service worker
 ├── ui/                          React, Canvas et adaptateurs navigateur
 ├── styles/                      CSS par surface propriétaire
 ├── music/                       vocabulaire tonal déterministe
@@ -127,7 +130,8 @@ Pianola distingue quatre durées de vie :
 | État | Propriétaire | Persisté | Undo/Redo |
 | --- | --- | --- | --- |
 | document musical | `ProjectDocument` dans `ProjectStore` | oui | oui |
-| espace de travail | `WorkspaceState`, runtime et hooks UI | en partie | non |
+| espace de travail projet | `ProjectWorkspaceState` projeté dans le runtime | oui, avec le document | non |
+| préférences utilisateur | `UserSettingsRepository` | oui, séparément | non |
 | session de geste | sélection, draft, lasso, presse-papier | non | non |
 | temps réel | transport AudioWorklet, voix DSP, buffers Canvas | non | non |
 
@@ -162,7 +166,7 @@ d’inspecteur ne gardent que le protocole d’interaction.
 
 ### Fichiers projet
 
-Le menu de fichiers est dans `src/ui/project-files/ProjectFileMenu.tsx`. Le
+Le menu du projet est dans `src/ui/project-files/ProjectMenu.tsx`. Le
 format natif et le MIDI ont des pipelines indépendants sous `src/project-io/`.
 Consultez le [guide des fichiers](docs/guides/project-files.md) avant de modifier
 un schéma, un parseur ou un export.
@@ -186,17 +190,18 @@ Tous les gestes et contrôles sont détaillés dans
 
 ## Fichiers et données
 
-Le format `.pianola` v1 stocke le document musical et les préférences d’éditeur
-utiles. Le parseur traite le JSON comme inconnu, vérifie les limites, puis
-construit le domaine. Le chargement arrête la lecture et réinitialise les états
-transitoires avant de remplacer le projet.
+Le nouveau format `.pianola` stocke le document musical et le workspace projet,
+jamais les préférences utilisateur. Le parseur traite le JSON comme inconnu,
+vérifie identité, version et limites, puis crée une entrée distincte dans la
+bibliothèque IndexedDB. L'ancien format v1 n'est pas accepté par ce flux.
 
 L’import MIDI analyse d’abord le SMF, présente les avertissements et collisions,
 puis construit un nouveau projet. L’export reçoit une projection musicale
 neutre ; le codec ne connaît ni React, ni le store, ni le clip affiché.
 
-Les fichiers restent locaux. Un rechargement sans sauvegarde perd les
-modifications en mémoire.
+Les données restent locales. L'autosave conserve deux générations validées et
+publie leur résumé dans le catalogue ; l'export `.pianola` reste la sauvegarde
+portable appartenant à l'utilisateur.
 
 ## Tests et validation
 
@@ -208,7 +213,7 @@ La référence est `npm run verify`. Elle contrôle, dans l’ordre :
 4. TypeScript strict ;
 5. build Vite de production ;
 6. chargement et rendu du module AudioWorklet produit ;
-7. 100 scénarios Vitest.
+7. suite Vitest.
 
 La suite centrale de régression reste volontairement en place. Pour cibler un
 fichier :

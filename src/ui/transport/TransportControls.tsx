@@ -23,7 +23,11 @@ export function TransportControls({
   const playing = status === "playing";
 
   return (
-    <div className="transport-cluster" aria-label="Transport preview">
+    <div
+      className="transport-controls"
+      role="group"
+      aria-label="Transport preview"
+    >
       <button
         className="icon-button"
         type="button"

@@ -1,8 +1,9 @@
-.transport-cluster {
+.transport-controls {
   display: flex;
+  min-width: max-content;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  grid-area: transport;
 }
 
 .icon-button,
@@ -111,7 +112,6 @@
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface-inset);
-  grid-area: master;
   grid-template-rows: 15px 19px;
   justify-self: end;
   gap: 1px;

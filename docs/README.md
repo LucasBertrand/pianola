@@ -13,4 +13,6 @@ vers les guides locaux placés dans `src/`.
 | trouver le propriétaire d’un comportement | [`code-map.md`](code-map.md) |
 | comprendre les couches | [`architecture.md`](architecture.md) |
 | décider de la durée de vie d’un état | [`state-ownership.md`](state-ownership.md) |
+| concevoir sauvegarde, autosave ou préférences | [`persistence-strategy.md`](persistence-strategy.md) |
+| comparer IndexedDB, fichiers, Android ou cloud | [`storage-strategies.md`](storage-strategies.md) |
 | comprendre les états de composition | [`app-composition.md`](app-composition.md) |

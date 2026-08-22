@@ -1,12 +1,21 @@
 import { useEffect } from "react";
+import type {
+  ShortcutBinding,
+} from "../../../persistence/user-settings-model";
 
 export function useKeyboardShortcut(
-  codes: readonly string[],
+  bindings: readonly ShortcutBinding[],
   onAction: () => void,
 ): void {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (codes.includes(event.code)) {
+      if (bindings.some((binding) =>
+        event.code === binding.code
+        && event.ctrlKey === binding.control
+        && event.shiftKey === binding.shift
+        && event.altKey === binding.alt
+        && event.metaKey === binding.meta
+      )) {
         if (
           document.activeElement instanceof HTMLInputElement
           || document.activeElement instanceof HTMLTextAreaElement
@@ -23,5 +32,5 @@ export function useKeyboardShortcut(
     return (): void => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [codes, onAction]);
+  }, [bindings, onAction]);
 }

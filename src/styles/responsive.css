@@ -19,14 +19,16 @@
     --project-inspector-width: 276px;
   }
 
-  .topbar {
+  .app-header {
     gap: 14px;
     grid-template-columns:
-      minmax(200px, 1fr) auto minmax(200px, 1fr);
+      minmax(0, 1fr)
+      minmax(160px, 240px)
+      minmax(0, 1fr);
   }
 
   .project-title-input {
-    width: min(240px, 100%);
+    width: 100%;
   }
 }
 
@@ -35,36 +37,44 @@
     --project-inspector-width: 250px;
   }
 
-  .topbar {
-    min-height: auto;
-    padding-top: 10px;
-    padding-bottom: 10px;
+  .app-header {
+    gap: 14px;
     grid-template-columns:
-      minmax(0, 1fr) auto minmax(0, 1fr);
-    grid-template-areas:
-      "left center master";
-    row-gap: 10px;
+      minmax(0, 1fr)
+      minmax(160px, 280px)
+      minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .app-header {
+    min-height: 64px;
+    padding: 0 10px;
+    grid-template-columns:
+      max-content
+      minmax(80px, 1fr)
+      max-content;
+    grid-template-areas: "left center right";
+    gap: 10px;
   }
 
-  .topbar-left {
+  .app-header > .left {
     justify-self: start;
   }
 
-  .topbar-center {
+  .app-header > .center {
     justify-self: center;
+  }
+
+  .app-header > .right {
+    justify-self: end;
   }
 }
 
 @media (max-width: 920px) {
-  .topbar {
-    min-height: auto;
+  .app-header {
     padding-right: 10px;
     padding-left: 10px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    grid-template-areas:
-      "left center master";
     gap: 10px;
   }
 
@@ -107,31 +117,9 @@
 }
 
 @media (max-width: 920px) and (orientation: portrait) {
-  .topbar {
-    grid-template-columns:
-      minmax(168px, 1fr) auto minmax(168px, 1fr);
-    grid-template-areas:
-      "left center master";
-    align-items: center;
-    column-gap: 12px;
-    row-gap: 10px;
-  }
-
-  .topbar-left {
-    width: 100%;
-    justify-self: start;
-  }
-
-  .topbar-center {
-    align-self: center;
-    justify-self: center;
-  }
-
   .master-bus-control {
-    width: 168px;
-    min-width: 168px;
-    align-self: center;
-    justify-self: end;
+    width: min(100%, 250px);
+    min-width: 0;
   }
 
   .workspace {
@@ -409,4 +397,81 @@
     border-bottom: 0;
   }
 
+}
+
+@media (max-width: 600px) {
+  .app-header {
+    min-height: 54px;
+    padding: 0 7px;
+    grid-template-columns:
+      max-content
+      minmax(48px, 1fr)
+      max-content;
+    grid-template-areas: "left center right";
+    gap: 7px;
+  }
+
+  .app-header > .left {
+    gap: 5px;
+  }
+
+  .project-title-input {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: 12px;
+  }
+
+  .project-menu-trigger {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+  }
+
+  .project-menu-chevron {
+    display: none;
+  }
+
+  .transport-controls {
+    gap: 5px;
+  }
+
+  .transport-controls .icon-button {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .transport-controls .play-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .master-bus-control {
+    width: 112px;
+    min-width: 112px;
+    height: 40px;
+    grid-template-rows: 13px 17px;
+  }
+
+  .master-bus-heading small {
+    display: none;
+  }
+
+  .master-bus-heading {
+    justify-content: flex-end;
+  }
+
+  .master-tuning-control {
+    padding-right: 2px;
+    padding-left: 2px;
+  }
+
+  .master-tuning-control input {
+    width: 27px;
+  }
+
+  .project-menu-popover {
+    width: min(286px, calc(100vw - 24px));
+  }
 }

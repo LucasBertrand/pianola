@@ -1,82 +1,182 @@
-.project-file-menu {
+.project-menu {
   position: relative;
+  flex: 0 0 auto;
 }
 
-.topbar-icon-button {
+.project-menu-trigger {
   display: grid;
-  width: 34px;
-  height: 34px;
-  padding: 0;
+  height: 36px;
+  padding: 0 9px;
   border: 1px solid var(--color-border-control);
-  border-radius: 9px;
-  place-items: center;
+  border-radius: 10px;
   background: var(--color-surface-control);
   color: var(--color-text-secondary);
+  grid-template-columns: 19px 10px;
+  place-items: center;
+  gap: 4px;
   cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
-.topbar-icon-button:active:not(:disabled) {
-  border-color: var(--color-accent-primary);
+.project-menu-trigger:hover,
+.project-menu-trigger[aria-expanded="true"] {
+  border-color: var(--color-border-active);
   background: var(--color-surface-selected);
+  color: var(--color-text-primary);
 }
 
-.topbar-icon-button:disabled {
-  cursor: default;
-  opacity: 0.32;
+.project-menu-trigger:focus-visible,
+.project-menu-item:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
 }
 
-.topbar-icon-button svg,
-.project-file-menu-item svg {
-  width: 17px;
-  height: 17px;
+.project-menu-trigger > svg:first-child {
+  width: 19px;
+  height: 19px;
+}
+
+.project-menu-trigger svg,
+.project-menu-item-icon svg {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.75;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.project-file-menu-popover {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 8px);
-  left: 0;
-  display: grid;
-  width: max-content;
-  min-width: 184px;
-  padding: 6px;
-  border: 1px solid var(--color-border-control);
-  border-radius: 10px;
-  background: var(--color-surface-panel);
-  box-shadow: 0 12px 30px var(--color-shadow-medium);
-  gap: 2px;
+.project-menu-chevron {
+  width: 10px;
+  height: 10px;
+  transition: transform 120ms ease;
 }
 
-.project-file-menu-popover[hidden] {
+.project-menu-trigger[aria-expanded="true"] .project-menu-chevron {
+  transform: rotate(180deg);
+}
+
+.project-menu-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 9px);
+  left: 0;
+  width: 286px;
+  padding: 7px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 14px;
+  background: var(--color-surface-panel);
+  box-shadow: 0 18px 44px var(--color-shadow-strong);
+}
+
+.project-menu-popover[hidden] {
   display: none;
 }
 
-.project-file-menu-item {
+.project-menu-heading {
+  display: flex;
+  padding: 10px 11px 12px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-menu-heading strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.project-menu-heading span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.project-menu-group {
   display: grid;
-  min-height: 40px;
-  padding: 0 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border-control);
+  margin-top: 3px;
+  gap: 2px;
+}
+
+.project-menu-group-label {
+  padding: 3px 10px 5px;
+  color: var(--color-text-quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.project-menu-item {
+  display: grid;
+  width: 100%;
+  min-height: 54px;
+  padding: 7px 9px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 9px;
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
-  font-size: 11px;
   text-align: left;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  transition:
+    border-color 100ms ease,
+    background-color 100ms ease,
+    color 100ms ease;
 }
 
-.project-file-menu-item:active {
+.project-menu-item:hover,
+.project-menu-item:focus-visible {
   border-color: var(--color-border-active);
   background: var(--color-surface-raised-strong);
   color: var(--color-text-primary);
+}
+
+.project-menu-item:active {
+  background: var(--color-surface-selected);
+}
+
+.project-menu-item-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 8px;
+  place-items: center;
+  background: var(--color-surface-control);
+  color: var(--color-accent-primary-bright);
+}
+
+.project-menu-item-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.project-menu-item-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-menu-item-copy strong {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.project-menu-item-copy small {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .project-file-input {

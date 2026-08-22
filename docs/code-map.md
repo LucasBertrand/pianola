@@ -7,13 +7,14 @@ départ visible, le propriétaire d’état et les témoins actuels.
 
 | Capacité | Point d’entrée | Propriétaire d’état | Tests |
 | --- | --- | --- | --- |
-| composition | `src/app/App.tsx` puis `src/ui/piano-roll/PianoRollWorkspace.tsx` | `EditorRuntime` et hooks de capacité | `tests/integration/critical-behavior.test.ts` |
+| composition | `src/app/App.tsx` puis `src/ui/home/ApplicationHome.tsx` ou `src/ui/piano-roll/PianoRollWorkspace.tsx` | accueil sans runtime ou une session `EditorRuntime` active | `tests/integration/critical-behavior.test.ts` |
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document et `WorkspaceState.activeClipId` | suite centrale de régression |
 | transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` du clip pour tempo/métrique, document pour boucle, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
-| fichiers natifs | `src/ui/project-files/useProjectFileWorkflow.ts` | document + état natif d’éditeur | tests sous `src/project-io/native/__tests__/` |
+| persistance locale | `src/persistence/project-persistence-model.ts` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/persistence/__tests__/project-repository-contract.test.ts` |
+| fichiers `.pianola` | `src/project-io/portable/portable-project-codec.ts` | document + `ProjectWorkspaceState` | `src/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
 
@@ -34,10 +35,11 @@ restent le garde-fou de parité des flux transversaux.
 | modifier Copy/Cut/Paste | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
 | modifier les collisions | `src/ui/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts` | `src/domain/note-collision.ts` |
 | modifier l’inspecteur | `src/ui/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
-| ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et format natif |
+| ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
 | modifier le master bus | `src/ui/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | commandes de transport, validation et painters ruler/grid |
-| modifier `.pianola` | `src/project-io/native/parse-native-project.ts` | schéma, parsing et sérialiseur |
+| modifier `.pianola` | `src/project-io/portable/portable-project-codec.ts` | workspace codec et parseur de document |
+| modifier autosave ou récupération | `src/use-cases/persistence/project-autosave.ts` | repository IndexedDB et Worker |
 | modifier le MIDI | `src/project-io/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/config/application-colors.ts` | tokens CSS et styles de surface |
 | modifier le responsive | `src/styles/responsive.css` | styles propriétaires des surfaces impliquées |
@@ -74,24 +76,26 @@ TransportControls
 Le statut et les voix ne sont ni persistés ni annulables. Le worklet avance
 l’horloge à chaque échantillon ; l’UI ne planifie aucune occurrence.
 
-## Flux : fichier natif
+## Flux : persistance et fichier portable
 
 ```text
-ProjectFileMenu
-  → useProjectFileWorkflow
-  → serialize-native-project / parse-native-project
-  → parsing par section
-  → remplacement du projet et restauration du workspace
+ProjectStore / signaux workspace
+  → ProjectAutosave
+  → WorkerStoredProjectCodec
+  → IndexedDbProjectRepository
+  → génération + résumé publiés atomiquement
+
+Export : useProjectFileWorkflow → portable-project-codec → Blob
+Import : ApplicationHome → portable-project-codec → nouvelle entrée locale
 ```
 
-Les tests de contrat sont
-`src/project-io/native/__tests__/parse-native-project.test.ts` et
-`src/project-io/native/__tests__/serialize-native-project.test.ts`.
+Le même contrat est exécuté contre les repositories mémoire et IndexedDB dans
+`src/persistence/__tests__/project-repository-contract.test.ts`.
 
 ## Flux : MIDI
 
 ```text
-ProjectFileMenu
+ProjectMenu
   → useMidiFileWorkflow
   → smf-reader
   → analyze-midi-import

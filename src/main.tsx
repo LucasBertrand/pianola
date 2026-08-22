@@ -14,10 +14,14 @@ import {
 import {
   installBrowserErrorCapture,
 } from "./ui/diagnostics/browser-error-reporter";
+import {
+  registerPianolaServiceWorker,
+} from "./pwa/register-service-worker";
 import "./styles.css";
 
 document.title = APPLICATION_CONSTANTS.productName;
 installBrowserErrorCapture();
+registerPianolaServiceWorker();
 
 /*
  * Install the centralized theme before React renders. Defining the custom

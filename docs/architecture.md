@@ -158,17 +158,20 @@ La façade publique est `src/audio/audio-worklet-transport.ts`. Le protocole et
 le DSP sont sous `src/audio/worklet/`. L’adaptateur navigateur peut être remplacé
 sans modifier le moteur temps réel pur.
 
-## Fichiers projet
+## Persistance et fichiers projet
 
-Le format natif sépare schéma, sérialiseur, parseur et lecteurs par section. Le
-MIDI sépare validation, lecture/écriture SMF, analyse, avertissements, collisions
-et construction de projet. Ces pipelines n’ont pas été restructurés dans le
-chantier de navigabilité actuel.
+Le domaine ne connaît aucune API navigateur. `ProjectAutosave` reçoit les ports
+injectés, le Web Worker sérialise et valide les snapshots, puis le repository
+IndexedDB publie atomiquement génération et résumé. Le format portable reste un
+pipeline distinct du stockage local. Le MIDI sépare validation, lecture/écriture
+SMF, analyse, avertissements, collisions et construction de projet.
 
 ```text
-Save  : ProjectDocument + NativeEditorState → JSON validé → Blob
-Load  : File → JSON inconnu → parse borné → projet + workspace
-MIDI  : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
+Autosave : document + workspace → Worker → deux générations IndexedDB
+Export   : document + workspace → JSON portable validé → Blob
+Import   : File → JSON inconnu → parse borné → nouvelle entrée locale
+Settings : mise à jour atomique → document IndexedDB séparé
+MIDI     : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ```
 
 ## Exceptions au seuil de 500 lignes

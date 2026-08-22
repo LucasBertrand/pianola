@@ -58,6 +58,24 @@ import type {
   ClipEditorRuntimeState,
   EditorRuntime,
 } from "../editor/runtime/editor-runtime";
+import type {
+  ProjectRepository,
+} from "../persistence/project-persistence-model";
+import type {
+  UserSettingsRepository,
+} from "../persistence/user-settings-model";
+import {
+  IndexedDbProjectRepository,
+} from "../pwa/persistence/indexed-db-project-repository";
+import {
+  IndexedDbUserSettingsRepository,
+} from "../pwa/persistence/indexed-db-user-settings-repository";
+import {
+  PianolaIndexedDb,
+} from "../pwa/persistence/pianola-indexed-db";
+import {
+  WorkerStoredProjectCodec,
+} from "../pwa/persistence/worker-stored-project-codec";
 
 /** Creates the runtime for one project. A future tab system can own one per tab. */
 export function createEditorRuntime(
@@ -231,6 +249,26 @@ export function createEditorRuntime(
   };
 
   return runtime;
+}
+
+export interface AppPersistenceRuntime {
+  readonly projects: ProjectRepository;
+  readonly userSettings: UserSettingsRepository;
+  dispose(): void;
+}
+
+export function createAppPersistenceRuntime(): AppPersistenceRuntime {
+  const database = new PianolaIndexedDb();
+  const codec = new WorkerStoredProjectCodec();
+
+  return {
+    projects: new IndexedDbProjectRepository(database, codec),
+    userSettings: new IndexedDbUserSettingsRepository(database),
+    dispose() {
+      codec.dispose();
+      database.close();
+    },
+  };
 }
 
 function createDefaultClipEditorRuntimeState(
