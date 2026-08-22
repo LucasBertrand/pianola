@@ -196,15 +196,8 @@ export function PianoRollWorkspace({
   const [pitchSnapSettings, setPitchSnapSettings] =
     useState<PitchSnapSettings>(
       () => runtime.pitchSnapSettings.get(),
-    );
-  const activeClip = getActiveClip(projectState);
-  const autosave = useProjectAutosave(
-    runtime,
-    documentId,
-    storedRevision,
-    projectRepository,
-    selectedInstrumentId,
   );
+  const activeClip = getActiveClip(projectState);
 
   useEffect(() => {
     setSelectedInstrumentId(initialWorkspace.selectedInstrumentId);
@@ -260,6 +253,14 @@ export function PianoRollWorkspace({
       );
     },
   });
+  const autosave = useProjectAutosave(
+    runtime,
+    documentId,
+    storedRevision,
+    projectRepository,
+    selectedInstrumentId,
+    playbackStatus,
+  );
   const handlePitchAudition = useCallback((pitch: number): void => {
     if (selectedInstrumentId !== null) {
       auditionPitch(selectedInstrumentId, pitch);
@@ -579,7 +580,6 @@ export function PianoRollWorkspace({
         onProjectTitleCommit={handleProjectTitleCommit}
         onReturnToStart={handleReturnToStart}
         onTogglePlayback={togglePlayback}
-        onStopPlayback={stopPlayback}
         onToggleLoop={handleToggleLoop}
         onPreviewMasterGain={previewMasterGain}
         onMasterGainCommit={handleMasterGainCommit}

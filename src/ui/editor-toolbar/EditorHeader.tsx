@@ -40,7 +40,6 @@ export interface EditorHeaderProps {
   readonly onProjectTitleCommit: (input: HTMLInputElement) => void;
   readonly onReturnToStart: () => void;
   readonly onTogglePlayback: () => void;
-  readonly onStopPlayback: () => void;
   readonly onToggleLoop: () => void;
   readonly onPreviewMasterGain: (gain: number) => void;
   readonly onMasterGainCommit: (gain: number) => void;
@@ -61,7 +60,6 @@ export function EditorHeader({
   onProjectTitleCommit: handleProjectTitleCommit,
   onReturnToStart: returnToStart,
   onTogglePlayback: togglePlayback,
-  onStopPlayback: stopPlayback,
   onToggleLoop: handleToggleLoop,
   onPreviewMasterGain: previewMasterGain,
   onMasterGainCommit: handleMasterGainCommit,
@@ -92,7 +90,6 @@ export function EditorHeader({
           }
           onReturnToStart={returnToStart}
           onTogglePlayback={togglePlayback}
-          onStop={stopPlayback}
           onToggleLoop={handleToggleLoop}
         />
         <span

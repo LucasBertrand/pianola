@@ -8,7 +8,6 @@ export interface TransportControlsProps {
   readonly loopEnabled: boolean;
   readonly onReturnToStart: () => void;
   readonly onTogglePlayback: () => void;
-  readonly onStop: () => void;
   readonly onToggleLoop: () => void;
 }
 
@@ -17,7 +16,6 @@ export function TransportControls({
   loopEnabled,
   onReturnToStart,
   onTogglePlayback,
-  onStop,
   onToggleLoop,
 }: TransportControlsProps): React.JSX.Element {
   const playing = status === "playing";
@@ -66,15 +64,6 @@ export function TransportControls({
             <path d="M8 5.75v12.5L18 12Z" />
           </svg>
         )}
-      </button>
-      <button
-        className="icon-button"
-        type="button"
-        title="Stop"
-        aria-label="Stop"
-        onClick={onStop}
-      >
-        <span className="stop-icon" aria-hidden="true" />
       </button>
       <button
         className={

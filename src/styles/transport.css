@@ -80,13 +80,6 @@
   transform: scale(0.97);
 }
 
-.stop-icon {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  background: currentColor;
-}
-
 .loop-toggle-button svg {
   width: 18px;
   height: 18px;

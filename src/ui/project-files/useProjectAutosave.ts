@@ -4,6 +4,9 @@ import {
   useState,
 } from "react";
 import type {
+  PlaybackStatus,
+} from "../../audio/playback-model";
+import type {
   InstrumentId,
 } from "../../domain/identifiers";
 import type {
@@ -25,6 +28,7 @@ import {
 
 export interface ProjectAutosaveSession {
   readonly status: ProjectSaveStatus;
+  readonly markWorkspaceDirty: () => void;
   readonly flush: () => Promise<void>;
 }
 
@@ -34,9 +38,12 @@ export function useProjectAutosave(
   initialRevision: number,
   repository: ProjectRepository,
   selectedInstrumentId: InstrumentId | null,
+  playbackStatus: PlaybackStatus,
 ): ProjectAutosaveSession {
   const selectedInstrumentRef = useRef(selectedInstrumentId);
   selectedInstrumentRef.current = selectedInstrumentId;
+  const playbackStatusRef = useRef(playbackStatus);
+  playbackStatusRef.current = playbackStatus;
   const autosaveRef = useRef<ProjectAutosave | null>(null);
 
   if (autosaveRef.current === null) {
@@ -61,15 +68,21 @@ export function useProjectAutosave(
     () => autosave.getStatus(),
   );
   const initialInstrumentRef = useRef(selectedInstrumentId);
+  const previousPlaybackStatusRef = useRef(playbackStatus);
 
   useEffect(() => autosave.subscribe(setStatus), [autosave]);
 
   useEffect(() => {
     const markDirty = (): void => autosave.markDirty();
+    const markTransientWorkspaceDirty = (): void => {
+      if (playbackStatusRef.current !== "playing") {
+        autosave.markDirty();
+      }
+    };
     const unsubscribers = [
       runtime.projectStore.subscribe(markDirty),
-      runtime.viewport.subscribe(markDirty),
-      runtime.playheadTick.subscribe(markDirty),
+      runtime.viewport.subscribe(markTransientWorkspaceDirty),
+      runtime.playheadTick.subscribe(markTransientWorkspaceDirty),
       runtime.pitchSnapSettings.subscribe(markDirty),
       runtime.gridSettings.subscribe(markDirty),
     ];
@@ -80,6 +93,18 @@ export function useProjectAutosave(
       }
     };
   }, [autosave, runtime]);
+
+  useEffect(() => {
+    const previousStatus = previousPlaybackStatusRef.current;
+    previousPlaybackStatusRef.current = playbackStatus;
+
+    if (
+      previousStatus === "playing"
+      && playbackStatus !== "playing"
+    ) {
+      autosave.markDirty();
+    }
+  }, [autosave, playbackStatus]);
 
   useEffect(() => {
     if (initialInstrumentRef.current === selectedInstrumentId) {
@@ -112,6 +137,7 @@ export function useProjectAutosave(
 
   return {
     status,
+    markWorkspaceDirty: () => autosave.markDirty(),
     flush: () => autosave.flush(),
   };
 }
