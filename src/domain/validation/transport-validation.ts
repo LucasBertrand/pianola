@@ -6,7 +6,6 @@ import {
   type TransportState,
 } from "../transport/transport";
 import {
-  areTimeSignaturesEqual,
   getTicksPerMeasure,
   type ScaleMarker,
   type TempoMarker,
@@ -212,16 +211,6 @@ function validateMeterMarkerBoundaries(
 
     if (marker === undefined) {
       continue;
-    }
-
-    if (
-      areTimeSignaturesEqual(activeSignature, marker.timeSignature)
-    ) {
-      issues.push({
-        code: "INVALID_TIME_SIGNATURE",
-        path: `timeMap.meterMarkers[${String(index)}].timeSignature`,
-        message: "Adjacent meter markers must use distinct time signatures.",
-      });
     }
 
     while (boundaryTick < marker.startTick) {

@@ -11,27 +11,30 @@ import {
 } from "../../use-cases/piano-roll/notes/note-edit-commands";
 import type {
   NoteCollisionResolutionRequest,
+  PreparedNoteCollisionResolution,
 } from "../../use-cases/piano-roll/notes/note-collision-resolution";
 import {
+  buildDeleteClipboardMarkerCommands,
   buildSliceCommandsForNotesAtTicks,
   buildTransformCommandsForNotes,
-  canPlacePastedNotes,
+  canPlacePastedTimelineContent,
+  createPastedMarkerGroups,
   createPastedNotes,
   findNotesByIds,
-  getRequiredMeasureCountForNotes,
+  getRequiredMeasureCountForTimelineContent,
+  planPastedMarkerCommands,
 } from "../../use-cases/piano-roll/selection/selection-edit-plans";
 import {
   CommandRejectedError,
 } from "../../domain/commands/command-errors";
 import {
   getActiveClip,
+  getClip,
+  type ProjectState,
 } from "../../domain/project/project-document";
 import {
   getMeasureCount,
 } from "../../domain/transport/time-map";
-import {
-  type Note,
-} from "../../domain/notes/note";
 import {
   type NoteId,
   type InstrumentId,
@@ -60,14 +63,24 @@ import {
 import {
   usePianoRollInstrumentTransfer,
 } from "./usePianoRollInstrumentTransfer";
+import type {
+  EditorSelection,
+} from "../../editor/selection/editor-selection";
+import type {
+  MarkerCollisionResolutionRequest,
+} from "../../use-cases/piano-roll/timeline/marker-collision-resolution";
 
 export interface PianoRollSelectionWorkflowOptions {
   readonly commands: EditorCommandPort;
+  readonly selection: EditorSelection;
   readonly getController: () => PianoRollControllerPort | null;
   readonly getPlayheadTick: () => number;
   readonly getGridResolutionTicks: () => number;
   readonly resolveCollision: (
     request: NoteCollisionResolutionRequest,
+  ) => void;
+  readonly resolveMarkerCollision: (
+    request: MarkerCollisionResolutionRequest,
   ) => void;
   readonly alert: ShowApplicationAlert;
 }
@@ -93,10 +106,12 @@ export interface PianoRollSelectionWorkflow {
 
 export function usePianoRollSelectionWorkflow({
   commands,
+  selection,
   getController,
   getPlayheadTick,
   getGridResolutionTicks,
   resolveCollision,
+  resolveMarkerCollision,
   alert,
 }: PianoRollSelectionWorkflowOptions): PianoRollSelectionWorkflow {
   const sequenceRef = useRef(0);
@@ -106,7 +121,7 @@ export function usePianoRollSelectionWorkflow({
     copySelection: copyCurrentSelection,
     copy,
     clear: clearClipboard,
-  } = usePianoRollClipboard(getController);
+  } = usePianoRollClipboard(commands, selection);
   const {
     undo,
     redo,
@@ -135,22 +150,39 @@ export function usePianoRollSelectionWorkflow({
       return;
     }
 
-    if (
-      commands.dispatch(
-        buildDeleteNoteCommands(
-          getActiveClip(commands.getState()).id,
-          clipboard.notes,
-        ),
-        "Cut notes",
-        {
-          clipId: getActiveClip(commands.getState()).id,
-          noteIds: [],
-        },
-      ) !== null
-    ) {
-      getController()?.clearSelection();
+    const activeClip = getActiveClip(commands.getState());
+    const cutCommands = [
+      ...buildDeleteNoteCommands(activeClip.id, clipboard.notes),
+      ...buildDeleteClipboardMarkerCommands(
+        activeClip.id,
+        clipboard.markerGroups,
+      ),
+    ];
+
+    try {
+      if (
+        commands.dispatch(
+          cutCommands,
+          getClipboardActionLabel("Cut", clipboard),
+          {
+            clipId: activeClip.id,
+            noteIds: [],
+            markerGroups: [],
+          },
+        ) !== null
+      ) {
+        getController()?.clearSelection();
+      }
+    } catch (error: unknown) {
+      alert(
+        "Cut unavailable",
+        error instanceof Error
+          ? error.message
+          : "The selected notes and markers could not be cut.",
+        "danger",
+      );
     }
-  }, [commands, copyCurrentSelection, getController]);
+  }, [alert, commands, copyCurrentSelection, getController]);
 
   const transform = useCallback(
     (
@@ -332,19 +364,26 @@ export function usePianoRollSelectionWorkflow({
     const pasteTick =
       Math.round(getPlayheadTick() / resolutionTicks)
       * resolutionTicks;
+    const timestamp = Date.now();
+    const sequence = nextSequence();
     const pastedNotes = createPastedNotes(
       clipboard,
       pasteTick,
-      Date.now(),
-      nextSequence(),
+      timestamp,
+      sequence,
+    );
+    const pastedMarkerGroups = createPastedMarkerGroups(
+      clipboard,
+      pasteTick,
     );
     const state = commands.getState();
     const activeClip = getActiveClip(state);
     const requiredMeasureCount =
-      getRequiredMeasureCountForNotes(
+      getRequiredMeasureCountForTimelineContent(
         state,
         activeClip.id,
         pastedNotes,
+        pastedMarkerGroups,
       );
     const currentMeasureCount = getMeasureCount(
       state.clock.ppqn,
@@ -360,13 +399,105 @@ export function usePianoRollSelectionWorkflow({
           }]
         : [];
 
-    if (!canPlacePastedNotes(state, activeClip.id, pastedNotes)) {
+    if (
+      !canPlacePastedTimelineContent(
+        state,
+        activeClip.id,
+        pastedNotes,
+        pastedMarkerGroups,
+      )
+    ) {
       alert(
         "Paste unavailable",
-        "Paste is unavailable because it exceeds the clip limit or targets an unavailable or locked instrument.",
+        "Paste is unavailable because it exceeds the clip limit, places a marker at tick 0, or targets an unavailable or locked instrument.",
       );
       return;
     }
+
+    let markerPlan: ReturnType<typeof planPastedMarkerCommands>;
+
+    try {
+      markerPlan = planPastedMarkerCommands(
+        state,
+        activeClip.id,
+        pastedMarkerGroups,
+      );
+    } catch (error: unknown) {
+      alert(
+        "Paste unavailable",
+        error instanceof Error
+          ? error.message
+          : "The copied markers could not be pasted.",
+        "danger",
+      );
+      return;
+    }
+
+    const pasteLabel = getClipboardActionLabel("Paste", clipboard);
+    const pastedNoteIds = pastedNotes.map((note) => note.id);
+    const markerGroupsAfterPaste = markerPlan.resultingMarkerGroups;
+    const noteCommands = buildAddNoteCommands(activeClip.id, pastedNotes);
+    const applyPastedSelection = (
+      nextState: ProjectState,
+      selectedNoteIds: readonly NoteId[],
+    ): void => {
+      selection.replaceFromIdentifiers(
+        nextState,
+        selectedNoteIds,
+        markerGroupsAfterPaste,
+        (note) => getClip(nextState, activeClip.id)
+          .instrumentStatesById[note.instrumentId]?.locked === false,
+      );
+      getController()?.refreshSelection();
+    };
+    const dispatchPaste = (
+      pasteCommands: Parameters<EditorCommandPort["dispatch"]>[0],
+      transactionLabel = pasteLabel,
+      selectedNoteIds: readonly NoteId[] = pastedNoteIds,
+    ): void => {
+      try {
+        const nextState = commands.dispatch(
+          pasteCommands,
+          transactionLabel,
+          {
+            clipId: activeClip.id,
+            noteIds: selectedNoteIds,
+            markerGroups: markerGroupsAfterPaste,
+          },
+        );
+
+        if (nextState !== null) {
+          applyPastedSelection(nextState, selectedNoteIds);
+        }
+      } catch (error: unknown) {
+        alert(
+          "Paste unavailable",
+          error instanceof Error
+            ? error.message
+            : "The copied notes and markers could not be pasted.",
+          "danger",
+        );
+      }
+    };
+    const requestMarkerOverwrite = (
+      preparedNoteResolution?: PreparedNoteCollisionResolution,
+    ): void => {
+      resolveMarkerCollision({
+        label: pasteLabel,
+        collisions: markerPlan.collisions,
+        onOverwrite(): void {
+          dispatchPaste(
+            [
+              ...timelineCommands,
+              ...markerPlan.overwriteCommands,
+              ...(preparedNoteResolution?.commands ?? noteCommands),
+            ],
+            preparedNoteResolution?.transactionLabel ?? pasteLabel,
+            preparedNoteResolution?.selectedNoteIds ?? pastedNoteIds,
+          );
+        },
+      });
+    };
 
     const intent = {
       originalNotes: [],
@@ -376,57 +507,46 @@ export function usePianoRollSelectionWorkflow({
     if (hasNoteEditCollisions(state, activeClip.id, intent)) {
       resolveCollision({
         clipId: activeClip.id,
-        label: "Paste notes",
+        label: pasteLabel,
         collisionCount: countNoteEditCollisions(
           state,
           activeClip.id,
           intent,
         ),
         ...intent,
-        prefixCommands: timelineCommands,
+        prefixCommands: [
+          ...timelineCommands,
+          ...markerPlan.commands,
+        ],
+        selectionAfterMarkerGroups: markerGroupsAfterPaste,
         onResolved(nextState, selectedNoteIds): void {
-          const resolvedNotes = findNotesByIds(
-            nextState,
-            activeClip.id,
-            selectedNoteIds,
-          );
-
-          getController()?.replaceSelection(resolvedNotes);
+          applyPastedSelection(nextState, selectedNoteIds);
         },
+        ...(markerPlan.collisions.length === 0
+          ? {}
+          : {
+              onResolutionPrepared(
+                resolution: PreparedNoteCollisionResolution,
+              ): void {
+                requestMarkerOverwrite(resolution);
+              },
+            }),
       });
       return;
     }
 
-    const nextState = commands.dispatch(
-      [
-        ...timelineCommands,
-        ...buildAddNoteCommands(activeClip.id, pastedNotes),
-      ],
-      "Paste notes",
-      {
-        clipId: activeClip.id,
-        noteIds: pastedNotes.map((note) => note.id),
-      },
-    );
-
-    if (nextState === null) {
+    if (markerPlan.collisions.length > 0) {
+      requestMarkerOverwrite();
       return;
     }
 
-    const selectedPastedNotes: Note[] = [];
-    const nextClip = getActiveClip(nextState);
-
-    for (const pastedNote of pastedNotes) {
-      const storedNote =
-        nextClip.tracksByInstrumentId[pastedNote.instrumentId]
-          ?.notesById[pastedNote.id];
-
-      if (storedNote !== undefined) {
-        selectedPastedNotes.push(storedNote);
-      }
-    }
-
-    getController()?.replaceSelection(selectedPastedNotes);
+    dispatchPaste(
+      [
+        ...timelineCommands,
+        ...markerPlan.commands,
+        ...noteCommands,
+      ],
+    );
   }, [
     alert,
     commands,
@@ -436,6 +556,8 @@ export function usePianoRollSelectionWorkflow({
     getPlayheadTick,
     nextSequence,
     resolveCollision,
+    resolveMarkerCollision,
+    selection,
   ]);
 
   return {
@@ -453,4 +575,20 @@ export function usePianoRollSelectionWorkflow({
     paste,
     transferToInstrument,
   };
+}
+
+function getClipboardActionLabel(
+  action: "Cut" | "Paste",
+  clipboard: {
+    readonly notes: readonly unknown[];
+    readonly markerGroups: readonly unknown[];
+  },
+): string {
+  if (clipboard.notes.length > 0 && clipboard.markerGroups.length > 0) {
+    return `${action} timeline selection`;
+  }
+
+  return clipboard.markerGroups.length > 0
+    ? `${action} markers`
+    : `${action} notes`;
 }

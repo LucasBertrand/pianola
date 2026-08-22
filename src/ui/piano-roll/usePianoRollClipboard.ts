@@ -4,10 +4,19 @@ import {
   useState,
 } from "react";
 import type {
-  PianoRollControllerPort,
-} from "../../editor/interactions/piano-roll-controller-port";
+  EditorCommandPort,
+} from "../../use-cases/commands/editor-command-service";
+import {
+  getActiveClip,
+} from "../../domain/project/project-document";
+import type {
+  EditorSelection,
+} from "../../editor/selection/editor-selection";
 import type {
   PianoRollClipboard,
+} from "../../use-cases/piano-roll/selection/selection-edit-plans";
+import {
+  createPianoRollClipboard,
 } from "../../use-cases/piano-roll/selection/selection-edit-plans";
 
 export interface PianoRollClipboardWorkflow {
@@ -18,9 +27,10 @@ export interface PianoRollClipboardWorkflow {
   readonly clear: () => void;
 }
 
-/** Owns the transient note clipboard and its availability signal. */
+/** Owns the transient mixed note/marker clipboard and its availability. */
 export function usePianoRollClipboard(
-  getController: () => PianoRollControllerPort | null,
+  commands: EditorCommandPort,
+  selection: EditorSelection,
 ): PianoRollClipboardWorkflow {
   const clipboardRef = useRef<PianoRollClipboard | null>(null);
   const [available, setAvailable] = useState(false);
@@ -32,31 +42,21 @@ export function usePianoRollClipboard(
     setAvailable(false);
   }, []);
   const copySelection = useCallback((): PianoRollClipboard | null => {
-    const notes = getController()?.getSelectedNotes() ?? [];
+    const activeClip = getActiveClip(commands.getState());
+    const clipboard = createPianoRollClipboard(
+      selection.copyNotes(),
+      selection.markerGroups,
+      activeClip.timeline.timeMap,
+    );
 
-    if (notes.length === 0) {
+    if (clipboard === null) {
       return null;
     }
-
-    let originTick = Number.POSITIVE_INFINITY;
-
-    for (const note of notes) {
-      originTick = Math.min(originTick, note.startTick);
-    }
-
-    if (!Number.isFinite(originTick)) {
-      return null;
-    }
-
-    const clipboard: PianoRollClipboard = {
-      notes,
-      originTick,
-    };
 
     clipboardRef.current = clipboard;
     setAvailable(true);
     return clipboard;
-  }, [getController]);
+  }, [commands, selection]);
   const copy = useCallback((): void => {
     copySelection();
   }, [copySelection]);

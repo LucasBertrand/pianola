@@ -2,6 +2,7 @@ import React, {
   useRef,
   type CSSProperties,
   type MutableRefObject,
+  type RefObject,
 } from "react";
 import {
   type InstrumentId,
@@ -9,6 +10,9 @@ import {
 import type {
   NoteCollisionResolutionRequest,
 } from "../../use-cases/piano-roll/notes/note-collision-resolution";
+import type {
+  MarkerCollisionResolutionRequest,
+} from "../../use-cases/piano-roll/timeline/marker-collision-resolution";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";
@@ -19,6 +23,9 @@ import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
 import type {
+  PointerInteractionStrategy,
+} from "../../editor/interactions/pointer/pointer-interaction-strategy";
+import type {
   SelectionMode,
 } from "../../editor/interactions/gestures/gesture-draft";
 import type {
@@ -28,6 +35,12 @@ import {
   GridCanvas,
   NotesCanvas,
 } from "./rendering/canvas-layer";
+import type {
+  TimelineDragPreview,
+} from "../../editor/model/timeline-drag-preview";
+import type {
+  MutableRenderSignal,
+} from "../../editor/model/render-signal";
 import {
   InteractionOverlay,
 } from "./InteractionOverlay";
@@ -44,6 +57,9 @@ export interface PianoRollLayersProps {
   readonly controllerRef: MutableRefObject<
     PianoRollControllerPort | null
   >;
+  readonly interactionStrategyRef: MutableRefObject<
+    PointerInteractionStrategy | null
+  >;
   readonly onSelectionChange: (
     hasSelection: boolean,
     soleInstrumentId: InstrumentId | null,
@@ -52,6 +68,13 @@ export interface PianoRollLayersProps {
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
+  readonly onMarkerCollision: (
+    request: MarkerCollisionResolutionRequest,
+  ) => void;
+  readonly globalLassoRef: RefObject<HTMLDivElement | null>;
+  readonly timelineDragPreview: MutableRenderSignal<
+    TimelineDragPreview | null
+  >;
 }
 
 const LAYER_STACK_STYLE: CSSProperties = {
@@ -75,9 +98,13 @@ export function PianoRollLayers(
     onHorizontalViewportInteractionEnd,
     onTwoFingerDoubleTap,
     controllerRef,
+    interactionStrategyRef,
     onSelectionChange,
     onGridSeek,
     onNoteCollision,
+    onMarkerCollision,
+    globalLassoRef,
+    timelineDragPreview,
   } = props;
   const {
     viewport,
@@ -133,9 +160,13 @@ export function PianoRollLayers(
         onTwoFingerDoubleTap={onTwoFingerDoubleTap}
         editingNoteMask={editingNoteMask}
         controllerRef={controllerRef}
+        interactionStrategyRef={interactionStrategyRef}
         onSelectionChange={onSelectionChange}
         onGridSeek={onGridSeek}
         onNoteCollision={onNoteCollision}
+        onMarkerCollision={onMarkerCollision}
+        globalLassoRef={globalLassoRef}
+        timelineDragPreview={timelineDragPreview}
       />
     </div>
   );

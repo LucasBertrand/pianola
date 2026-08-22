@@ -20,6 +20,7 @@ export interface EditorToolbarProps {
   readonly canRedo: boolean;
   readonly measureCount: number;
   readonly selectionAvailable: boolean;
+  readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
@@ -50,6 +51,7 @@ export function EditorToolbar({
   canRedo,
   measureCount,
   selectionAvailable,
+  clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
   noteColorMode,
@@ -222,9 +224,9 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title="Copy selected notes"
-          aria-label="Copy selected notes"
-          disabled={!selectionAvailable}
+          title="Copy selected notes and markers"
+          aria-label="Copy selected notes and markers"
+          disabled={!clipboardSelectionAvailable}
           onClick={onCopy}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -234,9 +236,9 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title="Cut selected notes"
-          aria-label="Cut selected notes"
-          disabled={!selectionAvailable}
+          title="Cut selected notes and markers"
+          aria-label="Cut selected notes and markers"
+          disabled={!clipboardSelectionAvailable}
           onClick={onCut}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -248,8 +250,8 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title="Paste notes at the playhead"
-          aria-label="Paste notes at the playhead"
+          title="Paste notes and markers at the playhead"
+          aria-label="Paste notes and markers at the playhead"
           disabled={
             !clipboardAvailable
           }

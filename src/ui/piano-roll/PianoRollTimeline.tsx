@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  type RefObject,
 } from "react";
 import {
   getActiveClip,
@@ -37,16 +38,36 @@ import {
 import type {
   TimeMapMarkerFlag,
 } from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
+import type {
+  EditorSelection,
+} from "../../editor/selection/editor-selection";
+import type {
+  TimelineDragPreview,
+} from "../../editor/model/timeline-drag-preview";
+import type {
+  MutableRenderSignal,
+} from "../../editor/model/render-signal";
+import type {
+  PointerInteractionStrategy,
+} from "../../editor/interactions/pointer/pointer-interaction-strategy";
 
 export interface PianoRollRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly markerFlags: readonly TimeMapMarkerFlag[];
+  readonly selection: EditorSelection;
+  readonly timelineDragPreview: MutableRenderSignal<
+    TimelineDragPreview | null
+  >;
+  readonly interactionStrategyRef: RefObject<
+    PointerInteractionStrategy | null
+  >;
   readonly onLoopCommit: (loop: LoopRegion) => void;
   readonly onOpenMarker: (tick: number) => void;
+  readonly onSelectMarker: (tick: number) => void;
   readonly onMoveMarker: (fromTick: number, toTick: number) => void;
-  readonly onGridSeek: (tick: number) => void;
+  readonly onClearSelection: () => void;
 }
 
 export function PianoRollRuler(
@@ -57,10 +78,14 @@ export function PianoRollRuler(
     projectStore,
     gridResolutionTicks,
     markerFlags,
+    selection,
+    timelineDragPreview,
+    interactionStrategyRef,
     onLoopCommit,
     onOpenMarker,
+    onSelectMarker,
     onMoveMarker,
-    onGridSeek,
+    onClearSelection,
   } = props;
   const renderRuler = useCallback(
     (frame: CanvasFrame): void => {
@@ -128,15 +153,19 @@ export function PianoRollRuler(
         viewport={viewport}
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}
+        interactionStrategyRef={interactionStrategyRef}
         onCommit={onLoopCommit}
-        onGridSeek={onGridSeek}
+        onClearSelection={onClearSelection}
       />
       <PianoRollTimeMapOverlay
         flags={markerFlags}
+        selection={selection}
+        timelineDragPreview={timelineDragPreview}
         viewport={viewport}
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}
         onOpenMarker={onOpenMarker}
+        onSelectMarker={onSelectMarker}
         onMoveMarker={onMoveMarker}
       />
     </div>

@@ -3,6 +3,9 @@ import {
   createEditorRuntime,
 } from "../../src/app/create-app-runtime";
 import {
+  getActiveClip,
+} from "../../src/domain/project/project-document";
+import {
   PianoRollInteractionSession,
 } from "../../src/editor/interactions/piano-roll-interaction-session";
 import type {
@@ -23,6 +26,7 @@ import {
 import {
   createTestNote,
   createTestProject,
+  TEST_CLIP_ID,
   TEST_INSTRUMENT_ID,
 } from "../support/test-builders";
 
@@ -342,6 +346,132 @@ describe("PianoRollGestureStrategy draw selection history", () => {
 
     runtime.editorCommands.undo();
     expect(session.selection.notes.map((note) => note.id)).toEqual([noteA.id]);
+  });
+});
+
+describe("PianoRollGestureStrategy ruler lasso", () => {
+  test("starts above the grid and selects a marker through one global lasso", () => {
+    const baseState = createTestProject();
+    const baseClip = getActiveClip(baseState);
+    const markerTick = 960;
+    const state = {
+      ...baseState,
+      clipsById: {
+        ...baseState.clipsById,
+        [TEST_CLIP_ID]: {
+          ...baseClip,
+          timeline: {
+            ...baseClip.timeline,
+            timeMap: {
+              ...baseClip.timeline.timeMap,
+              tempoMarkers: [
+                ...baseClip.timeline.timeMap.tempoMarkers,
+                { startTick: markerTick, bpm: 90 },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const runtime = createEditorRuntime(state);
+    const session = new PianoRollInteractionSession(
+      runtime.viewport.get(),
+      runtime.viewport.version,
+      runtime.selection,
+    );
+    const visuals = createVisualControllerSpy();
+    const selectionController = new PianoRollSelectionController({
+      session,
+      viewport: runtime.viewport,
+      editorCommands: runtime.editorCommands,
+      getVisuals: () => visuals,
+      onSelectionChange: () => undefined,
+    });
+    const workflow = new NoteGestureWorkflowAdapter({
+      editorCommands: runtime.editorCommands,
+      selection: session.selection,
+      onSelectionChanged: () => undefined,
+      onCollision: undefined,
+      onTransactionRejected: undefined,
+    });
+    const overlay = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 50,
+        right: 1000,
+        bottom: 850,
+        width: 1000,
+        height: 800,
+        x: 0,
+        y: 50,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const soughtTicks: number[] = [];
+    const strategy = createPianoRollGestureStrategy({
+      overlay,
+      getVisuals: () => visuals,
+      session,
+      viewport: runtime.viewport,
+      selectionController,
+      workflow,
+      spatialIndex: runtime.spatialIndex,
+      instrumentStyles: runtime.instrumentStyles,
+      editorCommands: runtime.editorCommands,
+      getActiveInstrumentId: () => TEST_INSTRUMENT_ID,
+      getInstrumentOrder: () => [TEST_INSTRUMENT_ID],
+      totalTicks: baseClip.timeline.durationTicks,
+      selectionMode: "replace",
+      gridResolutionTicks: runtime.gridResolutionTicks,
+      pitchSnapSettings: runtime.pitchSnapSettings,
+      onGridSeek: (tick) => {
+        soughtTicks.push(tick);
+      },
+      onPitchHighlightChange: undefined,
+    });
+    const startX = session.converter.tickToCssPixelX(0);
+    const endX = session.converter.tickToCssPixelX(1_920);
+
+    runtime.selection.addMarkerGroup({
+      startTick: markerTick,
+      kinds: ["tempo"],
+    });
+    strategy.onPointerDown(createPointerSample({
+      pointerId: 1,
+      clientX: startX,
+      clientY: 25,
+    }));
+    strategy.onPointerUp(createPointerSample({
+      pointerId: 1,
+      clientX: startX,
+      clientY: 25,
+    }));
+
+    expect(runtime.selection.size).toBe(0);
+    expect(soughtTicks).toHaveLength(1);
+
+    strategy.onPointerDown(createPointerSample({
+      pointerId: 2,
+      clientX: startX,
+      clientY: 25,
+    }));
+    strategy.onPointerMove(createPointerSample({
+      pointerId: 2,
+      clientX: endX,
+      clientY: 100,
+    }));
+    strategy.onPointerUp(createPointerSample({
+      pointerId: 2,
+      clientX: endX,
+      clientY: 100,
+    }));
+
+    expect(visuals.beginLasso).toHaveBeenCalledWith(startX, -25);
+    expect(runtime.selection.markerGroups).toEqual([{
+      startTick: markerTick,
+      kinds: ["tempo"],
+    }]);
+    expect(visuals.endLasso).toHaveBeenCalledOnce();
   });
 });
 

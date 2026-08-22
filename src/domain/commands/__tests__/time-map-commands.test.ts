@@ -95,7 +95,7 @@ describe("meter marker commands", () => {
     expect(activeTimeline(store).timeMap.meterMarkers).toHaveLength(1);
   });
 
-  test("rejects invalid marker placements", () => {
+  test("rejects invalid placements but accepts an identical meter", () => {
     const store = new ProjectStore(createTestProject());
 
     expect(() => dispatch(store, {
@@ -105,12 +105,14 @@ describe("meter marker commands", () => {
       timeSignature: { numerator: 3, denominator: 4 },
     })).toThrow(CommandRejectedError);
 
-    expect(() => dispatch(store, {
+    dispatch(store, {
       type: "AddMeterMarker",
       clipId: TEST_CLIP_ID,
       startTick: MEASURE_TICKS,
       timeSignature: { numerator: 4, denominator: 4 },
-    })).toThrow(CommandRejectedError);
+    });
+
+    expect(activeTimeline(store).timeMap.meterMarkers).toHaveLength(2);
 
     expect(() => dispatch(store, {
       type: "DeleteMeterMarker",
@@ -146,6 +148,33 @@ describe("meter marker commands", () => {
 });
 
 describe("tempo marker commands", () => {
+  test("keeps consecutive tempo and scale markers with identical values", () => {
+    const store = new ProjectStore(createTestProject());
+    const initialScale = activeTimeline(store).timeMap.scaleMarkers[0]!;
+
+    dispatch(store, {
+      type: "AddTempoMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS,
+      bpm: activeTimeline(store).timeMap.tempoMarkers[0]!.bpm,
+    });
+    dispatch(store, {
+      type: "AddScaleMarker",
+      clipId: TEST_CLIP_ID,
+      marker: {
+        ...initialScale,
+        startTick: MEASURE_TICKS,
+      },
+    });
+
+    expect(activeTimeline(store).timeMap.tempoMarkers.map(
+      (marker) => marker.startTick,
+    )).toEqual([0, MEASURE_TICKS]);
+    expect(activeTimeline(store).timeMap.scaleMarkers.map(
+      (marker) => marker.startTick,
+    )).toEqual([0, MEASURE_TICKS]);
+  });
+
   test("adds, updates and deletes a tempo marker with undo/redo", () => {
     const store = new ProjectStore(createTestProject());
 

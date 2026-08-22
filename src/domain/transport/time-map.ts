@@ -618,8 +618,7 @@ export function replaceInitialMeter(
   );
 }
 
-/** Sorts by tick, keeps the first marker of a duplicate tick and merges
- * adjacent identical signatures. */
+/** Sorts by tick and keeps the first marker of a duplicate tick. */
 export function normalizeMeterMarkers(
   markers: readonly MeterMarker[],
 ): MeterMarker[] {
@@ -630,16 +629,6 @@ export function normalizeMeterMarkers(
     const previous = normalized[normalized.length - 1];
 
     if (previous !== undefined && previous.startTick === marker.startTick) {
-      continue;
-    }
-
-    if (
-      previous !== undefined
-      && areTimeSignaturesEqual(
-        previous.timeSignature,
-        marker.timeSignature,
-      )
-    ) {
       continue;
     }
 
@@ -663,10 +652,6 @@ export function normalizeTempoMarkers(
       continue;
     }
 
-    if (previous !== undefined && previous.bpm === marker.bpm) {
-      continue;
-    }
-
     normalized.push(marker);
   }
 
@@ -684,15 +669,6 @@ export function normalizeScaleMarkers(
     const previous = normalized[normalized.length - 1];
 
     if (previous !== undefined && previous.startTick === marker.startTick) {
-      continue;
-    }
-
-    if (
-      previous !== undefined
-      && previous.rootNote === marker.rootNote
-      && previous.patternType === marker.patternType
-      && previous.patternId === marker.patternId
-    ) {
       continue;
     }
 
@@ -737,12 +713,6 @@ export function insertMeterMarker(
   if (span === undefined) {
     throw new RangeError(
       "A meter marker must start on a measure boundary.",
-    );
-  }
-
-  if (areTimeSignaturesEqual(span.timeSignature, marker.timeSignature)) {
-    throw new RangeError(
-      "The marker is identical to the active meter.",
     );
   }
 

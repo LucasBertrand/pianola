@@ -48,6 +48,9 @@ import type {
   NoteCollisionResolutionRequest,
 } from "../../../use-cases/piano-roll/notes/note-collision-resolution";
 import type {
+  MarkerCollisionResolutionRequest,
+} from "../../../use-cases/piano-roll/timeline/marker-collision-resolution";
+import type {
   InteractionVisualController,
 } from "./interaction-visual-controller";
 import {
@@ -59,6 +62,15 @@ import {
 import {
   PianoRollSelectionController,
 } from "./piano-roll-selection-controller";
+import type {
+  TimelineDragPreview,
+} from "../../../editor/model/timeline-drag-preview";
+import {
+  getActiveClip,
+} from "../../../domain/project/project-document";
+import {
+  resolvePitchSnapSettings,
+} from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
@@ -78,6 +90,9 @@ export interface UsePianoRollEventsOptions {
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly selectionRequests: EditorSelectionRequests;
   readonly highlightedPitch: MutableRenderSignal<number | null>;
+  readonly timelineDragPreview: MutableRenderSignal<
+    TimelineDragPreview | null
+  >;
   readonly onGridSeek?: (tick: number) => void;
   readonly onSelectionChange?: (
     hasSelection: boolean,
@@ -85,6 +100,9 @@ export interface UsePianoRollEventsOptions {
   ) => void;
   readonly onNoteCollision?: (
     request: NoteCollisionResolutionRequest,
+  ) => void;
+  readonly onMarkerCollision?: (
+    request: MarkerCollisionResolutionRequest,
   ) => void;
   readonly onTransactionRejected?: (error: unknown) => void;
 }
@@ -109,9 +127,11 @@ export function usePianoRollEvents(
     pitchSnapSettings,
     selectionRequests,
     highlightedPitch,
+    timelineDragPreview,
     onGridSeek,
     onSelectionChange,
     onNoteCollision,
+    onMarkerCollision,
     onTransactionRejected,
   } = options;
   const sessionRef = useRef<PianoRollInteractionSession | null>(null);
@@ -157,6 +177,7 @@ export function usePianoRollEvents(
       selection: session.selection,
       onSelectionChanged: () => selectionController.showSelection(),
       onCollision: onNoteCollision,
+      ...(onMarkerCollision === undefined ? {} : { onMarkerCollision }),
       onTransactionRejected,
     });
     const strategy = createPianoRollGestureStrategy({
@@ -179,6 +200,7 @@ export function usePianoRollEvents(
       onPitchHighlightChange: (pitch) => {
         highlightedPitch.set(pitch);
       },
+      timelineDragPreview,
     });
     const unsubscribeViewport = viewport.subscribe(
       () => selectionController.showSelection(),
@@ -206,6 +228,7 @@ export function usePianoRollEvents(
     instrumentStyles,
     onGridSeek,
     onNoteCollision,
+    onMarkerCollision,
     onTransactionRejected,
     overlayRef,
     pitchSnapSettings,
@@ -216,6 +239,84 @@ export function usePianoRollEvents(
     spatialIndex,
     strategyRef,
     totalTicks,
+    timelineDragPreview,
+    viewport,
+    visualsRef,
+  ]);
+
+  useEffect(() => {
+    let externalPreviewActive = false;
+
+    const updateExternalPreview = (): void => {
+      const preview = timelineDragPreview.get();
+      const visuals = visualsRef.current;
+
+      if (
+        preview?.source !== "markers"
+        || preview.standaloneMarkerTick !== null
+      ) {
+        if (externalPreviewActive) {
+          externalPreviewActive = false;
+          visuals?.endDrag();
+          selectionController.showSelection();
+        }
+        return;
+      }
+
+      const state = editorCommands.getState();
+      const clip = getActiveClip(state);
+      const converter = session.synchronizeConverter(
+        viewport.get(),
+        viewport.version,
+      );
+      const getSnapSettingsAtTick = (tick: number) =>
+        resolvePitchSnapSettings(
+          clip.timeline.timeMap,
+          pitchSnapSettings.get(),
+          tick,
+        );
+
+      if (!externalPreviewActive) {
+        externalPreviewActive = true;
+        visuals?.beginDrag(
+          session.selection.notes,
+          converter,
+          instrumentStyles.get(),
+          getSnapSettingsAtTick,
+          clip.timeline.timeMap.scaleMarkers,
+        );
+      }
+
+      const deltaX = converter.tickToCssPixelX(preview.deltaTicks)
+        - converter.tickToCssPixelX(0);
+      const pitchStepCssPixels = converter.pitchToCssPixelY(0)
+        - converter.pitchToCssPixelY(1);
+
+      visuals?.updateDrag(
+        deltaX,
+        pitchStepCssPixels,
+        preview.deltaTicks,
+        0,
+        getSnapSettingsAtTick,
+      );
+    };
+
+    const unsubscribe = timelineDragPreview.subscribe(updateExternalPreview);
+
+    return (): void => {
+      unsubscribe();
+
+      if (externalPreviewActive) {
+        visualsRef.current?.endDrag();
+      }
+    };
+  }, [
+    editorCommands,
+    instrumentStyles,
+    pitchSnapSettings,
+    selectionController,
+    session,
+    timelineDragPreview,
     viewport,
     visualsRef,
   ]);

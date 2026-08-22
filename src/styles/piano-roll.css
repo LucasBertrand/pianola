@@ -146,6 +146,7 @@
   bottom: 0;
   left: 0;
   overflow: hidden;
+  cursor: crosshair;
   touch-action: none;
 }
 
@@ -237,6 +238,40 @@
   cursor: grabbing;
 }
 
+.bar-ruler-marker-flag.is-selection-preview {
+  --marker-stem-color: var(--color-accent-primary);
+  z-index: 4;
+  display: none;
+  border-color: var(--color-accent-primary);
+  background: var(--color-surface-primary);
+  color: var(--color-text-bright);
+  cursor: grabbing;
+  pointer-events: none;
+}
+
+.bar-ruler-marker-flag.is-selected {
+  --marker-stem-color: var(--color-accent-primary);
+  z-index: 2;
+  border-color: var(--color-accent-primary);
+  background: var(--color-primary-medium);
+  color: var(--color-text-bright);
+  box-shadow:
+    0 0 0 1px var(--color-primary-medium),
+    0 0 8px var(--color-primary-medium);
+}
+
+.bar-ruler-marker-flag.has-visible-boundary {
+  --marker-stem-color: var(--color-accent-primary);
+}
+
+.bar-ruler-marker-flag.is-selected.is-selection-residual {
+  --marker-stem-color: var(--color-border-control);
+  border-color: var(--color-border-control);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  box-shadow: 0 2px 5px var(--color-shadow-soft);
+}
+
 .bar-ruler-marker-boundaries {
   position: absolute;
   z-index: 2;
@@ -254,7 +289,7 @@
   bottom: 0;
   left: 0;
   display: block;
-  width: 0.5px;
+  width: 1px;
   background: linear-gradient(to bottom,
       var(--color-accent-primary),
       transparent 72%);
@@ -263,11 +298,7 @@
   will-change: transform;
 }
 
-.bar-ruler-marker-boundaries i.is-active {
-  opacity: 0.48;
-}
-
-.bar-ruler-marker-boundaries i.is-hovered {
+.bar-ruler-marker-boundaries i.is-visible {
   opacity: 0.48;
 }
 

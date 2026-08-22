@@ -88,7 +88,7 @@ describe("validateClipTimeline", () => {
     )).toBe(true);
   });
 
-  test("rejects adjacent identical meters", () => {
+  test("accepts adjacent identical meters at distinct boundaries", () => {
     const result = validateClipTimeline(
       createTimeline({
         meterMarkers: [
@@ -101,10 +101,7 @@ describe("validateClipTimeline", () => {
       CLOCK,
     );
 
-    expect(result.valid).toBe(false);
-    expect(result.issues.some((issue) =>
-      issue.message.includes("distinct time signatures")
-    )).toBe(true);
+    expect(result).toEqual({ valid: true, issues: [] });
   });
 
   test("rejects a duration that does not end on a measure boundary", () => {

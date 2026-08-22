@@ -1,13 +1,14 @@
 import {
   EditorSelection,
+  type EditorSelectionSnapshot,
   type NoteSelectionPredicate,
 } from "../selection/editor-selection";
 import {
-  type Note,
-} from "../../domain/notes/note";
-import {
   type NoteId,
 } from "../../domain/identifiers";
+import type {
+  Note,
+} from "../../domain/notes/note";
 import {
   CoordinateConverter,
   type ViewportState,
@@ -46,7 +47,10 @@ export class PianoRollInteractionSession {
   };
   public readonly converter: CoordinateConverter;
 
-  private readonly gestureSelectionSnapshot: Note[] = [];
+  private gestureSelectionSnapshot: EditorSelectionSnapshot = {
+    notes: [],
+    markerGroups: [],
+  };
   private converterVersion: number;
   private gestureSelectionRestored = false;
   private noteSequence = 0;
@@ -78,12 +82,7 @@ export class PianoRollInteractionSession {
   }
 
   public captureGestureSelection(): void {
-    this.gestureSelectionSnapshot.length = 0;
-
-    for (const note of this.selection.notes) {
-      this.gestureSelectionSnapshot.push(note);
-    }
-
+    this.gestureSelectionSnapshot = this.selection.captureSnapshot();
     this.gestureSelectionRestored = false;
   }
 
@@ -94,13 +93,10 @@ export class PianoRollInteractionSession {
       return false;
     }
 
-    this.selection.clear();
-
-    for (const note of this.gestureSelectionSnapshot) {
-      if (predicate(note)) {
-        this.selection.add(note);
-      }
-    }
+    this.selection.restoreSnapshot(
+      this.gestureSelectionSnapshot,
+      predicate,
+    );
 
     this.gestureSelectionRestored = true;
     return true;

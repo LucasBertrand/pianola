@@ -20,12 +20,14 @@ import {
 } from "../../../domain/note-collision";
 import type {
   NoteCollisionResolutionRequest,
+  PreparedNoteCollisionResolution,
 } from "./note-collision-resolution";
 import type {
   EditorCommandPort,
 } from "../../commands/editor-command-service";
 import {
   type EditorSelection,
+  type SelectedTimeMapMarkerGroup,
 } from "../../../editor/selection/editor-selection";
 import {
   buildAddNoteCommands,
@@ -35,6 +37,13 @@ import {
   resizeNotes,
   type NoteResizeEdge,
 } from "./note-edit-commands";
+import {
+  planSelectedMarkerMove,
+} from "../selection/timeline-selection-move";
+import type {
+  MarkerCollisionResolutionRequest,
+  TimeMapMarkerCollision,
+} from "../timeline/marker-collision-resolution";
 
 export type NoteGestureCommitResult =
   | "unchanged"
@@ -46,6 +55,9 @@ export interface NoteGestureWorkflowCallbacks {
   readonly onCollision:
     | ((request: NoteCollisionResolutionRequest) => void)
     | undefined;
+  readonly onMarkerCollision?: (
+    request: MarkerCollisionResolutionRequest,
+  ) => void;
   readonly onTransactionRejected:
     | ((error: unknown) => void)
     | undefined;
@@ -59,6 +71,10 @@ interface CommitNoteEditOptions {
   readonly commands: readonly PianoRollCommand[];
   readonly label: string;
   readonly selectionAfterCommit: "reconcile" | "proposed";
+  readonly markerCommands?: readonly PianoRollCommand[];
+  readonly markerGroupsAfterCommit?: readonly SelectedTimeMapMarkerGroup[];
+  readonly markerCollisions?: readonly TimeMapMarkerCollision[];
+  readonly markerOverwriteCommands?: readonly PianoRollCommand[];
 }
 
 /**
@@ -75,11 +91,42 @@ export class NoteGestureWorkflow {
 
   public commitMove(
     proposedNotes: readonly Note[],
+    requestedDeltaTicks?: number,
   ): NoteGestureCommitResult {
     const originalNotes = this.selection.copyNotes();
-    const clipId = getActiveClip(this.commands.getState()).id;
+    const state = this.commands.getState();
+    const clipId = getActiveClip(state).id;
+    const deltaTicks = requestedDeltaTicks
+      ?? inferCommonDeltaTicks(originalNotes, proposedNotes);
+    let markerPlan;
+    let markerOverwriteCommands: readonly PianoRollCommand[] | undefined;
 
-    if (!hasChangedPosition(originalNotes, proposedNotes)) {
+    try {
+      markerPlan = planSelectedMarkerMove(
+        state,
+        clipId,
+        this.selection.markerGroups,
+        deltaTicks,
+      );
+      if (markerPlan.collisions.length > 0) {
+        markerOverwriteCommands = planSelectedMarkerMove(
+          state,
+          clipId,
+          this.selection.markerGroups,
+          deltaTicks,
+          true,
+        ).commands;
+      }
+    } catch (error: unknown) {
+      this.callbacks.onTransactionRejected?.(error);
+      return "rejected";
+    }
+
+    if (
+      !hasChangedPosition(originalNotes, proposedNotes)
+      && markerPlan.commands.length === 0
+      && markerPlan.collisions.length === 0
+    ) {
       return "unchanged";
     }
 
@@ -87,9 +134,21 @@ export class NoteGestureWorkflow {
       clipId,
       originalNotes,
       proposedNotes,
-      commands: buildRepositionNoteCommands(clipId, proposedNotes),
-      label: "Move notes",
+      commands: [
+        ...markerPlan.commands,
+        ...buildRepositionNoteCommands(clipId, proposedNotes),
+      ],
+      label: markerPlan.commands.length > 0
+        || markerPlan.collisions.length > 0
+        ? "Move timeline selection"
+        : "Move notes",
       selectionAfterCommit: "reconcile",
+      markerCommands: markerPlan.commands,
+      markerGroupsAfterCommit: markerPlan.resultingMarkerGroups,
+      markerCollisions: markerPlan.collisions,
+      ...(markerOverwriteCommands === undefined
+        ? {}
+        : { markerOverwriteCommands }),
     });
   }
 
@@ -177,17 +236,27 @@ export class NoteGestureWorkflow {
       options.clipId,
       options,
     );
+    const markerCollisions = options.markerCollisions ?? [];
 
     if (collisionCount > 0) {
       const originalNotes = options.originalNotes.slice();
       const proposedNotes = options.proposedNotes.slice();
 
-      this.callbacks.onCollision?.({
+      const request: NoteCollisionResolutionRequest = {
         clipId: options.clipId,
         label: options.label,
         collisionCount,
         originalNotes,
         proposedNotes,
+        ...(options.markerCommands === undefined
+          ? {}
+          : { prefixCommands: options.markerCommands }),
+        ...(options.markerGroupsAfterCommit === undefined
+          ? {}
+          : {
+              selectionAfterMarkerGroups:
+                options.markerGroupsAfterCommit,
+            }),
         onResolved: (
           resolvedState,
           selectedNoteIds,
@@ -201,10 +270,33 @@ export class NoteGestureWorkflow {
               note,
             ),
           );
+          this.selection.replaceMarkerGroups(
+            options.markerGroupsAfterCommit ?? this.selection.markerGroups,
+          );
           this.callbacks.onSelectionChanged?.();
         },
-      });
+        ...(markerCollisions.length === 0
+          ? {}
+          : {
+              onResolutionPrepared: (
+                resolution: PreparedNoteCollisionResolution,
+              ): void => {
+                this.requestMarkerOverwrite(
+                  options,
+                  markerCollisions,
+                  resolution,
+                );
+              },
+            }),
+      };
 
+      this.callbacks.onCollision?.(request);
+
+      return "collision";
+    }
+
+    if (markerCollisions.length > 0) {
+      this.requestMarkerOverwrite(options, markerCollisions);
       return "collision";
     }
 
@@ -221,6 +313,9 @@ export class NoteGestureWorkflow {
               ? options.proposedNotes
               : options.originalNotes,
           ),
+          ...(options.markerGroupsAfterCommit === undefined
+            ? {}
+            : { markerGroups: options.markerGroupsAfterCommit }),
         },
       );
     } catch (error: unknown) {
@@ -239,6 +334,11 @@ export class NoteGestureWorkflow {
         (note) => isNoteEditable(nextState, options.clipId, note),
       );
     } else {
+      if (options.markerGroupsAfterCommit !== undefined) {
+        this.selection.replaceMarkerGroups(
+          options.markerGroupsAfterCommit,
+        );
+      }
       this.selection.reconcile(
         nextState,
         (note) => isNoteEditable(nextState, options.clipId, note),
@@ -246,6 +346,62 @@ export class NoteGestureWorkflow {
     }
 
     return "committed";
+  }
+
+  private requestMarkerOverwrite(
+    options: CommitNoteEditOptions,
+    collisions: readonly TimeMapMarkerCollision[],
+    preparedNoteResolution?: PreparedNoteCollisionResolution,
+  ): void {
+    this.callbacks.onMarkerCollision?.({
+      label: options.label,
+      collisions,
+      onOverwrite: (): void => {
+        const markerCommands = options.markerOverwriteCommands ?? [];
+        const noteCommands = preparedNoteResolution?.commands
+          ?? options.commands;
+        const selectedNoteIds = preparedNoteResolution?.selectedNoteIds
+          ?? collectNoteIds(
+            options.selectionAfterCommit === "proposed"
+              ? options.proposedNotes
+              : options.originalNotes,
+          );
+        let nextState: ProjectState | null;
+
+        try {
+          nextState = this.commands.dispatch(
+            [...markerCommands, ...noteCommands],
+            preparedNoteResolution?.transactionLabel ?? options.label,
+            {
+              clipId: options.clipId,
+              noteIds: selectedNoteIds,
+              ...(options.markerGroupsAfterCommit === undefined
+                ? {}
+                : { markerGroups: options.markerGroupsAfterCommit }),
+            },
+          );
+        } catch (error: unknown) {
+          this.callbacks.onTransactionRejected?.(error);
+          return;
+        }
+
+        if (nextState === null) {
+          return;
+        }
+
+        this.selection.replaceFromNoteIds(
+          nextState,
+          selectedNoteIds,
+          (note) => isNoteEditable(nextState, options.clipId, note),
+        );
+        if (options.markerGroupsAfterCommit !== undefined) {
+          this.selection.replaceMarkerGroups(
+            options.markerGroupsAfterCommit,
+          );
+        }
+        this.callbacks.onSelectionChanged?.();
+      },
+    });
   }
 }
 
@@ -296,4 +452,16 @@ function hasChangedPosition(
   }
 
   return false;
+}
+
+function inferCommonDeltaTicks(
+  originalNotes: readonly Note[],
+  proposedNotes: readonly Note[],
+): number {
+  const original = originalNotes[0];
+  const proposed = proposedNotes[0];
+
+  return original === undefined || proposed === undefined
+    ? 0
+    : proposed.startTick - original.startTick;
 }

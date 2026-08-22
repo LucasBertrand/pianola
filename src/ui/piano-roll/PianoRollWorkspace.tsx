@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -51,6 +52,9 @@ import {
   PianoRollPlayhead,
 } from "../../ui/piano-roll/PianoRollTimeline";
 import {
+  PianoRollGlobalLasso,
+} from "../../ui/piano-roll/PianoRollGlobalLasso";
+import {
   PianoKeyboard,
 } from "../../ui/piano-roll/PianoKeyboard";
 import {
@@ -71,6 +75,9 @@ import {
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
+import type {
+  PointerInteractionStrategy,
+} from "../../editor/interactions/pointer/pointer-interaction-strategy";
 import {
   type PitchSnapSettings,
 } from "../../music/pitch-snap";
@@ -83,6 +90,12 @@ import type {
 import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
+import {
+  MutableRenderSignal,
+} from "../../editor/model/render-signal";
+import type {
+  TimelineDragPreview,
+} from "../../editor/model/timeline-drag-preview";
 import {
   useClipWorkflow,
 } from "../../ui/inspector/clips/useClipWorkflow";
@@ -119,6 +132,9 @@ import {
 import {
   useNoteCollisionDialogWorkflow,
 } from "./interactions/useNoteCollisionDialogWorkflow";
+import {
+  useMarkerCollisionDialogWorkflow,
+} from "./interactions/useMarkerCollisionDialogWorkflow";
 import {
   usePianoRollProjectState,
 } from "./usePianoRollProjectState";
@@ -160,6 +176,13 @@ export function PianoRollWorkspace({
 }: PianoRollWorkspaceProps): React.JSX.Element {
   const pianoRollControllerRef =
     useRef<PianoRollControllerPort | null>(null);
+  const interactionStrategyRef =
+    useRef<PointerInteractionStrategy | null>(null);
+  const globalLassoRef = useRef<HTMLDivElement | null>(null);
+  const timelineDragPreview = useMemo(
+    () => new MutableRenderSignal<TimelineDragPreview | null>(null),
+    [],
+  );
   const pendingMidiImportRef =
     useRef<MidiImportAnalysis | null>(null);
 
@@ -219,6 +242,9 @@ export function PianoRollWorkspace({
   const handlePitchSelect = useCallback((pitch: number): void => {
     pianoRollControllerRef.current
       ?.togglePitchSelection(pitch);
+  }, []);
+  const clearTimelineSelection = useCallback((): void => {
+    pianoRollControllerRef.current?.clearSelection();
   }, []);
   const clearPendingMidiImport = useCallback((): void => {
     pendingMidiImportRef.current = null;
@@ -383,9 +409,15 @@ export function PianoRollWorkspace({
     getController: getPianoRollController,
     seekPlayback,
   });
+  const handleMarkerCollision = useMarkerCollisionDialogWorkflow({
+    showDialog: setApplicationDialog,
+  });
   const timeMapMarkers = useTimeMapMarkerWorkflow({
     runtime,
     alert: showApplicationAlert,
+    getController: getPianoRollController,
+    resolveCollision: handleNoteCollision,
+    resolveMarkerCollision: handleMarkerCollision,
   });
   const {
     clipboardAvailable,
@@ -403,6 +435,7 @@ export function PianoRollWorkspace({
     transferToInstrument: handleTransferSelectionToInstrument,
   } = usePianoRollSelectionWorkflow({
     commands: runtime.editorCommands,
+    selection: runtime.selection,
     getController: getPianoRollController,
     getPlayheadTick() {
       return runtime.playheadTick.get();
@@ -411,6 +444,7 @@ export function PianoRollWorkspace({
       return runtime.gridResolutionTicks.get();
     },
     resolveCollision: handleNoteCollision,
+    resolveMarkerCollision: handleMarkerCollision,
     alert: showApplicationAlert,
   });
   const handleOpenSliceSelection = useCallback((): void => {
@@ -615,7 +649,8 @@ export function PianoRollWorkspace({
               activeClip.timeline.timeMap,
               activeClip.timeline.durationTicks,
             )}
-            selectionAvailable={selectionAvailable}
+            selectionAvailable={selectedNotes.length > 0}
+            clipboardSelectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
             noteColorMode={noteColorMode}
@@ -671,10 +706,14 @@ export function PianoRollWorkspace({
                 markerFlags={createTimeMapMarkerFlags(
                   activeClip.timeline.timeMap,
                 )}
+                selection={runtime.selection}
+                timelineDragPreview={timelineDragPreview}
+                interactionStrategyRef={interactionStrategyRef}
                 onLoopCommit={handleLoopRegionCommit}
                 onOpenMarker={timeMapMarkers.openMarker}
+                onSelectMarker={timeMapMarkers.selectMarker}
                 onMoveMarker={timeMapMarkers.moveMarker}
-                onGridSeek={seekPlayback}
+                onClearSelection={clearTimelineSelection}
               />
               <div className="canvas-host">
                 <PianoRollLayers
@@ -693,11 +732,16 @@ export function PianoRollWorkspace({
                   controllerRef={
                     pianoRollControllerRef
                   }
+                  interactionStrategyRef={interactionStrategyRef}
                   onSelectionChange={handleSelectionChange}
                   onGridSeek={seekPlayback}
                   onNoteCollision={handleNoteCollision}
+                  onMarkerCollision={handleMarkerCollision}
+                  globalLassoRef={globalLassoRef}
+                  timelineDragPreview={timelineDragPreview}
                 />
               </div>
+              <PianoRollGlobalLasso elementRef={globalLassoRef} />
               <PianoRollPlayhead
                 viewport={runtime.viewport}
                 playheadTick={runtime.playheadTick}
@@ -723,7 +767,7 @@ export function PianoRollWorkspace({
           portraitSection={projectInspectorSection}
           projectState={projectState}
           selectedInstrumentId={selectedInstrumentId}
-          selectionAvailable={selectionAvailable}
+          selectionAvailable={selectedNotes.length > 0}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClipSelect={handleClipSelect}
           onAddClip={handleAddClip}
@@ -770,18 +814,23 @@ export function PianoRollWorkspace({
       {timeMapMarkers.draft === null ? null : (
         <TempoMeterMarkerDialog
           mode={timeMapMarkers.draft.mode}
+          tempoIncluded={timeMapMarkers.draft.tempoIncluded}
+          meterIncluded={timeMapMarkers.draft.meterIncluded}
+          scaleIncluded={timeMapMarkers.draft.scaleIncluded}
+          canChangeMarkerTypes={timeMapMarkers.draft.canChangeMarkerTypes}
           bpm={timeMapMarkers.draft.bpm}
           timeSignature={timeMapMarkers.draft.timeSignature}
           rootNote={timeMapMarkers.draft.rootNote}
           patternType={timeMapMarkers.draft.patternType}
           patternId={timeMapMarkers.draft.patternId}
-          canDelete={timeMapMarkers.draft.canDelete}
+          onTempoIncludedChange={timeMapMarkers.setDraftTempoIncluded}
+          onMeterIncludedChange={timeMapMarkers.setDraftMeterIncluded}
+          onScaleIncludedChange={timeMapMarkers.setDraftScaleIncluded}
           onBpmChange={timeMapMarkers.setDraftBpm}
           onTimeSignatureChange={timeMapMarkers.setDraftTimeSignature}
           onRootNoteChange={timeMapMarkers.setDraftRootNote}
           onPatternTypeChange={timeMapMarkers.setDraftPatternType}
           onPatternIdChange={timeMapMarkers.setDraftPatternId}
-          onDelete={timeMapMarkers.deleteDraft}
           onConfirm={timeMapMarkers.confirmDraft}
           onCancel={timeMapMarkers.cancelDraft}
         />

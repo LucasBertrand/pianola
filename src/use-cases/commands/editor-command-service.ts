@@ -18,11 +18,13 @@ import {
 } from "../../config/domain-limits";
 import {
   EditorSelection,
+  type SelectedTimeMapMarkerGroup,
 } from "../../editor/selection/editor-selection";
 
 export interface EditorSelectionHistoryTarget {
   readonly clipId: ClipId;
   readonly noteIds: readonly NoteId[];
+  readonly markerGroups?: readonly SelectedTimeMapMarkerGroup[];
 }
 
 interface EditorSelectionHistoryEntry {
@@ -163,7 +165,13 @@ export class EditorCommandService implements EditorCommandPort {
         before: selectionBefore,
         after: selectionAfter === undefined
           ? selectionBefore
-          : cloneSelectionTarget(selectionAfter),
+          : cloneSelectionTarget({
+              ...selectionAfter,
+              markerGroups:
+                selectionAfter.markerGroups
+                ?? selectionBefore.markerGroups
+                ?? [],
+            }),
       });
       this.trimPastSelectionEntries();
       this.futureSelectionEntries.length = 0;
@@ -178,6 +186,7 @@ export class EditorCommandService implements EditorCommandPort {
     return {
       clipId: state.workspace.activeClipId,
       noteIds: this.selection.notes.map((note) => note.id),
+      markerGroups: cloneMarkerGroups(this.selection.markerGroups),
     };
   }
 
@@ -192,9 +201,10 @@ export class EditorCommandService implements EditorCommandPort {
 
     const activeClip = getActiveClip(state);
 
-    this.selection.replaceFromNoteIds(
+    this.selection.replaceFromIdentifiers(
       state,
       target.noteIds,
+      target.markerGroups ?? [],
       (note) =>
         activeClip.instrumentStatesById[note.instrumentId]?.locked === false,
     );
@@ -216,5 +226,15 @@ function cloneSelectionTarget(
   return {
     clipId: target.clipId,
     noteIds: target.noteIds.slice(),
+    markerGroups: cloneMarkerGroups(target.markerGroups ?? []),
   };
+}
+
+function cloneMarkerGroups(
+  groups: readonly SelectedTimeMapMarkerGroup[],
+): SelectedTimeMapMarkerGroup[] {
+  return groups.map((group) => ({
+    startTick: group.startTick,
+    kinds: group.kinds.slice(),
+  }));
 }

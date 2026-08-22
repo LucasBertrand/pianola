@@ -25,6 +25,9 @@ import type {
 import {
   NoteGestureWorkflow,
 } from "../../../use-cases/piano-roll/notes/note-gesture-workflow";
+import type {
+  MarkerCollisionResolutionRequest,
+} from "../../../use-cases/piano-roll/timeline/marker-collision-resolution";
 
 export interface NoteGestureWorkflowAdapterOptions {
   readonly editorCommands: EditorCommandPort;
@@ -33,6 +36,9 @@ export interface NoteGestureWorkflowAdapterOptions {
   readonly onCollision:
     | ((request: NoteCollisionResolutionRequest) => void)
     | undefined;
+  readonly onMarkerCollision?: (
+    request: MarkerCollisionResolutionRequest,
+  ) => void;
   readonly onTransactionRejected:
     | ((error: unknown) => void)
     | undefined;
@@ -50,6 +56,9 @@ export class NoteGestureWorkflowAdapter {
       options.selection,
       {
         onCollision: options.onCollision,
+        ...(options.onMarkerCollision === undefined
+          ? {}
+          : { onMarkerCollision: options.onMarkerCollision }),
         onTransactionRejected: options.onTransactionRejected,
         onSelectionChanged: options.onSelectionChanged,
       },
@@ -84,6 +93,7 @@ export class NoteGestureWorkflowAdapter {
         completion.deltaPitch,
         completion.getSnapSettingsAtTick,
       ),
+      completion.deltaTicks,
     );
   }
 

@@ -22,13 +22,31 @@ import {
 import {
   useTimeMapMarkerGesture,
 } from "./useTimeMapMarkerGesture";
+import type {
+  EditorSelection,
+} from "../../editor/selection/editor-selection";
+import type {
+  TimelineDragPreview,
+} from "../../editor/model/timeline-drag-preview";
+import type {
+  MutableRenderSignal,
+} from "../../editor/model/render-signal";
+import {
+  createMarkerPreviewProjection,
+  isOriginalMarkerBoundaryVisible,
+} from "./time-map-marker-preview";
 
 export interface PianoRollTimeMapOverlayProps {
   readonly flags: readonly TimeMapMarkerFlag[];
+  readonly selection: EditorSelection;
+  readonly timelineDragPreview: MutableRenderSignal<
+    TimelineDragPreview | null
+  >;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly onOpenMarker: (tick: Tick) => void;
+  readonly onSelectMarker: (tick: Tick) => void;
   readonly onMoveMarker: (fromTick: Tick, toTick: Tick) => void;
 }
 
@@ -39,64 +57,173 @@ export interface PianoRollTimeMapOverlayProps {
  */
 export function PianoRollTimeMapOverlay({
   flags,
+  selection,
+  timelineDragPreview,
   viewport,
   projectStore,
   gridResolutionTicks,
   onOpenMarker,
+  onSelectMarker,
   onMoveMarker,
 }: PianoRollTimeMapOverlayProps): React.JSX.Element {
   const layerRef = useRef<HTMLDivElement | null>(null);
   const flagElementsRef = useRef(new Map<Tick, HTMLButtonElement>());
+  const flagLabelElementsRef = useRef(new Map<Tick, HTMLSpanElement>());
+  const previewElementsRef = useRef(new Map<Tick, HTMLDivElement>());
   const boundaryElementsRef = useRef(new Map<Tick, HTMLElement>());
+  const previewBoundaryElementsRef = useRef(new Map<Tick, HTMLElement>());
+  const hoveredMarkerTickRef = useRef<Tick | null>(null);
   const getFlagElement = useCallback(
     (tick: Tick): HTMLButtonElement | null =>
       flagElementsRef.current.get(tick) ?? null,
     [],
   );
-  const getBoundaryElement = useCallback(
-    (tick: Tick): HTMLElement | null =>
-      boundaryElementsRef.current.get(tick) ?? null,
-    [],
-  );
-  const resetPositions = useCallback((): void => {
+  const syncMarkerPresentation = useCallback((): void => {
     const currentViewport = viewport.get();
     const pixelsPerTick =
       currentViewport.zoomX / currentViewport.ticksPerPixel;
+    const preview = timelineDragPreview.get();
+    const projection = preview === null
+      ? null
+      : createMarkerPreviewProjection(
+          flags,
+          selection.markerGroups,
+          preview,
+        );
 
     for (const flag of flags) {
+      const selected = selection.hasMarkerGroup(flag.startTick);
+      const previewGroup = projection?.sourceGroupsByTick.get(flag.startTick);
+      const remainingFlag = projection?.remainingFlagsByTick.has(
+        flag.startTick,
+      ) === true
+        ? projection.remainingFlagsByTick.get(flag.startTick) ?? null
+        : flag;
+      const receivesPreview =
+        projection?.destinationFlagsByTick.has(flag.startTick) === true;
+      const hideOriginal = projection !== null
+        && (remainingFlag === null || receivesPreview);
+      const originalBoundaryVisible = isOriginalMarkerBoundaryVisible({
+        selected,
+        hovered: hoveredMarkerTickRef.current === flag.startTick,
+        originalHidden: hideOriginal,
+        sourcePreviewed: previewGroup !== undefined,
+      });
       const x =
-        flag.startTick * pixelsPerTick - currentViewport.scrollX;
+        flag.startTick * pixelsPerTick
+        - currentViewport.scrollX;
       const flagElement = flagElementsRef.current.get(flag.startTick);
+      const labelElement = flagLabelElementsRef.current.get(flag.startTick);
+      const previewElement = previewElementsRef.current.get(flag.startTick);
       const boundaryElement =
         boundaryElementsRef.current.get(flag.startTick);
+      const previewBoundaryElement =
+        previewBoundaryElementsRef.current.get(flag.startTick);
 
       if (flagElement !== undefined) {
+        flagElement.style.display = hideOriginal ? "none" : "flex";
         flagElement.style.transform = `translate3d(${String(x)}px, 0, 0)`;
+        flagElement.classList.toggle("is-selected", selected);
+        flagElement.setAttribute("aria-pressed", String(selected));
+        flagElement.classList.toggle(
+          "is-selection-residual",
+          projection !== null
+            && previewGroup !== undefined
+            && !hideOriginal,
+        );
+        flagElement.classList.toggle(
+          "has-visible-boundary",
+          originalBoundaryVisible,
+        );
       }
 
       if (boundaryElement !== undefined) {
         boundaryElement.style.transform = `translate3d(${String(x)}px, 0, 0)`;
+        boundaryElement.classList.toggle(
+          "is-visible",
+          originalBoundaryVisible,
+        );
+      }
+
+      if (labelElement !== undefined) {
+        labelElement.textContent = remainingFlag === null
+          ? ""
+          : formatMarkerFlagLabel(remainingFlag);
+      }
+
+      if (previewElement !== undefined) {
+        previewElement.style.display =
+          projection === null || previewGroup === undefined
+            ? "none"
+            : "flex";
+
+        if (projection !== null && previewGroup !== undefined) {
+          const targetTick = flag.startTick + projection.deltaTicks;
+          const destinationFlag =
+            projection.destinationFlagsByTick.get(targetTick);
+          const previewX =
+            targetTick * pixelsPerTick
+            - currentViewport.scrollX;
+
+          previewElement.style.transform =
+            `translate3d(${String(previewX)}px, 0, 0)`;
+          previewElement.textContent = destinationFlag === undefined
+            ? ""
+            : formatMarkerFlagLabel(destinationFlag);
+        }
+      }
+
+      if (previewBoundaryElement !== undefined) {
+        previewBoundaryElement.classList.toggle(
+          "is-visible",
+          projection !== null && previewGroup !== undefined,
+        );
+
+        if (projection !== null && previewGroup !== undefined) {
+          const previewX =
+            (flag.startTick + projection.deltaTicks) * pixelsPerTick
+            - currentViewport.scrollX;
+
+          previewBoundaryElement.style.transform =
+            `translate3d(${String(previewX)}px, 0, 0)`;
+        }
       }
     }
-  }, [flags, viewport]);
+  }, [flags, selection, timelineDragPreview, viewport]);
 
   useEffect(() => {
-    resetPositions();
+    syncMarkerPresentation();
 
-    return viewport.subscribe(resetPositions);
-  }, [resetPositions, viewport]);
+    const unsubscribeViewport = viewport.subscribe(syncMarkerPresentation);
+    const unsubscribePreview = timelineDragPreview.subscribe(
+      syncMarkerPresentation,
+    );
+    const unsubscribeSelection = selection.subscribe(syncMarkerPresentation);
+
+    return (): void => {
+      unsubscribeViewport();
+      unsubscribePreview();
+      unsubscribeSelection();
+    };
+  }, [selection, syncMarkerPresentation, timelineDragPreview, viewport]);
+
+  useEffect(
+    () => projectStore.subscribe((state) => {
+      selection.reconcile(state);
+    }),
+    [projectStore, selection],
+  );
 
   const markerGesture = useTimeMapMarkerGesture({
-    flags,
+    selection,
+    timelineDragPreview,
     viewport,
     gridResolutionTicks,
     projectStore,
     layerRef,
-    onOpenMarker,
+    onSelectMarker,
     onMoveMarker,
     getFlagElement,
-    getBoundaryElement,
-    resetPositions,
   });
 
   return (
@@ -104,54 +231,100 @@ export function PianoRollTimeMapOverlay({
       <div
         ref={layerRef}
         className="bar-ruler-marker-overlay"
-        aria-label="Tempo and meter markers"
+        aria-label="Timeline markers"
       >
         {flags.map((flag) => (
-          <button
-            key={flag.startTick}
-            ref={(element) => {
-              if (element === null) {
-                flagElementsRef.current.delete(flag.startTick);
-              } else {
-                flagElementsRef.current.set(flag.startTick, element);
+          <React.Fragment key={flag.startTick}>
+            <button
+              ref={(element) => {
+                if (element === null) {
+                  flagElementsRef.current.delete(flag.startTick);
+                } else {
+                  flagElementsRef.current.set(flag.startTick, element);
+                }
+              }}
+              className={
+                `bar-ruler-marker-flag${
+                  flag.isInitial ? " is-initial" : ""
+                }`
               }
-            }}
-            className={
-              `bar-ruler-marker-flag${
-                flag.isInitial ? " is-initial" : ""
-              }`
-            }
-            type="button"
-            data-marker-tick={flag.startTick}
-            aria-label={
-              `Tempo and meter marker ${formatMarkerFlagLabel(flag)}`
-            }
-            onPointerDown={(event) => {
-              markerGesture.begin(flag, event);
-            }}
-            onPointerEnter={() => {
-              getBoundaryElement(flag.startTick)?.classList.add("is-hovered");
-            }}
-            onPointerLeave={() => {
-              getBoundaryElement(flag.startTick)?.classList.remove("is-hovered");
-            }}
-          >
-            <span>{formatMarkerFlagLabel(flag)}</span>
-          </button>
+              type="button"
+              data-marker-tick={flag.startTick}
+              title="Click to select. Double-click to edit."
+              aria-label={
+                `Timeline marker ${formatMarkerFlagLabel(flag)}`
+              }
+              onPointerDown={(event) => {
+                markerGesture.begin(flag, event);
+              }}
+              onDoubleClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onOpenMarker(flag.startTick);
+              }}
+              onPointerEnter={() => {
+                hoveredMarkerTickRef.current = flag.startTick;
+                syncMarkerPresentation();
+              }}
+              onPointerLeave={() => {
+                if (hoveredMarkerTickRef.current === flag.startTick) {
+                  hoveredMarkerTickRef.current = null;
+                  syncMarkerPresentation();
+                }
+              }}
+            >
+              <span
+                ref={(element) => {
+                  if (element === null) {
+                    flagLabelElementsRef.current.delete(flag.startTick);
+                  } else {
+                    flagLabelElementsRef.current.set(flag.startTick, element);
+                  }
+                }}
+              >
+                {formatMarkerFlagLabel(flag)}
+              </span>
+            </button>
+            <div
+              ref={(element) => {
+                if (element === null) {
+                  previewElementsRef.current.delete(flag.startTick);
+                } else {
+                  previewElementsRef.current.set(flag.startTick, element);
+                }
+              }}
+              className="bar-ruler-marker-flag is-selection-preview"
+              aria-hidden="true"
+            />
+          </React.Fragment>
         ))}
       </div>
       <div className="bar-ruler-marker-boundaries" aria-hidden="true">
         {flags.map((flag) => (
-          <i
-            key={flag.startTick}
-            ref={(element) => {
-              if (element === null) {
-                boundaryElementsRef.current.delete(flag.startTick);
-              } else {
-                boundaryElementsRef.current.set(flag.startTick, element);
-              }
-            }}
-          />
+          <React.Fragment key={flag.startTick}>
+            <i
+              ref={(element) => {
+                if (element === null) {
+                  boundaryElementsRef.current.delete(flag.startTick);
+                } else {
+                  boundaryElementsRef.current.set(flag.startTick, element);
+                }
+              }}
+            />
+            <i
+              ref={(element) => {
+                if (element === null) {
+                  previewBoundaryElementsRef.current.delete(flag.startTick);
+                } else {
+                  previewBoundaryElementsRef.current.set(
+                    flag.startTick,
+                    element,
+                  );
+                }
+              }}
+              className="is-preview"
+            />
+          </React.Fragment>
         ))}
       </div>
     </>

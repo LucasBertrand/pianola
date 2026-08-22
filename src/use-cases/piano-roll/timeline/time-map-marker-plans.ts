@@ -24,6 +24,9 @@ import {
 } from "../../../domain/transport/time-map";
 import type { TonalPatternId, TonalPatternType } from "../../../music/pitch-snap";
 import { ChordType } from "@tonaljs/tonal";
+import type {
+  TimeMapMarkerCollision,
+} from "./marker-collision-resolution";
 
 
 /**
@@ -45,6 +48,10 @@ export interface TimeMapMarkerDraft {
   readonly mode: "create" | "edit";
   readonly startTick: Tick;
   readonly measureIndex: number | null;
+  readonly tempoIncluded: boolean;
+  readonly meterIncluded: boolean;
+  readonly scaleIncluded: boolean;
+  readonly canChangeMarkerTypes: boolean;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string;
@@ -124,6 +131,10 @@ export function createMarkerDraft(
       mode: hasMarker ? "edit" : "create",
       startTick: span.startTick,
       measureIndex: span.index,
+      tempoIncluded: tempoMarker !== undefined,
+      meterIncluded: meterMarker !== undefined,
+      scaleIncluded: scaleMarker !== undefined,
+      canChangeMarkerTypes: span.startTick > 0,
       bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, span.startTick),
       timeSignature: meterMarker?.timeSignature
         ?? getMeterAtTick(timeMap, span.startTick),
@@ -147,6 +158,10 @@ export function createMarkerDraft(
     mode: hasMarker ? "edit" : "create",
     startTick: tick,
     measureIndex: null,
+    tempoIncluded: tempoMarker !== undefined,
+    meterIncluded: false,
+    scaleIncluded: scaleMarker !== undefined,
+    canChangeMarkerTypes: tick > 0,
     bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, tick),
     timeSignature: null,
     rootNote: scaleMarker?.rootNote ?? activeScaleMarker.rootNote,
@@ -157,8 +172,9 @@ export function createMarkerDraft(
 }
 
 /**
- * Turns a validated draft into the minimal command list: only effective
- * changes produce commands, so a no-op confirmation stays out of history.
+ * Reconciles the explicit marker types selected in a dialog draft with the
+ * stored flag. Unselected existing components are deleted, selected missing
+ * components are created, and retained components are updated as needed.
  */
 export function planMarkerDraftCommands(
   state: ProjectState,
@@ -170,12 +186,28 @@ export function planMarkerDraftCommands(
   const bpm = normalizeDraftBpm(draft.bpm);
   const commands: PianoRollCommand[] = [];
 
-  if (draft.timeSignature !== null) {
+  if (
+    draft.startTick === 0
+    && (!draft.tempoIncluded
+      || !draft.meterIncluded
+      || !draft.scaleIncluded)
+  ) {
+    throw new Error(
+      "The initial tempo, meter, and scale markers are required.",
+    );
+  }
+
+  if (draft.meterIncluded) {
+    if (draft.timeSignature === null) {
+      throw new Error(
+        "A meter marker can only be added on a measure boundary.",
+      );
+    }
+
     const timeSignature = normalizeDraftTimeSignature(draft.timeSignature);
     const meterMarker = timeMap.meterMarkers.find(
       (marker) => marker.startTick === draft.startTick,
     );
-    const activeMeter = getMeterAtTick(timeMap, draft.startTick);
 
     if (meterMarker !== undefined) {
       if (!isSameMeter(meterMarker.timeSignature, timeSignature)) {
@@ -186,7 +218,7 @@ export function planMarkerDraftCommands(
           timeSignature,
         });
       }
-    } else if (!isSameMeter(activeMeter, timeSignature)) {
+    } else {
       commands.push({
         type: "AddMeterMarker",
         clipId,
@@ -194,24 +226,25 @@ export function planMarkerDraftCommands(
         timeSignature,
       });
     }
+  } else if (
+    draft.startTick > 0
+    && timeMap.meterMarkers.some(
+      (marker) => marker.startTick === draft.startTick,
+    )
+  ) {
+    commands.push({
+      type: "DeleteMeterMarker",
+      clipId,
+      startTick: draft.startTick,
+    });
   }
 
   const tempoMarker = timeMap.tempoMarkers.find(
     (marker) => marker.startTick === draft.startTick,
   );
-  const previousTempo = getTempoAtTick(
-    timeMap,
-    Math.max(0, draft.startTick - 1),
-  );
 
-  if (tempoMarker !== undefined) {
-    if (previousTempo === bpm && draft.startTick > 0) {
-      commands.push({
-        type: "DeleteTempoMarker",
-        clipId,
-        startTick: draft.startTick,
-      });
-    } else if (tempoMarker.bpm !== bpm) {
+  if (draft.tempoIncluded && tempoMarker !== undefined) {
+    if (tempoMarker.bpm !== bpm) {
       commands.push({
         type: "UpdateTempoMarker",
         clipId,
@@ -219,31 +252,27 @@ export function planMarkerDraftCommands(
         bpm,
       });
     }
-  } else if (previousTempo !== bpm) {
+  } else if (draft.tempoIncluded) {
     commands.push({
       type: "AddTempoMarker",
       clipId,
       startTick: draft.startTick,
       bpm,
     });
+  } else if (tempoMarker !== undefined && draft.startTick > 0) {
+    commands.push({
+      type: "DeleteTempoMarker",
+      clipId,
+      startTick: draft.startTick,
+    });
   }
 
-  const scaleMarker = timeMap.scaleMarkers.find(m => m.startTick === draft.startTick);
-  const previousScaleMarker = getScaleMarkerAtTick(timeMap, Math.max(0, draft.startTick - 1));
+  const scaleMarker = timeMap.scaleMarkers.find(
+    (marker) => marker.startTick === draft.startTick,
+  );
 
-  if (scaleMarker !== undefined) {
+  if (draft.scaleIncluded && scaleMarker !== undefined) {
     if (
-      previousScaleMarker.rootNote === draft.rootNote &&
-      previousScaleMarker.patternType === draft.patternType &&
-      previousScaleMarker.patternId === draft.patternId &&
-      draft.startTick > 0
-    ) {
-      commands.push({
-        type: "DeleteScaleMarker",
-        clipId,
-        startTick: draft.startTick,
-      });
-    } else if (
       scaleMarker.rootNote !== draft.rootNote ||
       scaleMarker.patternType !== draft.patternType ||
       scaleMarker.patternId !== draft.patternId
@@ -259,11 +288,7 @@ export function planMarkerDraftCommands(
         },
       });
     }
-  } else if (
-    previousScaleMarker.rootNote !== draft.rootNote ||
-    previousScaleMarker.patternType !== draft.patternType ||
-    previousScaleMarker.patternId !== draft.patternId
-  ) {
+  } else if (draft.scaleIncluded) {
     commands.push({
       type: "AddScaleMarker",
       clipId,
@@ -273,6 +298,12 @@ export function planMarkerDraftCommands(
         patternType: draft.patternType,
         patternId: draft.patternId,
       },
+    });
+  } else if (scaleMarker !== undefined && draft.startTick > 0) {
+    commands.push({
+      type: "DeleteScaleMarker",
+      clipId,
+      startTick: draft.startTick,
     });
   }
 
@@ -314,23 +345,26 @@ export function planMarkerDeletionCommands(
   return commands;
 }
 
-/**
- * Moves the marker group at `fromTick` to `toTick`. The tempo companion only
- * follows when the target tick is free of tempo markers.
- */
-export function planMarkerMoveCommands(
+export interface MarkerMovePlan {
+  readonly commands: readonly PianoRollCommand[];
+  readonly collisions: readonly TimeMapMarkerCollision[];
+}
+
+/** Plans a complete flag move and optionally removes occupied point markers. */
+export function planMarkerMove(
   state: ProjectState,
   clipId: ClipId,
   fromTick: Tick,
   toTick: Tick,
-): PianoRollCommand[] {
+  overwriteCollisions = false,
+): MarkerMovePlan {
   if (fromTick === toTick) {
-    return [];
+    return { commands: [], collisions: [] };
   }
 
   const clip = getClip(state, clipId);
   const { timeMap, durationTicks } = clip.timeline;
-  const commands: PianoRollCommand[] = [];
+  const moveCommands: PianoRollCommand[] = [];
 
   const hasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === fromTick);
   let groupTargetTick = toTick;
@@ -356,7 +390,7 @@ export function planMarkerMoveCommands(
       );
     }
 
-    commands.push({
+    moveCommands.push({
       type: "MoveMeterMarker",
       clipId,
       startTick: fromTick,
@@ -366,14 +400,15 @@ export function planMarkerMoveCommands(
 
   const isMovingTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === fromTick);
   const targetHasTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === groupTargetTick);
+  const collisions: TimeMapMarkerCollision[] = [];
 
   if (isMovingTempo) {
     if (targetHasTempo && fromTick !== groupTargetTick) {
-      throw new Error("A tempo marker already exists at this position.");
+      collisions.push({ kind: "tempo", targetTick: groupTargetTick });
     }
 
     if (fromTick !== groupTargetTick) {
-      commands.push({
+      moveCommands.push({
         type: "MoveTempoMarker",
         clipId,
         startTick: fromTick,
@@ -387,11 +422,11 @@ export function planMarkerMoveCommands(
 
   if (isMovingScale) {
     if (targetHasScale && fromTick !== groupTargetTick) {
-      throw new Error("A scale marker already exists at this position.");
+      collisions.push({ kind: "scale", targetTick: groupTargetTick });
     }
 
     if (fromTick !== groupTargetTick) {
-      commands.push({
+      moveCommands.push({
         type: "MoveScaleMarker",
         clipId,
         startTick: fromTick,
@@ -400,7 +435,41 @@ export function planMarkerMoveCommands(
     }
   }
 
-  return commands;
+  if (collisions.length > 0 && !overwriteCollisions) {
+    return { commands: [], collisions };
+  }
+
+  const deleteCommands: PianoRollCommand[] = collisions.map((collision) => ({
+    type: collision.kind === "tempo"
+      ? "DeleteTempoMarker"
+      : "DeleteScaleMarker",
+    clipId,
+    startTick: collision.targetTick,
+  }));
+
+  return {
+    commands: [...deleteCommands, ...moveCommands],
+    collisions,
+  };
+}
+
+/** Compatibility planner for callers that require a collision-free move. */
+export function planMarkerMoveCommands(
+  state: ProjectState,
+  clipId: ClipId,
+  fromTick: Tick,
+  toTick: Tick,
+): PianoRollCommand[] {
+  const plan = planMarkerMove(state, clipId, fromTick, toTick);
+  const collision = plan.collisions[0];
+
+  if (collision !== undefined) {
+    throw new Error(
+      `A ${collision.kind} marker already exists at this position.`,
+    );
+  }
+
+  return plan.commands.slice();
 }
 
 /** Clamps and rounds a draft tempo to the editor limits and step. */

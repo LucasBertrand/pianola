@@ -3,13 +3,14 @@ import React, {
   useRef,
   type CSSProperties,
   type MutableRefObject,
+  type RefObject,
 } from "react";
-import {
-  APPLICATION_COLORS,
-} from "../../config/application-colors";
 import type {
   NoteCollisionResolutionRequest,
 } from "../../use-cases/piano-roll/notes/note-collision-resolution";
+import type {
+  MarkerCollisionResolutionRequest,
+} from "../../use-cases/piano-roll/timeline/marker-collision-resolution";
 import {
   type InstrumentId,
 } from "../../domain/identifiers";
@@ -40,6 +41,12 @@ import type {
 import {
   DomInteractionVisualController,
 } from "./interactions/dom-interaction-visual-controller";
+import type {
+  TimelineDragPreview,
+} from "../../editor/model/timeline-drag-preview";
+import type {
+  MutableRenderSignal,
+} from "../../editor/model/render-signal";
 
 export interface InteractionOverlayProps {
   readonly runtime: PianoRollRuntimePort;
@@ -54,6 +61,9 @@ export interface InteractionOverlayProps {
   readonly controllerRef: MutableRefObject<
     PianoRollControllerPort | null
   >;
+  readonly interactionStrategyRef: MutableRefObject<
+    PointerInteractionStrategy | null
+  >;
   readonly onSelectionChange: (
     hasSelection: boolean,
     soleInstrumentId: InstrumentId | null,
@@ -62,6 +72,13 @@ export interface InteractionOverlayProps {
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
+  readonly onMarkerCollision: (
+    request: MarkerCollisionResolutionRequest,
+  ) => void;
+  readonly globalLassoRef: RefObject<HTMLDivElement | null>;
+  readonly timelineDragPreview: MutableRenderSignal<
+    TimelineDragPreview | null
+  >;
 }
 
 const INTERACTION_LAYER_STYLE: CSSProperties = {
@@ -87,18 +104,6 @@ const SELECTION_LAYER_STYLE: CSSProperties = {
   willChange: "transform",
 };
 
-const LASSO_STYLE: CSSProperties = {
-  position: "absolute",
-  display: "none",
-  border: `1px solid ${APPLICATION_COLORS.interaction.lassoBorder}`,
-  background: APPLICATION_COLORS.interaction.lassoFill,
-  boxShadow:
-    `0 0 0 1px ${APPLICATION_COLORS.interaction.lassoInnerShadow}`,
-  pointerEvents: "none",
-  boxSizing: "border-box",
-  willChange: "transform, width, height",
-};
-
 export function InteractionOverlay(
   props: InteractionOverlayProps,
 ): React.JSX.Element {
@@ -113,9 +118,13 @@ export function InteractionOverlay(
     onTwoFingerDoubleTap,
     editingNoteMask,
     controllerRef,
+    interactionStrategyRef,
     onSelectionChange,
     onGridSeek,
     onNoteCollision,
+    onMarkerCollision,
+    globalLassoRef,
+    timelineDragPreview,
   } = props;
   const {
     viewport,
@@ -131,9 +140,6 @@ export function InteractionOverlay(
   } = runtime;
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const visualsRef = useRef<DomInteractionVisualController | null>(null);
-  const strategyRef = useRef<PointerInteractionStrategy | null>(
-    null,
-  );
 
   if (visualsRef.current === null) {
     visualsRef.current = new DomInteractionVisualController(
@@ -144,9 +150,17 @@ export function InteractionOverlay(
 
   const visuals = visualsRef.current;
 
+  useEffect(() => {
+    visuals.setLassoElement(globalLassoRef.current);
+
+    return (): void => {
+      visuals.setLassoElement(null);
+    };
+  }, [globalLassoRef, visuals]);
+
   useInteractionManager({
     overlayRef,
-    strategyRef,
+    strategyRef: interactionStrategyRef,
     viewport,
     totalTicks,
     setViewport,
@@ -158,7 +172,7 @@ export function InteractionOverlay(
   const controller = usePianoRollEvents({
     overlayRef,
     visualsRef,
-    strategyRef,
+    strategyRef: interactionStrategyRef,
     viewport,
     spatialIndex,
     instrumentStyles,
@@ -174,6 +188,8 @@ export function InteractionOverlay(
     onGridSeek,
     onSelectionChange,
     onNoteCollision,
+    onMarkerCollision,
+    timelineDragPreview,
   });
 
   useEffect(
@@ -214,14 +230,6 @@ export function InteractionOverlay(
         }}
         className="interaction-selection-layer"
         style={SELECTION_LAYER_STYLE}
-        aria-hidden="true"
-      />
-      <div
-        ref={(element) => {
-          visuals.setLassoElement(element);
-        }}
-        className="interaction-lasso"
-        style={LASSO_STYLE}
         aria-hidden="true"
       />
     </div>

@@ -3,6 +3,8 @@ export const INTERACTION_CONSTANTS = Object.freeze({
   longPressDelayMs: 300,
   penLongPressDelayMs: 280,
   longPressMovementToleranceCssPixels: 12,
+  loopDrawLongPressDelayMs: 300,
+  loopDrawPenLongPressDelayMs: 280,
   pianoKeyLongPressDelayMs: 520,
   pianoKeyPenLongPressDelayMs: 280,
   pianoKeyLongPressMovementToleranceCssPixels: 10,

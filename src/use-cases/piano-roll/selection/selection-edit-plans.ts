@@ -19,11 +19,36 @@ import {
   type ClipId,
   type NoteId,
   type InstrumentId,
+  type Tick,
 } from "../../../domain/identifiers";
+import type {
+  ScaleMarker,
+  TimeMap,
+} from "../../../domain/transport/time-map";
+import type {
+  SelectedTimeMapMarkerGroup,
+} from "../../../editor/selection/editor-selection";
+import type {
+  TimeMapMarkerCollision,
+} from "../timeline/marker-collision-resolution";
+
+export interface PianoRollClipboardMarkerGroup {
+  readonly startTick: Tick;
+  readonly tempoBpm: number | null;
+  readonly scaleMarker: Omit<ScaleMarker, "startTick"> | null;
+}
 
 export interface PianoRollClipboard {
   readonly notes: readonly Note[];
-  readonly originTick: number;
+  readonly markerGroups: readonly PianoRollClipboardMarkerGroup[];
+  readonly originTick: Tick;
+}
+
+export interface PastedMarkerCommandPlan {
+  readonly commands: readonly PianoRollCommand[];
+  readonly overwriteCommands: readonly PianoRollCommand[];
+  readonly resultingMarkerGroups: readonly SelectedTimeMapMarkerGroup[];
+  readonly collisions: readonly TimeMapMarkerCollision[];
 }
 
 export interface SliceCommandPlan {
@@ -231,6 +256,217 @@ export function createPastedNotes(
   return notes;
 }
 
+/**
+ * Captures selected notes and only the selected movable marker components.
+ * Meter markers never enter the clipboard because they are not represented by
+ * SelectedTimeMapMarkerGroup.
+ */
+export function createPianoRollClipboard(
+  notes: readonly Note[],
+  selectedMarkerGroups: readonly SelectedTimeMapMarkerGroup[],
+  timeMap: TimeMap,
+): PianoRollClipboard | null {
+  const clipboardNotes = notes.map((note) => ({ ...note }));
+  const markerGroups: PianoRollClipboardMarkerGroup[] = [];
+  let originTick = Number.POSITIVE_INFINITY;
+
+  for (const note of clipboardNotes) {
+    originTick = Math.min(originTick, note.startTick);
+  }
+
+  for (const selectedGroup of selectedMarkerGroups) {
+    const tempoMarker = selectedGroup.kinds.includes("tempo")
+      ? timeMap.tempoMarkers.find(
+          (marker) => marker.startTick === selectedGroup.startTick,
+        )
+      : undefined;
+    const scaleMarker = selectedGroup.kinds.includes("scale")
+      ? timeMap.scaleMarkers.find(
+          (marker) => marker.startTick === selectedGroup.startTick,
+        )
+      : undefined;
+
+    if (tempoMarker === undefined && scaleMarker === undefined) {
+      continue;
+    }
+
+    markerGroups.push({
+      startTick: selectedGroup.startTick,
+      tempoBpm: tempoMarker?.bpm ?? null,
+      scaleMarker: scaleMarker === undefined
+        ? null
+        : {
+            rootNote: scaleMarker.rootNote,
+            patternType: scaleMarker.patternType,
+            patternId: scaleMarker.patternId,
+          },
+    });
+    originTick = Math.min(originTick, selectedGroup.startTick);
+  }
+
+  if (
+    !Number.isFinite(originTick)
+    || (clipboardNotes.length === 0 && markerGroups.length === 0)
+  ) {
+    return null;
+  }
+
+  return {
+    notes: clipboardNotes,
+    markerGroups,
+    originTick,
+  };
+}
+
+export function createPastedMarkerGroups(
+  clipboard: PianoRollClipboard,
+  pasteTick: Tick,
+): readonly PianoRollClipboardMarkerGroup[] {
+  return clipboard.markerGroups.map((group) => ({
+    startTick: pasteTick + group.startTick - clipboard.originTick,
+    tempoBpm: group.tempoBpm,
+    scaleMarker: group.scaleMarker === null
+      ? null
+      : { ...group.scaleMarker },
+  }));
+}
+
+/** Builds normal and destructive marker-paste variants for one destination. */
+export function planPastedMarkerCommands(
+  state: ProjectDocument,
+  clipId: ClipId,
+  markerGroups: readonly PianoRollClipboardMarkerGroup[],
+): PastedMarkerCommandPlan {
+  const { timeMap } = getClip(state, clipId).timeline;
+  const commands: PianoRollCommand[] = [];
+  const overwriteCommands: PianoRollCommand[] = [];
+  const collisions: TimeMapMarkerCollision[] = [];
+  const resultingMarkerGroups: SelectedTimeMapMarkerGroup[] = [];
+  const tempoTicks = new Set<Tick>();
+  const scaleTicks = new Set<Tick>();
+
+  for (const group of markerGroups) {
+    if (!Number.isSafeInteger(group.startTick) || group.startTick <= 0) {
+      throw new Error(
+        "Pasted markers must be positioned after tick 0.",
+      );
+    }
+
+    const kinds: Array<"tempo" | "scale"> = [];
+
+    if (group.tempoBpm !== null) {
+      if (tempoTicks.has(group.startTick)) {
+        throw new Error(
+          "The clipboard contains duplicate tempo markers.",
+        );
+      }
+
+      tempoTicks.add(group.startTick);
+      kinds.push("tempo");
+      const addTempoCommand = {
+        type: "AddTempoMarker",
+        clipId,
+        startTick: group.startTick,
+        bpm: group.tempoBpm,
+      } as const;
+      commands.push(addTempoCommand);
+
+      const hasTempoCollision = timeMap.tempoMarkers.some(
+        (marker) => marker.startTick === group.startTick,
+      );
+
+      if (hasTempoCollision) {
+        collisions.push({ kind: "tempo", targetTick: group.startTick });
+        overwriteCommands.push({
+          type: "UpdateTempoMarker",
+          clipId,
+          startTick: group.startTick,
+          bpm: group.tempoBpm,
+        });
+      } else {
+        overwriteCommands.push(addTempoCommand);
+      }
+    }
+
+    if (group.scaleMarker !== null) {
+      if (scaleTicks.has(group.startTick)) {
+        throw new Error(
+          "The clipboard contains duplicate scale markers.",
+        );
+      }
+
+      scaleTicks.add(group.startTick);
+      kinds.push("scale");
+      const addScaleCommand = {
+        type: "AddScaleMarker",
+        clipId,
+        marker: {
+          startTick: group.startTick,
+          ...group.scaleMarker,
+        },
+      } as const;
+      commands.push(addScaleCommand);
+
+      const hasScaleCollision = timeMap.scaleMarkers.some(
+        (marker) => marker.startTick === group.startTick,
+      );
+
+      if (hasScaleCollision) {
+        collisions.push({ kind: "scale", targetTick: group.startTick });
+        overwriteCommands.push({
+          type: "UpdateScaleMarker",
+          clipId,
+          startTick: group.startTick,
+          changes: { ...group.scaleMarker },
+        });
+      } else {
+        overwriteCommands.push(addScaleCommand);
+      }
+    }
+
+    if (kinds.length > 0) {
+      resultingMarkerGroups.push({
+        startTick: group.startTick,
+        kinds,
+      });
+    }
+  }
+
+  return {
+    commands,
+    overwriteCommands,
+    resultingMarkerGroups,
+    collisions,
+  };
+}
+
+export function buildDeleteClipboardMarkerCommands(
+  clipId: ClipId,
+  markerGroups: readonly PianoRollClipboardMarkerGroup[],
+): readonly PianoRollCommand[] {
+  const commands: PianoRollCommand[] = [];
+
+  for (const group of markerGroups) {
+    if (group.tempoBpm !== null) {
+      commands.push({
+        type: "DeleteTempoMarker",
+        clipId,
+        startTick: group.startTick,
+      });
+    }
+
+    if (group.scaleMarker !== null) {
+      commands.push({
+        type: "DeleteScaleMarker",
+        clipId,
+        startTick: group.startTick,
+      });
+    }
+  }
+
+  return commands;
+}
+
 export function canPlacePastedNotes(
   state: ProjectDocument,
   clipId: ClipId,
@@ -269,10 +505,68 @@ export function canPlacePastedNotes(
   );
 }
 
+export function canPlacePastedTimelineContent(
+  state: ProjectDocument,
+  clipId: ClipId,
+  notes: readonly Note[],
+  markerGroups: readonly PianoRollClipboardMarkerGroup[],
+): boolean {
+  const clip = getClip(state, clipId);
+
+  if (notes.length === 0 && markerGroups.length === 0) {
+    return false;
+  }
+
+  for (const note of notes) {
+    const instrument = state.projectInstrumentsById[note.instrumentId];
+    const track = clip.tracksByInstrumentId[note.instrumentId];
+
+    if (
+      instrument === undefined
+      || clip.instrumentStatesById[note.instrumentId]?.locked !== false
+      || track === undefined
+      || note.startTick < 0
+    ) {
+      return false;
+    }
+  }
+
+  for (const group of markerGroups) {
+    if (
+      !Number.isSafeInteger(group.startTick)
+      || group.startTick <= 0
+      || (group.tempoBpm === null && group.scaleMarker === null)
+    ) {
+      return false;
+    }
+  }
+
+  return getRequiredMeasureCountForTimelineContent(
+    state,
+    clipId,
+    notes,
+    markerGroups,
+  ) <= MAXIMUM_MEASURE_COUNT;
+}
+
 export function getRequiredMeasureCountForNotes(
   state: ProjectDocument,
   clipId: ClipId,
   notes: readonly Note[],
+): number {
+  return getRequiredMeasureCountForTimelineContent(
+    state,
+    clipId,
+    notes,
+    [],
+  );
+}
+
+export function getRequiredMeasureCountForTimelineContent(
+  state: ProjectDocument,
+  clipId: ClipId,
+  notes: readonly Note[],
+  markerGroups: readonly PianoRollClipboardMarkerGroup[],
 ): number {
   const clip = getClip(state, clipId);
   let maximumEndTick = 0;
@@ -285,6 +579,16 @@ export function getRequiredMeasureCountForNotes(
     }
 
     maximumEndTick = Math.max(maximumEndTick, noteEndTick);
+  }
+
+  for (const group of markerGroups) {
+    const markerEndTick = group.startTick + 1;
+
+    if (!Number.isSafeInteger(markerEndTick) || markerEndTick <= 1) {
+      return MAXIMUM_MEASURE_COUNT + 1;
+    }
+
+    maximumEndTick = Math.max(maximumEndTick, markerEndTick);
   }
 
   const { timeMap, durationTicks } = clip.timeline;

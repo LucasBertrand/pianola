@@ -117,6 +117,10 @@ describe("createMarkerDraft", () => {
       mode: "create",
       startTick: MEASURE_TICKS + 100,
       measureIndex: null,
+      tempoIncluded: false,
+      meterIncluded: false,
+      scaleIncluded: false,
+      canChangeMarkerTypes: true,
       bpm: 120, // The tempo at 0 is 120, and next is at 2*MEASURE_TICKS
       timeSignature: null,
       rootNote: "C",
@@ -131,6 +135,10 @@ describe("createMarkerDraft", () => {
     const draft = createMarkerDraft(state, TEST_CLIP_ID, 2 * MEASURE_TICKS);
 
     expect(draft.mode).toBe("edit");
+    expect(draft.tempoIncluded).toBe(true);
+    expect(draft.meterIncluded).toBe(true);
+    expect(draft.scaleIncluded).toBe(false);
+    expect(draft.canChangeMarkerTypes).toBe(true);
     expect(draft.bpm).toBe(90);
     expect(draft.timeSignature).toEqual({
       numerator: 7,
@@ -148,24 +156,30 @@ describe("createMarkerDraft", () => {
     );
 
     expect(draft.mode).toBe("edit");
+    expect(draft.tempoIncluded).toBe(true);
+    expect(draft.meterIncluded).toBe(true);
+    expect(draft.scaleIncluded).toBe(true);
+    expect(draft.canChangeMarkerTypes).toBe(false);
     expect(draft.canDelete).toBe(false);
   });
 });
 
 describe("planMarkerDraftCommands", () => {
-  test("plans only effective changes", () => {
+  test("creates only the explicitly selected marker types", () => {
     const state = createProjectWithMarkers();
     const draft = createMarkerDraft(state, TEST_CLIP_ID, MEASURE_TICKS);
 
     expect(planMarkerDraftCommands(state, TEST_CLIP_ID, draft)).toEqual([]);
 
-    const changed = planMarkerDraftCommands(state, TEST_CLIP_ID, {
+    const selected = planMarkerDraftCommands(state, TEST_CLIP_ID, {
       ...draft,
+      tempoIncluded: true,
+      meterIncluded: true,
       bpm: 100,
       timeSignature: { numerator: 3, denominator: 4 },
     });
 
-    expect(changed).toEqual([
+    expect(selected).toEqual([
       {
         type: "AddMeterMarker",
         clipId: TEST_CLIP_ID,
@@ -181,7 +195,43 @@ describe("planMarkerDraftCommands", () => {
     ]);
   });
 
-  test("updates existing markers without touching preserved beat groups", () => {
+  test("creates selected markers even when values repeat the active timeline", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(state, TEST_CLIP_ID, MEASURE_TICKS);
+    const commands = planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      tempoIncluded: true,
+      meterIncluded: true,
+      scaleIncluded: true,
+    });
+
+    expect(commands).toEqual([
+      {
+        type: "AddMeterMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: MEASURE_TICKS,
+        timeSignature: { numerator: 4, denominator: 4 },
+      },
+      {
+        type: "AddTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: MEASURE_TICKS,
+        bpm: 120,
+      },
+      {
+        type: "AddScaleMarker",
+        clipId: TEST_CLIP_ID,
+        marker: {
+          startTick: MEASURE_TICKS,
+          rootNote: "C",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+      },
+    ]);
+  });
+
+  test("updates existing values without materializing unselected components", () => {
     const state = createProjectWithMarkers();
     const draft = createMarkerDraft(state, TEST_CLIP_ID, 2 * MEASURE_TICKS);
     const commands = planMarkerDraftCommands(state, TEST_CLIP_ID, {
@@ -189,12 +239,62 @@ describe("planMarkerDraftCommands", () => {
       bpm: 75,
     });
 
-    expect(commands).toEqual([{
-      type: "UpdateTempoMarker",
+    expect(commands).toEqual([
+      {
+        type: "UpdateTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 2 * MEASURE_TICKS,
+        bpm: 75,
+      },
+    ]);
+  });
+
+  test("adds a missing component when it is explicitly selected", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(state, TEST_CLIP_ID, 2 * MEASURE_TICKS);
+    const commands = planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      scaleIncluded: true,
+    });
+
+    expect(commands).toEqual([
+      {
+        type: "AddScaleMarker",
+        clipId: TEST_CLIP_ID,
+        marker: {
+          startTick: 2 * MEASURE_TICKS,
+          rootNote: "C",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+      },
+    ]);
+  });
+
+  test("deletes an existing component when it is unselected", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(state, TEST_CLIP_ID, 2 * MEASURE_TICKS);
+
+    expect(planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      tempoIncluded: false,
+    })).toEqual([{
+      type: "DeleteTempoMarker",
       clipId: TEST_CLIP_ID,
       startTick: 2 * MEASURE_TICKS,
-      bpm: 75,
     }]);
+  });
+
+  test("keeps every initial marker component mandatory", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(state, TEST_CLIP_ID, 0);
+
+    expect(() => planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      tempoIncluded: false,
+    })).toThrowError(
+      "The initial tempo, meter, and scale markers are required.",
+    );
   });
 
   test("clamps draft tempo to editor limits", () => {

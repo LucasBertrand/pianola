@@ -7,7 +7,6 @@ import {
   type Note,
 } from "../../domain/notes/note";
 import {
-  areTimeSignaturesEqual,
   createDefaultTimeSignature,
   getTicksPerMeasure,
   type MeterMarker,
@@ -178,10 +177,9 @@ export interface MeterMarkerSelection {
 }
 
 /**
- * Imports every valid time-signature change. A change is ignored when it is
- * identical to the active meter, lands on an already-used tick, or does not
- * fall on a measure boundary determined by the previous meter. A default 4/4
- * marker is inserted at tick 0 when the first event occurs later.
+ * Imports every valid time-signature event. An event is ignored when it lands
+ * on an already-used tick or does not fall on a measure boundary determined
+ * by the previous meter. Consecutive equal signatures remain explicit.
  */
 export function selectMeterMarkers(
   candidates: TimeSignatureCandidate[],
@@ -230,10 +228,7 @@ export function selectMeterMarkers(
       continue;
     }
 
-    if (
-      startTick <= activeMarker.startTick
-      || areTimeSignaturesEqual(activeMarker.timeSignature, timeSignature)
-    ) {
+    if (startTick <= activeMarker.startTick) {
       ignoredEventCount += 1;
       continue;
     }
@@ -286,4 +281,3 @@ export function isSupportedTimeSignatureDenominator(
     || denominator === 32
   );
 }
-

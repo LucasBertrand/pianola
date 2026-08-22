@@ -1,5 +1,6 @@
 import React, {
   useRef,
+  type RefObject,
 } from "react";
 import type {
   LoopRegion,
@@ -16,13 +17,19 @@ import type {
 import {
   usePianoRollLoopGesture,
 } from "./usePianoRollLoopGesture";
+import type {
+  PointerInteractionStrategy,
+} from "../../editor/interactions/pointer/pointer-interaction-strategy";
 
 export interface PianoRollLoopOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly interactionStrategyRef: RefObject<
+    PointerInteractionStrategy | null
+  >;
   readonly onCommit: (loop: LoopRegion) => void;
-  readonly onGridSeek: (tick: number) => void;
+  readonly onClearSelection: () => void;
 }
 
 export function PianoRollLoopOverlay(
@@ -32,8 +39,9 @@ export function PianoRollLoopOverlay(
     viewport,
     projectStore,
     gridResolutionTicks,
+    interactionStrategyRef,
     onCommit,
-    onGridSeek,
+    onClearSelection,
   } = props;
   const layerRef = useRef<HTMLDivElement | null>(null);
   const bandRef = useRef<HTMLButtonElement | null>(null);
@@ -47,8 +55,9 @@ export function PianoRollLoopOverlay(
     viewport,
     projectStore,
     gridResolutionTicks,
+    interactionStrategyRef,
     onCommit,
-    onGridSeek,
+    onClearSelection,
     layerRef,
     bandRef,
     startFlagRef,
@@ -64,6 +73,7 @@ export function PianoRollLoopOverlay(
         ref={layerRef}
         className="bar-ruler-loop-overlay"
         aria-label="Loop region"
+        title="Drag to select. Press and hold to draw the loop region."
       >
         <button
           ref={bandRef}

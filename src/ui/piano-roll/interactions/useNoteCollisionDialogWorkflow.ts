@@ -38,6 +38,7 @@ export function useNoteCollisionDialogWorkflow({
       mode: NoteCollisionResolutionMode,
     ): void => {
       const timestamp = Date.now();
+      const transactionSequence = transactionSequenceRef.current + 1;
       const plan = createNoteCollisionResolutionPlan(
         runtime.projectStore.getState(),
         request.clipId,
@@ -46,26 +47,42 @@ export function useNoteCollisionDialogWorkflow({
           proposedNotes: request.proposedNotes,
         },
         mode,
-        `${timestamp}-${transactionSequenceRef.current + 1}`,
+        `${timestamp}-${transactionSequence}`,
       );
       const resultingSelectionNoteIds = [
         ...plan.resultingSelectionNoteIds,
         ...(request.retainedSelectionNoteIds ?? []),
       ];
+      const transactionLabel = mode === "merge"
+        ? `${request.label}: merge collisions`
+        : `${request.label}: slice collisions`;
+
+      if (request.onResolutionPrepared !== undefined) {
+        transactionSequenceRef.current = transactionSequence;
+        request.onResolutionPrepared({
+          commands: plan.commands,
+          selectedNoteIds: resultingSelectionNoteIds,
+          transactionLabel,
+        });
+        return;
+      }
 
       try {
-        transactionSequenceRef.current += 1;
+        transactionSequenceRef.current = transactionSequence;
         const nextState = runtime.editorCommands.dispatch(
           [
             ...(request.prefixCommands ?? []),
             ...plan.commands,
           ],
-          mode === "merge"
-            ? `${request.label}: merge collisions`
-            : `${request.label}: slice collisions`,
+          transactionLabel,
           {
             clipId: request.clipId,
             noteIds: resultingSelectionNoteIds,
+            ...(request.selectionAfterMarkerGroups === undefined
+              ? {}
+              : {
+                  markerGroups: request.selectionAfterMarkerGroups,
+                }),
           },
         );
 

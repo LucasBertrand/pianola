@@ -23,6 +23,7 @@ import {
   moveMeterMarker,
   moveTempoMarker,
   normalizeMeterMarkers,
+  normalizeScaleMarkers,
   normalizeTempoMarkers,
   removeMeterMarker,
   removeTempoMarker,
@@ -191,7 +192,7 @@ describe("meter marker operations", () => {
     expect(edit.durationTicks).toBe(7_680 + 3 * 2_880);
   });
 
-  test("rejects insertion off a boundary, at tick 0, or identical to the active meter", () => {
+  test("rejects insertion off a boundary or at tick 0", () => {
     expect(() => insertMeterMarker(
       PPQN,
       createDefaultTimeMap(),
@@ -204,12 +205,15 @@ describe("meter marker operations", () => {
       4 * 3_840,
       { startTick: 0, timeSignature: { numerator: 3, denominator: 4 } },
     )).toThrow(RangeError);
-    expect(() => insertMeterMarker(
+    const identical = insertMeterMarker(
       PPQN,
       createDefaultTimeMap(),
       4 * 3_840,
       { startTick: 3_840, timeSignature: { numerator: 4, denominator: 4 } },
-    )).toThrow(RangeError);
+    );
+
+    expect(identical.timeMap.meterMarkers.map((marker) => marker.startTick))
+      .toEqual([0, 3_840]);
   });
 
   test("moves a marker onto a requested boundary", () => {
@@ -234,7 +238,7 @@ describe("meter marker operations", () => {
     )).toThrow(RangeError);
   });
 
-  test("merges adjacent identical meters on update", () => {
+  test("preserves adjacent identical meters on update", () => {
     const edit = updateMeterMarker(
       PPQN,
       createMixedTimeMap(),
@@ -248,7 +252,7 @@ describe("meter marker operations", () => {
     );
 
     expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
-      .toEqual([0, 7_680]);
+      .toEqual([0, 7_680, 14_400]);
     expect(edit.durationTicks).toBe(7_680 + 3 * 3_360);
   });
 
@@ -340,7 +344,7 @@ describe("meter marker operations", () => {
     )).toThrow(RangeError);
   });
 
-  test("normalization sorts, dedupes and merges", () => {
+  test("normalization sorts, dedupes ticks and preserves identical values", () => {
     const normalized = normalizeMeterMarkers([
       { startTick: 3_840, timeSignature: { numerator: 3, denominator: 4 } },
       { startTick: 0, timeSignature: { numerator: 4, denominator: 4 } },
@@ -348,7 +352,11 @@ describe("meter marker operations", () => {
       { startTick: 7_680, timeSignature: { numerator: 3, denominator: 4 } },
     ]);
 
-    expect(normalized.map((marker) => marker.startTick)).toEqual([0, 3_840]);
+    expect(normalized.map((marker) => marker.startTick)).toEqual([
+      0,
+      3_840,
+      7_680,
+    ]);
   });
 });
 
@@ -387,14 +395,37 @@ describe("tempo marker operations", () => {
     expect(() => removeTempoMarker(withMarker, 0)).toThrow(RangeError);
   });
 
-  test("normalization merges adjacent identical tempos", () => {
+  test("normalization preserves adjacent identical tempos", () => {
     const normalized = normalizeTempoMarkers([
       { startTick: 3_840, bpm: 120 },
       { startTick: 0, bpm: 120 },
       { startTick: 7_680, bpm: 60 },
     ]);
 
-    expect(normalized.map((marker) => marker.startTick)).toEqual([0, 7_680]);
+    expect(normalized.map((marker) => marker.startTick)).toEqual([
+      0,
+      3_840,
+      7_680,
+    ]);
+  });
+
+  test("normalization preserves adjacent identical scales", () => {
+    const normalized = normalizeScaleMarkers([
+      {
+        startTick: 3_840,
+        rootNote: "C",
+        patternType: "scale",
+        patternId: "ionian",
+      },
+      {
+        startTick: 0,
+        rootNote: "C",
+        patternType: "scale",
+        patternId: "ionian",
+      },
+    ]);
+
+    expect(normalized.map((marker) => marker.startTick)).toEqual([0, 3_840]);
   });
 });
 

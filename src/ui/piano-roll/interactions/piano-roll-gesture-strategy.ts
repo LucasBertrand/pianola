@@ -42,13 +42,20 @@ import type {
 } from "../../../editor/model/instrument-render-style";
 import type {
   ReadonlyRenderSignal,
+  MutableRenderSignal,
 } from "../../../editor/model/render-signal";
+import type {
+  TimelineDragPreview,
+} from "../../../editor/model/timeline-drag-preview";
 import type {
   PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import {
   resolvePitchSnapSettings,
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
+import {
+  measureTimelineSelectionTickBounds,
+} from "../../../use-cases/piano-roll/selection/timeline-selection-move";
 import type {
   EditorCommandPort,
 } from "../../../use-cases/commands/editor-command-service";
@@ -97,6 +104,9 @@ export interface PianoRollGestureStrategyOptions {
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly onGridSeek: ((tick: number) => void) | undefined;
   readonly onPitchHighlightChange?: ((pitch: number | null) => void) | undefined;
+  readonly timelineDragPreview?: MutableRenderSignal<
+    TimelineDragPreview | null
+  > | undefined;
 }
 
 const TAP_MOVEMENT_TOLERANCE_CSS_PIXELS =
@@ -132,6 +142,7 @@ export function createPianoRollGestureStrategy(
     pitchSnapSettings,
     onGridSeek,
     onPitchHighlightChange,
+    timelineDragPreview,
   } = options;
   const { converter, draft, gesture, lassoBuffer, tapState } = session;
   const { selection } = selectionController;
@@ -144,6 +155,8 @@ export function createPianoRollGestureStrategy(
   };
 
   const endGestureVisual = (): void => {
+    timelineDragPreview?.set(null);
+
     if (draft.mode === "DRAGGING") {
       getVisuals()?.endDrag();
       if (handledDragNote !== null) {
@@ -270,7 +283,18 @@ export function createPianoRollGestureStrategy(
       targetNote,
       draft.selectionMode === "add",
     );
-    const selectionBounds = measureNoteSelection(selection.notes);
+    const noteSelectionBounds = measureNoteSelection(selection.notes);
+    const timelineTickBounds = measureTimelineSelectionTickBounds(
+      selection.notes,
+      selection.markerGroups,
+    );
+    const selectionBounds = timelineTickBounds === null
+      ? noteSelectionBounds
+      : {
+          ...noteSelectionBounds,
+          minimumStartTick: timelineTickBounds.minimumStartTick,
+          maximumEndTick: timelineTickBounds.maximumEndTick,
+        };
     const resizeEdge = edgeHit?.edge ?? null;
 
     if (resizeEdge === null) {
@@ -366,6 +390,10 @@ export function createPianoRollGestureStrategy(
         draft.deltaPitch,
         draft.getSnapSettingsAtTick,
       );
+      timelineDragPreview?.set({
+        source: "notes",
+        deltaTicks: draft.deltaTicks,
+      });
 
       if (handledDragNote !== null) {
         const referencePitch = resolveRepositionedPitch(
@@ -415,6 +443,7 @@ export function createPianoRollGestureStrategy(
 
     if (mode === "DRAGGING") {
       workflow.commitMove(completion);
+      timelineDragPreview?.set(null);
       getVisuals()?.endDrag();
       if (handledDragNote !== null) {
         handledDragNote = null;
@@ -435,6 +464,7 @@ export function createPianoRollGestureStrategy(
         converter,
         selectionController,
         spatialIndex,
+        timeMap: getActiveClip(editorCommands.getState()).timeline.timeMap,
         resultBuffer: lassoBuffer,
         visuals: getVisuals(),
       });
