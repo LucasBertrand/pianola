@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  DEFAULT_CLIP_COLOR,
   type ClipTimeline,
 } from "../../../domain/clips/clip";
 import {
@@ -95,7 +96,7 @@ describe("native project parser", () => {
     delete stored.project.clipsById[TEST_CLIP_ID]?.color;
 
     expect(parseNativeProjectFile(JSON.stringify(stored))
-      .projectState.clipsById[TEST_CLIP_ID]?.color).toBe("#79a7ff");
+      .projectState.clipsById[TEST_CLIP_ID]?.color).toBe(DEFAULT_CLIP_COLOR);
   });
 
   test("reports a stable code and path for invalid JSON", () => {

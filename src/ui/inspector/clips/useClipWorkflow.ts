@@ -2,9 +2,6 @@ import {
   useCallback,
   useRef,
 } from "react";
-import {
-  RENDERING_CONSTANTS,
-} from "../../../config/rendering-config";
 import type {
   UpdateClipChanges,
 } from "../../../domain/commands/command-types";
@@ -16,6 +13,7 @@ import {
 } from "../../../domain/transport/transport";
 import {
   createDefaultClipTimeline,
+  DEFAULT_CLIP_COLOR,
   DEFAULT_MEASURE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
   MAXIMUM_CLIP_NAME_LENGTH,
@@ -281,9 +279,7 @@ function createEmptyClip(
   return {
     id: createClipId(sequence),
     name: `Clip ${clipIndex + 1}`,
-    color: RENDERING_CONSTANTS.userInstrumentColors[
-      clipIndex % RENDERING_CONSTANTS.userInstrumentColors.length
-    ] ?? RENDERING_CONSTANTS.userInstrumentColors[0],
+    color: DEFAULT_CLIP_COLOR,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
     instrumentStatesById,
