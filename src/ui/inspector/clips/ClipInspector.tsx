@@ -4,10 +4,6 @@ import {
   MAXIMUM_PROJECT_CLIP_COUNT,
 } from "../../../domain/clips/clip";
 import {
-  getMeasureCount,
-  getMeterAtTick,
-} from "../../../domain/transport/time-map";
-import {
   type ClipId,
 } from "../../../domain/identifiers";
 import {
@@ -50,11 +46,6 @@ export function ClipInspector({
           if (clip === undefined) {
             return null;
           }
-          const timeSignature = getMeterAtTick(
-            clip.timeline.timeMap,
-            0,
-          );
-
           return (
             <article
               className={
@@ -106,14 +97,6 @@ export function ClipInspector({
                   onSelect={onSelect}
                   onRename={(name) => onRename(clip.id, name)}
                 />
-                <small>
-                  {getMeasureCount(
-                    projectState.clock.ppqn,
-                    clip.timeline.timeMap,
-                    clip.timeline.durationTicks,
-                  )} measures {timeSignature.numerator}/
-                  {timeSignature.denominator}
-                </small>
               </div>
               <button
                 className="instrument-duplicate-button"

@@ -260,7 +260,7 @@ function getProjectMenuIconPaths(
       return (
         <>
           <path
-            d="M8 5.5 15 4v11.5M15 7.5 8 9v8"
+            d="M8 5.5 15 4v11.5M15 7.5 8 9V5.5M8 9v8"
             strokeLinejoin="bevel"
           />
           <ellipse cx="5.5" cy="17" rx="2.5" ry="2" />
@@ -272,7 +272,7 @@ function getProjectMenuIconPaths(
       return (
         <>
           <path
-            d="M8 5.5 15 4v11.5M15 7.5 8 9v8"
+            d="M8 5.5 15 4v11.5M15 7.5 8 9V5.5M8 9v8"
             strokeLinejoin="bevel"
           />
           <ellipse cx="5.5" cy="17" rx="2.5" ry="2" />

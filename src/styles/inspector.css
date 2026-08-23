@@ -142,7 +142,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  width: 30px;
+  width: 24px;
   height: 30px;
   padding: 0;
   border: 1px solid transparent;
@@ -191,7 +191,8 @@
 
 .project-instrument-card.clip-card {
   min-height: 0;
-  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
+  padding-left: 11px;
+  grid-template-columns: 24px minmax(0, 1fr) 30px 30px;
   grid-template-rows: auto;
   gap: 6px;
 }
