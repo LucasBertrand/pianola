@@ -302,6 +302,7 @@ export function updatePitchSnappedDrag(
   tonalBoundaries: readonly TonalBoundary[],
   updatePitchLabel: boolean,
   updatePitchColor: boolean,
+  updatePitchBackground = updatePitchColor,
 ): void {
   if (geometry === null) {
     return;
@@ -366,8 +367,45 @@ export function updatePitchSnappedDrag(
       );
 
       element.style.setProperty("--note-color", color);
-      element.style.background = color;
+
+      if (updatePitchBackground) {
+        element.style.background = color;
+      }
     }
+  }
+}
+
+export function updateSelectionPitchColors(
+  elements: readonly HTMLElement[],
+  geometry: LayerGeometry | null,
+  deltaPitch: number,
+  deltaTicks: number,
+  getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+): void {
+  if (geometry === null) {
+    return;
+  }
+
+  for (let index = 0; index < elements.length; index += 1) {
+    const element = elements[index];
+    const basePitch = geometry.pitch[index];
+    const baseTick = geometry.startTick[index];
+
+    if (
+      element === undefined
+      || basePitch === undefined
+      || baseTick === undefined
+    ) {
+      continue;
+    }
+
+    const destinationTick = Math.max(0, baseTick + deltaTicks);
+    const color = getPitchNoteColor(
+      basePitch + deltaPitch,
+      getSnapSettingsAtTick(destinationTick),
+    );
+
+    element.style.setProperty("--note-color", color);
   }
 }
 

@@ -60,6 +60,7 @@ import {
   updateGhostPitchPresentation,
   updateHorizontalGeometry,
   updatePitchSnappedDrag,
+  updateSelectionPitchColors,
   type LayerGeometry,
 } from "./dom-interaction-layers";/** DOM renderer for transient ghosts, resize handles, and lasso feedback. */
 export class DomInteractionVisualController
@@ -153,6 +154,7 @@ export class DomInteractionVisualController
         getSnapSettingsAtTick,
         this.dragScaleMarkers,
         false,
+        this.noteColorMode.get() === "pitch",
         false,
       );
       return;
@@ -180,6 +182,16 @@ export class DomInteractionVisualController
       this.dragScaleMarkers,
       this.noteColorMode.get() === "pitch",
     );
+
+    if (this.noteColorMode.get() === "pitch") {
+      updateSelectionPitchColors(
+        this.selectionElements,
+        this.selectionGeometry,
+        deltaPitch,
+        deltaTicks,
+        getSnapSettingsAtTick,
+      );
+    }
   }
 
   public endDrag(): void {
