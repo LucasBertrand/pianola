@@ -448,6 +448,10 @@ export function buildDeleteClipboardMarkerCommands(
   const commands: PianoRollCommand[] = [];
 
   for (const group of markerGroups) {
+    if (group.startTick <= 0) {
+      continue;
+    }
+
     if (group.tempoBpm !== null) {
       commands.push({
         type: "DeleteTempoMarker",
@@ -457,6 +461,38 @@ export function buildDeleteClipboardMarkerCommands(
     }
 
     if (group.scaleMarker !== null) {
+      commands.push({
+        type: "DeleteScaleMarker",
+        clipId,
+        startTick: group.startTick,
+      });
+    }
+  }
+
+  return commands;
+}
+
+/** Deletes only the explicitly selected movable marker components. */
+export function buildDeleteSelectedMarkerCommands(
+  clipId: ClipId,
+  markerGroups: readonly SelectedTimeMapMarkerGroup[],
+): readonly PianoRollCommand[] {
+  const commands: PianoRollCommand[] = [];
+
+  for (const group of markerGroups) {
+    if (group.startTick <= 0) {
+      continue;
+    }
+
+    if (group.kinds.includes("tempo")) {
+      commands.push({
+        type: "DeleteTempoMarker",
+        clipId,
+        startTick: group.startTick,
+      });
+    }
+
+    if (group.kinds.includes("scale")) {
       commands.push({
         type: "DeleteScaleMarker",
         clipId,

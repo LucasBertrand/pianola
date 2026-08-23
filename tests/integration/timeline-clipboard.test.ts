@@ -20,6 +20,7 @@ import {
 } from "../../src/use-cases/piano-roll/notes/note-edit-commands";
 import {
   buildDeleteClipboardMarkerCommands,
+  buildDeleteSelectedMarkerCommands,
   canPlacePastedTimelineContent,
   createPastedMarkerGroups,
   createPastedNotes,
@@ -288,6 +289,26 @@ describe("timeline clipboard", () => {
     expect(activeNote(runtime, note.id)).toBeUndefined();
     expect(markerAt(runtime, "tempo", SOURCE_MARKER_TICK)).toBeUndefined();
     expect(runtime.selection.size).toBe(0);
+  });
+
+  test("deletes selected marker components through the selection command plan", () => {
+    const runtime = createEditorRuntime(createClipboardProject());
+    const commands = buildDeleteSelectedMarkerCommands(
+      TEST_CLIP_ID,
+      [{ startTick: SOURCE_MARKER_TICK, kinds: ["tempo"] }],
+    );
+
+    expect(commands).toEqual([{
+      type: "DeleteTempoMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: SOURCE_MARKER_TICK,
+    }]);
+
+    runtime.editorCommands.dispatch(commands, "Delete markers");
+
+    expect(markerAt(runtime, "tempo", SOURCE_MARKER_TICK)).toBeUndefined();
+    expect(markerAt(runtime, "scale", SOURCE_MARKER_TICK)).toBeDefined();
+    expect(markerAt(runtime, "meter", SOURCE_MARKER_TICK)).toBeDefined();
   });
 
   test("restores source and pasted mixed selections through undo and redo", () => {

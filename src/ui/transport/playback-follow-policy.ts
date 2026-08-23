@@ -36,3 +36,13 @@ export function resolvePlaybackFollowClipSelection(
     ? playingClipId
     : requestedClipId;
 }
+
+/** Returns whether Return to start may also move the visible viewport. */
+export function shouldReturnViewportToStart(
+  enabled: boolean,
+  activeClipId: ClipId,
+  playingClipId: ClipId | null,
+): boolean {
+  return enabled
+    && (playingClipId === null || playingClipId === activeClipId);
+}

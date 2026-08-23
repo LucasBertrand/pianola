@@ -124,7 +124,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.editor-context-item.is-loop.is-inactive output {
+.editor-context-item.is-inactive output {
   color: var(--color-text-muted);
 }
 

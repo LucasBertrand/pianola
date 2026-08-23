@@ -20,6 +20,7 @@ export interface EditorToolbarProps {
   readonly canRedo: boolean;
   readonly measureCount: number;
   readonly selectionAvailable: boolean;
+  readonly noteSelectionAvailable: boolean;
   readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
@@ -51,6 +52,7 @@ export function EditorToolbar({
   canRedo,
   measureCount,
   selectionAvailable,
+  noteSelectionAvailable,
   clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
@@ -196,8 +198,8 @@ export function EditorToolbar({
         <button
           className="delete-notes-button"
           type="button"
-          title="Delete selected notes"
-          aria-label="Delete selected notes"
+          title="Delete selected notes and markers"
+          aria-label="Delete selected notes and markers"
           disabled={!selectionAvailable}
           onClick={onDeleteSelection}
         >
@@ -212,7 +214,7 @@ export function EditorToolbar({
           type="button"
           title="Enable or disable selected notes"
           aria-label="Enable or disable selected notes"
-          disabled={!selectionAvailable}
+          disabled={!noteSelectionAvailable}
           onClick={onToggleSelectionEnabled}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -347,7 +349,7 @@ export function EditorToolbar({
           type="button"
           title="Slice selected notes..."
           aria-label="Choose how to slice selected notes"
-          disabled={!selectionAvailable}
+          disabled={!noteSelectionAvailable}
           onClick={onOpenSliceSelection}
         >
           <svg
@@ -366,7 +368,7 @@ export function EditorToolbar({
           type="button"
           title="Invert selected intervals"
           aria-label="Invert selected intervals"
-          disabled={!selectionAvailable}
+          disabled={!noteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "invert",
@@ -393,7 +395,7 @@ export function EditorToolbar({
           type="button"
           title="Retrograde selected motif"
           aria-label="Retrograde selected motif"
-          disabled={!selectionAvailable}
+          disabled={!noteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "retrograde",
@@ -422,7 +424,7 @@ export function EditorToolbar({
           type="button"
           title="Augment selected motif"
           aria-label="Augment selected motif"
-          disabled={!selectionAvailable}
+          disabled={!noteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "augment",
@@ -447,7 +449,7 @@ export function EditorToolbar({
           type="button"
           title="Diminish selected motif"
           aria-label="Diminish selected motif"
-          disabled={!selectionAvailable}
+          disabled={!noteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "diminish",

@@ -18,7 +18,7 @@ export interface ClipShepardCssVariables {
 /** Single source of truth for the clip progress motif and its movement. */
 export const CLIP_SHEPARD_SETTINGS = {
   periodPixels: 28,
-  speedPixelsPerSecond: 22,
+  speedPixelsPerSecond: 44,
   gradientAngleDegrees: 122,
   hatchWidthPixels: 8,
   hatchOpacityPercent: 14,

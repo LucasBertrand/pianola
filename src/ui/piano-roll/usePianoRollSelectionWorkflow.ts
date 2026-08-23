@@ -129,6 +129,7 @@ export function usePianoRollSelectionWorkflow({
     toggleEnabled,
   } = usePianoRollSelectionCommands(
     commands,
+    selection,
     getController,
   );
   const transferToInstrument = usePianoRollInstrumentTransfer({

@@ -6,6 +6,7 @@ import {
   buildSetNotesEnabledCommands,
 } from "../../use-cases/piano-roll/notes/note-edit-commands";
 import {
+  buildDeleteSelectedMarkerCommands,
   findNotesByIds,
 } from "../../use-cases/piano-roll/selection/selection-edit-plans";
 import {
@@ -20,6 +21,9 @@ import type {
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
+import type {
+  EditorSelection,
+} from "../../editor/selection/editor-selection";
 
 export interface PianoRollSelectionCommands {
   readonly undo: () => void;
@@ -31,6 +35,7 @@ export interface PianoRollSelectionCommands {
 /** Owns history and direct commands for the current note selection. */
 export function usePianoRollSelectionCommands(
   commands: EditorCommandPort,
+  selection: EditorSelection,
   getController: () => PianoRollControllerPort | null,
 ): PianoRollSelectionCommands {
   const prepareHistoryNavigation = useCallback((): PianoRollControllerPort | null => {
@@ -54,21 +59,33 @@ export function usePianoRollSelectionCommands(
   const remove = useCallback((): void => {
     const controller = getController();
     const notes = controller?.getSelectedNotes() ?? [];
+    const markerGroups = selection.markerGroups;
+    const state = commands.getState();
+    const clipId = getActiveClip(state).id;
+    const deleteCommands = [
+      ...buildDeleteNoteCommands(clipId, notes),
+      ...buildDeleteSelectedMarkerCommands(clipId, markerGroups),
+    ];
 
     if (
-      notes.length > 0
+      deleteCommands.length > 0
       && commands.dispatch(
-        buildDeleteNoteCommands(getActiveClip(commands.getState()).id, notes),
-        "Delete notes",
+        deleteCommands,
+        notes.length > 0 && markerGroups.length > 0
+          ? "Delete timeline selection"
+          : markerGroups.length > 0
+            ? "Delete markers"
+            : "Delete notes",
         {
-          clipId: getActiveClip(commands.getState()).id,
+          clipId,
           noteIds: [],
+          markerGroups: [],
         },
       ) !== null
     ) {
       controller?.clearSelection();
     }
-  }, [commands, getController]);
+  }, [commands, getController, selection]);
   const toggleEnabled = useCallback((): void => {
     const controller = getController();
     const notes = controller?.getSelectedNotes() ?? [];

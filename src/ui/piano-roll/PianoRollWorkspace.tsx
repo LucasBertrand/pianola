@@ -117,6 +117,7 @@ import {
 import {
   getPlaybackFollowTargetClipId,
   resolvePlaybackFollowClipSelection,
+  shouldReturnViewportToStart,
 } from "../../ui/transport/playback-follow-policy";
 import {
   useMidiFileWorkflow,
@@ -356,7 +357,11 @@ export function PianoRollWorkspace({
     const viewport = runtime.viewport.get();
 
     if (
-      (playingClipId === null || playingClipId === activeClip.id)
+      shouldReturnViewportToStart(
+        autoScrollEnabled,
+        activeClip.id,
+        playingClipId,
+      )
       && viewport.scrollX !== 0
     ) {
       publishViewport({
@@ -364,7 +369,14 @@ export function PianoRollWorkspace({
         scrollX: 0,
       });
     }
-  }, [activeClip.id, playingClipId, publishViewport, returnToStart, runtime]);
+  }, [
+    activeClip.id,
+    autoScrollEnabled,
+    playingClipId,
+    publishViewport,
+    returnToStart,
+    runtime,
+  ]);
   const handleAutoScrollToggle = useCallback((): void => {
     setAutoScrollEnabled((enabled) => !enabled);
   }, []);
@@ -718,7 +730,8 @@ export function PianoRollWorkspace({
               activeClip.timeline.timeMap,
               activeClip.timeline.durationTicks,
             )}
-            selectionAvailable={selectedNotes.length > 0}
+            selectionAvailable={selectionAvailable}
+            noteSelectionAvailable={selectedNotes.length > 0}
             clipboardSelectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}

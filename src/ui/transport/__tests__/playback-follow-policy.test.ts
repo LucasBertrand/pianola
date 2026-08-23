@@ -6,6 +6,7 @@ import {
 import {
   getPlaybackFollowTargetClipId,
   resolvePlaybackFollowClipSelection,
+  shouldReturnViewportToStart,
 } from "../playback-follow-policy";
 
 describe("playback follow policy", () => {
@@ -58,5 +59,23 @@ describe("playback follow policy", () => {
       "clip-requested",
       "clip-playing",
     )).toBe("clip-requested");
+  });
+
+  test("moves the viewport on Return to start only while follow is enabled", () => {
+    expect(shouldReturnViewportToStart(
+      false,
+      "clip-active",
+      null,
+    )).toBe(false);
+    expect(shouldReturnViewportToStart(
+      true,
+      "clip-active",
+      null,
+    )).toBe(true);
+    expect(shouldReturnViewportToStart(
+      true,
+      "clip-active",
+      "clip-playing",
+    )).toBe(false);
   });
 });

@@ -187,14 +187,24 @@ export function EditorHeader({
             </output>
           </div>
           <div
-            className="editor-context-item is-selection"
+            className={
+              `editor-context-item is-selection${
+                selectedNotes.length === 0 && selectedMarkerCount === 0
+                  ? " is-inactive"
+                  : ""
+              }`
+            }
             title="Selection content"
           >
             <output>{selectionLabel}</output>
             <small>Selection</small>
           </div>
           <div
-            className="editor-context-item is-detection"
+            className={
+              `editor-context-item is-detection${
+                chordName === null ? " is-inactive" : ""
+              }`
+            }
             title="Chords detected from selected notes"
           >
             <output>{chordName ?? "—"}</output>

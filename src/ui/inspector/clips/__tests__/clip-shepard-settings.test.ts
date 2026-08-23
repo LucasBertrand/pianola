@@ -9,6 +9,10 @@ import {
 } from "../clip-shepard-settings";
 
 describe("clip Shepard settings", () => {
+  test("uses the faster clip playback motion", () => {
+    expect(CLIP_SHEPARD_SETTINGS.speedPixelsPerSecond).toBe(44);
+  });
+
   test("derives equal gaps on both sides of every hatch", () => {
     const variables = createClipShepardCssVariables(
       CLIP_SHEPARD_SETTINGS,
