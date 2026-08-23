@@ -92,6 +92,13 @@
   color: var(--color-accent-warm);
 }
 
+.auto-advance-toggle-button.is-active,
+.auto-scroll-toggle-button.is-active {
+  border-color: var(--color-success-strong);
+  background: var(--color-success-soft);
+  color: var(--color-accent-success);
+}
+
 .master-bus-control {
   display: flex;
   width: calc(var(--project-inspector-width) - 32px);

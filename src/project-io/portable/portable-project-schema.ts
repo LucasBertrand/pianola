@@ -6,7 +6,7 @@ import type {
 } from "../../persistence/project-persistence-model";
 
 export const PORTABLE_PROJECT_FORMAT = "app.pianola.project";
-export const PORTABLE_PROJECT_SCHEMA_VERSION = 1;
+export const PORTABLE_PROJECT_SCHEMA_VERSION = 3;
 
 export interface PortableProject {
   readonly sourceDocumentId: string;

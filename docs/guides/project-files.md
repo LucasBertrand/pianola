@@ -25,8 +25,9 @@ Le pipeline portable :
 3. construit le document et le workspace ;
 4. crée une entrée locale distincte sans modifier `UserSettings`.
 
-L'ancien codec sous `src/project-io/native/` n'est plus relié au produit. La
-rupture avec son enveloppe v1 est volontaire.
+Les enveloppes v1 locale, portable et native restent lisibles. Les champs
+`anchorTick` et `playheadTick` sont validés puis retirés pendant la construction
+du modèle v2 ; les exports et autosaves suivants ne les écrivent plus.
 
 Tests ciblés :
 

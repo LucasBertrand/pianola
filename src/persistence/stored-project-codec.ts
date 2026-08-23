@@ -91,7 +91,7 @@ export function parseStoredProject(
     );
   }
 
-  if (schemaVersion !== STORED_PROJECT_SCHEMA_VERSION) {
+  if (schemaVersion < 1) {
     throw new ProjectPersistenceError(
       "INVALID_DATA",
       `Stored project version ${schemaVersion} is not supported.`,

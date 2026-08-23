@@ -66,6 +66,7 @@
 }
 
 .application-home-project-actions button,
+.application-home-project-clone,
 .application-home-project-remove {
   min-height: 42px;
   padding: 0 18px;
@@ -85,6 +86,7 @@
 }
 
 .application-home-project-actions button:disabled,
+.application-home-project-clone:disabled,
 .application-home-project-remove:disabled {
   cursor: wait;
   opacity: 0.5;
@@ -127,6 +129,12 @@
   font-size: 18px;
 }
 
+.application-home-project-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.application-home-project-clone,
 .application-home-project-remove {
   width: 100%;
   min-height: 38px;
@@ -136,6 +144,10 @@
   background: transparent;
   color: var(--color-text-secondary);
   font-size: 11px;
+}
+
+.application-home-project-clone {
+  border-right: 1px solid var(--color-border-control);
 }
 
 .application-home-project-empty {

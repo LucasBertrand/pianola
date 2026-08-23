@@ -106,8 +106,23 @@
 
 @media (max-width: 920px) and (orientation: portrait) {
   .master-bus-control {
-    width: min(100%, 250px);
-    min-width: 0;
+    width: clamp(160px, 24vw, 190px);
+    min-width: 160px;
+  }
+
+  .master-bus-heading {
+    width: 50px;
+    padding-right: 5px;
+    flex-basis: 50px;
+  }
+
+  .master-bus-controls {
+    gap: 4px;
+    padding-left: 5px;
+  }
+
+  .master-gain-output {
+    display: none;
   }
 
   .workspace {
@@ -440,16 +455,27 @@
   }
 
   .master-bus-heading {
+    width: 36px;
+    padding-right: 4px;
     justify-content: flex-end;
+    flex-basis: 36px;
   }
 
   .master-gain-output {
-    padding-right: 2px;
-    padding-left: 2px;
+    display: none;
+  }
+
+  .master-bus-controls {
+    gap: 3px;
+    padding-left: 4px;
+  }
+
+  .master-heading-tuning > span {
+    display: none;
   }
 
   .master-heading-tuning input {
-    width: 5ch;
+    width: 4.5ch;
   }
 
   .project-menu-popover {

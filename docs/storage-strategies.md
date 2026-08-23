@@ -156,7 +156,7 @@ Plusieurs mégaoctets ne justifient pas à eux seuls OPFS ou une base note par
 note. Le temps de snapshot, sérialisation, transfert Worker et commit IndexedDB
 doit d'abord être mesuré sur tablette réelle.
 
-Le format v1 accepte actuellement jusqu'à 32 Mio. Deux générations d'un projet
+Le format projet accepte actuellement jusqu'à 32 Mio. Deux générations d'un projet
 à cette limite représentent déjà environ 64 Mio avant les copies temporaires et
 le shell. Le repository doit donc consulter quota et usage avant la publication,
 et éviter de maintenir simultanément plusieurs chaînes JSON complètes sur le

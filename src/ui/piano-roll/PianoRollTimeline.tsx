@@ -26,6 +26,12 @@ import {
 import type {
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";
+import type {
+  PlayheadPosition,
+} from "../../editor/model/playhead-position";
+import type {
+  ClipId,
+} from "../../domain/identifiers";
 import {
   paintRuler as paintRulerCanvas,
 } from "./rendering/ruler-painter";
@@ -183,7 +189,8 @@ export function PianoRollRuler(
 
 export interface PianoRollPlayheadProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
-  readonly playheadTick: ReadonlyRenderSignal<number>;
+  readonly clipId: ClipId;
+  readonly playheadPosition: ReadonlyRenderSignal<PlayheadPosition>;
 }
 
 export function PianoRollPlayhead(
@@ -191,7 +198,8 @@ export function PianoRollPlayhead(
 ): React.JSX.Element {
   const {
     viewport,
-    playheadTick,
+    clipId,
+    playheadPosition,
   } = props;
   const elementRef = useRef<HTMLDivElement | null>(null);
 
@@ -203,9 +211,17 @@ export function PianoRollPlayhead(
         return;
       }
 
+      const position = playheadPosition.get();
+
+      if (position.clipId !== clipId) {
+        element.hidden = true;
+        return;
+      }
+
+      element.hidden = false;
       const currentViewport = viewport.get();
       const x =
-        playheadTick.get()
+        position.tick
         * currentViewport.zoomX
         / currentViewport.ticksPerPixel
         - currentViewport.scrollX;
@@ -213,7 +229,7 @@ export function PianoRollPlayhead(
       element.style.transform = `translate3d(${x}px, 0, 0)`;
     };
     const unsubscribeViewport = viewport.subscribe(updatePosition);
-    const unsubscribePlayhead = playheadTick.subscribe(updatePosition);
+    const unsubscribePlayhead = playheadPosition.subscribe(updatePosition);
 
     updatePosition();
 
@@ -222,7 +238,8 @@ export function PianoRollPlayhead(
       unsubscribePlayhead();
     };
   }, [
-    playheadTick,
+    clipId,
+    playheadPosition,
     viewport,
   ]);
 

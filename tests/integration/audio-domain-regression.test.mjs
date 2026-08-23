@@ -1293,7 +1293,7 @@ function getActiveTestMeasureCount(state) {
     const loaded = parseNativeProjectFile(serialized);
     const nativeDocument = JSON.parse(serialized);
 
-    assert.equal(nativeDocument.formatVersion, 1);
+    assert.equal(nativeDocument.formatVersion, 3);
     assert.equal(loaded.projectState.masterBus.gain, 0.41);
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
     assert.equal(
@@ -1365,7 +1365,6 @@ function getActiveTestMeasureCount(state) {
       clipStatesById: {
         ...firstEditorState.clipStatesById,
         "clip-native-second": {
-          playheadTick: 720,
           pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
           gridSettings: {
             baseResolutionTicks: 240,
@@ -2173,7 +2172,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("isolates notes and local transport data between clips", () => {
+  test("isolates notes and loops while keeping auto-advance global", () => {
     const initialState = createProject({
       notesByInstrumentId: {
         "voice-a": [createNote("clip-a-note", "voice-a", 60, 0)],
@@ -2196,7 +2195,7 @@ function getActiveTestMeasureCount(state) {
       },
       transportSettings: {
         ...createDefaultTransportState(),
-        anchorTick: 120,
+        loopEnabled: true,
       },
     };
     const withSecondClip = dispatch(initialState, {
@@ -2225,12 +2224,30 @@ function getActiveTestMeasureCount(state) {
       ["clip-b-note"],
     );
     assert.equal(
-      editedSecondClip.clipsById["clip-test"].transportSettings.anchorTick,
-      0,
+      editedSecondClip.clipsById["clip-test"]
+        .transportSettings.loopEnabled,
+      false,
     );
     assert.equal(
-      editedSecondClip.clipsById["clip-second"].transportSettings.anchorTick,
-      120,
+      editedSecondClip.clipsById["clip-second"]
+        .transportSettings.loopEnabled,
+      true,
+    );
+    const stoppedGlobally = dispatch(editedSecondClip, {
+      type: "SetAutoAdvanceEnabled",
+      enabled: false,
+    });
+
+    assert.equal(stoppedGlobally.autoAdvanceEnabled, false);
+    assert.equal(
+      "autoAdvanceEnabled" in stoppedGlobally.clipsById["clip-test"]
+        .transportSettings,
+      false,
+    );
+    assert.equal(
+      "autoAdvanceEnabled" in stoppedGlobally.clipsById["clip-second"]
+        .transportSettings,
+      false,
     );
   });
 
@@ -2485,7 +2502,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("restores playhead position independently for each clip", () => {
+  test("keeps one playhead independent from the selected clip", () => {
     const runtime = createEditorRuntime(createProject());
     const secondClip = {
       id: "clip-playhead-second",
@@ -2512,11 +2529,16 @@ function getActiveTestMeasureCount(state) {
     );
     runtime.editorCommands.selectClip(secondClip.id);
     assert.equal(runtime.playheadTick.get(), 0);
+    assert.deepEqual(runtime.playheadPosition.get(), {
+      clipId: "clip-test",
+      tick: 640,
+    });
 
     runtime.playheadTick.set(1_280);
     runtime.editorCommands.selectClip("clip-test");
-    assert.equal(runtime.playheadTick.get(), 640);
-
-    runtime.editorCommands.selectClip(secondClip.id);
-    assert.equal(runtime.playheadTick.get(), 1_280);
+    assert.equal(runtime.playheadTick.get(), 0);
+    assert.deepEqual(runtime.playheadPosition.get(), {
+      clipId: secondClip.id,
+      tick: 1_280,
+    });
   });

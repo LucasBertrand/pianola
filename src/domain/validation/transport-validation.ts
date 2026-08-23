@@ -45,14 +45,6 @@ export function validateTransportState(
     });
   }
 
-  if (!isValidTick(transport.anchorTick)) {
-    issues.push({
-      code: "INVALID_TRANSPORT_ANCHOR",
-      path: "anchorTick",
-      message: "Transport anchor tick must be non-negative and finite.",
-    });
-  }
-
   return {
     valid: issues.length === 0,
     issues,

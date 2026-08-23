@@ -53,7 +53,7 @@ export function parseNativeProjectFile(
     "$.formatVersion",
   );
 
-  if (formatVersion !== NATIVE_PROJECT_FILE_VERSION) {
+  if (formatVersion < 1 || formatVersion > NATIVE_PROJECT_FILE_VERSION) {
     fail(
       "UNSUPPORTED_VERSION",
       "$.formatVersion",

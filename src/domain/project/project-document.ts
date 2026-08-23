@@ -36,6 +36,7 @@ export interface ProjectDocument {
   readonly instrumentPresetOrder: readonly PresetId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipOrder: readonly ClipId[];
+  readonly autoAdvanceEnabled: boolean;
   readonly masterBus: MasterBusState;
 }
 

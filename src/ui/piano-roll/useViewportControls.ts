@@ -192,6 +192,10 @@ export function useViewportControls(
   }, [controller, runtime]);
 
   useEffect(() => {
+    if (!followPlayback) {
+      return undefined;
+    }
+
     const followPlayhead = (): void => {
       synchronizeInputs(controller.followPlayhead());
     };

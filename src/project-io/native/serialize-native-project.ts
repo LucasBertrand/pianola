@@ -54,6 +54,7 @@ export function serializeNativeProjectFile(
       instrumentPresetOrder: state.instrumentPresetOrder,
       clipsById,
       clipOrder: state.clipOrder,
+      autoAdvanceEnabled: state.autoAdvanceEnabled,
       masterBus: state.masterBus,
     }),
     editor: toNativeJsonObject({

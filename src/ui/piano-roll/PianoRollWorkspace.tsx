@@ -115,6 +115,9 @@ import {
   useProjectAutosave,
 } from "../../ui/project-files/useProjectAutosave";
 import {
+  getPlaybackFollowTargetClipId,
+} from "../../ui/transport/playback-follow-policy";
+import {
   useMidiFileWorkflow,
 } from "../../ui/project-files/useMidiFileWorkflow";
 import {
@@ -206,6 +209,7 @@ export function PianoRollWorkspace({
   } = usePianoRollProjectState(runtime, pianoRollControllerRef);
   const [projectInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(false);
   const [manageMeasuresDialogOpen, setManageMeasuresDialogOpen] =
     useState(false);
   const [projectInspectorSection, setGeneralInspectorSection] =
@@ -271,7 +275,9 @@ export function PianoRollWorkspace({
   } = useApplicationDialogs(clearPendingMidiImport);
   const {
     status: playbackStatus,
+    playingClipId,
     togglePlayback,
+    toggleClipPlayback,
     stopPlayback,
     returnToStart,
     seek: seekPlayback,
@@ -281,7 +287,7 @@ export function PianoRollWorkspace({
     previewMasterGain,
   } = useAudioPlayback({
     projectStore: runtime.projectStore,
-    playheadTick: runtime.playheadTick,
+    playheadPosition: runtime.playheadPosition,
     onError(error) {
       showApplicationAlert(
         "Playback unavailable",
@@ -296,7 +302,6 @@ export function PianoRollWorkspace({
     storedRevision,
     projectRepository,
     selectedInstrumentId,
-    playbackStatus,
   );
   const handlePitchAudition = useCallback((pitch: number): void => {
     if (selectedInstrumentId !== null) {
@@ -340,20 +345,28 @@ export function PianoRollWorkspace({
   } = useViewportControls(
     runtime,
     projectInspectorOpen,
-    playbackStatus === "playing",
+    autoScrollEnabled
+      && playbackStatus === "playing"
+      && playingClipId === activeClip.id,
     seekPlayback,
   );
   const handleReturnToStart = useCallback((): void => {
     returnToStart();
     const viewport = runtime.viewport.get();
 
-    if (viewport.scrollX !== 0) {
+    if (
+      (playingClipId === null || playingClipId === activeClip.id)
+      && viewport.scrollX !== 0
+    ) {
       publishViewport({
         ...viewport,
         scrollX: 0,
       });
     }
-  }, [publishViewport, returnToStart, runtime]);
+  }, [activeClip.id, playingClipId, publishViewport, returnToStart, runtime]);
+  const handleAutoScrollToggle = useCallback((): void => {
+    setAutoScrollEnabled((enabled) => !enabled);
+  }, []);
   const handleNoteCollision = useNoteCollisionDialogWorkflow({
     runtime,
     showDialog: setApplicationDialog,
@@ -396,9 +409,8 @@ export function PianoRollWorkspace({
     [],
   );
   const beginClipChange = useCallback((): void => {
-    stopPlayback();
     clearInteractionSelection();
-  }, [clearInteractionSelection, stopPlayback]);
+  }, [clearInteractionSelection]);
   const {
     select: handleClipSelect,
     add: handleAddClip,
@@ -412,6 +424,24 @@ export function PianoRollWorkspace({
     duplicateEditorState: runtime.duplicateClipEditorState,
     confirm: showApplicationConfirmation,
   });
+  useEffect(() => {
+    const targetClipId = getPlaybackFollowTargetClipId(
+      autoScrollEnabled,
+      playbackStatus,
+      activeClip.id,
+      playingClipId,
+    );
+
+    if (targetClipId !== null) {
+      handleClipSelect(targetClipId);
+    }
+  }, [
+    activeClip.id,
+    autoScrollEnabled,
+    handleClipSelect,
+    playbackStatus,
+    playingClipId,
+  ]);
   const {
     insertMeasuresAtPlayhead: handleInsertMeasuresAtPlayhead,
     removeMeasureAtPlayhead: handleRemoveMeasureAtPlayhead,
@@ -420,6 +450,7 @@ export function PianoRollWorkspace({
     commitMasterTuning: handleMasterTuningCommit,
     commitProjectTitle: handleProjectTitleCommit,
     toggleLoop: handleToggleLoop,
+    toggleAutoAdvance: handleToggleAutoAdvance,
     commitLoopRegion: handleLoopRegionCommit,
   } = useTransportWorkflow({
     runtime,
@@ -625,6 +656,7 @@ export function PianoRollWorkspace({
         selectedMarkerCount={selectedMarkerCount}
         gridResolutionTicks={gridResolutionTicks}
         playbackStatus={playbackStatus}
+        autoScrollEnabled={autoScrollEnabled}
         midiInputRef={importMidiInputRef}
         saveStatus={autosave.status}
         onCloseProject={handleCloseProject}
@@ -636,6 +668,8 @@ export function PianoRollWorkspace({
         onReturnToStart={handleReturnToStart}
         onTogglePlayback={togglePlayback}
         onToggleLoop={handleToggleLoop}
+        onToggleAutoAdvance={handleToggleAutoAdvance}
+        onToggleAutoScroll={handleAutoScrollToggle}
         onPreviewMasterGain={previewMasterGain}
         onMasterGainCommit={handleMasterGainCommit}
         onMasterMuteToggle={handleMasterMuteToggle}
@@ -767,7 +801,8 @@ export function PianoRollWorkspace({
               <PianoRollGlobalLasso elementRef={globalLassoRef} />
               <PianoRollPlayhead
                 viewport={runtime.viewport}
-                playheadTick={runtime.playheadTick}
+                clipId={activeClip.id}
+                playheadPosition={runtime.playheadPosition}
               />
             </div>
           </div>
@@ -788,10 +823,18 @@ export function PianoRollWorkspace({
           open={projectInspectorOpen}
           portraitSection={projectInspectorSection}
           projectState={projectState}
+          playingClipId={
+            playbackStatus === "playing" ? playingClipId : null
+          }
+          playheadPosition={runtime.playheadPosition}
+          suppressClipSelectionHighlight={
+            autoScrollEnabled && playbackStatus === "playing"
+          }
           selectedInstrumentId={selectedInstrumentId}
           selectionAvailable={selectedNotes.length > 0}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClipSelect={handleClipSelect}
+          onToggleClipPlayback={toggleClipPlayback}
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
           onReorderClip={handleReorderClip}

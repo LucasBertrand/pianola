@@ -21,6 +21,7 @@ export interface ApplicationHomeProps {
   readonly error: string | null;
   readonly onCreateProject: () => void | Promise<void>;
   readonly onOpenProject: (documentId: string) => void | Promise<void>;
+  readonly onCloneProject: (documentId: string) => void | Promise<void>;
   readonly onImportProject: (file: File) => void | Promise<void>;
   readonly onRemoveProject: (documentId: string) => void | Promise<void>;
 }
@@ -32,6 +33,7 @@ export function ApplicationHome({
   error,
   onCreateProject,
   onOpenProject,
+  onCloneProject,
   onImportProject,
   onRemoveProject,
 }: ApplicationHomeProps): React.JSX.Element {
@@ -77,6 +79,7 @@ export function ApplicationHome({
           busy={busy}
           onCreate={onCreateProject}
           onOpen={onOpenProject}
+          onClone={onCloneProject}
           onImport={onImportProject}
           onRemove={requestProjectRemoval}
         />
@@ -96,6 +99,7 @@ interface LocalProjectCollectionProps {
   readonly busy: boolean;
   readonly onCreate: () => void | Promise<void>;
   readonly onOpen: (documentId: string) => void | Promise<void>;
+  readonly onClone: (documentId: string) => void | Promise<void>;
   readonly onImport: (file: File) => void | Promise<void>;
   readonly onRemove: (project: ProjectSummary) => void;
 }
@@ -105,6 +109,7 @@ function LocalProjectCollection({
   busy,
   onCreate,
   onOpen,
+  onClone,
   onImport,
   onRemove,
 }: LocalProjectCollectionProps): React.JSX.Element {
@@ -182,18 +187,30 @@ function LocalProjectCollection({
                 <strong>{project.title}</strong>
                 <span>{formatUpdatedAt(project.updatedAt)}</span>
                 <span>
-                  Revision {project.revision} · {formatBytes(project.byteSize)}
+                  Version {project.schemaVersion} · Revision {project.revision}
+                  {" · "}{formatBytes(project.byteSize)}
                 </span>
               </button>
-              <button
-                type="button"
-                className="application-home-project-remove"
-                aria-label={`Delete ${project.title}`}
-                disabled={busy}
-                onClick={() => onRemove(project)}
-              >
-                Delete
-              </button>
+              <div className="application-home-project-card-actions">
+                <button
+                  type="button"
+                  className="application-home-project-clone"
+                  aria-label={`Clone ${project.title}`}
+                  disabled={busy}
+                  onClick={() => void onClone(project.documentId)}
+                >
+                  Clone
+                </button>
+                <button
+                  type="button"
+                  className="application-home-project-remove"
+                  aria-label={`Delete ${project.title}`}
+                  disabled={busy}
+                  onClick={() => onRemove(project)}
+                >
+                  Delete
+                </button>
+              </div>
             </article>
           ))}
         </div>

@@ -210,10 +210,7 @@ function assertValidClip(
     );
   }
 
-  if (
-    clip.transportSettings.anchorTick > durationTicks
-    || clip.transportSettings.loop.endTick > durationTicks
-  ) {
+  if (clip.transportSettings.loop.endTick > durationTicks) {
     reject(
       "INVALID_COMMAND",
       `Clip "${clip.id}" transport exceeds its duration.`,

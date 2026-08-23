@@ -89,6 +89,41 @@ describe("AudioWorklet browser transport", () => {
     expect(fakeNode.disconnected).toBe(true);
     expect(fakeContext.state).toBe("closed");
   });
+
+  test("replaces a playing clip immediately without a stop command", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const fakePort = new FakeMessagePort();
+    const fakeNode = new FakeAudioWorkletNode(fakePort);
+    const fakeContext = new FakeAudioContext();
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      {},
+      0,
+      () => fakeContext as unknown as AudioContext,
+      () => fakeNode as unknown as AudioWorkletNode,
+    );
+
+    await transport.play(480);
+    transport.replacePlaybackState(
+      snapshot,
+      clip.transportSettings,
+      0,
+    );
+
+    expect(transport.status).toBe("playing");
+    expect(fakePort.messages.slice(-2).map((message) => message.type))
+      .toEqual(["load-timeline", "seek"]);
+    expect(fakePort.messages.some((message) => message.type === "stop"))
+      .toBe(false);
+
+    await transport.dispose();
+  });
 });
 
 class FakeMessagePort {

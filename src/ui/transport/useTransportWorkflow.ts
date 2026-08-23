@@ -37,6 +37,7 @@ export interface TransportWorkflow {
   readonly commitMasterTuning: (tuningFrequencyHz: number) => void;
   readonly commitProjectTitle: (input: HTMLInputElement) => void;
   readonly toggleLoop: () => void;
+  readonly toggleAutoAdvance: () => void;
   readonly commitLoopRegion: (loop: LoopRegion) => void;
 }
 
@@ -240,6 +241,18 @@ export function useTransportWorkflow({
     );
   }, [runtime]);
 
+  const toggleAutoAdvance = useCallback((): void => {
+    const state = runtime.projectStore.getState();
+
+    runtime.editorCommands.dispatch(
+      [{
+        type: "SetAutoAdvanceEnabled",
+        enabled: !state.autoAdvanceEnabled,
+      }],
+      "Toggle project auto-advance",
+    );
+  }, [runtime]);
+
   return {
     insertMeasuresAtPlayhead,
     removeMeasureAtPlayhead,
@@ -248,6 +261,7 @@ export function useTransportWorkflow({
     commitMasterTuning,
     commitProjectTitle,
     toggleLoop,
+    toggleAutoAdvance,
     commitLoopRegion,
   };
 }

@@ -15,8 +15,8 @@ import { parseNativeProjectFile } from "../parse-native-project";
 import { serializeNativeProjectFile } from "../serialize-native-project";
 import { NATIVE_PROJECT_FILE_FORMAT } from "../version";
 
-describe("native v1 parser", () => {
-  test("builds domain and workspace state from a stored v1 document", () => {
+describe("native project parser", () => {
+  test("builds domain and workspace state from the current document", () => {
     const project = createTestProject();
     const editor = createDefaultNativeEditorState(project);
     const metadata = createNativeProjectFileMetadata();
@@ -27,6 +27,56 @@ describe("native v1 parser", () => {
       projectState: project,
       editorState: editor,
     });
+  });
+
+  test("migrates the first legacy clip auto-advance to project scope", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const stored = JSON.parse(serialized) as {
+      formatVersion: number;
+      project: {
+        schemaVersion: number;
+        autoAdvanceEnabled?: boolean;
+        clipsById: Record<string, {
+          transportSettings: Record<string, unknown>;
+        }>;
+      };
+    };
+    const storedClip = stored.project.clipsById[TEST_CLIP_ID];
+
+    expect(storedClip).toBeDefined();
+    stored.formatVersion = 2;
+    stored.project.schemaVersion = 2;
+    delete stored.project.autoAdvanceEnabled;
+    storedClip!.transportSettings["autoAdvanceEnabled"] = false;
+
+    const loaded = parseNativeProjectFile(JSON.stringify(stored));
+
+    expect(loaded.projectState.autoAdvanceEnabled).toBe(false);
+    expect("autoAdvanceEnabled" in (
+      loaded.projectState.clipsById[TEST_CLIP_ID]?.transportSettings ?? {}
+    )).toBe(false);
+    const migratedSerialization = serializeNativeProjectFile(
+      loaded.projectState,
+      loaded.metadata,
+      loaded.editorState,
+    );
+    const migratedSource = JSON.parse(migratedSerialization) as {
+      project: {
+        autoAdvanceEnabled: boolean;
+        clipsById: Record<string, {
+          transportSettings: Record<string, unknown>;
+        }>;
+      };
+    };
+
+    expect(migratedSource.project.autoAdvanceEnabled).toBe(false);
+    expect("autoAdvanceEnabled" in migratedSource.project
+      .clipsById[TEST_CLIP_ID]!.transportSettings).toBe(false);
   });
 
   test("reports a stable code and path for invalid JSON", () => {
@@ -43,7 +93,7 @@ describe("native v1 parser", () => {
     try {
       parseNativeProjectFile(JSON.stringify({
         format: NATIVE_PROJECT_FILE_FORMAT,
-        formatVersion: 2,
+        formatVersion: 4,
       }));
       throw new Error("Expected version recognition to fail.");
     } catch (error: unknown) {
@@ -52,6 +102,50 @@ describe("native v1 parser", () => {
         path: "$.formatVersion",
       });
     }
+  });
+
+  test("loads v1 playhead fields without persisting them again", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const legacy = JSON.parse(serialized) as {
+      formatVersion: number;
+      project: {
+        schemaVersion: number;
+        clipsById: Record<string, {
+          transportSettings: Record<string, unknown>;
+        }>;
+      };
+      editor: {
+        clipStatesById: Record<string, Record<string, unknown>>;
+      };
+    };
+
+    legacy.formatVersion = 1;
+    legacy.project.schemaVersion = 1;
+
+    for (const clipId of project.clipOrder) {
+      legacy.project.clipsById[clipId]!.transportSettings["anchorTick"] = 240;
+      legacy.editor.clipStatesById[clipId]!["playheadTick"] = 240;
+    }
+
+    const loaded = parseNativeProjectFile(JSON.stringify(legacy));
+    const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
+    const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
+
+    expect(loaded.projectState.schemaVersion).toBe(3);
+    expect(loadedClip).toBeDefined();
+    expect(loadedEditor).toBeDefined();
+    expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);
+    expect("playheadTick" in (loadedEditor ?? {})).toBe(false);
+    expect(serializeNativeProjectFile(
+      loaded.projectState,
+      loaded.metadata,
+      loaded.editorState,
+    )).not.toContain("playheadTick");
   });
 
   test("round-trips clips with multiple meter and tempo markers", () => {

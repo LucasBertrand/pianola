@@ -23,15 +23,25 @@ import {
 import {
   useCardReorder,
 } from "../shared/useCardReorder";
+import type {
+  ReadonlyRenderSignal,
+} from "../../editor/model/render-signal";
+import type {
+  PlayheadPosition,
+} from "../../editor/model/playhead-position";
 
 export interface ProjectInspectorProps {
   readonly open: boolean;
   readonly portraitSection: "instruments" | "clips";
   readonly projectState: ProjectState;
+  readonly playingClipId: ClipId | null;
+  readonly playheadPosition: ReadonlyRenderSignal<PlayheadPosition>;
+  readonly suppressClipSelectionHighlight: boolean;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly selectionAvailable: boolean;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClipSelect: (clipId: ClipId) => void;
+  readonly onToggleClipPlayback: (clipId: ClipId) => void;
   readonly onAddClip: () => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
   readonly onReorderClip: (clipId: ClipId, targetIndex: number) => void;
@@ -65,10 +75,14 @@ export function ProjectInspector({
   open,
   portraitSection,
   projectState,
+  playingClipId,
+  playheadPosition,
+  suppressClipSelectionHighlight,
   selectedInstrumentId,
   selectionAvailable,
   setToolbarHost,
   onClipSelect,
+  onToggleClipPlayback,
   onAddClip,
   onDuplicateClip,
   onReorderClip,
@@ -331,7 +345,11 @@ export function ProjectInspector({
         </section>
         <ClipInspector
           projectState={projectState}
+          playingClipId={playingClipId}
+          playheadPosition={playheadPosition}
+          suppressSelectionHighlight={suppressClipSelectionHighlight}
           onSelect={onClipSelect}
+          onTogglePlayback={onToggleClipPlayback}
           onAdd={onAddClip}
           onDuplicate={onDuplicateClip}
           onReorder={onReorderClip}

@@ -134,7 +134,8 @@
 .clip-card {
   --instrument-color: var(--color-accent-primary);
   min-height: 0;
-  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
+  grid-template-columns:
+    24px minmax(0, max-content) minmax(0, 1fr) repeat(3, 30px);
   grid-template-rows: auto;
 }
 
@@ -166,11 +167,100 @@
 }
 
 .clip-card .instrument-delete-button {
-  grid-column: 4;
+  grid-column: 6;
 }
 
 .clip-card .instrument-duplicate-button {
-  grid-column: 3;
+  grid-column: 5;
+}
+
+.clip-card .clip-play-button {
+  grid-column: 4;
+}
+
+.clip-play-button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  margin: auto;
+  fill: currentColor;
+  stroke: none;
+}
+
+.clip-playhead-background,
+.clip-playback-progress {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.clip-playhead-background {
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-surface-deepest) 38%, transparent),
+      color-mix(in srgb, var(--color-surface-deepest) 54%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-accent-primary) 5%, transparent),
+      transparent 68%
+    );
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.clip-card.has-playhead .clip-playhead-background {
+  opacity: 1;
+}
+
+.clip-playback-progress {
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent-primary) 34%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-primary-bright) 22%, transparent) 48%,
+    color-mix(in srgb, var(--color-accent-primary) 28%, transparent) 100%
+  );
+  clip-path: inset(0 100% 0 0);
+  will-change: clip-path;
+}
+
+.clip-playback-shepard-plane {
+  position: absolute;
+  inset: -96px;
+  background: repeating-linear-gradient(
+    var(--clip-shepard-angle, 122deg),
+    transparent 0 var(--clip-shepard-hatch-start, 10px),
+    color-mix(
+      in srgb,
+      var(--color-accent-primary-bright)
+        var(--clip-shepard-hatch-opacity, 14%),
+      transparent
+    ) var(--clip-shepard-hatch-start, 10px)
+      var(--clip-shepard-hatch-end, 18px),
+    transparent var(--clip-shepard-hatch-end, 18px)
+      var(--clip-shepard-period, 28px)
+  );
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.clip-card > :not(.clip-playhead-background):not(.clip-playback-progress) {
+  position: relative;
+  z-index: 1;
+}
+
+.project-instrument-card.clip-card.is-playing {
+  border-color: color-mix(
+    in srgb,
+    var(--color-accent-primary) 68%,
+    var(--color-border-control)
+  );
 }
 
 .project-instrument-card {
@@ -192,7 +282,8 @@
 .project-instrument-card.clip-card {
   min-height: 0;
   padding-left: 11px;
-  grid-template-columns: 24px minmax(0, 1fr) 30px 30px;
+  grid-template-columns:
+    24px minmax(0, max-content) minmax(0, 1fr) repeat(3, 30px);
   grid-template-rows: auto;
   gap: 6px;
 }
@@ -259,6 +350,14 @@
   grid-row: 1;
 }
 
+.clip-card .instrument-copy {
+  display: grid;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  justify-self: start;
+}
+
 .instrument-identity {
   display: grid;
   grid-column: 1;
@@ -314,6 +413,25 @@
   font-weight: 650;
 }
 
+.clip-card .instrument-name-input,
+.clip-name-measure {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.clip-name-measure {
+  min-width: 0;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: normal;
+  white-space: pre;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .instrument-name-input[readonly] {
   cursor: pointer;
   user-select: none;
@@ -322,6 +440,12 @@
 .instrument-name-input:not([readonly]):focus {
   border-color: color-mix(in srgb, var(--instrument-color) 55%, var(--color-border-strong));
   background: var(--color-surface-inset);
+}
+
+.clip-card .instrument-name-input:focus,
+.clip-card .instrument-name-input:focus-visible {
+  outline: 0;
+  box-shadow: none;
 }
 
 .instrument-copy small {
@@ -430,6 +554,12 @@
   border-color: var(--color-warm-medium);
   background: var(--color-warm-soft);
   color: var(--color-accent-warm);
+}
+
+.project-instrument-card .clip-play-button.is-active {
+  border-color: var(--color-primary-strong);
+  background: var(--color-primary-soft);
+  color: var(--color-accent-primary-bright);
 }
 
 .project-instrument-card button:disabled {

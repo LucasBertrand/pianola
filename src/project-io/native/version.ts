@@ -15,7 +15,7 @@ export const MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH =
   MAXIMUM_PROJECT_TITLE_LENGTH;
 
 /**
- * A future v1 -> v2 migration belongs after JSON/version recognition and
+ * Stored-version migrations belong after JSON/version recognition and
  * before the specialized parsers build domain and workspace state.
  */
 export const NATIVE_PROJECT_MIGRATION_ENTRY_POINT =

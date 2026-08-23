@@ -193,10 +193,6 @@ export function insertTimeIntoTransport(
   insertionTick: number,
   insertedTicks: number,
 ): TransportState {
-  const anchorTick =
-    transport.anchorTick >= insertionTick
-      ? transport.anchorTick + insertedTicks
-      : transport.anchorTick;
   const loop = {
     startTick: transport.loop.startTick >= insertionTick
       ? transport.loop.startTick + insertedTicks
@@ -207,8 +203,7 @@ export function insertTimeIntoTransport(
   };
 
   if (
-    anchorTick === transport.anchorTick
-    && loop.startTick === transport.loop.startTick
+    loop.startTick === transport.loop.startTick
     && loop.endTick === transport.loop.endTick
   ) {
     return transport;
@@ -216,7 +211,6 @@ export function insertTimeIntoTransport(
 
   return {
     ...transport,
-    anchorTick,
     loop,
   };
 }
@@ -227,11 +221,6 @@ export function removeTimeFromTransport(
   removalEndTick: number,
   projectDurationTicks: number,
 ): TransportState {
-  const anchorTick = collapseTickForRemovedTime(
-    transport.anchorTick,
-    removalStartTick,
-    removalEndTick,
-  );
   const collapsedLoop = {
     startTick: collapseTickForRemovedTime(
       transport.loop.startTick,
@@ -253,8 +242,7 @@ export function removeTimeFromTransport(
       );
 
   if (
-    anchorTick === transport.anchorTick
-    && loop.startTick === transport.loop.startTick
+    loop.startTick === transport.loop.startTick
     && loop.endTick === transport.loop.endTick
   ) {
     return transport;
@@ -262,7 +250,6 @@ export function removeTimeFromTransport(
 
   return {
     ...transport,
-    anchorTick,
     loop,
   };
 }
@@ -457,17 +444,12 @@ export function trimProjectToDuration(
   }
 
   const transport = state.transportSettings;
-  const anchorTick = Math.min(
-    transport.anchorTick,
-    projectDurationTicks,
-  );
   const loop = fitLoopRegionToProject(
     transport.loop,
     projectDurationTicks,
   );
   const transportChanged =
-    anchorTick !== transport.anchorTick
-    || loop.startTick !== transport.loop.startTick
+    loop.startTick !== transport.loop.startTick
     || loop.endTick !== transport.loop.endTick;
 
   if (!tracksChanged && !transportChanged) {
@@ -480,7 +462,6 @@ export function trimProjectToDuration(
     transportSettings: transportChanged
       ? {
           ...transport,
-          anchorTick,
           loop,
         }
       : transport,

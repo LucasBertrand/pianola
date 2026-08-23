@@ -69,7 +69,7 @@ export function parsePortableProject(serialized: string): PortableProject {
     );
   }
 
-  if (version !== PORTABLE_PROJECT_SCHEMA_VERSION) {
+  if (version < 1) {
     throw new ProjectPersistenceError(
       "INVALID_DATA",
       `Project file version ${version} is not supported.`,

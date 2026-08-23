@@ -54,6 +54,9 @@ import {
   MappedRenderSignal,
   MutableRenderSignal,
 } from "../editor/model/render-signal";
+import {
+  ActiveClipPlayheadTickSignal,
+} from "../editor/model/playhead-position";
 import type {
   ClipEditorRuntimeState,
   EditorRuntime,
@@ -100,8 +103,12 @@ export function createEditorRuntime(
   );
 
   const viewport = new MutableRenderSignal(viewportState);
-  const playheadTick = new MutableRenderSignal(
-    activeClip.transportSettings.anchorTick,
+  const playheadPosition = new MutableRenderSignal(
+    { clipId: activeClip.id, tick: 0 },
+  );
+  const playheadTick = new ActiveClipPlayheadTickSignal(
+    playheadPosition,
+    () => projectStore.getState().workspace.activeClipId,
   );
   const pitchSnapSettings = new MutableRenderSignal(
     DEFAULT_PITCH_SNAP_SETTINGS,
@@ -117,18 +124,32 @@ export function createEditorRuntime(
 
     if (state.workspace.activeClipId !== previousState.workspace.activeClipId) {
       clipEditorStates.set(previousState.workspace.activeClipId, {
-        playheadTick: playheadTick.get(),
         viewport: viewport.get(),
         pitchSnapSettings: pitchSnapSettings.get(),
         gridSettings: gridSettings.get(),
       });
       const restored = clipEditorStates.get(state.workspace.activeClipId)
-        ?? createDefaultClipEditorRuntimeState(nextClip);
+        ?? createDefaultClipEditorRuntimeState();
 
-      playheadTick.set(restored.playheadTick);
       viewport.set(restored.viewport);
       pitchSnapSettings.set(restored.pitchSnapSettings);
       gridSettings.set(restored.gridSettings);
+      playheadPosition.invalidate();
+    }
+
+    const currentPlayhead = playheadPosition.get();
+    const playheadClip = state.clipsById[currentPlayhead.clipId];
+
+    if (playheadClip === undefined) {
+      playheadPosition.set({
+        clipId: state.workspace.activeClipId,
+        tick: 0,
+      });
+    } else if (currentPlayhead.tick > playheadClip.timeline.durationTicks) {
+      playheadPosition.set({
+        clipId: currentPlayhead.clipId,
+        tick: playheadClip.timeline.durationTicks,
+      });
     }
 
     if (
@@ -166,6 +187,7 @@ export function createEditorRuntime(
     noteColorMode: new MutableRenderSignal<NoteColorMode>(
       EDITOR_CONSTANTS.defaultNoteColorMode,
     ),
+    playheadPosition,
     playheadTick,
     highlightedPitch: new MutableRenderSignal<number | null>(null),
     pitchSnapSettings,
@@ -178,7 +200,6 @@ export function createEditorRuntime(
       const state = projectStore.getState();
 
       clipEditorStates.set(state.workspace.activeClipId, {
-        playheadTick: playheadTick.get(),
         viewport: viewport.get(),
         pitchSnapSettings: pitchSnapSettings.get(),
         gridSettings: gridSettings.get(),
@@ -191,7 +212,7 @@ export function createEditorRuntime(
 
         if (clip !== undefined) {
           result[clipId] = clipEditorStates.get(clipId)
-            ?? createDefaultClipEditorRuntimeState(clip);
+            ?? createDefaultClipEditorRuntimeState();
         }
       }
 
@@ -207,11 +228,9 @@ export function createEditorRuntime(
       }
 
       const currentState = projectStore.getState();
-      const currentClip = getActiveClip(currentState);
       const restored = clipEditorStates.get(currentState.workspace.activeClipId)
-        ?? createDefaultClipEditorRuntimeState(currentClip);
+        ?? createDefaultClipEditorRuntimeState();
 
-      playheadTick.set(restored.playheadTick);
       viewport.set(restored.viewport);
       pitchSnapSettings.set(restored.pitchSnapSettings);
       gridSettings.set(restored.gridSettings);
@@ -229,7 +248,6 @@ export function createEditorRuntime(
 
       if (sourceClipId === state.workspace.activeClipId) {
         clipEditorStates.set(sourceClipId, {
-          playheadTick: playheadTick.get(),
           viewport: viewport.get(),
           pitchSnapSettings: pitchSnapSettings.get(),
           gridSettings: gridSettings.get(),
@@ -237,10 +255,9 @@ export function createEditorRuntime(
       }
 
       const sourceState = clipEditorStates.get(sourceClipId)
-        ?? createDefaultClipEditorRuntimeState(sourceClip);
+        ?? createDefaultClipEditorRuntimeState();
 
       clipEditorStates.set(targetClipId, {
-        playheadTick: sourceState.playheadTick,
         viewport: { ...sourceState.viewport },
         pitchSnapSettings: { ...sourceState.pitchSnapSettings },
         gridSettings: { ...sourceState.gridSettings },
@@ -271,11 +288,8 @@ export function createAppPersistenceRuntime(): AppPersistenceRuntime {
   };
 }
 
-function createDefaultClipEditorRuntimeState(
-  clip: ReturnType<typeof getActiveClip>,
-): ClipEditorRuntimeState {
+function createDefaultClipEditorRuntimeState(): ClipEditorRuntimeState {
   return {
-    playheadTick: clip.transportSettings.anchorTick,
     viewport: createInitialViewportState(),
     pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
     gridSettings: DEFAULT_GRID_SETTINGS,

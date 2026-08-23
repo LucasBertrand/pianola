@@ -39,7 +39,7 @@ export class InMemoryProjectRepository implements ProjectRepository {
     return this.enqueue(() => Promise.resolve(
       [...this.storage.summaries.values()]
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-        .map((summary) => ({ ...summary })),
+        .map(normalizeSummary),
     ));
   }
 
@@ -178,8 +178,19 @@ function createSummary(
   return {
     documentId: project.documentId,
     title: project.document.title,
+    schemaVersion: project.document.schemaVersion,
     revision: project.revision,
     updatedAt: project.updatedAt,
     byteSize,
+  };
+}
+
+function normalizeSummary(summary: ProjectSummary): ProjectSummary {
+  return {
+    ...summary,
+    // Catalog rows written before schema v2 did not expose this metadata.
+    schemaVersion: Number.isSafeInteger(summary.schemaVersion)
+      ? summary.schemaVersion
+      : 1,
   };
 }

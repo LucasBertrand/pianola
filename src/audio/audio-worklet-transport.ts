@@ -2,12 +2,13 @@ import type {
   InstrumentId,
   Tick,
 } from "../domain/identifiers";
+import {
+  resolvePlaybackStartTick,
+  type TransportState,
+} from "../domain/transport/transport";
 import type {
   InstrumentConfig,
 } from "../domain/instruments/instrument";
-import type {
-  TransportState,
-} from "../domain/transport/transport";
 import {
   AUDIO_CONSTANTS,
 } from "../config/audio-config";
@@ -60,7 +61,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     snapshot: PlaybackSnapshot,
     transport: TransportState,
     callbacks: AudioTransportCallbacks = {},
-    initialPositionTick: Tick = transport.anchorTick,
+    initialPositionTick: Tick = 0,
     contextFactory: AudioContextFactory = createBrowserAudioContext,
     nodeFactory: AudioWorkletNodeFactory = createBrowserAudioWorkletNode,
   ) {
@@ -143,9 +144,11 @@ export class AudioWorkletTransport implements AudioTransportController {
 
     this.operationSequence += 1;
     const operation = this.operationSequence;
-    this.positionTick = startTick >= this.snapshot.durationTicks
-      ? (this.transport.loopEnabled ? this.transport.loop.startTick : 0)
-      : clampPlaybackTick(startTick, this.snapshot.durationTicks);
+    this.positionTick = resolvePlaybackStartTick(
+      startTick,
+      this.snapshot.durationTicks,
+      this.transport,
+    );
 
     try {
       await this.ensureInitialized();

@@ -190,10 +190,12 @@ Tous les gestes et contrôles sont détaillés dans
 
 ## Fichiers et données
 
-Le nouveau format `.pianola` stocke le document musical et le workspace projet,
+Le format `.pianola` stocke le document musical et le workspace projet,
 jamais les préférences utilisateur. Le parseur traite le JSON comme inconnu,
 vérifie identité, version et limites, puis crée une entrée distincte dans la
-bibliothèque IndexedDB. L'ancien format v1 n'est pas accepté par ce flux.
+bibliothèque IndexedDB. Les données v1 restent lisibles : leurs anciennes
+positions de playhead sont validées puis ignorées, car le playhead v2 est un
+état de session non persistant.
 
 L’import MIDI analyse d’abord le SMF, présente les avertissements et collisions,
 puis construit un nouveau projet. L’export reçoit une projection musicale

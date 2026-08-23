@@ -16,7 +16,7 @@ export type ValidationCode =
   | "INVALID_PPQN"
   | "INVALID_TIME_SIGNATURE"
   | "INVALID_LOOP"
-  | "INVALID_TRANSPORT_ANCHOR"
+  | "INVALID_TRANSPORT_AUTOMATION"
   | "INVALID_PROJECT_DURATION";
 
 export interface ValidationIssue {

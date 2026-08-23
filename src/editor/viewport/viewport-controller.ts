@@ -30,7 +30,6 @@ import {
   getMinimumHorizontalZoom,
   getMinimumVerticalZoom,
   getPlaybackFollowScrollX,
-  getScrollXToRevealTick,
 } from "../geometry/viewport-bounds";
 import type {
   EditorRuntime,
@@ -151,21 +150,18 @@ export class ViewportController {
   }
 
   public followPlayhead(): ViewportControlState {
+    if (!this.followPlayback) {
+      return this.synchronize();
+    }
+
     const viewport = this.runtime.viewport.get();
-    const scrollX = this.followPlayback
-      ? getPlaybackFollowScrollX(
-        viewport,
-        this.viewportWidth,
-        this.getTotalTicks(),
-        this.runtime.playheadTick.get(),
-        this.horizontalInteractionActive,
-      )
-      : getScrollXToRevealTick(
-        viewport,
-        this.viewportWidth,
-        this.getTotalTicks(),
-        this.runtime.playheadTick.get(),
-      );
+    const scrollX = getPlaybackFollowScrollX(
+      viewport,
+      this.viewportWidth,
+      this.getTotalTicks(),
+      this.runtime.playheadTick.get(),
+      this.horizontalInteractionActive,
+    );
 
     return scrollX === viewport.scrollX
       ? this.synchronize()

@@ -69,6 +69,27 @@ describe("P3 editor controller contracts", () => {
       .toBeGreaterThan(flushed.viewport.scrollX);
   });
 
+  test("does not reveal the playhead when playback follow is disabled", () => {
+    const runtime = createEditorRuntime(createTestProject({
+      clips: [{ id: "clip-a", measureCount: 16 }],
+    }));
+    const controller = new ViewportController(runtime);
+
+    controller.updateDimensions(800, 650);
+    controller.queueHorizontalZoom(2);
+    controller.flushPendingInputs();
+    controller.queueHorizontalScroll(1_000);
+    const navigated = controller.flushPendingInputs();
+
+    runtime.playheadTick.set(0);
+    controller.setFollowPlayback(false);
+
+    expect(navigated.viewport.scrollX).toBeGreaterThan(0);
+    expect(controller.followPlayhead().viewport.scrollX).toBe(
+      navigated.viewport.scrollX,
+    );
+  });
+
   test("formats timeline status independently from DOM outputs", () => {
     const timeMap = createDefaultTimeMap();
 

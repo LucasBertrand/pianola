@@ -1,6 +1,7 @@
 import {
   APPLICATION_CONSTANTS,
 } from "../../config/product-config";
+import { PROJECT_CONSTANTS } from "../../config/domain-limits";
 import {
   type Clip,
   createDefaultClipTimeline,
@@ -46,6 +47,7 @@ export function createBlankProjectState(): ProjectState {
     instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById: { [clipId]: clip },
     clipOrder: [clipId],
+    autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
     workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),
   };

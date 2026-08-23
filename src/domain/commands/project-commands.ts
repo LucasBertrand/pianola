@@ -11,12 +11,30 @@ import {
   MAXIMUM_PROJECT_TITLE_LENGTH,
 } from "../project/project-document";
 import type {
+  SetAutoAdvanceEnabledCommand,
   SetMasterMutedCommand,
   UpdateMasterGainCommand,
   UpdateMasterTuningCommand,
   UpdateProjectTitleCommand,
 } from "./command-types";
 import { reject } from "./command-context";
+
+export function applySetAutoAdvanceEnabled(
+  state: ProjectState,
+  command: SetAutoAdvanceEnabledCommand,
+): ProjectState {
+  if (typeof command.enabled !== "boolean") {
+    reject(
+      "INVALID_COMMAND",
+      "Project auto-advance state must be a boolean.",
+      command.type,
+    );
+  }
+
+  return command.enabled === state.autoAdvanceEnabled
+    ? state
+    : { ...state, autoAdvanceEnabled: command.enabled };
+}
 
 export function applyUpdateProjectTitle(
   state: ProjectState,
@@ -132,4 +150,3 @@ export function applyUpdateMasterTuning(
     },
   };
 }
-

@@ -42,14 +42,23 @@ Save changes crée une seule étape Undo/Redo avec le résultat final.
 
 Chaque clip possède ses notes, sa timeline, sa boucle et ses verrouillages par
 instrument. Ajouter, dupliquer, renommer, réordonner ou supprimer un clip passe
-par l’inspecteur. Changer de clip arrête la lecture et vide la sélection de
-notes.
+par l’inspecteur. Changer de clip vide la sélection de notes sans arrêter la
+lecture. Le bouton Play d’une carte lance immédiatement ce clip ; cliquer dans
+la grille déplace l’unique playhead dans le clip affiché et repositionne aussi
+la lecture en cours.
 
 ## Transport, timeline et viewport
 
 Lecture/Pause démarre ou suspend le transport du processeur audio. Stop libère
 les voix actives avec une transition courte.
 Le bouton de retour replace le playhead et le scroll horizontal au début.
+L’enchaînement suit l’ordre des cartes, sauf si la boucle ou le bouton global
+« Stop playback at the end of every clip » est actif. L’auto-scroll est désactivé
+pour toute la séquence : sa valeur ne change pas lors de la sélection d’un
+autre clip. L’auto-scroll est désactivé par défaut ; lorsqu’il est actif, il sélectionne le clip joué et suit le
+playhead. Lorsqu’il est désactivé, ni la sélection du clip ni le viewport ne
+sont modifiés par la lecture : le playhead peut rester dans un autre clip ou
+sortir de la zone visible.
 Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
 Undo/Redo.
 La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme).

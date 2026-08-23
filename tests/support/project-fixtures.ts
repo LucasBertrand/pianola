@@ -58,6 +58,7 @@ interface AudioTestProjectOptions {
   readonly masterGain?: number;
   readonly masterMuted?: boolean;
   readonly masterTuningFrequencyHz?: number;
+  readonly autoAdvanceEnabled?: boolean;
   readonly transport?: Partial<TransportState> & {
     readonly loop?: Partial<TransportState["loop"]>;
     readonly bpm?: number;
@@ -124,6 +125,7 @@ export function createAudioTestProject({
   masterMuted = createDefaultMasterBusState().muted,
   masterTuningFrequencyHz =
     createDefaultMasterBusState().tuningFrequencyHz,
+  autoAdvanceEnabled = PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
   transport: transportChanges = {},
   instrumentOrder = ["voice-a"],
   projectInstrumentChangesById = {},
@@ -142,7 +144,6 @@ export function createAudioTestProject({
   };
   const transportSettings: TransportState = {
     ...defaultTransport,
-    anchorTick: transportChanges.anchorTick ?? defaultTransport.anchorTick,
     loopEnabled:
       transportChanges.loopEnabled ?? defaultTransport.loopEnabled,
     loop: {
@@ -216,6 +217,7 @@ export function createAudioTestProject({
       },
     },
     clipOrder: [clipId],
+    autoAdvanceEnabled,
     workspace: { activeClipId: clipId },
     masterBus: {
       gain: masterGain,
@@ -236,7 +238,6 @@ export function createAudioTestEditorState(
     pitchPreviewEnabled: false,
     clipStatesById: {
       "clip-test": {
-        playheadTick: 960,
         pitchSnapSettings: {
           ...DEFAULT_PITCH_SNAP_SETTINGS,
           enabled: true,

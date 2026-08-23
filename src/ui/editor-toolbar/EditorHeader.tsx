@@ -44,6 +44,7 @@ export interface EditorHeaderProps {
   readonly selectedMarkerCount: number;
   readonly gridResolutionTicks: number;
   readonly playbackStatus: PlaybackStatus;
+  readonly autoScrollEnabled: boolean;
   readonly midiInputRef: RefObject<HTMLInputElement | null>;
   readonly saveStatus: ProjectSaveStatus;
   readonly onCloseProject: () => void | Promise<void>;
@@ -57,6 +58,8 @@ export interface EditorHeaderProps {
   readonly onReturnToStart: () => void;
   readonly onTogglePlayback: () => void;
   readonly onToggleLoop: () => void;
+  readonly onToggleAutoAdvance: () => void;
+  readonly onToggleAutoScroll: () => void;
   readonly onPreviewMasterGain: (gain: number) => void;
   readonly onMasterGainCommit: (gain: number) => void;
   readonly onMasterMuteToggle: () => void;
@@ -70,6 +73,7 @@ export function EditorHeader({
   selectedMarkerCount,
   gridResolutionTicks,
   playbackStatus,
+  autoScrollEnabled,
   midiInputRef: importMidiInputRef,
   saveStatus,
   onCloseProject: handleCloseProject,
@@ -81,6 +85,8 @@ export function EditorHeader({
   onReturnToStart: returnToStart,
   onTogglePlayback: togglePlayback,
   onToggleLoop: handleToggleLoop,
+  onToggleAutoAdvance: handleToggleAutoAdvance,
+  onToggleAutoScroll: handleToggleAutoScroll,
   onPreviewMasterGain: previewMasterGain,
   onMasterGainCommit: handleMasterGainCommit,
   onMasterMuteToggle: handleMasterMuteToggle,
@@ -146,9 +152,15 @@ export function EditorHeader({
           loopEnabled={
             activeClip.transportSettings.loopEnabled
           }
+          autoAdvanceEnabled={
+            projectState.autoAdvanceEnabled
+          }
+          autoScrollEnabled={autoScrollEnabled}
           onReturnToStart={returnToStart}
           onTogglePlayback={togglePlayback}
           onToggleLoop={handleToggleLoop}
+          onToggleAutoAdvance={handleToggleAutoAdvance}
+          onToggleAutoScroll={handleToggleAutoScroll}
         />
         <div className="editor-context-panel" aria-label="Editor context">
           <span

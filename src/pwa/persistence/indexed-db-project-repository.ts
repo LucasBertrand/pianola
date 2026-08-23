@@ -45,7 +45,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       await done;
       return summaries
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-        .map((summary) => ({ ...summary }));
+        .map(normalizeSummary);
     });
   }
 
@@ -281,9 +281,20 @@ function createSummary(
   return {
     documentId: project.documentId,
     title: project.document.title,
+    schemaVersion: project.document.schemaVersion,
     revision: project.revision,
     updatedAt: project.updatedAt,
     byteSize,
+  };
+}
+
+function normalizeSummary(summary: ProjectSummary): ProjectSummary {
+  return {
+    ...summary,
+    // IndexedDB catalogs created before schema v2 have no schemaVersion field.
+    schemaVersion: Number.isSafeInteger(summary.schemaVersion)
+      ? summary.schemaVersion
+      : 1,
   };
 }
 

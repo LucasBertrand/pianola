@@ -134,14 +134,6 @@ export function assertTransportWithinProjectDuration(
   assertValidClipTimeline(state.timeline, state.clock);
   const projectDurationTicks = state.timeline.durationTicks;
 
-  if (transport.anchorTick > projectDurationTicks) {
-    reject(
-      "INVALID_COMMAND",
-      "Transport anchor cannot exceed the clip duration.",
-      commandType,
-    );
-  }
-
   if (transport.loop.endTick > projectDurationTicks) {
     reject(
       "INVALID_COMMAND",

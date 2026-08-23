@@ -14,11 +14,10 @@ import type {
 
 export const STORED_PROJECT_FORMAT =
   "app.pianola.stored-project";
-export const STORED_PROJECT_SCHEMA_VERSION = 1;
+export const STORED_PROJECT_SCHEMA_VERSION = 2;
 
 /** Navigation state for one clip, expressed without CSS pixel offsets. */
 export interface ProjectClipWorkspaceState {
-  readonly playheadTick: number;
   readonly firstVisibleTick: number;
   readonly highestVisiblePitch: number;
   readonly horizontalZoom: number;
@@ -49,6 +48,7 @@ export interface ProjectSummary {
   readonly documentId: string;
   readonly title: string;
   readonly revision: number;
+  readonly schemaVersion: number;
   readonly updatedAt: string;
   readonly byteSize: number;
 }

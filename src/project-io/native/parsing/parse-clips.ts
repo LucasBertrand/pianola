@@ -153,11 +153,25 @@ function parseTransport(
   path: string,
 ): TransportState {
   const transport = readRecord(source, path);
-  assertExactRecordKeys(transport, [
-    "loop",
-    "loopEnabled",
-    "anchorTick",
-  ], path);
+  const transportKeys = ["loop", "loopEnabled"];
+
+  if ("autoAdvanceEnabled" in transport) {
+    transportKeys.push("autoAdvanceEnabled");
+    readBoolean(
+      transport["autoAdvanceEnabled"],
+      `${path}.autoAdvanceEnabled`,
+    );
+  }
+
+  if ("anchorTick" in transport) {
+    transportKeys.push("anchorTick");
+    readNonNegativeSafeInteger(
+      transport["anchorTick"],
+      `${path}.anchorTick`,
+    );
+  }
+
+  assertExactRecordKeys(transport, transportKeys, path);
   const loop = parseLoop(transport["loop"], `${path}.loop`);
   const loopEnabled = readBoolean(
     transport["loopEnabled"],
@@ -167,10 +181,6 @@ function parseTransport(
   const parsedTransport: TransportState = {
     loop,
     loopEnabled,
-    anchorTick: readNonNegativeSafeInteger(
-      transport["anchorTick"],
-      `${path}.anchorTick`,
-    ),
   };
   const validation = validateTransportState(parsedTransport);
 
@@ -588,14 +598,6 @@ function assertTransportWithinClip(
   const durationTicks =
     clip.timeline.durationTicks;
   const transport = clip.transportSettings;
-
-  if (transport.anchorTick > durationTicks) {
-    fail(
-      "INVALID_DATA",
-      `${clipPath}.transportSettings.anchorTick`,
-      "Transport anchor exceeds the clip duration.",
-    );
-  }
 
   if (
     transport.loop.endTick > durationTicks

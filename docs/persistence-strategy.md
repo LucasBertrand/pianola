@@ -17,10 +17,10 @@ la même durée de vie, ni la même politique de sauvegarde.
 | Famille | Exemples | Portée | Exportée dans `.pianola` | Stockage local durable |
 | --- | --- | --- | --- | --- |
 | document projet | titre, clips, notes, timelines, instruments, mixage | un projet, portable | oui | oui, dans la bibliothèque locale |
-| workspace de projet | clip et instrument actifs, playhead, viewport, grille et snap par clip | un projet, adaptable à l'appareil | oui, dans une section distincte | oui, avec le document |
+| workspace de projet | clip et instrument actifs, viewport, grille et snap par clip | un projet, adaptable à l'appareil | oui, dans une section distincte | oui, avec le document |
 | préférences utilisateur | raccourcis, thème futur, mode de sélection, couleur des notes, préécoute du pitch, valeurs par défaut | un utilisateur + une installation | non | oui, dans un document de réglages distinct |
 | récupération | dernière révision automatique, génération précédente, date et cause de fermeture | une installation | non | oui, remplaçable et borné |
-| état éphémère | sélection, Undo/Redo, presse-papier, geste, dialogue ouvert, voix audio | une session | non | non |
+| état éphémère | playhead unique, sélection, Undo/Redo, presse-papier, geste, dialogue ouvert, voix audio | une session | non | non |
 
 Règle de décision : une donnée nécessaire pour reproduire le morceau appartient
 au document. Une donnée qui décrit où reprendre l'édition appartient au
@@ -55,9 +55,10 @@ Aujourd'hui :
 - le service worker ne met en cache que le shell et les ressources statiques ;
   les projets restent exclusivement dans IndexedDB.
 
-Le lecteur v1 reste présent dans le dépôt pour ses anciens tests internes, mais
-le produit ne l'appelle plus. Cette rupture est volontaire : aucun contrat de
-compatibilité avec les anciens `.pianola` n'est fourni par le nouveau système.
+Les lecteurs locaux et portables v2 acceptent les enveloppes v1. Ils valident
+les anciens champs de position `anchorTick` et `playheadTick`, puis les
+abandonnent lors de la construction du runtime. Une sauvegarde ou un export
+suivant produit uniquement le schéma v2.
 
 ## Expérience produit cible
 
@@ -279,7 +280,8 @@ d'éviction, mais ne remplace jamais une sauvegarde exportée. Références :
 Le workspace voyage avec le projet, mais ne stocke aucune dimension de fenêtre,
 coordonnée de pointeur ou position brute en pixels CSS. Le format cible exprime
 la navigation en coordonnées musicales : tick visible ou central, pitch visible
-ou central, facteurs de zoom, playhead et identifiants actifs.
+ou central, facteurs de zoom et identifiants actifs. Le playhead est exclu : il
+repart au début du clip actif à chaque nouvelle session.
 
 Au chargement, l'adaptateur d'éditeur projette ces valeurs dans le viewport
 réel, puis les borne selon la taille disponible. Le même fichier peut ainsi être
@@ -288,17 +290,19 @@ workspaces. Les préférences propres aux périphériques d'entrée restent dans
 `UserSettings` : les raccourcis clavier sont actifs sur bureau et simplement
 ignorés, mais conservés, sur un appareil tactile.
 
-## Rupture avec `.pianola` v1
+## Migrations `.pianola` v1 à v3
 
-Le nouveau format commence à `schemaVersion: 1` sous l'identité
-`app.pianola.project`. Il n'accepte pas l'ancienne enveloppe
-`app.pianola.native-project` et ne tente aucune conversion implicite. Les trois
-préférences auparavant mêlées à `editor` sont désormais chargées uniquement
-depuis `UserSettings`.
+Le format courant utilise `schemaVersion: 3` sous l'identité
+`app.pianola.project`. Son lecteur accepte les versions 1 et 2, convertit le
+document vers la version courante et ignore les positions de playhead
+historiques. La v3 remonte `autoAdvanceEnabled` des transports de clips vers le
+document projet ; en cas d'anciennes valeurs divergentes, celle du premier clip
+visible devient la valeur globale. Les trois préférences auparavant mêlées à
+`editor` restent chargées uniquement depuis `UserSettings`.
 
-L'ancien codec reste isolé sous `src/project-io/native/` jusqu'à son retrait
-mécanique ; il n'est relié ni à la bibliothèque, ni au menu d'import, ni à
-l'autosave.
+Le codec historique isolé sous `src/project-io/native/` applique la même
+tolérance v1/v2/v3 pour ses fixtures et exports, même s’il n’est relié ni à la
+bibliothèque, ni au menu d’import, ni à l’autosave.
 
 ## Tests obligatoires
 
@@ -328,7 +332,7 @@ mémoire et l'adaptateur réel. Les scénarios minimaux couvrent :
 2. [x] Introduire `UserSettingsRepository` et les raccourcis par action stable.
 3. [x] Introduire `ProjectRepository`, IndexedDB, autosave et deux générations.
 4. [x] Livrer bibliothèque, import/export et état de sauvegarde visible.
-5. [x] Livrer le nouveau format portable sans chemin de compatibilité v1.
+5. [x] Livrer le format portable et sa migration de lecture v1 vers v2.
 6. [x] Ajouter le service worker de shell et les politiques StorageManager.
 7. [ ] Valider hors ligne, installation Chrome, suspension, arrêt forcé,
    manque d'espace et sauvegarde/restauration sur bureau et Android réels.

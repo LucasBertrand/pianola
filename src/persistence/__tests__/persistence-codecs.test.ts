@@ -42,6 +42,7 @@ describe("persistence codecs", () => {
     });
     expect(serialized).not.toContain("selectionMode");
     expect(serialized).not.toContain("pitchPreviewEnabled");
+    expect(serialized).not.toContain("playheadTick");
   });
 
   test("refuses a future portable version", () => {
@@ -57,6 +58,47 @@ describe("persistence codecs", () => {
 
     expect(() => parsePortableProject(JSON.stringify(source)))
       .toThrow("newer than this application");
+  });
+
+  test("migrates v1 portable playhead fields to transient state", () => {
+    const document = createTestProject();
+    const serialized = serializePortableProject({
+      sourceDocumentId: "portable-project",
+      exportedAt: "2026-08-22T12:00:00.000Z",
+      document,
+      workspace: createDefaultProjectWorkspace(document),
+    });
+    const legacy = JSON.parse(serialized) as {
+      schemaVersion: number;
+      document: {
+        schemaVersion: number;
+        clipsById: Record<string, {
+          transportSettings: Record<string, unknown>;
+        }>;
+      };
+      workspace: {
+        clipStatesById: Record<string, Record<string, unknown>>;
+      };
+    };
+
+    legacy.schemaVersion = 1;
+    legacy.document.schemaVersion = 1;
+
+    for (const clipId of document.clipOrder) {
+      legacy.document.clipsById[clipId]!
+        .transportSettings["anchorTick"] = 480;
+      legacy.workspace.clipStatesById[clipId]!["playheadTick"] = 480;
+    }
+
+    const migrated = parsePortableProject(JSON.stringify(legacy));
+    const clipId = document.clipOrder[0]!;
+
+    expect(migrated.document.schemaVersion).toBe(3);
+    expect("anchorTick" in migrated.document.clipsById[clipId]!
+      .transportSettings).toBe(false);
+    expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)
+      .toBe(false);
+    expect(serializePortableProject(migrated)).not.toContain("playheadTick");
   });
 
   test("validates user settings and rejects duplicate shortcuts", () => {

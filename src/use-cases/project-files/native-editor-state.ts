@@ -58,7 +58,6 @@ export function createDefaultNativeEditorState(
 
     if (clip !== undefined) {
       clipStatesById[clipId] = {
-        playheadTick: clip.transportSettings.anchorTick,
         pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
         gridSettings: DEFAULT_GRID_SETTINGS,
         viewport: defaultViewport,

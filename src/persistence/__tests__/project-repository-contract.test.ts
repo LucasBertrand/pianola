@@ -131,6 +131,9 @@ function runRepositoryContract(
         revision: 1,
         document: { title: snapshot.document.title },
       });
+      await expect(restarted.list()).resolves.toMatchObject([{
+        schemaVersion: snapshot.document.schemaVersion,
+      }]);
     });
 
     test("rejects a stale concurrent revision", async () => {

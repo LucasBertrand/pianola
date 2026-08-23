@@ -1,6 +1,7 @@
 import {
   type Clip,
 } from "../../../domain/clips/clip";
+import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
 import {
   type ClipId,
 } from "../../../domain/identifiers";
@@ -54,7 +55,7 @@ export function parseProjectSnapshot(
     `${path}.schemaVersion`,
   );
 
-  if (schemaVersion !== PROJECT_SCHEMA_VERSION) {
+  if (schemaVersion < 1 || schemaVersion > PROJECT_SCHEMA_VERSION) {
     fail(
       "INVALID_DATA",
       `${path}.schemaVersion`,
@@ -99,6 +100,13 @@ export function parseProjectSnapshot(
     project["clipsById"],
     `${path}.clipsById`,
   );
+  const autoAdvanceEnabled = parseAutoAdvanceEnabled(
+    project,
+    sourceClips,
+    clipOrder,
+    schemaVersion,
+    path,
+  );
   assertExactRecordKeys(sourceClips, clipOrder, `${path}.clipsById`);
   const clipsById: Record<ClipId, Clip> = {};
 
@@ -123,9 +131,51 @@ export function parseProjectSnapshot(
     instrumentPresetOrder,
     clipsById,
     clipOrder,
+    autoAdvanceEnabled,
     masterBus,
   };
   return projectState;
+}
+
+function parseAutoAdvanceEnabled(
+  project: Readonly<Record<string, unknown>>,
+  sourceClips: Readonly<Record<string, unknown>>,
+  clipOrder: readonly ClipId[],
+  schemaVersion: number,
+  path: string,
+): boolean {
+  if ("autoAdvanceEnabled" in project) {
+    return readBoolean(
+      project["autoAdvanceEnabled"],
+      `${path}.autoAdvanceEnabled`,
+    );
+  }
+
+  if (schemaVersion >= 3) {
+    return readBoolean(undefined, `${path}.autoAdvanceEnabled`);
+  }
+
+  const firstClipId = clipOrder[0];
+  const firstClip = firstClipId === undefined
+    ? undefined
+    : readRecord(
+        sourceClips[firstClipId],
+        `${path}.clipsById.${String(firstClipId)}`,
+      );
+  const legacyTransport = firstClip === undefined
+    ? undefined
+    : readRecord(
+        firstClip["transportSettings"],
+        `${path}.clipsById.${String(firstClipId)}.transportSettings`,
+      );
+
+  return legacyTransport !== undefined
+    && "autoAdvanceEnabled" in legacyTransport
+    ? readBoolean(
+        legacyTransport["autoAdvanceEnabled"],
+        `${path}.clipsById.${String(firstClipId)}.transportSettings.autoAdvanceEnabled`,
+      )
+    : PROJECT_CONSTANTS.defaultAutoAdvanceEnabled;
 }
 
 function parseProjectClock(source: unknown, path: string): ProjectClock {

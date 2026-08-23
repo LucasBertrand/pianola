@@ -100,13 +100,18 @@ export function parseProjectWorkspace(
       return invalid(clipPath, "Clip does not exist.");
     }
 
-    clipStatesById[clipId] = {
-      playheadTick: readPersistenceNumber(
+    if ("playheadTick" in stored) {
+      // v1 persisted a clip-local playhead. It is validated for corruption,
+      // then deliberately discarded because playback position is transient.
+      readPersistenceNumber(
         stored["playheadTick"],
         `${clipPath}.playheadTick`,
         0,
         clip.timeline.durationTicks,
-      ),
+      );
+    }
+
+    clipStatesById[clipId] = {
       firstVisibleTick: readPersistenceNumber(
         stored["firstVisibleTick"],
         `${clipPath}.firstVisibleTick`,

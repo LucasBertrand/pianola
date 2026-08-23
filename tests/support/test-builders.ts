@@ -28,6 +28,7 @@ import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
 } from "../../src/domain/project-instrument-factory";
+import { PROJECT_CONSTANTS } from "../../src/config/domain-limits";
 
 export const TEST_INSTRUMENT_ID = "instrument-a";
 export const TEST_CLIP_ID = "clip-a";
@@ -47,7 +48,6 @@ export interface TestClipOptions {
   readonly name?: string;
   readonly measureCount?: number;
   readonly notes?: readonly Note[];
-  readonly anchorTick?: number;
 }
 
 export interface TestProjectOptions {
@@ -115,6 +115,7 @@ export function createTestProject({
     instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById,
     clipOrder: clips.map((clip) => clip.id),
+    autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
     workspace: { activeClipId },
     masterBus: createDefaultMasterBusState(),
   };
@@ -126,7 +127,6 @@ function createTestClip(
     name = id,
     measureCount = 4,
     notes = [],
-    anchorTick = 0,
   }: TestClipOptions,
   instrumentIds: readonly InstrumentId[],
 ): Clip {
@@ -159,9 +159,6 @@ function createTestClip(
     ),
     tracksByInstrumentId,
     instrumentStatesById,
-    transportSettings: {
-      ...createDefaultTransportState(),
-      anchorTick,
-    },
+    transportSettings: createDefaultTransportState(),
   };
 }

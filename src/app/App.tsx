@@ -55,6 +55,9 @@ import {
 import {
   requestPersistentBrowserStorage,
 } from "../pwa/persistence/browser-storage-policy";
+import {
+  createStoredProjectClone,
+} from "../use-cases/persistence/clone-stored-project";
 
 /** Creates the application runtime and exposes the top-level product surface. */
 export function App(): React.JSX.Element {
@@ -156,6 +159,24 @@ function EditorApplication(): React.JSX.Element {
       setActiveProject(stored);
     }), [persistence, runLibraryAction]);
 
+  const handleClone = useCallback((documentId: string) =>
+    runLibraryAction(async () => {
+      const source = await persistence.projects.load(documentId);
+
+      if (source === null) {
+        throw new Error("This local project no longer exists.");
+      }
+
+      const candidate = createStoredProjectClone(
+        source,
+        createDocumentId(),
+        new Date().toISOString(),
+      );
+      await persistence.projects.save(candidate, null);
+      void requestPersistentBrowserStorage();
+      await refreshLibrary();
+    }), [persistence, refreshLibrary, runLibraryAction]);
+
   const handleImport = useCallback((file: File) =>
     runLibraryAction(async () => {
       if (file.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
@@ -205,6 +226,7 @@ function EditorApplication(): React.JSX.Element {
       error={error}
       onCreateProject={handleCreate}
       onOpenProject={handleOpen}
+      onCloneProject={handleClone}
       onImportProject={handleImport}
       onRemoveProject={handleRemove}
     />

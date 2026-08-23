@@ -39,6 +39,9 @@ import type {
 import type {
   EditorSelection,
 } from "../selection/editor-selection";
+import type {
+  PlayheadPosition,
+} from "../model/playhead-position";
 
 /** Long-lived services and high-frequency signals owned by one editor tab. */
 export interface EditorRuntime {
@@ -53,6 +56,7 @@ export interface EditorRuntime {
     Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
+  readonly playheadPosition: MutableRenderSignal<PlayheadPosition>;
   readonly playheadTick: MutableRenderSignal<number>;
   readonly highlightedPitch: MutableRenderSignal<number | null>;
   readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
@@ -71,7 +75,6 @@ export interface EditorRuntime {
 }
 
 export interface ClipEditorRuntimeState {
-  readonly playheadTick: number;
   readonly viewport: ViewportState;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly gridSettings: GridSettings;

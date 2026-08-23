@@ -20,7 +20,6 @@ export interface LoopRegion {
 export interface TransportState {
   readonly loop: LoopRegion;
   readonly loopEnabled: boolean;
-  readonly anchorTick: Tick;
 }
 
 export function createDefaultTransportState(): TransportState {
@@ -34,7 +33,6 @@ export function createDefaultTransportState(): TransportState {
         / PROJECT_CONSTANTS.defaultTimeSignatureDenominator,
     },
     loopEnabled: PROJECT_CONSTANTS.defaultLoopEnabled,
-    anchorTick: 0,
   };
 }
 
@@ -43,4 +41,19 @@ export function createDefaultProjectClock(): ProjectClock {
     ppqn: DEFAULT_PPQN,
     launchGridTicks: DEFAULT_PPQN,
   };
+}
+
+/** Resolves Play at the clip end to the canonical restart position. */
+export function resolvePlaybackStartTick(
+  tick: number,
+  durationTicks: number,
+  transport: TransportState,
+): Tick {
+  if (!Number.isFinite(tick)) {
+    throw new RangeError("Playback position must be finite.");
+  }
+
+  return tick >= durationTicks
+    ? (transport.loopEnabled ? transport.loop.startTick : 0)
+    : Math.min(durationTicks, Math.max(0, tick));
 }

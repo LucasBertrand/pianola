@@ -166,20 +166,33 @@ describe("P0 critical behavior witnesses", () => {
     expect(snapshot.instruments[0]?.noteIds).toEqual([]);
   });
 
-  test("restores each clip playhead while navigation stays outside undo", () => {
+  test("keeps one playhead independent from clip selection and undo", () => {
     const runtime = createEditorRuntime(createCriticalBehaviorProject());
 
     runtime.playheadTick.set(640);
+    expect(runtime.playheadPosition.get()).toEqual({
+      clipId: TEST_CLIP_ID,
+      tick: 640,
+    });
+
     runtime.editorCommands.selectClip(SECOND_TEST_CLIP_ID);
+    expect(runtime.playheadPosition.get()).toEqual({
+      clipId: TEST_CLIP_ID,
+      tick: 640,
+    });
+
     runtime.playheadTick.set(1_280);
+    expect(runtime.playheadPosition.get()).toEqual({
+      clipId: SECOND_TEST_CLIP_ID,
+      tick: 1_280,
+    });
+
     runtime.editorCommands.selectClip(TEST_CLIP_ID);
-
-    expect(runtime.playheadTick.get()).toBe(640);
-    expect(runtime.projectStore.canUndo()).toBe(false);
-
-    runtime.editorCommands.selectClip(SECOND_TEST_CLIP_ID);
-
-    expect(runtime.playheadTick.get()).toBe(1_280);
+    expect(runtime.playheadPosition.get()).toEqual({
+      clipId: SECOND_TEST_CLIP_ID,
+      tick: 1_280,
+    });
+    expect(runtime.playheadTick.get()).toBe(0);
     expect(runtime.projectStore.canUndo()).toBe(false);
   });
 });

@@ -194,7 +194,6 @@ export function createProjectFromMidiImport(
         ),
       },
       loopEnabled: false,
-      anchorTick: 0,
     },
   };
   const presetLibrary = createDefaultInstrumentPresetLibrary();
@@ -211,6 +210,7 @@ export function createProjectFromMidiImport(
       [clipId]: clip,
     },
     clipOrder: [clipId],
+    autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
     workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),
   };

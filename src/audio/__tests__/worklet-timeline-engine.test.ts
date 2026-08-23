@@ -80,7 +80,6 @@ describe("AudioWorklet timeline engine", () => {
     });
 
     engine.loadTimeline(timeline, {
-      anchorTick: 0,
       loopEnabled: false,
       loop: { startTick: 0, endTick: timeline.durationTicks },
     });
@@ -105,7 +104,6 @@ describe("AudioWorklet timeline engine", () => {
     });
 
     engine.loadTimeline(toTimeline(snapshot), {
-      anchorTick: 0,
       loopEnabled: true,
       loop: { startTick: 0, endTick: 192 },
     });
@@ -474,7 +472,6 @@ describe("AudioWorklet timeline engine", () => {
     });
 
     engine.loadTimeline(toTimeline(snapshot), {
-      anchorTick: 0,
       loopEnabled: true,
       loop: { startTick: 48, endTick: 192 },
     });
@@ -503,7 +500,6 @@ describe("AudioWorklet timeline engine", () => {
     });
 
     engine.loadTimeline(toTimeline(snapshot), {
-      anchorTick: 48,
       loopEnabled: true,
       loop: { startTick: 48, endTick: 96 },
     });
@@ -529,7 +525,6 @@ describe("AudioWorklet timeline engine", () => {
     });
 
     engine.loadTimeline(toTimeline(snapshot), {
-      anchorTick: 0,
       loopEnabled: true,
       loop: { startTick: 0, endTick: 192 },
     });

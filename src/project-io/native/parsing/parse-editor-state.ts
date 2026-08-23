@@ -127,13 +127,16 @@ export function parseEditorState(
       fail("INVALID_DATA", clipStatePath, "The clip does not exist.");
     }
 
-    clipStatesById[clipId] = {
-      playheadTick: readNumberInRange(
+    if ("playheadTick" in clipState) {
+      readNumberInRange(
         clipState["playheadTick"],
         `${clipStatePath}.playheadTick`,
         0,
         clip.timeline.durationTicks,
-      ),
+      );
+    }
+
+    clipStatesById[clipId] = {
       pitchSnapSettings: parsePitchSnapSettings(
         clipState["pitchSnapSettings"],
         `${clipStatePath}.pitchSnapSettings`,

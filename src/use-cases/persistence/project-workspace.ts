@@ -47,7 +47,6 @@ export function createDefaultProjectWorkspace(
 
     if (clip !== undefined) {
       clipStatesById[clipId] = {
-        playheadTick: clip.transportSettings.anchorTick,
         firstVisibleTick: 0,
         highestVisiblePitch:
           VIEWPORT_CONSTANTS.initialMaximumVisiblePitch,
@@ -125,7 +124,6 @@ export function restoreProjectWorkspace(
     workspace.clipStatesById,
   )) {
     states[clipId] = {
-      playheadTick: state.playheadTick,
       pitchSnapSettings: state.pitchSnapSettings,
       gridSettings: state.gridSettings,
       viewport: toRuntimeViewport(state, viewportBase),
@@ -157,10 +155,6 @@ function toPersistentClipState(
   );
 
   return {
-    playheadTick: Math.min(
-      durationTicks,
-      Math.max(0, state.playheadTick),
-    ),
     firstVisibleTick,
     highestVisiblePitch,
     horizontalZoom: viewport.zoomX,

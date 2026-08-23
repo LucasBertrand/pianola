@@ -58,10 +58,10 @@ Le domaine est réparti par propriétaire :
 | `src/domain/notes/note.ts` | note, pitch et vélocité |
 | `src/domain/instruments/instrument.ts` | sons, presets et instruments |
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
-| `src/domain/transport/transport.ts` | horloge (PPQN) et boucle |
+| `src/domain/transport/transport.ts` | horloge (PPQN) et boucle locale au clip |
 | `src/domain/transport/time-map.ts` | marqueurs de tempo et de métrique par clip, navigation en mesures |
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
-| `src/domain/project/project-document.ts` | document, workspace et accès clip |
+| `src/domain/project/project-document.ts` | document, enchaînement global, workspace et accès clip |
 
 La `TimeMap` d’un clip est l’unique source de vérité temporelle. Notes,
 marqueurs de tempo et marqueurs de gamme sont ancrés à leurs ticks absolus.
@@ -146,6 +146,14 @@ Le worklet possède le transport et déclenche les occurrences depuis le nombre
 d’échantillons réellement rendus. Le thread principal ne possède aucun timer
 audio et n’envoie aucun événement par note. Une charge React ou Canvas peut
 retarder l’affichage du playhead, jamais la lecture.
+
+`EditorRuntime.playheadPosition` est l’unique position de lecture et contient le
+clip ainsi que son tick. `WorkspaceState.activeClipId` reste une sélection
+d’édition indépendante. Une fin naturelle déplace ce playhead selon l’ordre
+visible et charge le clip suivant ; la boucle du clip courant reste prioritaire
+et le dernier clip s’arrête. Le suivi visuel sélectionne le clip joué puis suit
+son tick uniquement lorsqu’il est activé ; il est désactivé au montage et ne
+publie alors aucune modification de viewport.
 
 Le dialogue d’instrument reste propriétaire de son brouillon. Chaque réglage
 est envoyé au worklet comme un message léger ; les paramètres continus des voix

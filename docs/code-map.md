@@ -11,8 +11,8 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
-| clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document et `WorkspaceState.activeClipId` | suite centrale de régression |
-| transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` du clip pour tempo/métrique, document pour boucle, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
+| clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document, ordre, `WorkspaceState.activeClipId` et identité transitoire du clip joué | suite centrale de régression |
+| transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` et boucle du clip, enchaînement global du document, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
 | persistance locale | `src/persistence/project-persistence-model.ts` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/persistence/__tests__/project-repository-contract.test.ts` |
 | fichiers `.pianola` | `src/project-io/portable/portable-project-codec.ts` | document + `ProjectWorkspaceState` | `src/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
@@ -29,7 +29,8 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le bouton Lecture | `src/ui/transport/TransportControls.tsx` | `useAudioPlayback.ts`, puis `audio-worklet-transport.ts` |
 | modifier le ruler ou la boucle | `src/ui/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx` et painter |
 | modifier les marqueurs tempo/métrique | `src/ui/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, puis `use-cases/piano-roll/timeline/time-map-marker-plans.ts` |
-| modifier le playhead | `src/ui/piano-roll/PianoRollTimeline.tsx` | signal `playheadTick` du runtime |
+| modifier le playhead | `src/editor/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
+| modifier le motif Shepard des clips | `src/ui/inspector/clips/clip-shepard-settings.ts` | moteur générique `src/ui/shared/shepard-motion.ts` et variables CSS dérivées |
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
 | modifier Copy/Cut/Paste | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
@@ -128,13 +129,16 @@ produit une seule transaction.
 ```text
 ClipInspector
   → useClipWorkflow
-  → arrêt lecture + clear interaction
+  → clear interaction
   → ProjectStore.selectClip
   → usePianoRollProjectState
   → restauration des signaux du clip actif
 ```
 
-Cette navigation ne consomme pas Undo/Redo.
+Cette navigation ne consomme pas Undo/Redo et ne modifie pas le clip joué.
+Le bouton Play d’une carte passe directement par `useAudioPlayback`; à la fin,
+`clipOrder` détermine la carte suivante, sauf si la boucle ou l’arrêt en fin du
+clip courant est actif.
 
 ## Styles propriétaires
 

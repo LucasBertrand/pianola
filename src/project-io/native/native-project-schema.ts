@@ -26,7 +26,7 @@ export type NativeJsonValue =
   | NativeJsonObject
   | readonly NativeJsonValue[];
 
-/** Stored v1 object; deliberately independent from the domain model. */
+/** Stored JSON object; deliberately independent from the domain model. */
 export interface NativeJsonObject {
   readonly [key: string]: NativeJsonValue;
 }
@@ -47,7 +47,6 @@ export type NativeViewportState = Pick<
 export type NativeSelectionMode = "replace" | "add" | "subtract";
 
 export interface NativeClipEditorState {
-  readonly playheadTick: number;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly gridSettings: GridSettings;
   readonly viewport: NativeViewportState;
