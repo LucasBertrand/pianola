@@ -39,6 +39,9 @@ import type {
 import type {
   MutableRenderSignal,
 } from "../../editor/model/render-signal";
+import type {
+  SelectionMode,
+} from "../../editor/interactions/gestures/gesture-draft";
 
 export interface TimeMapMarkerGestureOptions {
   readonly selection: EditorSelection;
@@ -49,7 +52,8 @@ export interface TimeMapMarkerGestureOptions {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly projectStore: ProjectStorePort;
   readonly layerRef: RefObject<HTMLDivElement | null>;
-  readonly onSelectMarker: (tick: Tick) => void;
+  readonly selectionMode: SelectionMode;
+  readonly onSelectMarker: (tick: Tick, mode: SelectionMode) => void;
   readonly onMoveMarker: (fromTick: Tick, toTick: Tick) => void;
   readonly getFlagElement: (tick: Tick) => HTMLButtonElement | null;
 }
@@ -68,6 +72,7 @@ export function useTimeMapMarkerGesture({
   gridResolutionTicks,
   projectStore,
   layerRef,
+  selectionMode,
   onSelectMarker,
   onMoveMarker,
   getFlagElement,
@@ -79,6 +84,10 @@ export function useTimeMapMarkerGesture({
     if (reactEvent.button !== 0 || !reactEvent.isPrimary) {
       return;
     }
+
+    const effectiveSelectionMode = reactEvent.shiftKey
+      ? "add"
+      : selectionMode;
 
     if (flag.isInitial) {
       const handle = reactEvent.currentTarget;
@@ -97,7 +106,7 @@ export function useTimeMapMarkerGesture({
           && event.clientY >= rect.top && event.clientY <= rect.bottom;
 
         if (inside) {
-          onSelectMarker(flag.startTick);
+          onSelectMarker(flag.startTick, effectiveSelectionMode);
         }
       }
 
@@ -243,7 +252,7 @@ export function useTimeMapMarkerGesture({
             && event.clientY >= rect.top && event.clientY <= rect.bottom;
           
           if (inside) {
-            onSelectMarker(originTick);
+            onSelectMarker(originTick, effectiveSelectionMode);
           }
         }
       }
@@ -267,6 +276,7 @@ export function useTimeMapMarkerGesture({
     gridResolutionTicks,
     projectStore,
     layerRef,
+    selectionMode,
     onSelectMarker,
     onMoveMarker,
     getFlagElement,

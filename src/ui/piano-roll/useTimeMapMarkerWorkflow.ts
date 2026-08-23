@@ -26,7 +26,7 @@ import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
 export interface TimeMapMarkerWorkflow {
   readonly draft: TimeMapMarkerDraft | null;
   readonly openMarker: (tick: Tick) => void;
-  readonly selectMarker: (tick: Tick) => void;
+  readonly selectMarker: (tick: Tick, mode: SelectionMode) => void;
   readonly openMarkerAtPlayhead: () => void;
   readonly moveMarker: (fromTick: Tick, toTick: Tick) => void;
   readonly setDraftTempoIncluded: (included: boolean) => void;
@@ -66,6 +66,12 @@ import type {
 import {
   createSelectedMarkerGroup,
 } from "../../editor/selection/editor-selection";
+import type {
+  SelectionMode,
+} from "../../editor/interactions/gestures/gesture-draft";
+import {
+  applyTimeMapMarkerSelection,
+} from "./time-map-marker-selection";
 
 export interface TimeMapMarkerWorkflowOptions {
   readonly runtime: EditorRuntime;
@@ -102,7 +108,10 @@ export function useTimeMapMarkerWorkflow({
     },
     [runtime],
   );
-  const selectMarker = useCallback((tick: Tick): void => {
+  const selectMarker = useCallback((
+    tick: Tick,
+    mode: SelectionMode,
+  ): void => {
     const timeMap = getActiveClip(runtime.projectStore.getState())
       .timeline.timeMap;
     const group = createSelectedMarkerGroup(
@@ -111,7 +120,10 @@ export function useTimeMapMarkerWorkflow({
       timeMap.scaleMarkers.some((marker) => marker.startTick === tick),
     );
 
-    if (group !== null && runtime.selection.addMarkerGroup(group)) {
+    if (
+      group !== null
+      && applyTimeMapMarkerSelection(runtime.selection, group, mode)
+    ) {
       getController()?.refreshSelection();
     }
   }, [getController, runtime]);

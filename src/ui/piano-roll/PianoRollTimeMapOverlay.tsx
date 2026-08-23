@@ -35,6 +35,9 @@ import {
   createMarkerPreviewProjection,
   isOriginalMarkerBoundaryVisible,
 } from "./time-map-marker-preview";
+import type {
+  SelectionMode,
+} from "../../editor/interactions/gestures/gesture-draft";
 
 export interface PianoRollTimeMapOverlayProps {
   readonly flags: readonly TimeMapMarkerFlag[];
@@ -45,8 +48,9 @@ export interface PianoRollTimeMapOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly selectionMode: SelectionMode;
   readonly onOpenMarker: (tick: Tick) => void;
-  readonly onSelectMarker: (tick: Tick) => void;
+  readonly onSelectMarker: (tick: Tick, mode: SelectionMode) => void;
   readonly onMoveMarker: (fromTick: Tick, toTick: Tick) => void;
 }
 
@@ -62,6 +66,7 @@ export function PianoRollTimeMapOverlay({
   viewport,
   projectStore,
   gridResolutionTicks,
+  selectionMode,
   onOpenMarker,
   onSelectMarker,
   onMoveMarker,
@@ -221,6 +226,7 @@ export function PianoRollTimeMapOverlay({
     gridResolutionTicks,
     projectStore,
     layerRef,
+    selectionMode,
     onSelectMarker,
     onMoveMarker,
     getFlagElement,

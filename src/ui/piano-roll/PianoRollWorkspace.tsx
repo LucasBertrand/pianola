@@ -731,6 +731,7 @@ export function PianoRollWorkspace({
                 timelineDragPreview={timelineDragPreview}
                 loopDragPreview={loopDragPreview}
                 interactionStrategyRef={interactionStrategyRef}
+                selectionMode={selectionMode}
                 onLoopCommit={handleLoopRegionCommit}
                 onOpenMarker={timeMapMarkers.openMarker}
                 onSelectMarker={timeMapMarkers.selectMarker}

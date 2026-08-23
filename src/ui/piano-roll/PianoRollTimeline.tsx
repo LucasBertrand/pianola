@@ -50,6 +50,9 @@ import type {
 import type {
   PointerInteractionStrategy,
 } from "../../editor/interactions/pointer/pointer-interaction-strategy";
+import type {
+  SelectionMode,
+} from "../../editor/interactions/gestures/gesture-draft";
 
 export interface PianoRollRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
@@ -64,9 +67,10 @@ export interface PianoRollRulerProps {
   readonly interactionStrategyRef: RefObject<
     PointerInteractionStrategy | null
   >;
+  readonly selectionMode: SelectionMode;
   readonly onLoopCommit: (loop: LoopRegion) => void;
   readonly onOpenMarker: (tick: number) => void;
-  readonly onSelectMarker: (tick: number) => void;
+  readonly onSelectMarker: (tick: number, mode: SelectionMode) => void;
   readonly onMoveMarker: (fromTick: number, toTick: number) => void;
   readonly onClearSelection: () => void;
 }
@@ -83,6 +87,7 @@ export function PianoRollRuler(
     timelineDragPreview,
     loopDragPreview,
     interactionStrategyRef,
+    selectionMode,
     onLoopCommit,
     onOpenMarker,
     onSelectMarker,
@@ -167,6 +172,7 @@ export function PianoRollRuler(
         viewport={viewport}
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}
+        selectionMode={selectionMode}
         onOpenMarker={onOpenMarker}
         onSelectMarker={onSelectMarker}
         onMoveMarker={onMoveMarker}

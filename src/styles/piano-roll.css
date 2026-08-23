@@ -515,16 +515,17 @@
   position: absolute;
   z-index: 1;
   top: 50%;
-  width: 5px;
+  width: auto;
   height: 68%;
   min-height: 8px;
   max-height: 13px;
+  aspect-ratio: 1;
   border: 1px solid color-mix(
     in srgb,
     var(--note-color) 58%,
     var(--color-white-strong)
   );
-  border-radius: 999px;
+  border-radius: 3px;
   background: var(--note-color);
   box-sizing: border-box;
   content: "";

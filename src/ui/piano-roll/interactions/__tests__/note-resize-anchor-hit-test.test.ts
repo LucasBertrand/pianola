@@ -31,20 +31,25 @@ const SMALL_NOTE: Note = {
   velocity: 100,
   enabled: true,
 };
+const LONG_NOTE: Note = {
+  ...SMALL_NOTE,
+  id: "note-2" as Note["id"],
+  durationTicks: 300,
+};
 
 describe("note resize anchor hit test", () => {
-  test("does not treat the center of a short note as an anchor", () => {
+  test("does not treat the center of a regular note as an anchor", () => {
     expect(isPointInsideNoteResizeAnchor(
-      SMALL_NOTE,
+      LONG_NOTE,
       "start",
-      13,
+      25,
       872.5,
       CONVERTER,
     )).toBe(false);
     expect(isPointInsideNoteResizeAnchor(
-      SMALL_NOTE,
+      LONG_NOTE,
       "end",
-      13,
+      25,
       872.5,
       CONVERTER,
     )).toBe(false);
@@ -72,5 +77,22 @@ describe("note resize anchor hit test", () => {
       864,
       CONVERTER,
     )).toBe(false);
+  });
+
+  test("extends each square anchor toward the note interior", () => {
+    expect(isPointInsideNoteResizeAnchor(
+      SMALL_NOTE,
+      "start",
+      11,
+      872.5,
+      CONVERTER,
+    )).toBe(true);
+    expect(isPointInsideNoteResizeAnchor(
+      SMALL_NOTE,
+      "end",
+      15,
+      872.5,
+      CONVERTER,
+    )).toBe(true);
   });
 });
