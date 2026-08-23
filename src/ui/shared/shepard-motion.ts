@@ -17,7 +17,7 @@ export interface ShepardMotionStyleTarget {
   readonly animate: (
     keyframes: Keyframe[] | PropertyIndexedKeyframes,
     options?: number | KeyframeAnimationOptions,
-  ) => Pick<Animation, "cancel">;
+  ) => Pick<Animation, "cancel" | "pause" | "play">;
 }
 
 export interface ShepardAnimationPort {
@@ -27,6 +27,7 @@ export interface ShepardAnimationPort {
 export interface ShepardMotionController {
   readonly start: () => void;
   readonly stop: () => void;
+  readonly dispose: () => void;
   readonly isRunning: () => boolean;
 }
 
@@ -82,7 +83,7 @@ export function createShepardMotionController(
 ): ShepardMotionController {
   validateOptions(options);
 
-  let animation: Pick<Animation, "cancel"> | null = null;
+  let animation: Pick<Animation, "cancel" | "pause" | "play"> | null = null;
   let running = false;
 
   const publishFrame = (frame: ShepardMotionFrame): void => {
@@ -102,6 +103,12 @@ export function createShepardMotionController(
 
   const start = (): void => {
     if (running) {
+      return;
+    }
+
+    if (animation !== null) {
+      animation.play();
+      running = true;
       return;
     }
 
@@ -141,16 +148,19 @@ export function createShepardMotionController(
 
   const stop = (): void => {
     running = false;
+    animation?.pause();
+  };
+
+  const dispose = (): void => {
+    running = false;
     animation?.cancel();
     animation = null;
-    target.style.setProperty("transform", formatTranslate3d(
-      calculateShepardMotionFrame(0, options),
-    ));
   };
 
   return {
     start,
     stop,
+    dispose,
     isRunning: () => running,
   };
 }

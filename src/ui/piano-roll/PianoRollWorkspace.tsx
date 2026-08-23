@@ -116,6 +116,7 @@ import {
 } from "../../ui/project-files/useProjectAutosave";
 import {
   getPlaybackFollowTargetClipId,
+  resolvePlaybackFollowClipSelection,
 } from "../../ui/transport/playback-follow-policy";
 import {
   useMidiFileWorkflow,
@@ -424,6 +425,19 @@ export function PianoRollWorkspace({
     duplicateEditorState: runtime.duplicateClipEditorState,
     confirm: showApplicationConfirmation,
   });
+  const handleClipSelectionRequest = useCallback((clipId: string): void => {
+    handleClipSelect(resolvePlaybackFollowClipSelection(
+      autoScrollEnabled,
+      playbackStatus,
+      clipId,
+      playingClipId,
+    ));
+  }, [
+    autoScrollEnabled,
+    handleClipSelect,
+    playbackStatus,
+    playingClipId,
+  ]);
   useEffect(() => {
     const targetClipId = getPlaybackFollowTargetClipId(
       autoScrollEnabled,
@@ -833,7 +847,7 @@ export function PianoRollWorkspace({
           selectedInstrumentId={selectedInstrumentId}
           selectionAvailable={selectedNotes.length > 0}
           setToolbarHost={setGeneralInspectorToolbarHost}
-          onClipSelect={handleClipSelect}
+          onClipSelect={handleClipSelectionRequest}
           onToggleClipPlayback={toggleClipPlayback}
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}

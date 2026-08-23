@@ -5,6 +5,7 @@ import {
 } from "vitest";
 import {
   getPlaybackFollowTargetClipId,
+  resolvePlaybackFollowClipSelection,
 } from "../playback-follow-policy";
 
 describe("playback follow policy", () => {
@@ -33,5 +34,29 @@ describe("playback follow policy", () => {
       "clip-editing",
       "clip-playing",
     )).toBeNull();
+  });
+
+  test("rejects a transient clip selection while following playback", () => {
+    expect(resolvePlaybackFollowClipSelection(
+      true,
+      "playing",
+      "clip-requested",
+      "clip-playing",
+    )).toBe("clip-playing");
+  });
+
+  test("allows clip selection while playback following is inactive", () => {
+    expect(resolvePlaybackFollowClipSelection(
+      false,
+      "playing",
+      "clip-requested",
+      "clip-playing",
+    )).toBe("clip-requested");
+    expect(resolvePlaybackFollowClipSelection(
+      true,
+      "paused",
+      "clip-requested",
+      "clip-playing",
+    )).toBe("clip-requested");
   });
 });

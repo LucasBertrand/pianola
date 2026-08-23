@@ -19,3 +19,20 @@ export function getPlaybackFollowTargetClipId(
     ? playingClipId
     : null;
 }
+
+/**
+ * Prevents a user selection from briefly taking the editor away from the
+ * playing clip while playback following owns the view.
+ */
+export function resolvePlaybackFollowClipSelection(
+  enabled: boolean,
+  status: PlaybackStatus,
+  requestedClipId: ClipId,
+  playingClipId: ClipId | null,
+): ClipId {
+  return enabled
+    && status === "playing"
+    && playingClipId !== null
+    ? playingClipId
+    : requestedClipId;
+}

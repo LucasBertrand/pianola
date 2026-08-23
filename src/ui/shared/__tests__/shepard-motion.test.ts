@@ -62,6 +62,8 @@ describe("Shepard motion", () => {
     let publishedKeyframes: Keyframe[] | PropertyIndexedKeyframes | null = null;
     let publishedOptions: number | KeyframeAnimationOptions | undefined;
     let cancelled = false;
+    let paused = false;
+    let played = false;
     const animationPort: ShepardAnimationPort = {
       prefersReducedMotion: () => false,
     };
@@ -74,7 +76,11 @@ describe("Shepard motion", () => {
       animate: (keyframes, options) => {
         publishedKeyframes = keyframes;
         publishedOptions = options;
-        return { cancel: () => { cancelled = true; } };
+        return {
+          cancel: () => { cancelled = true; },
+          pause: () => { paused = true; },
+          play: () => { played = true; },
+        };
       },
     }, HORIZONTAL_MOTION, animationPort);
 
@@ -95,8 +101,16 @@ describe("Shepard motion", () => {
 
     controller.stop();
     expect(controller.isRunning()).toBe(false);
+    expect(paused).toBe(true);
+    expect(cancelled).toBe(false);
+
+    controller.start();
+    expect(controller.isRunning()).toBe(true);
+    expect(played).toBe(true);
+
+    controller.dispose();
+    expect(controller.isRunning()).toBe(false);
     expect(cancelled).toBe(true);
-    expect(properties.get("transform")).toBe("translate3d(0px, 0px, 0)");
   });
 
   test("stays static when reduced motion is requested", () => {
@@ -108,7 +122,11 @@ describe("Shepard motion", () => {
       style: { setProperty: () => undefined },
       animate: () => {
         animationCount += 1;
-        return { cancel: () => undefined };
+        return {
+          cancel: () => undefined,
+          pause: () => undefined,
+          play: () => undefined,
+        };
       },
     }, HORIZONTAL_MOTION, animationPort);
 

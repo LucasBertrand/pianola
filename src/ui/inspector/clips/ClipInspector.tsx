@@ -19,6 +19,7 @@ import {
 } from "../../shared/useCardReorder";
 import {
   createShepardMotionController,
+  type ShepardMotionController,
 } from "../../shared/shepard-motion";
 import type {
   ReadonlyRenderSignal,
@@ -153,6 +154,7 @@ function ClipCard({
   const nameMeasureRef = useRef<HTMLSpanElement | null>(null);
   const progressRef = useRef<HTMLDivElement | null>(null);
   const shepardPlaneRef = useRef<HTMLDivElement | null>(null);
+  const shepardMotionRef = useRef<ShepardMotionController | null>(null);
   const [renaming, setRenaming] = useState(false);
   const initiallyOwnsPlayhead = playheadPosition.get().clipId === clip.id;
 
@@ -196,17 +198,32 @@ function ClipCard({
   }, [clip.id, clip.timeline.durationTicks, playheadPosition]);
 
   useEffect(() => {
-    if (!playing || shepardPlaneRef.current === null) {
+    const shepardPlane = shepardPlaneRef.current;
+
+    if (shepardPlane === null) {
       return undefined;
     }
 
     const shepardMotion = createShepardMotionController(
-      shepardPlaneRef.current,
+      shepardPlane,
       CLIP_SHEPARD_SETTINGS,
     );
-    shepardMotion.start();
+    shepardMotionRef.current = shepardMotion;
 
-    return () => shepardMotion.stop();
+    return () => {
+      shepardMotion.dispose();
+      shepardMotionRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const shepardMotion = shepardMotionRef.current;
+
+    if (playing) {
+      shepardMotion?.start();
+    } else {
+      shepardMotion?.stop();
+    }
   }, [playing]);
 
   return (
