@@ -27,12 +27,22 @@ describe("P2 command family contracts", () => {
   test("clip commands support success, rejection, undo and redo", () => {
     const store = new ProjectStore(createTestProject());
 
-    dispatch(store, { type: "RenameClip", clipId: TEST_CLIP_ID, name: "Verse" }, 1);
+    dispatch(store, {
+      type: "UpdateClip",
+      clipId: TEST_CLIP_ID,
+      changes: { name: "Verse", color: "#ff9b71" },
+    }, 1);
     expect(store.getState().clipsById[TEST_CLIP_ID]?.name).toBe("Verse");
+    expect(store.getState().clipsById[TEST_CLIP_ID]?.color).toBe("#ff9b71");
     store.undo();
     expect(store.getState().clipsById[TEST_CLIP_ID]?.name).toBe(TEST_CLIP_ID);
     store.redo();
     expect(store.getState().clipsById[TEST_CLIP_ID]?.name).toBe("Verse");
+    expect(() => dispatch(store, {
+      type: "UpdateClip",
+      clipId: TEST_CLIP_ID,
+      changes: { color: "orange" },
+    }, 2)).toThrow(CommandRejectedError);
     expect(() => dispatch(store, { type: "DeleteClip", clipId: "missing" }, 2))
       .toThrow(CommandRejectedError);
   });

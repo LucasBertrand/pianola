@@ -5,6 +5,7 @@ import {
   type Clip,
   type ClipInstrumentState,
   type Track,
+  DEFAULT_CLIP_COLOR,
 } from "../../domain/clips/clip";
 import {
   type InstrumentId,
@@ -178,6 +179,7 @@ export function createProjectFromMidiImport(
   const clip: Clip = {
     id: clipId,
     name: "Imported Clip",
+    color: DEFAULT_CLIP_COLOR,
     timeline: {
       durationTicks: projectDurationTicks,
       timeMap,

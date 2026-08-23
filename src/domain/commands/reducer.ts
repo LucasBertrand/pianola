@@ -11,6 +11,7 @@ import {
   applyDeleteClip,
   applyRenameClip,
   applyReorderClips,
+  applyUpdateClip,
 } from "./clip-commands";
 import { CommandRejectedError } from "./command-errors";
 import { assertNever, reject } from "./command-context";
@@ -22,6 +23,7 @@ import type {
   PianoRollCommand,
   RenameClipCommand,
   ReorderClipsCommand,
+  UpdateClipCommand,
   ReorderProjectInstrumentsCommand,
   SetAutoAdvanceEnabledCommand,
   SetMasterMutedCommand,
@@ -128,6 +130,8 @@ function applyCommand(
       return applyReorderClips(state, command);
     case "RenameClip":
       return applyRenameClip(state, command);
+    case "UpdateClip":
+      return applyUpdateClip(state, command);
     case "AddProjectInstrument":
       return applyAddProjectInstrument(state, command);
     case "UpdateProjectInstrument":
@@ -157,6 +161,7 @@ type ActiveClipCommand = Exclude<
   | DeleteClipCommand
   | ReorderClipsCommand
   | RenameClipCommand
+  | UpdateClipCommand
   | AddProjectInstrumentCommand
   | UpdateProjectInstrumentCommand
   | DeleteProjectInstrumentCommand

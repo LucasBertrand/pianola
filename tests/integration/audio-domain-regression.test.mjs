@@ -1332,6 +1332,7 @@ function getActiveTestMeasureCount(state) {
       clip: {
         id: "clip-native-second",
         name: "Native Second",
+        color: "#79a7ff",
         timeline: createTestTimeline(2),
         tracksByInstrumentId: {
           "voice-a": {
@@ -2181,6 +2182,7 @@ function getActiveTestMeasureCount(state) {
     const secondClip = {
       id: "clip-second",
       name: "Second Clip",
+      color: "#79a7ff",
       timeline: createTestTimeline(2),
       tracksByInstrumentId: {
         "voice-a": {
@@ -2258,6 +2260,7 @@ function getActiveTestMeasureCount(state) {
       clip: {
         id: "clip-voice-state-second",
         name: "ProjectInstrument State Second",
+        color: "#79a7ff",
         timeline: createTestTimeline(2),
         tracksByInstrumentId: {
           "voice-a": {
@@ -2386,6 +2389,7 @@ function getActiveTestMeasureCount(state) {
       clip: {
         id: "clip-second",
         name: "Second Clip",
+        color: "#79a7ff",
         timeline: createTestTimeline(4),
         tracksByInstrumentId: {
           "voice-a": {
@@ -2457,6 +2461,7 @@ function getActiveTestMeasureCount(state) {
         clip: {
           id: "clip-second",
           name: "Second Clip",
+          color: "#79a7ff",
           timeline: createTestTimeline(4),
           tracksByInstrumentId: {
             "voice-a": {
@@ -2507,6 +2512,7 @@ function getActiveTestMeasureCount(state) {
     const secondClip = {
       id: "clip-playhead-second",
       name: "Playhead Second",
+      color: "#79a7ff",
       timeline: createTestTimeline(4),
       tracksByInstrumentId: {
         "voice-a": {

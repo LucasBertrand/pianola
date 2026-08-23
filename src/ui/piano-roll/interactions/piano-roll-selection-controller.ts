@@ -124,6 +124,27 @@ implements PianoRollControllerPort {
 
     this.selection.reconcile(state, isSelectable);
 
+    if (request.type === "selectAllNotes") {
+      const notes: Note[] = [];
+
+      for (const instrumentId of state.instrumentOrder) {
+        const track = activeClip.tracksByInstrumentId[instrumentId];
+
+        if (
+          track === undefined
+          || activeClip.instrumentStatesById[instrumentId]?.locked !== false
+        ) {
+          continue;
+        }
+
+        notes.push(...Object.values(track.notesById));
+      }
+
+      this.selection.replace(notes);
+      this.showSelection();
+      return;
+    }
+
     if (
       state.projectInstrumentsById[request.instrumentId] === undefined
       || activeClip.instrumentStatesById[request.instrumentId]?.locked !== false

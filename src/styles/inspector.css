@@ -135,7 +135,7 @@
   --instrument-color: var(--color-accent-primary);
   min-height: 0;
   grid-template-columns:
-    24px minmax(0, max-content) minmax(0, 1fr) repeat(3, 30px);
+    24px minmax(0, max-content) minmax(0, 1fr) repeat(4, 30px);
   grid-template-rows: auto;
 }
 
@@ -166,15 +166,19 @@
   background: transparent;
 }
 
-.clip-card .instrument-delete-button {
-  grid-column: 6;
+.clip-card .clip-settings-button {
+  grid-column: 7;
 }
 
 .clip-card .instrument-duplicate-button {
-  grid-column: 5;
+  grid-column: 6;
 }
 
 .clip-card .clip-play-button {
+  grid-column: 5;
+}
+
+.clip-card .clip-select-all-button {
   grid-column: 4;
 }
 
@@ -205,7 +209,7 @@
     ),
     linear-gradient(
       90deg,
-      color-mix(in srgb, var(--color-accent-primary) 5%, transparent),
+      color-mix(in srgb, var(--instrument-color) 8%, transparent),
       transparent 68%
     );
   opacity: 0;
@@ -220,11 +224,10 @@
   inset: 0;
   overflow: hidden;
   border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-accent-primary) 34%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent-primary-bright) 22%, transparent) 48%,
-    color-mix(in srgb, var(--color-accent-primary) 28%, transparent) 100%
+  background: color-mix(
+    in srgb,
+    var(--instrument-color) 20%,
+    transparent
   );
   clip-path: inset(0 100% 0 0);
   will-change: clip-path;
@@ -238,8 +241,12 @@
     transparent 0 var(--clip-shepard-hatch-start, 10px),
     color-mix(
       in srgb,
-      var(--color-accent-primary-bright)
-        var(--clip-shepard-hatch-opacity, 14%),
+      color-mix(
+        in srgb,
+        var(--instrument-color) 78%,
+        var(--color-text-bright)
+      )
+        var(--clip-shepard-hatch-opacity, 18%),
       transparent
     ) var(--clip-shepard-hatch-start, 10px)
       var(--clip-shepard-hatch-end, 18px),
@@ -258,7 +265,7 @@
 .project-instrument-card.clip-card.is-playing {
   border-color: color-mix(
     in srgb,
-    var(--color-accent-primary) 68%,
+    var(--instrument-color) 68%,
     var(--color-border-control)
   );
 }
@@ -283,9 +290,14 @@
   min-height: 0;
   padding-left: 11px;
   grid-template-columns:
-    24px minmax(0, max-content) minmax(0, 1fr) repeat(3, 30px);
+    24px minmax(0, max-content) minmax(0, 1fr) repeat(4, 30px);
   grid-template-rows: auto;
   gap: 6px;
+  background: color-mix(
+    in srgb,
+    var(--instrument-color) 14%,
+    var(--color-surface-panel)
+  );
 }
 
 .project-instrument-card::before {
@@ -350,6 +362,14 @@
   grid-row: 1;
 }
 
+.project-instrument-card.clip-card.is-selected {
+  background: color-mix(
+    in srgb,
+    var(--instrument-color) 22%,
+    var(--color-surface-selected)
+  );
+}
+
 .clip-card .instrument-copy {
   display: grid;
   width: fit-content;
@@ -397,55 +417,6 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.5;
-}
-
-.instrument-name-input {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  padding: 1px 2px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  outline: 0;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.clip-card .instrument-name-input,
-.clip-name-measure {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.clip-name-measure {
-  min-width: 0;
-  padding: 1px 2px;
-  border: 1px solid transparent;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: normal;
-  white-space: pre;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.instrument-name-input[readonly] {
-  cursor: pointer;
-  user-select: none;
-}
-
-.instrument-name-input:not([readonly]):focus {
-  border-color: color-mix(in srgb, var(--instrument-color) 55%, var(--color-border-strong));
-  background: var(--color-surface-inset);
-}
-
-.clip-card .instrument-name-input:focus,
-.clip-card .instrument-name-input:focus-visible {
-  outline: 0;
-  box-shadow: none;
 }
 
 .instrument-copy small {
@@ -557,9 +528,9 @@
 }
 
 .project-instrument-card .clip-play-button.is-active {
-  border-color: var(--color-primary-strong);
-  background: var(--color-primary-soft);
-  color: var(--color-accent-primary-bright);
+  border-color: var(--color-success-strong);
+  background: var(--color-success-soft);
+  color: var(--color-accent-success);
 }
 
 .project-instrument-card button:disabled {

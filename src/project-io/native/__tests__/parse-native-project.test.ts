@@ -79,6 +79,25 @@ describe("native project parser", () => {
       .clipsById[TEST_CLIP_ID]!.transportSettings).toBe(false);
   });
 
+  test("adds the default color when loading a clip saved before colors", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const stored = JSON.parse(serialized) as {
+      project: {
+        clipsById: Record<string, { color?: string }>;
+      };
+    };
+
+    delete stored.project.clipsById[TEST_CLIP_ID]?.color;
+
+    expect(parseNativeProjectFile(JSON.stringify(stored))
+      .projectState.clipsById[TEST_CLIP_ID]?.color).toBe("#79a7ff");
+  });
+
   test("reports a stable code and path for invalid JSON", () => {
     try {
       parseNativeProjectFile("{not-json");

@@ -323,6 +323,17 @@
   margin-bottom: 16px;
 }
 
+.clip-editor-dialog .application-dialog-heading {
+  margin-bottom: 16px;
+}
+
+.clip-editor-identity {
+  display: grid;
+  margin-bottom: 6px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+}
+
 .instrument-editor-color-control {
   display: grid;
   margin-bottom: 12px;

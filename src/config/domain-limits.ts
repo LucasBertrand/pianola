@@ -39,6 +39,7 @@ export const PROJECT_CONSTANTS = Object.freeze({
   defaultLoopEnabled: false,
   defaultAutoAdvanceEnabled: true,
   defaultInstrumentMuted: false,
+  defaultClipColor: "#79a7ff",
   defaultClipInstrumentLocked: false,
   defaultInstrumentSolo: false,
   defaultInstrumentGain: 0.82,

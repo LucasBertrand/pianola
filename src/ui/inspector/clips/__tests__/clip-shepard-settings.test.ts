@@ -23,7 +23,7 @@ describe("clip Shepard settings", () => {
       "--clip-shepard-period": "28px",
       "--clip-shepard-hatch-start": "10px",
       "--clip-shepard-hatch-end": "18px",
-      "--clip-shepard-hatch-opacity": "14%",
+      "--clip-shepard-hatch-opacity": "18%",
     });
   });
 

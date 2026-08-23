@@ -32,6 +32,8 @@ export const MAXIMUM_CLIP_NAME_LENGTH =
   PROJECT_CONSTANTS.maximumClipNameLength;
 export const MAXIMUM_PROJECT_CLIP_COUNT =
   PROJECT_CONSTANTS.maximumClipCount;
+export const DEFAULT_CLIP_COLOR =
+  PROJECT_CONSTANTS.defaultClipColor;
 
 /** Per-clip editing state for one global instrument. */
 export interface ClipInstrumentState {
@@ -52,6 +54,7 @@ export interface ClipTimeline {
 export interface Clip {
   readonly id: ClipId;
   readonly name: string;
+  readonly color: string;
   readonly timeline: ClipTimeline;
   readonly tracksByInstrumentId: Readonly<Record<InstrumentId, Track>>;
   readonly instrumentStatesById: Readonly<Record<InstrumentId, ClipInstrumentState>>;

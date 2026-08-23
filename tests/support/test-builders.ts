@@ -7,6 +7,7 @@ import {
 } from "../../src/domain/master-bus";
 import {
   createDefaultClipTimeline,
+  DEFAULT_CLIP_COLOR,
   type Clip,
 } from "../../src/domain/clips/clip";
 import {
@@ -153,6 +154,7 @@ function createTestClip(
   return {
     id,
     name,
+    color: DEFAULT_CLIP_COLOR,
     timeline: createDefaultClipTimeline(
       createDefaultProjectClock(),
       measureCount,

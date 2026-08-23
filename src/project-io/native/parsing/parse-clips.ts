@@ -4,6 +4,7 @@ import {
   type Clip,
   type ClipTimeline,
   type Track,
+  DEFAULT_CLIP_COLOR,
 } from "../../../domain/clips/clip";
 import {
   type ClipId,
@@ -47,6 +48,7 @@ import {
   readPositiveSafeInteger,
   readRecord,
   readSafeInteger,
+  readString,
 } from "./json-readers";
 import { parseClipInstrumentStates } from "./parse-instruments";
 
@@ -118,6 +120,17 @@ export function parseClip(
     `${path}.name`,
     PROJECT_CONSTANTS.maximumClipNameLength,
   );
+  const color = "color" in clip
+    ? readString(clip["color"], `${path}.color`, 32)
+    : DEFAULT_CLIP_COLOR;
+
+  if (!/^#[0-9a-f]{6}$/i.test(color)) {
+    fail(
+      "INVALID_DATA",
+      `${path}.color`,
+      "Clip color must use the #RRGGBB format.",
+    );
+  }
   const timeline = parseClipTimeline(clip["timeline"], clock, `${path}.timeline`);
   const transportSettings = parseTransport(
     clip["transportSettings"],
@@ -138,6 +151,7 @@ export function parseClip(
   const parsedClip: Clip = {
     id: clipId,
     name,
+    color,
     timeline,
     tracksByInstrumentId,
     instrumentStatesById,

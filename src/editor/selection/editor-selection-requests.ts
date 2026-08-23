@@ -4,6 +4,7 @@ import {
 
 export type EditorSelectionRequest =
   | { readonly type: "clear" }
+  | { readonly type: "selectAllNotes" }
   | { readonly type: "toggleInstrument"; readonly instrumentId: InstrumentId };
 
 export type EditorSelectionRequestListener = (
@@ -25,6 +26,10 @@ export class EditorSelectionRequests {
 
   public toggleInstrument(instrumentId: InstrumentId): void {
     this.publish({ type: "toggleInstrument", instrumentId });
+  }
+
+  public selectAllNotes(): void {
+    this.publish({ type: "selectAllNotes" });
   }
 
   public subscribe(

@@ -21,7 +21,7 @@ export const CLIP_SHEPARD_SETTINGS = {
   speedPixelsPerSecond: 44,
   gradientAngleDegrees: 122,
   hatchWidthPixels: 8,
-  hatchOpacityPercent: 14,
+  hatchOpacityPercent: 18,
 } as const satisfies ClipShepardSettings;
 
 export function createClipShepardCssVariables(

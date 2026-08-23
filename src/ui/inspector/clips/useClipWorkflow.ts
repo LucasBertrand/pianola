@@ -2,6 +2,12 @@ import {
   useCallback,
   useRef,
 } from "react";
+import {
+  RENDERING_CONSTANTS,
+} from "../../../config/rendering-config";
+import type {
+  UpdateClipChanges,
+} from "../../../domain/commands/command-types";
 import type {
   EditorCommandPort,
 } from "../../../use-cases/commands/editor-command-service";
@@ -44,7 +50,7 @@ export interface ClipWorkflow {
   readonly duplicate: (clipId: ClipId) => void;
   readonly reorder: (clipId: ClipId, targetIndex: number) => void;
   readonly remove: (clipId: ClipId) => void;
-  readonly rename: (clipId: ClipId, name: string) => void;
+  readonly update: (clipId: ClipId, changes: UpdateClipChanges) => void;
 }
 
 /** Coordinates clip lifecycle without leaking React state into the domain. */
@@ -214,10 +220,13 @@ export function useClipWorkflow({
     });
   }, [beginClipChange, commands, confirm]);
 
-  const rename = useCallback((clipId: ClipId, name: string): void => {
+  const update = useCallback((
+    clipId: ClipId,
+    changes: UpdateClipChanges,
+  ): void => {
     commands.dispatch(
-      [{ type: "RenameClip", clipId, name }],
-      "Rename clip",
+      [{ type: "UpdateClip", clipId, changes }],
+      "Update clip settings",
     );
   }, [commands]);
 
@@ -227,7 +236,7 @@ export function useClipWorkflow({
     duplicate,
     reorder,
     remove,
-    rename,
+    update,
   };
 }
 
@@ -272,6 +281,9 @@ function createEmptyClip(
   return {
     id: createClipId(sequence),
     name: `Clip ${clipIndex + 1}`,
+    color: RENDERING_CONSTANTS.userInstrumentColors[
+      clipIndex % RENDERING_CONSTANTS.userInstrumentColors.length
+    ] ?? RENDERING_CONSTANTS.userInstrumentColors[0],
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
     instrumentStatesById,

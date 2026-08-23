@@ -70,6 +70,9 @@ import {
   InstrumentPresetDialog,
 } from "../../ui/dialogs/InstrumentPresetDialog";
 import {
+  ClipEditorDialog,
+} from "../../ui/dialogs/ClipEditorDialog";
+import {
   EditorHeader,
 } from "../../ui/editor-toolbar/EditorHeader";
 import {
@@ -102,6 +105,9 @@ import type {
 import {
   useClipWorkflow,
 } from "../../ui/inspector/clips/useClipWorkflow";
+import {
+  useClipDialogWorkflow,
+} from "../../ui/inspector/clips/useClipDialogWorkflow";
 import {
   useProjectInstrumentWorkflow,
 } from "../../ui/inspector/instruments/useProjectInstrumentWorkflow";
@@ -430,12 +436,20 @@ export function PianoRollWorkspace({
     duplicate: handleDuplicateClip,
     reorder: handleReorderClip,
     remove: handleDeleteClip,
-    rename: handleRenameClip,
+    update: handleUpdateClip,
   } = useClipWorkflow({
     commands: runtime.editorCommands,
     beginClipChange,
     duplicateEditorState: runtime.duplicateClipEditorState,
     confirm: showApplicationConfirmation,
+  });
+  const clipDialog = useClipDialogWorkflow({
+    runtime,
+    updateClip: handleUpdateClip,
+    removeClip: handleDeleteClip,
+    dismissApplicationDialog(): void {
+      setApplicationDialog(null);
+    },
   });
   const handleClipSelectionRequest = useCallback((clipId: string): void => {
     handleClipSelect(resolvePlaybackFollowClipSelection(
@@ -450,6 +464,10 @@ export function PianoRollWorkspace({
     playbackStatus,
     playingClipId,
   ]);
+  const handleSelectClipNotes = useCallback((clipId: string): void => {
+    handleClipSelectionRequest(clipId);
+    runtime.selectionRequests.selectAllNotes();
+  }, [handleClipSelectionRequest, runtime]);
   useEffect(() => {
     const targetClipId = getPlaybackFollowTargetClipId(
       autoScrollEnabled,
@@ -865,8 +883,8 @@ export function PianoRollWorkspace({
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
           onReorderClip={handleReorderClip}
-          onDeleteClip={handleDeleteClip}
-          onRenameClip={handleRenameClip}
+          onSelectClipNotes={handleSelectClipNotes}
+          onEditClip={clipDialog.openEdit}
           onReorderInstrument={handleReorderInstrument}
           onAddProjectInstrument={instrumentDialog.openCreate}
           onInstrumentSelect={handleInstrumentSelect}
@@ -885,6 +903,18 @@ export function PianoRollWorkspace({
         onAlternate={handleApplicationDialogAlternate}
         onCancel={handleApplicationDialogCancel}
       />
+      {!clipDialog.open ? null : (
+        <ClipEditorDialog
+          clipName={clipDialog.name}
+          clipColor={clipDialog.color}
+          canDelete={clipDialog.canDelete}
+          onClipNameChange={clipDialog.setName}
+          onClipColorChange={clipDialog.setColor}
+          onConfirm={clipDialog.confirm}
+          onDelete={clipDialog.remove}
+          onCancel={clipDialog.cancel}
+        />
+      )}
       {!instrumentDialog.open || instrumentDialog.config === null ? null : (
         <InstrumentPresetDialog
           mode={instrumentDialog.mode}

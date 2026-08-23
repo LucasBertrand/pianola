@@ -122,6 +122,17 @@ export interface RenameClipCommand {
   readonly name: string;
 }
 
+export interface UpdateClipChanges {
+  readonly name?: string;
+  readonly color?: string;
+}
+
+export interface UpdateClipCommand {
+  readonly type: "UpdateClip";
+  readonly clipId: ClipId;
+  readonly changes: UpdateClipChanges;
+}
+
 export interface AppendMeasuresCommand {
   readonly type: "AppendMeasures";
   readonly clipId: ClipId;
@@ -336,6 +347,7 @@ export type PianoRollCommand =
   | DeleteClipCommand
   | ReorderClipsCommand
   | RenameClipCommand
+  | UpdateClipCommand
   | AddProjectInstrumentCommand
   | UpdateProjectInstrumentCommand
   | UpdateClipInstrumentStateCommand

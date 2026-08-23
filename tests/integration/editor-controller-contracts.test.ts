@@ -132,6 +132,35 @@ describe("P3 editor controller contracts", () => {
     expect(publishedSelectionSizes).toEqual([1, 0]);
   });
 
+  test("selects every note in the active clip through one request", () => {
+    const secondInstrumentId = "instrument-b";
+    const firstNote = createTestNote({ id: "first-note" });
+    const secondNote = createTestNote({
+      id: "second-note",
+      instrumentId: secondInstrumentId,
+      pitch: 67,
+    });
+    const runtime = createEditorRuntime(createTestProject({
+      instrumentIds: [TEST_INSTRUMENT_ID, secondInstrumentId],
+      clips: [{ id: "clip-a", notes: [firstNote, secondNote] }],
+    }));
+    const session = new PianoRollInteractionSession(
+      runtime.viewport.get(),
+      runtime.viewport.version,
+    );
+    const controller = new PianoRollSelectionController({
+      session,
+      viewport: runtime.viewport,
+      editorCommands: runtime.editorCommands,
+      getVisuals: () => null,
+      onSelectionChange: undefined,
+    });
+
+    controller.handleRequest({ type: "selectAllNotes" });
+
+    expect(controller.getSelectedNotes()).toEqual([firstNote, secondNote]);
+  });
+
   test("adapts a completed move into the note workflow", () => {
     const note = createTestNote({ id: "moving-note", startTick: 0 });
     const runtime = createEditorRuntime(createTestProject({

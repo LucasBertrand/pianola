@@ -45,8 +45,8 @@ export interface ProjectInspectorProps {
   readonly onAddClip: () => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
   readonly onReorderClip: (clipId: ClipId, targetIndex: number) => void;
-  readonly onDeleteClip: (clipId: ClipId) => void;
-  readonly onRenameClip: (clipId: ClipId, name: string) => void;
+  readonly onSelectClipNotes: (clipId: ClipId) => void;
+  readonly onEditClip: (clipId: ClipId) => void;
   readonly onReorderInstrument: (
     instrumentId: InstrumentId,
     targetIndex: number,
@@ -86,8 +86,8 @@ export function ProjectInspector({
   onAddClip,
   onDuplicateClip,
   onReorderClip,
-  onDeleteClip,
-  onRenameClip,
+  onSelectClipNotes,
+  onEditClip,
   onReorderInstrument,
   onAddProjectInstrument,
   onInstrumentSelect,
@@ -353,8 +353,8 @@ export function ProjectInspector({
           onAdd={onAddClip}
           onDuplicate={onDuplicateClip}
           onReorder={onReorderClip}
-          onDelete={onDeleteClip}
-          onRename={onRenameClip}
+          onSelectNotes={onSelectClipNotes}
+          onEdit={onEditClip}
         />
       </div>
     </aside>

@@ -30,6 +30,7 @@ import type {
   PianoRollCommand,
   RenameClipCommand,
   ReorderClipsCommand,
+  UpdateClipCommand,
 } from "./command-types";
 import { assertValidClipInstrumentState } from "./instrument-commands";
 import { notesOverlapInInstrument } from "./active-clip-command-helpers";
@@ -162,6 +163,56 @@ export function applyRenameClip(
   };
 }
 
+export function applyUpdateClip(
+  state: ProjectState,
+  command: UpdateClipCommand,
+): ProjectState {
+  const clip = state.clipsById[command.clipId];
+
+  if (clip === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.clipId}" does not exist.`,
+      command.type,
+    );
+  }
+
+  const name = command.changes.name?.trim() ?? clip.name;
+  const color = command.changes.color ?? clip.color;
+
+  if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip name must contain between 1 and ${MAXIMUM_CLIP_NAME_LENGTH} characters.`,
+      command.type,
+    );
+  }
+
+  if (!/^#[0-9a-f]{6}$/i.test(color)) {
+    reject(
+      "INVALID_COMMAND",
+      "Clip color must use the #RRGGBB format.",
+      command.type,
+    );
+  }
+
+  if (name === clip.name && color === clip.color) {
+    return state;
+  }
+
+  return {
+    ...state,
+    clipsById: {
+      ...state.clipsById,
+      [clip.id]: {
+        ...clip,
+        name,
+        color,
+      },
+    },
+  };
+}
+
 function assertValidClip(
   state: ProjectState,
   clip: Clip,
@@ -171,6 +222,7 @@ function assertValidClip(
     clip.id.length === 0
     || clip.name.trim().length === 0
     || clip.name.length > MAXIMUM_CLIP_NAME_LENGTH
+    || !/^#[0-9a-f]{6}$/i.test(clip.color)
   ) {
     reject("INVALID_COMMAND", "Clip identity is invalid.", commandType);
   }
