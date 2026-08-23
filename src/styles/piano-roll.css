@@ -515,10 +515,10 @@
   position: absolute;
   z-index: 1;
   top: 50%;
-  width: 4px;
-  height: 62%;
-  min-height: 7px;
-  max-height: 12px;
+  width: 5px;
+  height: 68%;
+  min-height: 8px;
+  max-height: 13px;
   border: 1px solid color-mix(
     in srgb,
     var(--note-color) 58%,
@@ -532,11 +532,11 @@
 }
 
 .interaction-note-selection::before {
-  left: -6px;
+  left: -7px;
 }
 
 .interaction-note-selection::after {
-  right: -6px;
+  right: -7px;
 }
 
 .interaction-note-ghost.is-resizing-start,

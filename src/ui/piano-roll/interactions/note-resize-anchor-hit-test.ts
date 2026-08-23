@@ -8,11 +8,11 @@ import type {
   ResizeEdge,
 } from "../../../editor/interactions/gestures/gesture-draft";
 
-const ANCHOR_WIDTH_CSS_PIXELS = 4;
-const ANCHOR_OUTER_OFFSET_CSS_PIXELS = 6;
-const ANCHOR_HEIGHT_RATIO = 0.62;
-const MINIMUM_ANCHOR_HEIGHT_CSS_PIXELS = 7;
-const MAXIMUM_ANCHOR_HEIGHT_CSS_PIXELS = 12;
+const ANCHOR_WIDTH_CSS_PIXELS = 5;
+const ANCHOR_OUTER_OFFSET_CSS_PIXELS = 7;
+const ANCHOR_HEIGHT_RATIO = 0.68;
+const MINIMUM_ANCHOR_HEIGHT_CSS_PIXELS = 8;
+const MAXIMUM_ANCHOR_HEIGHT_CSS_PIXELS = 13;
 
 /** Matches the visible CSS anchor exactly, including its external offset. */
 export function isPointInsideNoteResizeAnchor(
