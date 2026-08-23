@@ -56,6 +56,7 @@ export function createTransferableAudioWorkletTimeline(
 
   return {
     timeline: {
+      sourceId: snapshot.sourceId,
       ppqn: snapshot.ppqn,
       durationTicks: snapshot.durationTicks,
       masterGain: snapshot.masterGain,

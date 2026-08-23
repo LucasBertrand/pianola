@@ -1,4 +1,5 @@
 import type {
+  ClipId,
   InstrumentId,
   Tick,
 } from "../../domain/identifiers";
@@ -29,7 +30,7 @@ import {
 } from "./worklet-held-note-starter";
 
 export interface TimelineEngineDiagnostic {
-  readonly type: "note-start" | "loop" | "project-end";
+  readonly type: "note-start" | "loop" | "clip-transition" | "project-end";
   readonly frame: number;
   readonly tick: number;
   readonly instrumentId?: InstrumentId;
@@ -47,6 +48,12 @@ export interface WorkletTimelineEngineOptions {
 export class WorkletTimelineEngine {
   private timeline: AudioWorkletTimeline | null = null;
   private transport: TransportState | null = null;
+  private timelineSequence = 0;
+  private queuedTimeline: {
+    readonly timeline: AudioWorkletTimeline;
+    readonly transport: TransportState;
+    readonly sequence: number;
+  } | null = null;
   private runtimeInstruments: WorkletRuntimeInstrument[] = [];
   private readonly runtimeInstrumentsById =
     new Map<InstrumentId, WorkletRuntimeInstrument>();
@@ -83,6 +90,14 @@ export class WorkletTimelineEngine {
     return this.currentTick;
   }
 
+  public get sourceId(): ClipId {
+    return this.requireTimeline().sourceId;
+  }
+
+  public get sequence(): number {
+    return this.timelineSequence;
+  }
+
   public get frame(): number {
     return this.renderedFrame;
   }
@@ -94,11 +109,34 @@ export class WorkletTimelineEngine {
   public loadTimeline(
     timeline: AudioWorkletTimeline,
     transport: TransportState,
+    sequence = 0,
+  ): void {
+    this.queuedTimeline = null;
+    this.activateTimeline(timeline, transport, sequence);
+  }
+
+  public queueTimeline(
+    timeline: AudioWorkletTimeline,
+    transport: TransportState,
+    sequence: number,
+  ): void {
+    this.queuedTimeline = { timeline, transport, sequence };
+  }
+
+  public clearQueuedTimeline(): void {
+    this.queuedTimeline = null;
+  }
+
+  private activateTimeline(
+    timeline: AudioWorkletTimeline,
+    transport: TransportState,
+    sequence: number,
   ): void {
     const previousRuntimeById = new Map(this.runtimeInstrumentsById);
 
     this.timeline = timeline;
     this.transport = transport;
+    this.timelineSequence = sequence;
     this.masterGain = timeline.masterGain;
     this.masterMuted = timeline.masterMuted;
     this.tuningFrequencyHz = timeline.masterTuningFrequencyHz;
@@ -389,8 +427,28 @@ export class WorkletTimelineEngine {
     this.advanceTempoCursor();
 
     if (this.currentTick >= timeline.durationTicks) {
-      this.currentTick = timeline.durationTicks;
       this.releaseTimelineVoices();
+
+      if (this.queuedTimeline !== null) {
+        const queued = this.queuedTimeline;
+
+        this.queuedTimeline = null;
+        this.currentTick = 0;
+        this.tickCompensation = 0;
+        this.activateTimeline(
+          queued.timeline,
+          queued.transport,
+          queued.sequence,
+        );
+        this.onDiagnostic?.({
+          type: "clip-transition",
+          frame: this.renderedFrame + 1,
+          tick: this.currentTick,
+        });
+        return;
+      }
+
+      this.currentTick = timeline.durationTicks;
       this.currentStatus = "stopped";
       this.stateRevision += 1;
       this.onDiagnostic?.({

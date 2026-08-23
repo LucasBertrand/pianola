@@ -1,4 +1,5 @@
 import type {
+  ClipId,
   InstrumentId,
   Tick,
 } from "../../domain/identifiers";
@@ -31,6 +32,7 @@ export interface AudioWorkletTimelineInstrument {
 
 /** Minimum transferable data required by the real-time rendering thread. */
 export interface AudioWorkletTimeline {
+  readonly sourceId: ClipId;
   readonly ppqn: number;
   readonly durationTicks: Tick;
   readonly masterGain: number;
@@ -46,7 +48,15 @@ export type MainToAudioWorkletMessage =
       readonly type: "load-timeline";
       readonly timeline: AudioWorkletTimeline;
       readonly transport: TransportState;
+      readonly sequence: number;
     }
+  | {
+      readonly type: "queue-timeline";
+      readonly timeline: AudioWorkletTimeline;
+      readonly transport: TransportState;
+      readonly sequence: number;
+    }
+  | { readonly type: "clear-queued-timeline" }
   | {
       readonly type: "play";
       readonly tick: Tick;
@@ -82,8 +92,10 @@ export type AudioWorkletToMainMessage =
   | {
       readonly type: "transport-state";
       readonly status: PlaybackStatus;
+      readonly sourceId: ClipId;
       readonly tick: Tick;
       readonly frame: number;
+      readonly sequence: number;
     }
   | {
       readonly type: "processor-error";

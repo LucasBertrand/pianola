@@ -79,7 +79,23 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   private handleMessage(message: MainToAudioWorkletMessage): void {
     switch (message.type) {
       case "load-timeline":
-        this.engine.loadTimeline(message.timeline, message.transport);
+        this.engine.loadTimeline(
+          message.timeline,
+          message.transport,
+          message.sequence,
+        );
+        break;
+
+      case "queue-timeline":
+        this.engine.queueTimeline(
+          message.timeline,
+          message.transport,
+          message.sequence,
+        );
+        break;
+
+      case "clear-queued-timeline":
+        this.engine.clearQueuedTimeline();
         break;
 
       case "play":
@@ -143,8 +159,10 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     this.port.postMessage({
       type: "transport-state",
       status: this.engine.status,
+      sourceId: this.engine.sourceId,
       tick: this.engine.positionTick,
       frame: currentFrame,
+      sequence: this.engine.sequence,
     });
   }
 

@@ -24,6 +24,24 @@ describe("clip playback sequence", () => {
       .toBe(NEXT_CLIP_ID);
   });
 
+  test("uses the reordered visual list immediately", () => {
+    const project = createSequenceProject();
+    const reorderedProject = projectReducer(project, {
+      transactionId: "reorder-clips",
+      label: "Reorder clips",
+      createdAt: 1,
+      commands: [{
+        type: "ReorderClips",
+        clipOrder: [NEXT_CLIP_ID, TEST_CLIP_ID],
+      }],
+    });
+
+    expect(getAutoAdvanceTargetClipId(reorderedProject, NEXT_CLIP_ID))
+      .toBe(TEST_CLIP_ID);
+    expect(getAutoAdvanceTargetClipId(reorderedProject, TEST_CLIP_ID))
+      .toBeNull();
+  });
+
   test("stops at the end of the visible list", () => {
     const project = createSequenceProject();
 

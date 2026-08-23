@@ -88,8 +88,8 @@ export function useAudioPlayback(
     useState<ClipId | null>(null);
   const transportRef = useRef<AudioWorkletTransport | null>(null);
   const loadedClipIdRef = useRef<ClipId | null>(null);
+  const queuedClipIdRef = useRef<ClipId | null>(null);
   const playingClipIdRef = useRef<ClipId | null>(null);
-  const allowAutoAdvanceRef = useRef(true);
 
   onErrorRef.current = onError;
 
@@ -141,53 +141,33 @@ export function useAudioPlayback(
         ),
         initialClip.transportSettings,
         {
-          onStatusChange(nextStatus, positionTick) {
-            const completedClipId = loadedClipIdRef.current;
+          onStatusChange(nextStatus, sourceClipId, positionTick) {
+            const sourceChanged = loadedClipIdRef.current !== sourceClipId;
 
-            if (completedClipId !== null) {
-              publishPlayhead(completedClipId, positionTick);
-            }
+            loadedClipIdRef.current = sourceClipId;
+            publishPlayhead(sourceClipId, positionTick);
 
-            if (
-              nextStatus === "stopped"
-              && completedClipId !== null
-              && allowAutoAdvanceRef.current
-            ) {
-              const latestState = projectStore.getState();
-              const completedClip = latestState.clipsById[completedClipId];
-              const completedNaturally = completedClip !== undefined
-                && positionTick >= completedClip.timeline.durationTicks;
-              const nextClipId = completedNaturally
-                ? getAutoAdvanceTargetClipId(latestState, completedClipId)
-                : null;
+            if (sourceChanged) {
+              queuedClipIdRef.current = null;
 
-              if (nextClipId !== null) {
-                try {
-                  replaceTransportClip(
-                    transport,
-                    latestState,
-                    nextClipId,
-                    0,
-                  );
-                  loadedClipIdRef.current = nextClipId;
-                  publishPlayhead(nextClipId, 0);
-                  publishPlayingClipId(nextClipId);
-                  setStatus("playing");
-                  playTransport(transport, nextClipId, 0);
-                  return;
-                } catch (error: unknown) {
-                  publishPlayingClipId(null);
-                  setStatus("stopped");
-                  onErrorRef.current(error);
-                  return;
-                }
+              try {
+                synchronizeAutoAdvanceQueue(
+                  transport,
+                  projectStore.getState(),
+                  sourceClipId,
+                  queuedClipIdRef,
+                );
+              } catch (error: unknown) {
+                transport.clearQueuedPlaybackState();
+                queuedClipIdRef.current = null;
+                onErrorRef.current(error);
               }
             }
 
             if (nextStatus === "stopped") {
               publishPlayingClipId(null);
-            } else if (completedClipId !== null) {
-              publishPlayingClipId(completedClipId);
+            } else {
+              publishPlayingClipId(sourceClipId);
             }
 
             setStatus(nextStatus);
@@ -200,6 +180,12 @@ export function useAudioPlayback(
       );
       transportRef.current = transport;
       loadedClipIdRef.current = initialClip.id;
+      synchronizeAutoAdvanceQueue(
+        transport,
+        state,
+        initialClip.id,
+        queuedClipIdRef,
+      );
       setStatus("stopped");
     } catch (error: unknown) {
       onErrorRef.current(error);
@@ -215,11 +201,11 @@ export function useAudioPlayback(
         loadedClipIdRef.current !== null
         && state.clipsById[loadedClipIdRef.current] === undefined
       ) {
-        allowAutoAdvanceRef.current = false;
         transport.stop();
-        allowAutoAdvanceRef.current = true;
         publishPlayingClipId(null);
+        queuedClipIdRef.current = null;
         setStatus("stopped");
+        return;
       }
 
       const sourcePosition = normalizePlayheadPosition(
@@ -228,14 +214,36 @@ export function useAudioPlayback(
       );
       publishPlayhead(sourcePosition.clipId, sourcePosition.tick);
 
+      const loadedClipId = loadedClipIdRef.current;
+      const playbackStateChanged = loadedClipId === null
+        || didPlaybackStateChange(state, previousState, loadedClipId);
+
       if (
         loadedClipIdRef.current === sourcePosition.clipId
-        && !didPlaybackStateChange(
-          state,
-          previousState,
-          sourcePosition.clipId,
-        )
+        && !playbackStateChanged
       ) {
+        const nextClipId = getAutoAdvanceTargetClipId(
+          state,
+          sourcePosition.clipId,
+        );
+        const queuedPlaybackChanged = nextClipId !== null
+          && didPlaybackStateChange(state, previousState, nextClipId);
+
+        if (
+          nextClipId !== queuedClipIdRef.current
+          || queuedPlaybackChanged
+          || state.clipOrder !== previousState.clipOrder
+          || state.autoAdvanceEnabled !== previousState.autoAdvanceEnabled
+          || state.masterBus.gain !== previousState.masterBus.gain
+        ) {
+          synchronizeAutoAdvanceQueue(
+            transport,
+            state,
+            sourcePosition.clipId,
+            queuedClipIdRef,
+          );
+        }
+
         return;
       }
 
@@ -249,10 +257,14 @@ export function useAudioPlayback(
           sourceChanged ? sourcePosition.tick : undefined,
         );
         loadedClipIdRef.current = sourcePosition.clipId;
+        synchronizeAutoAdvanceQueue(
+          transport,
+          state,
+          sourcePosition.clipId,
+          queuedClipIdRef,
+        );
       } catch (error: unknown) {
-        allowAutoAdvanceRef.current = false;
         transport.stop();
-        allowAutoAdvanceRef.current = true;
         publishPlayingClipId(null);
         setStatus("stopped");
         onErrorRef.current(error);
@@ -268,6 +280,7 @@ export function useAudioPlayback(
       if (transportRef.current === transport) {
         transportRef.current = null;
         loadedClipIdRef.current = null;
+        queuedClipIdRef.current = null;
       }
     };
   }, [
@@ -290,11 +303,10 @@ export function useAudioPlayback(
     const publishPosition = (): void => {
       const clipId = loadedClipIdRef.current;
 
-      if (transport.status !== "playing" || clipId === null) {
-        return;
+      if (transport.status === "playing" && clipId !== null) {
+        publishPlayhead(clipId, transport.getPositionTick());
       }
 
-      publishPlayhead(clipId, transport.getPositionTick());
       animationFrame = requestAnimationFrame(publishPosition);
     };
 
@@ -325,9 +337,14 @@ export function useAudioPlayback(
       );
       const alreadyPlaying = transport.status === "playing";
 
-      allowAutoAdvanceRef.current = true;
       replaceTransportClip(transport, state, clipId, normalizedTick);
       loadedClipIdRef.current = clipId;
+      synchronizeAutoAdvanceQueue(
+        transport,
+        state,
+        clipId,
+        queuedClipIdRef,
+      );
       publishPlayhead(clipId, normalizedTick);
       publishPlayingClipId(clipId);
 
@@ -337,9 +354,7 @@ export function useAudioPlayback(
         playTransport(transport, clipId, normalizedTick);
       }
     } catch (error: unknown) {
-      allowAutoAdvanceRef.current = false;
       transport.stop();
-      allowAutoAdvanceRef.current = true;
       publishPlayingClipId(null);
       setStatus("stopped");
       onErrorRef.current(error);
@@ -352,9 +367,7 @@ export function useAudioPlayback(
   ]);
 
   const stopPlayback = useCallback((): void => {
-    allowAutoAdvanceRef.current = false;
     transportRef.current?.stop();
-    allowAutoAdvanceRef.current = true;
     publishPlayingClipId(null);
     setStatus("stopped");
   }, [publishPlayingClipId]);
@@ -429,6 +442,12 @@ export function useAudioPlayback(
     if (loadedClipIdRef.current !== position.clipId) {
       replaceTransportClip(transport, state, position.clipId, 0);
       loadedClipIdRef.current = position.clipId;
+      synchronizeAutoAdvanceQueue(
+        transport,
+        state,
+        position.clipId,
+        queuedClipIdRef,
+      );
 
       if (transport.status !== "stopped") {
         publishPlayingClipId(position.clipId);
@@ -466,6 +485,12 @@ export function useAudioPlayback(
           normalizedTick,
         );
         loadedClipIdRef.current = targetClip.id;
+        synchronizeAutoAdvanceQueue(
+          transport,
+          state,
+          targetClip.id,
+          queuedClipIdRef,
+        );
         publishPlayhead(targetClip.id, normalizedTick);
 
         if (transport.status !== "stopped") {
@@ -476,9 +501,7 @@ export function useAudioPlayback(
         transport.seek(normalizedTick);
       }
     } catch (error: unknown) {
-      allowAutoAdvanceRef.current = false;
       transport.stop();
-      allowAutoAdvanceRef.current = true;
       publishPlayingClipId(null);
       setStatus("stopped");
       onErrorRef.current(error);
@@ -641,4 +664,30 @@ function replaceTransportClip(
     clip.transportSettings,
     positionTickOverride,
   );
+}
+
+function synchronizeAutoAdvanceQueue(
+  transport: AudioWorkletTransport,
+  state: ProjectState,
+  currentClipId: ClipId,
+  queuedClipIdRef: { current: ClipId | null },
+): void {
+  const nextClipId = getAutoAdvanceTargetClipId(state, currentClipId);
+
+  if (nextClipId === null) {
+    transport.clearQueuedPlaybackState();
+    queuedClipIdRef.current = null;
+    return;
+  }
+
+  const nextClip = getClip(state, nextClipId);
+
+  transport.queuePlaybackState(
+    compilePlaybackPlan(
+      state,
+      createClipPlaybackSource(nextClip),
+    ),
+    nextClip.transportSettings,
+  );
+  queuedClipIdRef.current = nextClipId;
 }

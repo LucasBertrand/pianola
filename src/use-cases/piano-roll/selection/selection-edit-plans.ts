@@ -346,9 +346,9 @@ export function planPastedMarkerCommands(
   const scaleTicks = new Set<Tick>();
 
   for (const group of markerGroups) {
-    if (!Number.isSafeInteger(group.startTick) || group.startTick <= 0) {
+    if (!Number.isSafeInteger(group.startTick) || group.startTick < 0) {
       throw new Error(
-        "Pasted markers must be positioned after tick 0.",
+        "Pasted markers cannot be positioned before tick 0.",
       );
     }
 
@@ -424,7 +424,8 @@ export function planPastedMarkerCommands(
       }
     }
 
-    if (kinds.length > 0) {
+    // Tick-0 markers are editable but intentionally not movable/selectable.
+    if (kinds.length > 0 && group.startTick > 0) {
       resultingMarkerGroups.push({
         startTick: group.startTick,
         kinds,
@@ -534,7 +535,7 @@ export function canPlacePastedTimelineContent(
   for (const group of markerGroups) {
     if (
       !Number.isSafeInteger(group.startTick)
-      || group.startTick <= 0
+      || group.startTick < 0
       || (group.tempoBpm === null && group.scaleMarker === null)
     ) {
       return false;
@@ -582,9 +583,17 @@ export function getRequiredMeasureCountForTimelineContent(
   }
 
   for (const group of markerGroups) {
+    if (!Number.isSafeInteger(group.startTick) || group.startTick < 0) {
+      return MAXIMUM_MEASURE_COUNT + 1;
+    }
+
+    if (group.startTick === 0) {
+      continue;
+    }
+
     const markerEndTick = group.startTick + 1;
 
-    if (!Number.isSafeInteger(markerEndTick) || markerEndTick <= 1) {
+    if (!Number.isSafeInteger(markerEndTick)) {
       return MAXIMUM_MEASURE_COUNT + 1;
     }
 

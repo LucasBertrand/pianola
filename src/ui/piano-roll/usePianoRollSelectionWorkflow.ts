@@ -409,7 +409,7 @@ export function usePianoRollSelectionWorkflow({
     ) {
       alert(
         "Paste unavailable",
-        "Paste is unavailable because it exceeds the clip limit, places a marker at tick 0, or targets an unavailable or locked instrument.",
+        "Paste is unavailable because it exceeds the clip limit, contains an invalid timeline position, or targets an unavailable or locked instrument.",
       );
       return;
     }

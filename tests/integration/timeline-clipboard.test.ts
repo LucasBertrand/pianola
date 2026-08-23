@@ -10,8 +10,9 @@ import {
   getActiveClip,
   type ProjectState,
 } from "../../src/domain/project/project-document";
-import type {
-  TimeMap,
+import {
+  getMeasureCount,
+  type TimeMap,
 } from "../../src/domain/transport/time-map";
 import {
   buildAddNoteCommands,
@@ -19,9 +20,11 @@ import {
 } from "../../src/use-cases/piano-roll/notes/note-edit-commands";
 import {
   buildDeleteClipboardMarkerCommands,
+  canPlacePastedTimelineContent,
   createPastedMarkerGroups,
   createPastedNotes,
   createPianoRollClipboard,
+  getRequiredMeasureCountForTimelineContent,
   planPastedMarkerCommands,
 } from "../../src/use-cases/piano-roll/selection/selection-edit-plans";
 import {
@@ -147,6 +150,85 @@ describe("timeline clipboard", () => {
         },
       },
     ]);
+  });
+
+  test("resolves pasted markers at tick zero as initial-marker collisions", () => {
+    const state = createClipboardProject();
+    const clip = getActiveClip(state);
+    const markerGroups = [{
+      startTick: 0,
+      tempoBpm: 90,
+      scaleMarker: {
+        rootNote: "D",
+        patternType: "scale" as const,
+        patternId: "dorian",
+      },
+    }];
+
+    expect(canPlacePastedTimelineContent(
+      state,
+      TEST_CLIP_ID,
+      [],
+      markerGroups,
+    )).toBe(true);
+    expect(getRequiredMeasureCountForTimelineContent(
+      state,
+      TEST_CLIP_ID,
+      [],
+      markerGroups,
+    )).toBe(getMeasureCount(
+      state.clock.ppqn,
+      clip.timeline.timeMap,
+      clip.timeline.durationTicks,
+    ));
+
+    const plan = planPastedMarkerCommands(
+      state,
+      TEST_CLIP_ID,
+      markerGroups,
+    );
+
+    expect(plan.collisions).toEqual([
+      { kind: "tempo", targetTick: 0 },
+      { kind: "scale", targetTick: 0 },
+    ]);
+    expect(plan.overwriteCommands).toEqual([
+      {
+        type: "UpdateTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 0,
+        bpm: 90,
+      },
+      {
+        type: "UpdateScaleMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 0,
+        changes: {
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "dorian",
+        },
+      },
+    ]);
+    expect(plan.resultingMarkerGroups).toEqual([]);
+
+    const runtime = createEditorRuntime(state);
+
+    runtime.editorCommands.dispatch(
+      plan.overwriteCommands,
+      "Overwrite initial markers",
+    );
+
+    const updatedTimeMap = getActiveClip(runtime.projectStore.getState())
+      .timeline.timeMap;
+
+    expect(updatedTimeMap.tempoMarkers[0]?.bpm).toBe(90);
+    expect(markerAt(runtime, "scale", 0)).toEqual({
+      startTick: 0,
+      rootNote: "D",
+      patternType: "scale",
+      patternId: "dorian",
+    });
   });
 
   test("cuts only selected flag components and restores them with undo", () => {

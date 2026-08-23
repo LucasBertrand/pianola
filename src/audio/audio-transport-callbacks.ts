@@ -1,4 +1,5 @@
 import type {
+  ClipId,
   Tick,
 } from "../domain/identifiers";
 import type {
@@ -8,6 +9,7 @@ import type {
 export interface AudioTransportCallbacks {
   readonly onStatusChange?: (
     status: PlaybackStatus,
+    sourceId: ClipId,
     positionTick: Tick,
   ) => void;
   readonly onError?: (error: unknown) => void;

@@ -16,6 +16,7 @@ import {
   compilePlaybackPlan,
 } from "../playback-snapshot";
 import type {
+  AudioWorkletToMainMessage,
   MainToAudioWorkletMessage,
 } from "../worklet/audio-worklet-protocol";
 import {
@@ -124,6 +125,84 @@ describe("AudioWorklet browser transport", () => {
 
     await transport.dispose();
   });
+
+  test("promotes a queued clip and ignores late position reports", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const nextSnapshot = {
+      ...snapshot,
+      sourceId: "clip-next",
+    };
+    const fakePort = new FakeMessagePort();
+    const fakeNode = new FakeAudioWorkletNode(fakePort);
+    const fakeContext = new FakeAudioContext();
+    const statusReports: Array<{
+      readonly sourceId: string;
+      readonly tick: number;
+    }> = [];
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      {
+        onStatusChange(_status, sourceId, tick) {
+          statusReports.push({ sourceId, tick });
+        },
+      },
+      0,
+      () => fakeContext as unknown as AudioContext,
+      () => fakeNode as unknown as AudioWorkletNode,
+    );
+
+    await transport.play(0);
+    transport.queuePlaybackState(nextSnapshot, clip.transportSettings);
+
+    const loadMessage = fakePort.messages.find(
+      (message) => message.type === "load-timeline",
+    );
+    const queueMessage = fakePort.messages.find(
+      (message) => message.type === "queue-timeline",
+    );
+
+    expect(loadMessage?.type).toBe("load-timeline");
+    expect(queueMessage?.type).toBe("queue-timeline");
+
+    if (
+      loadMessage?.type !== "load-timeline"
+      || queueMessage?.type !== "queue-timeline"
+    ) {
+      return;
+    }
+
+    fakePort.emit({
+      type: "transport-state",
+      status: "playing",
+      sourceId: nextSnapshot.sourceId,
+      tick: 24,
+      frame: 1_024,
+      sequence: queueMessage.sequence,
+    });
+    fakePort.emit({
+      type: "transport-state",
+      status: "stopped",
+      sourceId: snapshot.sourceId,
+      tick: snapshot.durationTicks,
+      frame: 1_025,
+      sequence: loadMessage.sequence,
+    });
+
+    expect(transport.status).toBe("playing");
+    expect(transport.getPositionTick()).toBe(24);
+    expect(statusReports.at(-1)).toEqual({
+      sourceId: nextSnapshot.sourceId,
+      tick: 24,
+    });
+
+    await transport.dispose();
+  });
 });
 
 class FakeMessagePort {
@@ -132,6 +211,10 @@ class FakeMessagePort {
 
   public postMessage(message: MainToAudioWorkletMessage): void {
     this.messages.push(message);
+  }
+
+  public emit(message: AudioWorkletToMainMessage): void {
+    this.onmessage?.({ data: message } as MessageEvent);
   }
 
   public close(): void {}

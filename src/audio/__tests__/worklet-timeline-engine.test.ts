@@ -254,6 +254,57 @@ describe("AudioWorklet timeline engine", () => {
     expect(engine.status).toBe("playing");
   });
 
+  test("switches a queued clip on the audio-clock boundary without stopping", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const snapshot = createSnapshotWithNotes([createTestNote({
+      id: "next-clip-start",
+      startTick: 0,
+      durationTicks: 48,
+    })]);
+    const firstTimeline = {
+      ...toTimeline(snapshot),
+      sourceId: "clip-first",
+      durationTicks: 192,
+      instruments: toTimeline(createSnapshotWithNotes([])).instruments,
+    };
+    const nextTimeline = {
+      ...toTimeline(snapshot),
+      sourceId: "clip-next",
+      durationTicks: 192,
+    };
+    const transport = {
+      loopEnabled: false,
+      loop: { startTick: 0, endTick: 192 },
+    };
+    const engine = new WorkletTimelineEngine(SAMPLE_RATE, {
+      onDiagnostic: (event) => diagnostics.push(event),
+    });
+
+    engine.loadTimeline(firstTimeline, transport, 10);
+    engine.queueTimeline(nextTimeline, transport, 11);
+    engine.play(0);
+    renderFrames(engine, 4_800);
+
+    expect(engine.status).toBe("playing");
+    expect(engine.sourceId).toBe("clip-next");
+    expect(engine.sequence).toBe(11);
+    expect(engine.positionTick).toBe(0);
+    expect(diagnostics).toContainEqual(expect.objectContaining({
+      type: "clip-transition",
+      frame: 4_800,
+    }));
+    expect(diagnostics.some((event) => event.type === "project-end"))
+      .toBe(false);
+
+    renderFrames(engine, 1);
+
+    expect(diagnostics).toContainEqual(expect.objectContaining({
+      type: "note-start",
+      frame: 4_800,
+      tick: 0,
+    }));
+  });
+
   test("applies pulse width previews to an active voice", () => {
     const snapshot = createSnapshotWithNotes([]);
     const instrument = snapshot.instruments[0];
