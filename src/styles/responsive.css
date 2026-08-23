@@ -23,12 +23,7 @@
     gap: 14px;
     grid-template-columns:
       minmax(0, 1fr)
-      minmax(160px, 240px)
       minmax(0, 1fr);
-  }
-
-  .project-title-input {
-    width: 100%;
   }
 }
 
@@ -41,7 +36,6 @@
     gap: 14px;
     grid-template-columns:
       minmax(0, 1fr)
-      minmax(160px, 280px)
       minmax(0, 1fr);
   }
 }
@@ -51,19 +45,14 @@
     min-height: 64px;
     padding: 0 10px;
     grid-template-columns:
-      max-content
-      minmax(80px, 1fr)
+      minmax(0, 1fr)
       max-content;
-    grid-template-areas: "left center right";
+    grid-template-areas: "left right";
     gap: 10px;
   }
 
   .app-header > .left {
     justify-self: start;
-  }
-
-  .app-header > .center {
-    justify-self: center;
   }
 
   .app-header > .right {
@@ -102,7 +91,6 @@
     padding: 0 16px 18px;
     box-shadow: none;
     transform: translate3d(100%, 0, 0);
-    transition: transform 180ms ease;
   }
 
   .project-inspector.is-open {
@@ -157,7 +145,6 @@
     box-shadow: none;
     grid-row: 1;
     transform: none;
-    transition: none;
     grid-template-rows: auto minmax(0, 1fr);
   }
 
@@ -404,21 +391,14 @@
     min-height: 54px;
     padding: 0 7px;
     grid-template-columns:
-      max-content
-      minmax(48px, 1fr)
+      minmax(0, 1fr)
       max-content;
-    grid-template-areas: "left center right";
+    grid-template-areas: "left right";
     gap: 7px;
   }
 
   .app-header > .left {
     gap: 5px;
-  }
-
-  .project-title-input {
-    padding-right: 4px;
-    padding-left: 4px;
-    font-size: 12px;
   }
 
   .project-menu-trigger {
@@ -450,8 +430,9 @@
   .master-bus-control {
     width: 112px;
     min-width: 112px;
-    height: 40px;
-    grid-template-rows: 13px 17px;
+    height: 36px;
+    padding-right: 5px;
+    padding-left: 5px;
   }
 
   .master-bus-heading small {
@@ -462,12 +443,12 @@
     justify-content: flex-end;
   }
 
-  .master-tuning-control {
+  .master-gain-output {
     padding-right: 2px;
     padding-left: 2px;
   }
 
-  .master-tuning-control input {
+  .master-heading-tuning input {
     width: 27px;
   }
 

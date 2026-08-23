@@ -131,6 +131,7 @@ export function InteractionOverlay(
     spatialIndex,
     instrumentStyles,
     noteColorMode,
+    projectStore,
     editorCommands,
     selection,
     gridResolutionTicks,
@@ -145,6 +146,9 @@ export function InteractionOverlay(
     visualsRef.current = new DomInteractionVisualController(
       editingNoteMask,
       noteColorMode,
+      instrumentStyles,
+      editorCommands,
+      pitchSnapSettings,
     );
   }
 
@@ -176,6 +180,8 @@ export function InteractionOverlay(
     viewport,
     spatialIndex,
     instrumentStyles,
+    noteColorMode,
+    projectStore,
     editorCommands,
     selection,
     activeInstrumentId,

@@ -28,6 +28,7 @@ import type {
 } from "../../editor/interactions/pointer/pointer-interaction-strategy";
 
 import type {
+  MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";
 import {
@@ -50,6 +51,7 @@ export interface PianoRollLoopGestureOptions {
   readonly interactionStrategyRef: RefObject<
     PointerInteractionStrategy | null
   >;
+  readonly loopDragPreview: MutableRenderSignal<LoopRegion | null>;
   readonly onCommit: (loop: LoopRegion) => void;
   readonly onClearSelection: () => void;
   readonly layerRef: RefObject<HTMLDivElement | null>;
@@ -67,6 +69,7 @@ export function usePianoRollLoopGesture({
   projectStore,
   gridResolutionTicks,
   interactionStrategyRef,
+  loopDragPreview,
   onCommit,
   onClearSelection,
   layerRef,
@@ -111,6 +114,26 @@ export function usePianoRollLoopGesture({
     let layerLeft = 0;
     let drawAnchorTick = 0;
     let layerLongPressTimerId: number | null = null;
+    let previewStartTick: number | null = null;
+    let previewEndTick: number | null = null;
+
+    const publishPreview = (startTick: number, endTick: number): void => {
+      if (
+        startTick === previewStartTick
+        && endTick === previewEndTick
+      ) {
+        return;
+      }
+
+      previewStartTick = startTick;
+      previewEndTick = endTick;
+      loopDragPreview.set({ startTick, endTick });
+    };
+    const clearPreview = (): void => {
+      previewStartTick = null;
+      previewEndTick = null;
+      loopDragPreview.set(null);
+    };
 
     const cancelLayerLongPress = (): void => {
       if (layerLongPressTimerId !== null) {
@@ -299,6 +322,7 @@ export function usePianoRollLoopGesture({
           projectStore.getState(),
         ).transportSettings.loopEnabled,
       );
+      publishPreview(draftStartTick, draftEndTick);
     };
     const scheduleLayerLongPress = (event: PointerEvent): void => {
       cancelLayerLongPress();
@@ -462,6 +486,7 @@ export function usePianoRollLoopGesture({
         );
         activePointerId = -1;
         gestureMode = null;
+        clearPreview();
 
         if (layer.hasPointerCapture(event.pointerId)) {
           layer.releasePointerCapture(event.pointerId);
@@ -494,6 +519,7 @@ export function usePianoRollLoopGesture({
       } else {
         updateFromState();
       }
+      clearPreview();
 
       event.preventDefault();
     };
@@ -512,7 +538,11 @@ export function usePianoRollLoopGesture({
 
       activePointerId = -1;
       gestureMode = null;
+      clearPreview();
       updateFromState();
+    };
+    const handleContextMenu = (event: MouseEvent): void => {
+      event.preventDefault();
     };
     const unsubscribeViewport =
       viewport.subscribe(updateFromState);
@@ -523,6 +553,7 @@ export function usePianoRollLoopGesture({
     layer.addEventListener("pointermove", handlePointerMove);
     layer.addEventListener("pointerup", finishPointer);
     layer.addEventListener("pointercancel", cancelPointer);
+    layer.addEventListener("contextmenu", handleContextMenu);
     layer.addEventListener(
       "lostpointercapture",
       cancelPointer,
@@ -531,6 +562,7 @@ export function usePianoRollLoopGesture({
 
     return (): void => {
       cancelLayerLongPress();
+      clearPreview();
       if (gestureMode === "pending-layer") {
         interactionStrategyRef.current?.cancel();
       }
@@ -549,6 +581,7 @@ export function usePianoRollLoopGesture({
         "pointercancel",
         cancelPointer,
       );
+      layer.removeEventListener("contextmenu", handleContextMenu);
       layer.removeEventListener(
         "lostpointercapture",
         cancelPointer,
@@ -557,6 +590,7 @@ export function usePianoRollLoopGesture({
   }, [
     gridResolutionTicks,
     interactionStrategyRef,
+    loopDragPreview,
     onCommit,
     onClearSelection,
     projectStore,

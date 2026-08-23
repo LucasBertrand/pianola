@@ -110,12 +110,14 @@ export function populateGhostLayer(
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
     const noteSnapSettings = getSnapSettingsAtTick(note.startTick);
 
-    element.style.background = getNoteFillStyle(
+    const fillStyle = getNoteFillStyle(
       note,
       stylesByInstrumentId,
       colorMode,
       noteSnapSettings,
     );
+    element.style.setProperty("--note-color", fillStyle);
+    element.style.background = fillStyle;
     element.style.opacity = String(
       (stylesByInstrumentId[note.instrumentId]?.opacity ?? 1)
       * (note.enabled ? 1 : 0.36),
@@ -153,6 +155,7 @@ export function populateSelectionLayer(
   notes: readonly Note[],
   converter: CoordinateConverter,
   elements: HTMLElement[],
+  getNoteColor: (note: Note) => string,
 ): LayerGeometry | null {
   if (selectionLayer === null) {
     return null;
@@ -203,6 +206,7 @@ export function populateSelectionLayer(
     element.style.top = `${y}px`;
     element.style.width = `${noteWidth}px`;
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
+    element.style.setProperty("--note-color", getNoteColor(note));
     const geometryIndex = elements.length;
 
     elements.push(element);
@@ -217,6 +221,12 @@ export function populateSelectionLayer(
   selectionLayer.appendChild(fragment);
 
   return { left, width, pitch, startTick, durationTicks };
+}
+
+export function clearSelectionLayer(
+  selectionLayer: HTMLDivElement | null,
+): void {
+  selectionLayer?.replaceChildren();
 }
 
 export function updateGhostPitchPresentation(
@@ -270,10 +280,13 @@ export function updateGhostPitchPresentation(
     );
 
     if (updatePitchColor) {
-      element.style.background = getPitchNoteColor(
+      const color = getPitchNoteColor(
         pitch,
         snapSettings,
       );
+
+      element.style.setProperty("--note-color", color);
+      element.style.background = color;
     }
   }
 }
@@ -347,10 +360,13 @@ export function updatePitchSnappedDrag(
     }
 
     if (updatePitchColor) {
-      element.style.background = getPitchNoteColor(
+      const color = getPitchNoteColor(
         snappedPitch,
         snapSettings,
       );
+
+      element.style.setProperty("--note-color", color);
+      element.style.background = color;
     }
   }
 }

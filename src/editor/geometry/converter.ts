@@ -6,6 +6,10 @@ export const MIN_MIDI_PITCH =
   VIEWPORT_CONSTANTS.minimumMidiPitch;
 export const MAX_MIDI_PITCH =
   VIEWPORT_CONSTANTS.maximumMidiPitch;
+export const MIN_DISPLAYED_MIDI_PITCH =
+  VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch;
+export const MAX_DISPLAYED_MIDI_PITCH =
+  VIEWPORT_CONSTANTS.highestDisplayedMidiPitch;
 export const MAXIMUM_HORIZONTAL_ZOOM =
   VIEWPORT_CONSTANTS.maximumHorizontalZoom;
 export const MAXIMUM_VERTICAL_ZOOM =
@@ -77,7 +81,7 @@ export class CoordinateConverter {
 
   public pitchToPixelY(pitch: number): number {
     return (
-      (MAX_MIDI_PITCH - pitch) * this.pitchHeightDevicePixels
+      (MAX_DISPLAYED_MIDI_PITCH - pitch) * this.pitchHeightDevicePixels
       - this.scrollYDevicePixels
     );
   }
@@ -87,7 +91,7 @@ export class CoordinateConverter {
       pixel + this.scrollYDevicePixels
     ) / this.pitchHeightDevicePixels;
 
-    return MAX_MIDI_PITCH - Math.floor(pitchRow);
+    return MAX_DISPLAYED_MIDI_PITCH - Math.floor(pitchRow);
   }
 
   public tickToCssPixelX(tick: number): number {
@@ -102,7 +106,7 @@ export class CoordinateConverter {
 
   public pitchToCssPixelY(pitch: number): number {
     return (
-      (MAX_MIDI_PITCH - pitch) * this.pitchHeightCssPixels
+      (MAX_DISPLAYED_MIDI_PITCH - pitch) * this.pitchHeightCssPixels
       - this.scrollYCssPixels
     );
   }
@@ -112,7 +116,7 @@ export class CoordinateConverter {
       pixel + this.scrollYCssPixels
     ) / this.pitchHeightCssPixels;
 
-    return MAX_MIDI_PITCH - Math.floor(pitchRow);
+    return MAX_DISPLAYED_MIDI_PITCH - Math.floor(pitchRow);
   }
 
   public cssPixelToDevicePixel(pixel: number): number {

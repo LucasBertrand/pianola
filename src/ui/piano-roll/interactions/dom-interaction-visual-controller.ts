@@ -17,6 +17,7 @@ import type {
   EditingNoteMask,
 } from "../../../editor/interactions/editing-note-mask";
 import {
+  getNoteFillStyle,
   getPitchNoteColor,
 } from "../rendering/note-style";
 import type {
@@ -32,6 +33,15 @@ import type {
   ReadonlyRenderSignal,
 } from "../../../editor/model/render-signal";
 import type {
+  EditorCommandPort,
+} from "../../../use-cases/commands/editor-command-service";
+import {
+  getActiveClip,
+} from "../../../domain/project/project-document";
+import {
+  resolvePitchSnapSettings,
+} from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
+import type {
   InteractionVisualController,
 } from "./interaction-visual-controller";
 import type {
@@ -42,6 +52,7 @@ import type {
 } from "../../../domain/transport/time-map";
 
 import {
+  clearSelectionLayer,
   clearLayer,
   populateGhostLayer,
   populateSelectionLayer,
@@ -67,6 +78,12 @@ export class DomInteractionVisualController
     private readonly editingNoteMask: EditingNoteMask,
     private readonly noteColorMode:
       ReadonlyRenderSignal<NoteColorMode>,
+    private readonly instrumentStyles: ReadonlyRenderSignal<
+      Readonly<Record<InstrumentId, InstrumentRenderStyle>>
+    >,
+    private readonly editorCommands: EditorCommandPort,
+    private readonly pitchSnapSettings:
+      ReadonlyRenderSignal<PitchSnapSettings>,
   ) {}
 
   public setGhostLayer(element: HTMLDivElement | null): void {
@@ -251,13 +268,16 @@ export class DomInteractionVisualController
     element.style.top = `${y}px`;
     element.style.width = `${Math.max(1, endX - x)}px`;
     element.style.height = `${Math.max(1, nextY - y - 1)}px`;
-    element.style.background =
+    const fillStyle =
       this.noteColorMode.get() === "pitch"
         ? getPitchNoteColor(
             pitch,
             getSnapSettingsAtTick(startTick),
           )
         : style?.fillStyle ?? APPLICATION_COLORS.accent.primary;
+
+    element.style.setProperty("--note-color", fillStyle);
+    element.style.background = fillStyle;
     const labelElement = document.createElement("span");
 
     labelElement.className = "interaction-note-label";
@@ -326,11 +346,26 @@ export class DomInteractionVisualController
     notes: readonly Note[],
     converter: CoordinateConverter,
   ): void {
+    const activeClip = getActiveClip(this.editorCommands.getState());
+    const stylesByInstrumentId = this.instrumentStyles.get();
+    const colorMode = this.noteColorMode.get();
+    const globalPitchSnapSettings = this.pitchSnapSettings.get();
+
     this.selectionGeometry = populateSelectionLayer(
       this.selectionLayer,
       notes,
       converter,
       this.selectionElements,
+      (note) => getNoteFillStyle(
+        note,
+        stylesByInstrumentId,
+        colorMode,
+        resolvePitchSnapSettings(
+          activeClip.timeline.timeMap,
+          globalPitchSnapSettings,
+          note.startTick,
+        ),
+      ),
     );
   }
 
@@ -338,6 +373,6 @@ export class DomInteractionVisualController
     resetLayerTransform(this.selectionLayer);
     this.selectionElements.length = 0;
     this.selectionGeometry = null;
-    this.selectionLayer?.replaceChildren();
+    clearSelectionLayer(this.selectionLayer);
   }
 }

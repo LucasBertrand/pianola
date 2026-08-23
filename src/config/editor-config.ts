@@ -2,10 +2,18 @@ import {
   PROJECT_CONSTANTS,
 } from "./domain-limits";
 
+const CLASSIC_PIANO_PITCH_COUNT = 88;
+const CLASSIC_PIANO_HIGHEST_MIDI_PITCH = 108;
+const CLASSIC_PIANO_LOWEST_MIDI_PITCH =
+  CLASSIC_PIANO_HIGHEST_MIDI_PITCH - CLASSIC_PIANO_PITCH_COUNT + 1;
+
 /** Viewport ranges, editor defaults, and UI control response values. */
 export const VIEWPORT_CONSTANTS = Object.freeze({
   minimumMidiPitch: PROJECT_CONSTANTS.minimumMidiPitch,
   maximumMidiPitch: PROJECT_CONSTANTS.maximumMidiPitch,
+  displayedPitchCount: CLASSIC_PIANO_PITCH_COUNT,
+  lowestDisplayedMidiPitch: CLASSIC_PIANO_LOWEST_MIDI_PITCH,
+  highestDisplayedMidiPitch: CLASSIC_PIANO_HIGHEST_MIDI_PITCH,
   maximumHorizontalZoom: 2.5,
   maximumVerticalZoom: 2.2,
   // This is only a serialization and numerical-safety guard. The actual

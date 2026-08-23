@@ -29,6 +29,9 @@ import type {
   InstrumentRenderStyle,
 } from "../../../editor/model/instrument-render-style";
 import type {
+  NoteColorMode,
+} from "../../../editor/model/note-color-mode";
+import type {
   MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../../editor/model/render-signal";
@@ -71,6 +74,9 @@ import {
 import {
   resolvePitchSnapSettings,
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
+import type {
+  ProjectStorePort,
+} from "../../../domain/project-store";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
@@ -81,6 +87,8 @@ export interface UsePianoRollEventsOptions {
   readonly instrumentStyles: ReadonlyRenderSignal<
     Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
+  readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
+  readonly projectStore: ProjectStorePort;
   readonly editorCommands: EditorCommandPort;
   readonly selection: EditorSelection;
   readonly activeInstrumentId: InstrumentId;
@@ -118,6 +126,8 @@ export function usePianoRollEvents(
     viewport,
     spatialIndex,
     instrumentStyles,
+    noteColorMode,
+    projectStore,
     editorCommands,
     selection,
     activeInstrumentId,
@@ -205,6 +215,19 @@ export function usePianoRollEvents(
     const unsubscribeViewport = viewport.subscribe(
       () => selectionController.showSelection(),
     );
+    const refreshSelection = (): void => {
+      selectionController.showSelection();
+    };
+    const unsubscribeInstrumentStyles = instrumentStyles.subscribe(
+      refreshSelection,
+    );
+    const unsubscribeNoteColorMode = noteColorMode.subscribe(
+      refreshSelection,
+    );
+    const unsubscribePitchSnapSettings = pitchSnapSettings.subscribe(
+      refreshSelection,
+    );
+    const unsubscribeProject = projectStore.subscribe(refreshSelection);
     const unsubscribeSelectionRequests = selectionRequests.subscribe(
       (request) => selectionController.handleRequest(request),
     );
@@ -215,6 +238,10 @@ export function usePianoRollEvents(
     return (): void => {
       strategy.cancel();
       unsubscribeViewport();
+      unsubscribeInstrumentStyles();
+      unsubscribeNoteColorMode();
+      unsubscribePitchSnapSettings();
+      unsubscribeProject();
       unsubscribeSelectionRequests();
 
       if (strategyRef.current === strategy) {
@@ -226,12 +253,14 @@ export function usePianoRollEvents(
     gridResolutionTicks,
     highlightedPitch,
     instrumentStyles,
+    noteColorMode,
     onGridSeek,
     onNoteCollision,
     onMarkerCollision,
     onTransactionRejected,
     overlayRef,
     pitchSnapSettings,
+    projectStore,
     selectionController,
     selectionMode,
     selectionRequests,

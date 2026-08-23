@@ -86,6 +86,9 @@ import {
   transformNoteSelection,
 } from "../../src/domain/selection-transformations";
 import {
+  VIEWPORT_CONSTANTS,
+} from "../../src/config/editor-config";
+import {
   constrainViewportToContent,
   getMaximumHorizontalScroll,
   getMaximumVerticalScroll,
@@ -700,7 +703,11 @@ function getActiveTestMeasureCount(state) {
     );
 
     assert.equal(minimumZoomX, viewportWidth * 5 / totalTicks);
-    assert.equal(minimumZoomY, viewportHeight / (128 * 18));
+    assert.equal(
+      minimumZoomY,
+      viewportHeight
+        / (VIEWPORT_CONSTANTS.displayedPitchCount * 18),
+    );
     assert.equal(constrained.zoomX, minimumZoomX);
     assert.equal(constrained.zoomY, minimumZoomY);
     assert.equal(getMaximumHorizontalScroll(

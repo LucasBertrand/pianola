@@ -36,12 +36,11 @@ export function getMinimumVerticalZoom(
   viewportHeight: number,
   pitchHeight: number,
 ): number {
-  const pitchCount =
-    VIEWPORT_CONSTANTS.maximumMidiPitch
-    - VIEWPORT_CONSTANTS.minimumMidiPitch
-    + 1;
   const fitZoom = sanitizeExtent(viewportHeight)
-    / (pitchCount * sanitizeExtent(pitchHeight));
+    / (
+      VIEWPORT_CONSTANTS.displayedPitchCount
+      * sanitizeExtent(pitchHeight)
+    );
 
   return clamp(
     fitZoom,
@@ -113,13 +112,9 @@ export function getMaximumVerticalScroll(
   viewport: ViewportState,
   viewportHeight: number,
 ): number {
-  const pitchCount =
-    VIEWPORT_CONSTANTS.maximumMidiPitch
-    - VIEWPORT_CONSTANTS.minimumMidiPitch
-    + 1;
-
   return normalizeScrollMaximum(
-    pitchCount * viewport.pitchHeight * viewport.zoomY
+    VIEWPORT_CONSTANTS.displayedPitchCount
+      * viewport.pitchHeight * viewport.zoomY
       - sanitizeExtent(viewportHeight),
   );
 }

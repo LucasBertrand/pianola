@@ -124,13 +124,8 @@ export function MasterGainControl(
     >
       <div className="master-bus-heading">
         <small>Master</small>
-        <output ref={outputRef}>
-          {formatMasterGainDecibels(gain)}
-        </output>
-      </div>
-      <div className="master-bus-controls">
         <label
-          className="master-tuning-control"
+          className="master-heading-tuning"
           title="Master tuning frequency"
         >
           <input
@@ -153,6 +148,11 @@ export function MasterGainControl(
           />
           <span>Hz</span>
         </label>
+      </div>
+      <div className="master-bus-controls">
+        <output ref={outputRef} className="master-gain-output">
+          {formatMasterGainDecibels(gain)}
+        </output>
         <input
           ref={inputRef}
           className="master-gain-input"

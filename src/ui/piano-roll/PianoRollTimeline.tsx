@@ -60,6 +60,7 @@ export interface PianoRollRulerProps {
   readonly timelineDragPreview: MutableRenderSignal<
     TimelineDragPreview | null
   >;
+  readonly loopDragPreview: MutableRenderSignal<LoopRegion | null>;
   readonly interactionStrategyRef: RefObject<
     PointerInteractionStrategy | null
   >;
@@ -80,6 +81,7 @@ export function PianoRollRuler(
     markerFlags,
     selection,
     timelineDragPreview,
+    loopDragPreview,
     interactionStrategyRef,
     onLoopCommit,
     onOpenMarker,
@@ -154,6 +156,7 @@ export function PianoRollRuler(
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}
         interactionStrategyRef={interactionStrategyRef}
+        loopDragPreview={loopDragPreview}
         onCommit={onLoopCommit}
         onClearSelection={onClearSelection}
       />

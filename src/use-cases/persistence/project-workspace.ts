@@ -148,10 +148,10 @@ function toPersistentClipState(
     ),
   );
   const highestVisiblePitch = Math.min(
-    VIEWPORT_CONSTANTS.maximumMidiPitch,
+    VIEWPORT_CONSTANTS.highestDisplayedMidiPitch,
     Math.max(
-      0,
-      VIEWPORT_CONSTANTS.maximumMidiPitch
+      VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch,
+      VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
         - viewport.scrollY / (viewport.pitchHeight * viewport.zoomY),
     ),
   );
@@ -182,7 +182,7 @@ function toRuntimeViewport(
       state.firstVisibleTick * state.horizontalZoom / base.ticksPerPixel,
     scrollY:
       (
-        VIEWPORT_CONSTANTS.maximumMidiPitch
+        VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
         - state.highestVisiblePitch
       ) * base.pitchHeight * state.verticalZoom,
   };

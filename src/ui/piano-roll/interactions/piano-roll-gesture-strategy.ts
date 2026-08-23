@@ -54,6 +54,9 @@ import {
   resolvePitchSnapSettings,
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import {
+  isPointInsideNoteResizeAnchor,
+} from "./note-resize-anchor-hit-test";
+import {
   measureTimelineSelectionTickBounds,
 } from "../../../use-cases/piano-roll/selection/timeline-selection-move";
 import type {
@@ -233,19 +236,17 @@ export function createPianoRollGestureStrategy(
       (note) => selectionController.isSelectedNoteEditable(note),
       (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
     );
-    const edgeCandidate = selectedEdgeCandidate
-      ?? spatialIndex.queryNoteEdge(
-        pointerTick,
-        pointerPitch,
-        edgeEnvelope,
-        (note) => selectionController.isNoteEditable(note),
-        (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
-      );
-    const edgeHit =
-      edgeCandidate !== undefined && selection.has(edgeCandidate.note.id)
-        ? edgeCandidate
+    const edgeHit = selectedEdgeCandidate !== undefined
+      && isPointInsideNoteResizeAnchor(
+        selectedEdgeCandidate.note,
+        selectedEdgeCandidate.edge,
+        localX,
+        localY,
+        converter,
+      )
+        ? selectedEdgeCandidate
         : undefined;
-    const targetNote = edgeCandidate?.note ?? hitNote;
+    const targetNote = edgeHit?.note ?? hitNote;
     const pointerStarted = gesture.beginPointer({
       pointerId: event.pointerId,
       overlayLeft: bounds.left,

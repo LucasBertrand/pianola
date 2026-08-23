@@ -8,8 +8,12 @@ import React, {
 import {
   MIDI_CONSTANTS,
 } from "../../config/midi-config";
+import {
+  MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
+} from "../../project-io/native/version";
 
 export interface ProjectMenuProps {
+  readonly projectTitle: string;
   readonly midiInputRef: RefObject<HTMLInputElement | null>;
   readonly onReturnHome: () => void | Promise<void>;
   readonly onExportProject: () => void;
@@ -18,15 +22,18 @@ export interface ProjectMenuProps {
   readonly onMidiFileChange: (
     event: ChangeEvent<HTMLInputElement>,
   ) => void | Promise<void>;
+  readonly onProjectTitleCommit: (input: HTMLInputElement) => void;
 }
 
 export function ProjectMenu({
+  projectTitle,
   midiInputRef,
   onReturnHome,
   onExportProject,
   onOpenMidiImport,
   onExportMidi,
   onMidiFileChange,
+  onProjectTitleCommit,
 }: ProjectMenuProps): React.JSX.Element {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -88,10 +95,22 @@ export function ProjectMenu({
           aria-label="Project"
           hidden={!open}
         >
-          <div className="project-menu-heading" role="presentation">
-            <strong>Project</strong>
-            <span>Manage the active composition</span>
-          </div>
+          <input
+            key={projectTitle}
+            className="project-menu-title-input"
+            type="text"
+            maxLength={MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH}
+            defaultValue={projectTitle}
+            aria-label="Project title"
+            onBlur={(event) => {
+              onProjectTitleCommit(event.currentTarget);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
+          />
 
           <div
             className="project-menu-group"

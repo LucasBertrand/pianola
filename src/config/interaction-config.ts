@@ -1,10 +1,13 @@
+const LONG_PRESS_DELAY_MS = 300;
+const PEN_LONG_PRESS_DELAY_MS = 280;
+
 /** Touch, pointer, keyboard-preview, and pinch gesture tuning. */
 export const INTERACTION_CONSTANTS = Object.freeze({
-  longPressDelayMs: 300,
-  penLongPressDelayMs: 280,
+  longPressDelayMs: LONG_PRESS_DELAY_MS,
+  penLongPressDelayMs: PEN_LONG_PRESS_DELAY_MS,
   longPressMovementToleranceCssPixels: 12,
-  loopDrawLongPressDelayMs: 300,
-  loopDrawPenLongPressDelayMs: 280,
+  loopDrawLongPressDelayMs: LONG_PRESS_DELAY_MS,
+  loopDrawPenLongPressDelayMs: PEN_LONG_PRESS_DELAY_MS,
   pianoKeyLongPressDelayMs: 520,
   pianoKeyPenLongPressDelayMs: 280,
   pianoKeyLongPressMovementToleranceCssPixels: 10,

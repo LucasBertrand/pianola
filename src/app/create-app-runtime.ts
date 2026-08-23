@@ -289,7 +289,7 @@ function createInitialViewportState(): ViewportState {
     scrollX: 0,
     scrollY:
       (
-        VIEWPORT_CONSTANTS.maximumMidiPitch
+        VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
         - VIEWPORT_CONSTANTS.initialMaximumVisiblePitch
       ) * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels,
     pitchHeight: VIEWPORT_CONSTANTS.initialPitchHeightCssPixels,

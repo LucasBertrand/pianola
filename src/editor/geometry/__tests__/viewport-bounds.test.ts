@@ -3,6 +3,9 @@ import {
   expect,
   test,
 } from "vitest";
+import {
+  VIEWPORT_CONSTANTS,
+} from "../../../config/editor-config";
 import type {
   ViewportState,
 } from "../converter";
@@ -28,6 +31,20 @@ const VIEWPORT: ViewportState = {
 };
 
 describe("viewport bounds", () => {
+  test("uses the 88-key classical piano range for vertical content", () => {
+    expect(VIEWPORT_CONSTANTS.displayedPitchCount).toBe(88);
+    expect(VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch).toBe(21);
+    expect(VIEWPORT_CONSTANTS.highestDisplayedMidiPitch).toBe(108);
+    expect(
+      VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
+      - VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch
+      + 1,
+    ).toBe(VIEWPORT_CONSTANTS.displayedPitchCount);
+
+    expect(getMinimumVerticalZoom(1_584, 18)).toBe(1);
+    expect(getMaximumVerticalScroll(VIEWPORT, 720)).toBe(864);
+  });
+
   test("derives zoom limits from content and viewport dimensions", () => {
     const unconstrained = {
       ...VIEWPORT,

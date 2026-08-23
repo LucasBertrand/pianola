@@ -184,10 +184,10 @@ export function PianoKeyboard(
         ) / pitchRowHeight,
       );
       const pitch =
-        VIEWPORT_CONSTANTS.maximumMidiPitch - pitchIndex;
+        VIEWPORT_CONSTANTS.highestDisplayedMidiPitch - pitchIndex;
 
-      return pitch >= VIEWPORT_CONSTANTS.minimumMidiPitch
-        && pitch <= VIEWPORT_CONSTANTS.maximumMidiPitch
+      return pitch >= VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch
+        && pitch <= VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
         ? pitch
         : null;
     };
@@ -443,8 +443,8 @@ function createPianoKeys(): readonly React.JSX.Element[] {
   const keys: React.JSX.Element[] = [];
 
   for (
-    let pitch = VIEWPORT_CONSTANTS.maximumMidiPitch;
-    pitch >= VIEWPORT_CONSTANTS.minimumMidiPitch;
+    let pitch = VIEWPORT_CONSTANTS.highestDisplayedMidiPitch;
+    pitch >= VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch;
     pitch -= 1
   ) {
     const pitchClass = pitch % 12;

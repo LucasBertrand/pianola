@@ -23,10 +23,10 @@ export function calculateVisibleRegion(
     / viewport.zoomX;
   const pitchHeight = viewport.pitchHeight * viewport.zoomY;
   const maxPitch =
-    VIEWPORT_CONSTANTS.maximumMidiPitch
+    VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
     - Math.floor(viewport.scrollY / pitchHeight);
   const minPitch =
-    VIEWPORT_CONSTANTS.maximumMidiPitch
+    VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
     - Math.floor(
       (viewport.scrollY + heightCssPixels) / pitchHeight,
     );
@@ -35,11 +35,11 @@ export function calculateVisibleRegion(
     startTick: Math.max(0, startTick),
     endTick: Math.min(totalTicks, endTick),
     minPitch: Math.max(
-      VIEWPORT_CONSTANTS.minimumMidiPitch,
+      VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch,
       minPitch,
     ),
     maxPitch: Math.min(
-      VIEWPORT_CONSTANTS.maximumMidiPitch,
+      VIEWPORT_CONSTANTS.highestDisplayedMidiPitch,
       maxPitch,
     ),
   };

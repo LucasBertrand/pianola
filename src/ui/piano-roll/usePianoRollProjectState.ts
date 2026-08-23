@@ -25,6 +25,7 @@ export interface PianoRollProjectState {
   readonly selectedInstrumentId: InstrumentId | null;
   readonly selectionAvailable: boolean;
   readonly selectedNotes: readonly Note[];
+  readonly selectedMarkerCount: number;
   readonly selectInstrument: (instrumentId: InstrumentId | null) => void;
   readonly setSelectionAvailable: (available: boolean) => void;
   readonly handleSelectionChange: (
@@ -48,6 +49,7 @@ export function usePianoRollProjectState(
     );
   const [selectionAvailable, setSelectionAvailable] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<readonly Note[]>([]);
+  const [selectedMarkerCount, setSelectedMarkerCount] = useState(0);
   const clearInteractionSelection = useCallback((): void => {
     const controller = controllerRef.current;
 
@@ -56,6 +58,7 @@ export function usePianoRollProjectState(
     runtime.selectionRequests.clear();
     setSelectionAvailable(false);
     setSelectedNotes([]);
+    setSelectedMarkerCount(0);
   }, [controllerRef, runtime]);
   const handleSelectionChange = useCallback((
     hasSelection: boolean,
@@ -63,11 +66,12 @@ export function usePianoRollProjectState(
   ): void => {
     setSelectionAvailable(hasSelection);
     setSelectedNotes(controllerRef.current?.getSelectedNotes() ?? []);
+    setSelectedMarkerCount(runtime.selection.markerGroupCount);
 
     if (soleInstrumentId !== null) {
       selectInstrument(soleInstrumentId);
     }
-  }, [controllerRef]);
+  }, [controllerRef, runtime]);
 
   useEffect(
     () => runtime.projectStore.subscribe((state, previousState) => {
@@ -95,6 +99,7 @@ export function usePianoRollProjectState(
     selectedInstrumentId,
     selectionAvailable,
     selectedNotes,
+    selectedMarkerCount,
     selectInstrument,
     setSelectionAvailable,
     handleSelectionChange,

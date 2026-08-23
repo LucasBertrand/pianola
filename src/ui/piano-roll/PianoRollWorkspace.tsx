@@ -20,6 +20,9 @@ import {
 import {
   getMeasureCount,
 } from "../../domain/transport/time-map";
+import type {
+  LoopRegion,
+} from "../../domain/transport/transport";
 import {
   createTimeMapMarkerFlags,
 } from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
@@ -183,6 +186,10 @@ export function PianoRollWorkspace({
     () => new MutableRenderSignal<TimelineDragPreview | null>(null),
     [],
   );
+  const loopDragPreview = useMemo(
+    () => new MutableRenderSignal<LoopRegion | null>(null),
+    [],
+  );
   const pendingMidiImportRef =
     useRef<MidiImportAnalysis | null>(null);
 
@@ -191,6 +198,7 @@ export function PianoRollWorkspace({
     selectedInstrumentId,
     selectionAvailable,
     selectedNotes,
+    selectedMarkerCount,
     selectInstrument: setSelectedInstrumentId,
     setSelectionAvailable,
     handleSelectionChange,
@@ -219,6 +227,9 @@ export function PianoRollWorkspace({
   const [pitchSnapSettings, setPitchSnapSettings] =
     useState<PitchSnapSettings>(
       () => runtime.pitchSnapSettings.get(),
+  );
+  const [gridResolutionTicks, setGridResolutionTicks] = useState(
+    () => runtime.gridResolutionTicks.get(),
   );
   const activeClip = getActiveClip(projectState);
 
@@ -299,6 +310,12 @@ export function PianoRollWorkspace({
   useEffect(
     () => runtime.pitchSnapSettings.subscribe(() => {
       setPitchSnapSettings(runtime.pitchSnapSettings.get());
+    }),
+    [runtime],
+  );
+  useEffect(
+    () => runtime.gridResolutionTicks.subscribe(() => {
+      setGridResolutionTicks(runtime.gridResolutionTicks.get());
     }),
     [runtime],
   );
@@ -603,6 +620,10 @@ export function PianoRollWorkspace({
     >
       <EditorHeader
         projectState={projectState}
+        loopDragPreview={loopDragPreview}
+        selectedNotes={selectedNotes}
+        selectedMarkerCount={selectedMarkerCount}
+        gridResolutionTicks={gridResolutionTicks}
         playbackStatus={playbackStatus}
         midiInputRef={importMidiInputRef}
         saveStatus={autosave.status}
@@ -708,6 +729,7 @@ export function PianoRollWorkspace({
                 )}
                 selection={runtime.selection}
                 timelineDragPreview={timelineDragPreview}
+                loopDragPreview={loopDragPreview}
                 interactionStrategyRef={interactionStrategyRef}
                 onLoopCommit={handleLoopRegionCommit}
                 onOpenMarker={timeMapMarkers.openMarker}
@@ -750,7 +772,6 @@ export function PianoRollWorkspace({
           </div>
 
           <PianoRollViewportControls
-            selectedNotes={selectedNotes}
             timelinePositionRef={barLabelRef}
             timelineTimeRef={timelineTimeRef}
             horizontalScrollRef={scrollInputRef}

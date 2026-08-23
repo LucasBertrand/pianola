@@ -5,13 +5,19 @@ import React, {
 import type {
   PlaybackStatus,
 } from "../../audio/playback-model";
+import type {
+  Note,
+} from "../../domain/notes/note";
+import type {
+  LoopRegion,
+} from "../../domain/transport/transport";
+import type {
+  ReadonlyRenderSignal,
+} from "../../editor/model/render-signal";
 import {
   getActiveClip,
   type ProjectState,
 } from "../../domain/project/project-document";
-import {
-  MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
-} from "../../project-io/native/version";
 import {
   MasterGainControl,
 } from "../transport/MasterGainControl";
@@ -24,9 +30,19 @@ import {
 import type {
   ProjectSaveStatus,
 } from "../../use-cases/persistence/project-autosave";
+import {
+  detectChordsFromNotes,
+} from "../../music/chord-recognition";
+import {
+  formatLoopDuration,
+} from "./editor-context-format";
 
 export interface EditorHeaderProps {
   readonly projectState: ProjectState;
+  readonly loopDragPreview: ReadonlyRenderSignal<LoopRegion | null>;
+  readonly selectedNotes: readonly Note[];
+  readonly selectedMarkerCount: number;
+  readonly gridResolutionTicks: number;
   readonly playbackStatus: PlaybackStatus;
   readonly midiInputRef: RefObject<HTMLInputElement | null>;
   readonly saveStatus: ProjectSaveStatus;
@@ -49,6 +65,10 @@ export interface EditorHeaderProps {
 
 export function EditorHeader({
   projectState,
+  loopDragPreview,
+  selectedNotes,
+  selectedMarkerCount,
+  gridResolutionTicks,
   playbackStatus,
   midiInputRef: importMidiInputRef,
   saveStatus,
@@ -66,8 +86,44 @@ export function EditorHeader({
   onMasterMuteToggle: handleMasterMuteToggle,
   onMasterTuningCommit: handleMasterTuningCommit,
 }: EditorHeaderProps): React.JSX.Element {
+  const [previewLoop, setPreviewLoop] = React.useState(
+    () => loopDragPreview.get(),
+  );
   const activeClip = getActiveClip(projectState);
   const saveStatusLabel = formatSaveStatus(saveStatus);
+  const chordName = React.useMemo(
+    () => detectChordsFromNotes(selectedNotes),
+    [selectedNotes],
+  );
+  const loopDuration = React.useMemo(
+    () => formatLoopDuration(
+      projectState.clock.ppqn,
+      activeClip.timeline,
+      previewLoop ?? activeClip.transportSettings.loop,
+      gridResolutionTicks,
+    ),
+    [
+      activeClip.timeline,
+      activeClip.transportSettings.loop,
+      gridResolutionTicks,
+      previewLoop,
+      projectState.clock.ppqn,
+    ],
+  );
+  const selectionLabel = formatSelectionLabel(
+    selectedNotes.length,
+    selectedMarkerCount,
+  );
+
+  React.useEffect(() => {
+    const updatePreview = (): void => {
+      setPreviewLoop(loopDragPreview.get());
+    };
+    const unsubscribe = loopDragPreview.subscribe(updatePreview);
+
+    updatePreview();
+    return unsubscribe;
+  }, [loopDragPreview]);
 
   return (
     <header className="app-header">
@@ -76,12 +132,14 @@ export function EditorHeader({
         aria-label="Project actions and transport"
       >
         <ProjectMenu
+          projectTitle={projectState.title}
           midiInputRef={importMidiInputRef}
           onReturnHome={handleCloseProject}
           onExportProject={handleExportProject}
           onOpenMidiImport={handleOpenMidiImport}
           onExportMidi={handleExportMidi}
           onMidiFileChange={handleMidiFileChange}
+          onProjectTitleCommit={handleProjectTitleCommit}
         />
         <TransportControls
           status={playbackStatus}
@@ -92,36 +150,45 @@ export function EditorHeader({
           onTogglePlayback={togglePlayback}
           onToggleLoop={handleToggleLoop}
         />
-        <span
-          className={`project-save-status is-${saveStatus.state}`}
-          role={saveStatus.state === "error" ? "alert" : "status"}
-          aria-label={saveStatusLabel}
-          title={saveStatus.state === "error"
-            ? `${saveStatusLabel}: ${saveStatus.error.message}`
-            : saveStatusLabel}
-        />
-      </section>
-
-      <section
-        className="center"
-        aria-label="Active project"
-      >
-        <input
-          key={projectState.title}
-          className="project-title-input"
-          type="text"
-          maxLength={MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH}
-          defaultValue={projectState.title}
-          aria-label="Project title"
-          onBlur={(event) => {
-            handleProjectTitleCommit(event.currentTarget);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.currentTarget.blur();
+        <div className="editor-context-panel" aria-label="Editor context">
+          <span
+            className={`project-save-status is-${saveStatus.state}`}
+            role={saveStatus.state === "error" ? "alert" : "status"}
+            aria-label={saveStatusLabel}
+            title={saveStatus.state === "error"
+              ? `${saveStatusLabel}: ${saveStatus.error.message}`
+              : saveStatusLabel}
+          />
+          <div
+            className={
+              `editor-context-item is-loop${
+                activeClip.transportSettings.loopEnabled
+                  ? ""
+                  : " is-inactive"
+              }`
             }
-          }}
-        />
+            title="Loop duration"
+          >
+            <output>{loopDuration.musical}</output>
+            <output className="editor-context-secondary">
+              {loopDuration.absolute}
+            </output>
+          </div>
+          <div
+            className="editor-context-item is-selection"
+            title="Selection content"
+          >
+            <output>{selectionLabel}</output>
+            <small>Selection</small>
+          </div>
+          <div
+            className="editor-context-item is-detection"
+            title="Chords detected from selected notes"
+          >
+            <output>{chordName ?? "—"}</output>
+            <small>Chords detection</small>
+          </div>
+        </div>
       </section>
 
       <section className="right" aria-label="Master bus">
@@ -139,6 +206,17 @@ export function EditorHeader({
       </section>
     </header>
   );
+}
+
+function formatSelectionLabel(
+  noteCount: number,
+  markerCount: number,
+): string {
+  const notes = `${String(noteCount)} note${noteCount === 1 ? "" : "s"}`;
+  const markers =
+    `${String(markerCount)} marker${markerCount === 1 ? "" : "s"}`;
+
+  return `${notes} • ${markers}`;
 }
 
 function formatSaveStatus(status: ProjectSaveStatus): string {
