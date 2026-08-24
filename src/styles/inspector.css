@@ -135,7 +135,7 @@
   --instrument-color: var(--color-accent-primary);
   min-height: 0;
   grid-template-columns:
-    24px minmax(0, max-content) minmax(0, 1fr) repeat(4, 30px);
+    24px minmax(0, 1fr) repeat(4, 30px);
   grid-template-rows: auto;
 }
 
@@ -166,20 +166,22 @@
   background: transparent;
 }
 
-.clip-card .clip-settings-button {
-  grid-column: 7;
+.clip-card .clip-select-all-button {
+  grid-column: 3;
 }
 
 .clip-card .instrument-duplicate-button {
-  grid-column: 6;
+  grid-column: 4;
 }
 
-.clip-card .clip-play-button {
+.clip-card .clip-settings-button {
   grid-column: 5;
 }
 
-.clip-card .clip-select-all-button {
-  grid-column: 4;
+.clip-card .clip-play-button {
+  grid-column: 6;
+  border-color: var(--instrument-color);
+  color: var(--instrument-color);
 }
 
 .clip-play-button svg {
@@ -202,16 +204,12 @@
   inset: 0;
   border-radius: inherit;
   background:
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       color-mix(in srgb, var(--color-surface-deepest) 38%, transparent),
-      color-mix(in srgb, var(--color-surface-deepest) 54%, transparent)
-    ),
-    linear-gradient(
-      90deg,
+      color-mix(in srgb, var(--color-surface-deepest) 54%, transparent)),
+    linear-gradient(90deg,
       color-mix(in srgb, var(--instrument-color) 8%, transparent),
-      transparent 68%
-    );
+      transparent 68%);
   opacity: 0;
   transition: opacity 180ms ease;
 }
@@ -224,27 +222,23 @@
   inset: 0;
   overflow: hidden;
   border-radius: inherit;
-  background: color-mix(
-    in srgb,
-    var(--instrument-color) 20%,
-    transparent
-  );
+  background: color-mix(in srgb,
+      var(--instrument-color) 20%,
+      transparent);
   clip-path: inset(0 100% 0 0);
   will-change: clip-path;
 }
 
 
-.clip-card > :not(.clip-playhead-background):not(.clip-playback-progress) {
+.clip-card> :not(.clip-playhead-background):not(.clip-playback-progress) {
   position: relative;
   z-index: 1;
 }
 
 .project-instrument-card.clip-card.is-playing {
-  border-color: color-mix(
-    in srgb,
-    var(--instrument-color) 68%,
-    var(--color-border-control)
-  );
+  border-color: color-mix(in srgb,
+      var(--instrument-color) 68%,
+      var(--color-border-control));
 }
 
 .project-instrument-card {
@@ -267,7 +261,7 @@
   min-height: 0;
   padding-left: 11px;
   grid-template-columns:
-    24px minmax(0, max-content) minmax(0, 1fr) repeat(4, 30px);
+    24px minmax(0, 1fr) repeat(4, 30px);
   grid-template-rows: auto;
   gap: 6px;
 }
@@ -340,6 +334,7 @@
   max-width: 100%;
   overflow: hidden;
   justify-self: start;
+  grid-column: 2;
 }
 
 .instrument-identity {
@@ -492,9 +487,9 @@
 }
 
 .project-instrument-card .clip-play-button.is-active {
-  border-color: var(--color-success-strong);
-  background: var(--color-success-soft);
-  color: var(--color-accent-success);
+  border-color: var(--instrument-color);
+  background: color-mix(in srgb, var(--instrument-color) 20%, transparent);
+  color: var(--instrument-color);
 }
 
 .project-instrument-card button:disabled {
