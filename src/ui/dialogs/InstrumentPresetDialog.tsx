@@ -342,21 +342,6 @@ export function InstrumentPresetDialog({
                     )}
                   </select>
                 </label>
-                <label className="instrument-editor-toggle-control">
-                  <span>Free phase</span>
-                  <input
-                    type="checkbox"
-                    checked={instrument.oscillatorFreePhase}
-                    onChange={(event) => {
-                      update({
-                        oscillatorFreePhase: event.currentTarget.checked,
-                      });
-                    }}
-                  />
-                  <output>
-                    {instrument.oscillatorFreePhase ? "On" : "Off"}
-                  </output>
-                </label>
                 <label className="instrument-editor-select-control">
                   <span>Polyphony</span>
                   <select
@@ -377,7 +362,7 @@ export function InstrumentPresetDialog({
                       <option key={value} value={value}>{value}</option>
                     ))}
                   </select>
-                </label>
+                </label>                               
                 <ParameterControl
                   label="Detune"
                   value={instrument.oscillatorDetuneCents}
@@ -398,6 +383,21 @@ export function InstrumentPresetDialog({
                     onChange={(value) => update({ pulseWidth: value })}
                   />
                 ) : null}
+                <label className="instrument-editor-toggle-control">
+                  <span>Free phase</span>
+                  <input
+                    type="checkbox"
+                    checked={instrument.oscillatorFreePhase}
+                    onChange={(event) => {
+                      update({
+                        oscillatorFreePhase: event.currentTarget.checked,
+                      });
+                    }}
+                  />
+                  <output>
+                    {instrument.oscillatorFreePhase ? "On" : "Off"}
+                  </output>
+                </label> 
               </div>
               <WaveformVisual
                 waveform={instrument.oscillatorWaveform}

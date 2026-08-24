@@ -341,8 +341,6 @@
 
 .instrument-editor-dialog .application-dialog-heading {
   margin-bottom: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .clip-editor-dialog .application-dialog-heading {
@@ -653,11 +651,6 @@
 .instrument-editor-envelope-controls {
   display: grid;
   gap: 2px;
-}
-
-.instrument-editor-envelope .instrument-editor-parameter:last-child {
-  margin-top: 4px;
-  padding-top: 4px;
 }
 
 .instrument-editor-dialog > .application-dialog-actions {
