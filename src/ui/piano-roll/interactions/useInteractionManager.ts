@@ -76,7 +76,7 @@ export function useInteractionManager(
     let longPressOriginX = 0;
     let longPressOriginY = 0;
     let longPressEvent: PointerSample | null = null;
-    let viewportGestureActive = false;
+    let viewportInteractionActive = false;
     let gestureFirstPointerId = -1;
     let gestureSecondPointerId = -1;
     let gestureStartTimeStamp = 0;
@@ -85,12 +85,24 @@ export function useInteractionManager(
     let gestureMoved = false;
     let gestureUsesTouchPointers = false;
 
-    const endViewportGesture = (): void => {
-      if (!viewportGestureActive) {
+    const beginViewportInteraction = (): void => {
+      if (viewportInteractionActive) {
         return;
       }
 
-      viewportGestureActive = false;
+      // Playback following must not page the grid underneath an active
+      // pointer. The interaction remains suspended until the last pointer
+      // finishes, including across a transition into a pinch gesture.
+      viewportInteractionActive = true;
+      onHorizontalViewportInteractionStart();
+    };
+
+    const endViewportInteraction = (): void => {
+      if (!viewportInteractionActive) {
+        return;
+      }
+
+      viewportInteractionActive = false;
       onHorizontalViewportInteractionEnd();
     };
 
@@ -187,8 +199,6 @@ export function useInteractionManager(
         bounds.left,
         bounds.top,
       );
-      viewportGestureActive = true;
-      onHorizontalViewportInteractionStart();
       strategyRef.current?.onGesture(gestureEvents);
     };
 
@@ -297,6 +307,10 @@ export function useInteractionManager(
       activePointers.set(event.pointerId, sample);
       pointerOrigins.set(event.pointerId, sample);
 
+      if (activePointers.size === 1) {
+        beginViewportInteraction();
+      }
+
       if (!overlay.hasPointerCapture(event.pointerId)) {
         overlay.setPointerCapture(event.pointerId);
       }
@@ -398,8 +412,6 @@ export function useInteractionManager(
           window.cancelAnimationFrame(gestureAnimationFrameId);
           gestureAnimationFrameId = null;
         }
-
-        endViewportGesture();
       }
 
       activePointers.delete(event.pointerId);
@@ -415,6 +427,7 @@ export function useInteractionManager(
         pinchGesture.reset();
         suppressSinglePointer = false;
         gestureEvents.length = 0;
+        endViewportInteraction();
       } else if (pinchGesture.active) {
         pinchGesture.reset();
         suppressSinglePointer = true;
@@ -449,9 +462,12 @@ export function useInteractionManager(
         pointerOrigins.delete(event.pointerId);
         cancelLongPress();
         strategyRef.current?.cancel();
-        endViewportGesture();
         pinchGesture.reset();
         suppressSinglePointer = activePointers.size > 0;
+
+        if (activePointers.size === 0) {
+          endViewportInteraction();
+        }
 
         if (wasViewportGesture) {
           twoPointerDoubleTap.reset();
@@ -476,9 +492,9 @@ export function useInteractionManager(
         gestureAnimationFrameId = null;
       }
       strategyRef.current?.cancel();
-      endViewportGesture();
       activePointers.clear();
       pointerOrigins.clear();
+      endViewportInteraction();
       twoPointerDoubleTap.reset();
       unbindPointerEvents();
     };
