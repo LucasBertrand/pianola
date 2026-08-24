@@ -314,13 +314,35 @@
 }
 
 .instrument-editor-dialog {
-  width: min(92vw, 720px);
-  max-height: min(90vh, 760px);
-  overflow: auto;
+  width: min(100%, 920px);
+  max-height: calc(100dvh - 40px);
+  padding: 22px;
+  overflow: hidden auto;
+  scrollbar-color: var(--color-border-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.instrument-editor-dialog::-webkit-scrollbar {
+  width: 10px;
+}
+
+.instrument-editor-dialog::-webkit-scrollbar-track,
+.instrument-editor-dialog::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.instrument-editor-dialog::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--color-border-strong);
+  background-clip: content-box;
 }
 
 .instrument-editor-dialog .application-dialog-heading {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .clip-editor-dialog .application-dialog-heading {
@@ -336,7 +358,7 @@
 
 .instrument-editor-color-control {
   display: grid;
-  margin-bottom: 12px;
+  margin: 0;
   align-content: start;
   gap: 6px;
   color: var(--color-text-muted);
@@ -345,7 +367,8 @@
 }
 
 .instrument-editor-color-control input {
-  width: 44px;
+  width: 100%;
+  max-width: 46px;
   height: 44px;
   padding: 2px;
   border: 1px solid var(--color-border-control);
@@ -360,12 +383,22 @@
 
 .instrument-editor-identity {
   display: grid;
-  grid-template-columns: 52px minmax(150px, 1fr) 120px minmax(140px, 1fr);
-  gap: 10px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-deep);
+  grid-template-columns:
+    52px
+    minmax(180px, 1.1fr)
+    minmax(124px, 0.7fr)
+    minmax(260px, 1.6fr);
+  align-items: start;
+  gap: 12px;
 }
 
 .instrument-editor-identity .instrument-preset-dialog-control {
-  margin-bottom: 12px;
+  margin: 0;
 }
 
 .instrument-preset-manager {
@@ -373,24 +406,30 @@
 }
 
 .instrument-preset-manager .instrument-preset-dialog-control {
-  margin-bottom: 5px;
+  margin-bottom: 7px;
 }
 
-.instrument-preset-manager-actions,
+.instrument-preset-manager-actions {
+  display: grid;
+  grid-auto-columns: minmax(max-content, 1fr);
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
 .instrument-preset-action-buttons {
   display: flex;
-  gap: 5px;
+  gap: 6px;
 }
 
 .instrument-preset-manager-actions button,
 .instrument-preset-action-buttons button {
-  min-height: 25px;
-  padding: 0 8px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--color-border-control);
   border-radius: 6px;
   background: var(--color-surface-raised);
   color: var(--color-text-control);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -414,14 +453,14 @@
 
 .instrument-preset-action-panel {
   display: grid;
-  margin: 0 0 12px 62px;
-  padding: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
   border: 1px solid var(--color-border-primary);
   border-radius: 9px;
   background: var(--color-surface-information);
   color: var(--color-text-secondary);
-  font-size: 10px;
-  gap: 8px;
+  font-size: 11px;
+  gap: 10px;
 }
 
 .instrument-preset-action-panel .instrument-preset-dialog-control {
@@ -434,30 +473,110 @@
 
 .instrument-preset-action-error {
   color: var(--color-accent-danger);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .instrument-editor-modules {
   display: grid;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  align-items: stretch;
+  gap: 12px;
 }
 
 .instrument-editor-module {
+  --instrument-control-label-width: 92px;
+  --instrument-control-output-width: 62px;
+  display: grid;
   min-width: 0;
   margin: 0;
-  padding: 10px;
+  padding: 13px 14px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 9px;
+  border-radius: 12px;
   background: var(--color-surface-deep);
+  align-content: start;
+  gap: 2px;
 }
 
 .instrument-editor-module legend {
-  padding: 0 5px;
+  padding: 0 7px;
   color: var(--color-text-secondary);
   font-size: 10px;
   font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.instrument-editor-module-layout.has-visual {
+  --instrument-control-label-width: 74px;
+  --instrument-control-output-width: 52px;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 106px;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.instrument-editor-control-list {
+  min-width: 0;
+}
+
+.instrument-editor-visual {
+  display: grid;
+  min-width: 0;
+  min-height: 92px;
+  padding: 7px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 8px;
+  background: var(--color-surface-inset);
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 3px;
+}
+
+.instrument-editor-visual > span {
+  color: var(--color-text-muted);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.instrument-editor-visual svg {
+  display: block;
+  width: 100%;
+  max-height: 118px;
+  overflow: visible;
+}
+
+.instrument-editor-visual-grid {
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.instrument-editor-visual-guide {
+  fill: none;
+  opacity: 0.5;
+  stroke: var(--color-border);
+  stroke-dasharray: 2 3;
+  stroke-width: 1;
+}
+
+.instrument-editor-visual-line {
+  fill: none;
+  stroke: var(--color-accent-primary-bright);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.instrument-editor-visual-node {
+  fill: var(--color-surface-inset);
+  stroke: var(--color-accent-primary-bright);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .instrument-editor-select-control,
@@ -465,22 +584,19 @@
 .instrument-editor-parameter {
   display: grid;
   min-width: 0;
-  min-height: 30px;
-  grid-template-columns: minmax(64px, auto) minmax(0, 1fr) 58px;
+  min-height: 36px;
+  grid-template-columns:
+    var(--instrument-control-label-width)
+    minmax(0, 1fr)
+    var(--instrument-control-output-width);
   align-items: center;
-  gap: 7px;
+  gap: 9px;
   color: var(--color-text-muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .instrument-editor-toggle-control {
-  display: flex;
-  min-height: 30px;
-  align-items: center;
-  color: var(--color-text-muted);
-  font-size: 9px;
   cursor: pointer;
-  gap: 7px;
 }
 
 .instrument-editor-toggle-control input {
@@ -488,35 +604,27 @@
   height: 16px;
   margin: 0;
   accent-color: var(--color-accent-primary);
+  justify-self: start;
+}
+
+.instrument-editor-toggle-control output {
+  color: var(--color-text-control);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  text-align: right;
 }
 
 .instrument-editor-select-control {
-  grid-template-columns: minmax(64px, 1fr) minmax(90px, 1.2fr);
-}
-
-.instrument-editor-oscillator-waveform-row {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-}
-
-.instrument-editor-oscillator-waveform-row
-  .instrument-editor-select-control {
-  grid-template-columns: minmax(60px, auto) minmax(72px, 1fr);
-}
-
-.instrument-editor-oscillator-waveform-row
-  .instrument-editor-toggle-control {
-  white-space: nowrap;
+  grid-template-columns:
+    var(--instrument-control-label-width)
+    minmax(90px, 1fr);
 }
 
 .instrument-editor-select-control select {
   width: 100%;
   min-width: 0;
-  height: 26px;
-  padding: 0 5px;
+  height: 30px;
+  padding: 0 8px;
   border: 1px solid var(--color-border-control);
   border-radius: 6px;
   background: var(--color-surface-inset);
@@ -536,7 +644,7 @@
   overflow: hidden;
   color: var(--color-text-control);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 8px;
+  font-size: 9px;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -544,39 +652,15 @@
 
 .instrument-editor-envelope-controls {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: end;
-  gap: 8px;
+  gap: 2px;
 }
 
-.instrument-editor-envelope .instrument-editor-parameter {
-  min-height: 0;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 18px 112px 18px;
-  justify-items: center;
-  gap: 4px;
+.instrument-editor-envelope .instrument-editor-parameter:last-child {
+  margin-top: 4px;
+  padding-top: 4px;
 }
 
-.instrument-editor-envelope .instrument-editor-parameter > span {
-  width: 100%;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 8px;
-  font-weight: 650;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.instrument-editor-envelope .instrument-editor-parameter input {
-  width: 24px;
-  height: 112px;
-  writing-mode: vertical-lr;
-  direction: rtl;
-}
-
-.instrument-editor-envelope .instrument-editor-parameter output {
-  width: 100%;
-  text-align: center;
+.instrument-editor-dialog > .application-dialog-actions {
+  padding-top: 16px;
 }
 

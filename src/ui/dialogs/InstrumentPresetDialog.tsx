@@ -167,20 +167,19 @@ export function InstrumentPresetDialog({
               }}
             />
           </label>
-          <label className="instrument-preset-dialog-control">
+          <label className="instrument-preset-dialog-control instrument-editor-name-control">
             <span>Name</span>
             <input
               type="text"
               value={instrumentName}
               maxLength={MAXIMUM_INSTRUMENT_NAME_LENGTH}
-              autoFocus
               autoComplete="off"
               onChange={(event) => {
                 onInstrumentNameChange(event.currentTarget.value);
               }}
             />
           </label>
-          <label className="instrument-preset-dialog-control">
+          <label className="instrument-preset-dialog-control instrument-editor-engine-control">
             <span>Engine</span>
             <select value="subtractive" disabled>
               <option value="subtractive">Subtractive</option>
@@ -321,77 +320,90 @@ export function InstrumentPresetDialog({
         <div className="instrument-editor-modules">
           <fieldset className="instrument-editor-module">
             <legend>Oscillator</legend>
-            <div className="instrument-editor-oscillator-waveform-row">
-              <label className="instrument-editor-select-control">
-                <span>Waveform</span>
-                <select
-                  value={instrument.oscillatorWaveform}
-                  onChange={(event) => {
-                    update({
-                      oscillatorWaveform:
-                        event.currentTarget.value as OscillatorWaveform,
-                    });
-                  }}
-                >
-                  {INSTRUMENT_CONSTANTS.oscillatorWaveformOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="instrument-editor-toggle-control">
-                <input
-                  type="checkbox"
-                  checked={instrument.oscillatorFreePhase}
-                  onChange={(event) => {
-                    update({ oscillatorFreePhase: event.currentTarget.checked });
-                  }}
+            <div className="instrument-editor-module-layout has-visual">
+              <div className="instrument-editor-control-list">
+                <label className="instrument-editor-select-control">
+                  <span>Waveform</span>
+                  <select
+                    value={instrument.oscillatorWaveform}
+                    onChange={(event) => {
+                      update({
+                        oscillatorWaveform:
+                          event.currentTarget.value as OscillatorWaveform,
+                      });
+                    }}
+                  >
+                    {INSTRUMENT_CONSTANTS.oscillatorWaveformOptions.map(
+                      (option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label className="instrument-editor-toggle-control">
+                  <span>Free phase</span>
+                  <input
+                    type="checkbox"
+                    checked={instrument.oscillatorFreePhase}
+                    onChange={(event) => {
+                      update({
+                        oscillatorFreePhase: event.currentTarget.checked,
+                      });
+                    }}
+                  />
+                  <output>
+                    {instrument.oscillatorFreePhase ? "On" : "Off"}
+                  </output>
+                </label>
+                <label className="instrument-editor-select-control">
+                  <span>Polyphony</span>
+                  <select
+                    value={instrument.polyphony}
+                    onChange={(event) => {
+                      update({ polyphony: Number(event.currentTarget.value) });
+                    }}
+                  >
+                    {Array.from(
+                      {
+                        length:
+                          MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+                          - MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+                          + 1,
+                      },
+                      (_, index) => MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY + index,
+                    ).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <ParameterControl
+                  label="Detune"
+                  value={instrument.oscillatorDetuneCents}
+                  minimum={-1_200}
+                  maximum={1_200}
+                  step={1}
+                  suffix=" ct"
+                  onChange={(value) => update({ oscillatorDetuneCents: value })}
                 />
-                <span>Free phase</span>
-              </label>
-            </div>
-            <label className="instrument-editor-select-control">
-              <span>Polyphony</span>
-              <select
-                value={instrument.polyphony}
-                onChange={(event) => {
-                  update({ polyphony: Number(event.currentTarget.value) });
-                }}
-              >
-                {Array.from(
-                  {
-                    length:
-                      MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-                      - MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-                      + 1,
-                  },
-                  (_, index) => MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY + index,
-                ).map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-            <ParameterControl
-              label="Detune"
-              value={instrument.oscillatorDetuneCents}
-              minimum={-1_200}
-              maximum={1_200}
-              step={1}
-              suffix=" ct"
-              onChange={(value) => update({ oscillatorDetuneCents: value })}
-            />
-            {instrument.oscillatorWaveform === "square" ? (
-              <ParameterControl
-                label="Pulse width"
-                value={instrument.pulseWidth}
-                minimum={INSTRUMENT_CONSTANTS.minimumPulseWidth}
-                maximum={INSTRUMENT_CONSTANTS.maximumPulseWidth}
-                step={EDITOR_CONSTANTS.pulseWidthStep}
-                format={(value) => `${Math.round(value * 100)}%`}
-                onChange={(value) => update({ pulseWidth: value })}
+                {instrument.oscillatorWaveform === "square" ? (
+                  <ParameterControl
+                    label="Pulse width"
+                    value={instrument.pulseWidth}
+                    minimum={INSTRUMENT_CONSTANTS.minimumPulseWidth}
+                    maximum={INSTRUMENT_CONSTANTS.maximumPulseWidth}
+                    step={EDITOR_CONSTANTS.pulseWidthStep}
+                    format={(value) => `${Math.round(value * 100)}%`}
+                    onChange={(value) => update({ pulseWidth: value })}
+                  />
+                ) : null}
+              </div>
+              <WaveformVisual
+                waveform={instrument.oscillatorWaveform}
+                pulseWidth={instrument.pulseWidth}
               />
-            ) : null}
+            </div>
           </fieldset>
 
           <fieldset className="instrument-editor-module">
@@ -524,15 +536,288 @@ function EnvelopeControls({
   return (
     <fieldset className="instrument-editor-module instrument-editor-envelope">
       <legend>{title}</legend>
-      <div className="instrument-editor-envelope-controls">
-        <ParameterControl label="Attack" value={envelope.attackSeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(attackSeconds) => onChange({ ...envelope, attackSeconds })} />
-        <ParameterControl label="Decay" value={envelope.decaySeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(decaySeconds) => onChange({ ...envelope, decaySeconds })} />
-        <ParameterControl label="Sustain" value={envelope.sustainLevel} minimum={0} maximum={1} step={EDITOR_CONSTANTS.sustainStep} format={(value) => `${Math.round(value * 100)}%`} onChange={(sustainLevel) => onChange({ ...envelope, sustainLevel })} />
-        <ParameterControl label="Release" value={envelope.releaseSeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(releaseSeconds) => onChange({ ...envelope, releaseSeconds })} />
-        <ParameterControl label="Curve" value={envelope.curve} minimum={INSTRUMENT_CONSTANTS.minimumEnvelopeCurve} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeCurve} step={EDITOR_CONSTANTS.envelopeCurveStep} format={(value) => `${Math.round(value * 100)}%`} onChange={(curve) => onChange({ ...envelope, curve })} />
+      <div className="instrument-editor-module-layout has-visual">
+        <div className="instrument-editor-envelope-controls">
+          <ParameterControl
+            label="Attack"
+            value={envelope.attackSeconds}
+            minimum={0}
+            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds}
+            step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
+            scale="power"
+            format={formatMilliseconds}
+            onChange={(attackSeconds) => onChange({
+              ...envelope,
+              attackSeconds,
+            })}
+          />
+          <ParameterControl
+            label="Decay"
+            value={envelope.decaySeconds}
+            minimum={0}
+            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds}
+            step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
+            scale="power"
+            format={formatMilliseconds}
+            onChange={(decaySeconds) => onChange({
+              ...envelope,
+              decaySeconds,
+            })}
+          />
+          <ParameterControl
+            label="Sustain"
+            value={envelope.sustainLevel}
+            minimum={0}
+            maximum={1}
+            step={EDITOR_CONSTANTS.sustainStep}
+            format={(value) => `${Math.round(value * 100)}%`}
+            onChange={(sustainLevel) => onChange({
+              ...envelope,
+              sustainLevel,
+            })}
+          />
+          <ParameterControl
+            label="Release"
+            value={envelope.releaseSeconds}
+            minimum={0}
+            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds}
+            step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
+            scale="power"
+            format={formatMilliseconds}
+            onChange={(releaseSeconds) => onChange({
+              ...envelope,
+              releaseSeconds,
+            })}
+          />
+          <ParameterControl
+            label="Curve"
+            value={envelope.curve}
+            minimum={INSTRUMENT_CONSTANTS.minimumEnvelopeCurve}
+            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeCurve}
+            step={EDITOR_CONSTANTS.envelopeCurveStep}
+            format={(value) => `${Math.round(value * 100)}%`}
+            onChange={(curve) => onChange({ ...envelope, curve })}
+          />
+        </div>
+        <EnvelopeVisual envelope={envelope} />
       </div>
     </fieldset>
   );
+}
+
+interface WaveformVisualProps {
+  readonly waveform: OscillatorWaveform;
+  readonly pulseWidth: number;
+}
+
+function WaveformVisual({
+  waveform,
+  pulseWidth,
+}: WaveformVisualProps): React.JSX.Element {
+  const title = waveform === "square"
+    ? `Square waveform at ${Math.round(pulseWidth * 100)}% pulse width`
+    : `${waveform} waveform`;
+
+  return (
+    <div className="instrument-editor-visual">
+      <span>Wave</span>
+      <svg viewBox="0 0 128 72" role="img" aria-label={title}>
+        <title>{title}</title>
+        <path className="instrument-editor-visual-grid" d="M6 36H122" />
+        <polyline
+          className="instrument-editor-visual-line"
+          points={createWaveformPoints(waveform, pulseWidth)}
+        />
+      </svg>
+    </div>
+  );
+}
+
+interface EnvelopeVisualProps {
+  readonly envelope: SubtractiveSynthConfig["envelope"];
+}
+
+function EnvelopeVisual({
+  envelope,
+}: EnvelopeVisualProps): React.JSX.Element {
+  const preview = createEnvelopePreview(envelope);
+
+  return (
+    <div className="instrument-editor-visual">
+      <span>ADSR</span>
+      <svg viewBox="0 0 132 80" role="img" aria-label="Envelope preview">
+        <title>Envelope preview</title>
+        <path className="instrument-editor-visual-grid" d="M8 66H124" />
+        {preview.boundaries.map((x) => (
+          <path
+            key={x}
+            className="instrument-editor-visual-guide"
+            d={`M${x} 10V66`}
+          />
+        ))}
+        <polyline
+          className="instrument-editor-visual-line"
+          points={preview.points}
+        />
+        {preview.nodes.map(([x, y]) => (
+          <circle
+            key={`${x}-${y}`}
+            className="instrument-editor-visual-node"
+            cx={x}
+            cy={y}
+            r="2.5"
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function formatMilliseconds(seconds: number): string {
+  return `${Math.round(seconds * 1_000)} ms`;
+}
+
+function createWaveformPoints(
+  waveform: OscillatorWaveform,
+  pulseWidth: number,
+): string {
+  const sampleCount = 97;
+
+  return Array.from({ length: sampleCount }, (_, index) => {
+    const progress = index / (sampleCount - 1);
+    const phase = progress * 2;
+    const cycle = phase % 1;
+    let value: number;
+
+    switch (waveform) {
+      case "sine":
+        value = Math.sin(phase * Math.PI * 2);
+        break;
+      case "triangle":
+        value = 1 - 4 * Math.abs(cycle - 0.5);
+        break;
+      case "sawtooth":
+        value = 1 - 2 * cycle;
+        break;
+      case "square":
+        value = cycle < pulseWidth ? 1 : -1;
+        break;
+    }
+
+    const x = 6 + progress * 116;
+    const y = 36 - value * 21;
+
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(" ");
+}
+
+function createEnvelopePreview(
+  envelope: SubtractiveSynthConfig["envelope"],
+): {
+  readonly points: string;
+  readonly boundaries: readonly number[];
+  readonly nodes: ReadonlyArray<readonly [number, number]>;
+} {
+  const left = 8;
+  const right = 124;
+  const top = 10;
+  const bottom = 66;
+  const attackWeight = envelopeStageWeight(
+    envelope.attackSeconds,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+  );
+  const decayWeight = envelopeStageWeight(
+    envelope.decaySeconds,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds,
+  );
+  const sustainWeight = 0.24;
+  const releaseWeight = envelopeStageWeight(
+    envelope.releaseSeconds,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+  );
+  const weightTotal =
+    attackWeight + decayWeight + sustainWeight + releaseWeight;
+  const plotWidth = right - left;
+  const attackX = left + plotWidth * attackWeight / weightTotal;
+  const decayX = attackX + plotWidth * decayWeight / weightTotal;
+  const sustainX = decayX + plotWidth * sustainWeight / weightTotal;
+  const sustainY = bottom - envelope.sustainLevel * (bottom - top);
+  const points = [
+    ...sampleEnvelopeStage(
+      left,
+      attackX,
+      bottom,
+      top,
+      envelope.curve,
+    ),
+    ...sampleEnvelopeStage(
+      attackX,
+      decayX,
+      top,
+      sustainY,
+      envelope.curve,
+    ).slice(1),
+    [sustainX, sustainY] as const,
+    ...sampleEnvelopeStage(
+      sustainX,
+      right,
+      sustainY,
+      bottom,
+      envelope.curve,
+    ).slice(1),
+  ];
+
+  return {
+    points: points
+      .map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`)
+      .join(" "),
+    boundaries: [attackX, decayX, sustainX],
+    nodes: [
+      [left, bottom],
+      [attackX, top],
+      [decayX, sustainY],
+      [sustainX, sustainY],
+      [right, bottom],
+    ],
+  };
+}
+
+function envelopeStageWeight(seconds: number, maximumSeconds: number): number {
+  const normalized = Math.max(0, Math.min(1, seconds / maximumSeconds));
+
+  return 0.14 + Math.sqrt(normalized) * 0.2;
+}
+
+function sampleEnvelopeStage(
+  startX: number,
+  endX: number,
+  startY: number,
+  endY: number,
+  curve: number,
+): ReadonlyArray<readonly [number, number]> {
+  return Array.from({ length: 17 }, (_, index) => {
+    const progress = index / 16;
+    const shapedProgress = shapeEnvelopePreviewProgress(progress, curve);
+
+    return [
+      startX + (endX - startX) * progress,
+      startY + (endY - startY) * shapedProgress,
+    ] as const;
+  });
+}
+
+function shapeEnvelopePreviewProgress(progress: number, curve: number): number {
+  if (Math.abs(curve) < 0.000_001) {
+    return progress;
+  }
+
+  const exponent = Math.abs(curve) * 5;
+
+  if (curve < 0) {
+    return Math.expm1(exponent * progress) / Math.expm1(exponent);
+  }
+
+  return -Math.expm1(-exponent * progress) / -Math.expm1(-exponent);
 }
 
 interface ParameterControlProps {
