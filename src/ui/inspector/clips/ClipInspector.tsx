@@ -15,10 +15,6 @@ import {
 import {
   useCardReorder,
 } from "../../shared/useCardReorder";
-import {
-  createShepardMotionController,
-  type ShepardMotionController,
-} from "../../shared/shepard-motion";
 import type {
   ReadonlyRenderSignal,
 } from "../../../editor/model/render-signal";
@@ -28,14 +24,6 @@ import type {
 import {
   resolveClipPlayheadVisual,
 } from "./clip-playhead-visual";
-import {
-  CLIP_SHEPARD_SETTINGS,
-  createClipShepardCssVariables,
-} from "./clip-shepard-settings";
-
-const CLIP_SHEPARD_CSS_VARIABLES = createClipShepardCssVariables(
-  CLIP_SHEPARD_SETTINGS,
-);
 
 export interface ClipInspectorProps {
   readonly projectState: ProjectState;
@@ -149,8 +137,6 @@ function ClipCard({
 }: ClipCardProps): React.JSX.Element {
   const cardRef = useRef<HTMLElement | null>(null);
   const progressRef = useRef<HTMLDivElement | null>(null);
-  const shepardPlaneRef = useRef<HTMLDivElement | null>(null);
-  const shepardMotionRef = useRef<ShepardMotionController | null>(null);
   const initiallyOwnsPlayhead = playheadPosition.get().clipId === clip.id;
 
   useEffect(() => {
@@ -174,34 +160,7 @@ function ClipCard({
     return unsubscribe;
   }, [clip.id, clip.timeline.durationTicks, playheadPosition]);
 
-  useEffect(() => {
-    const shepardPlane = shepardPlaneRef.current;
 
-    if (shepardPlane === null) {
-      return undefined;
-    }
-
-    const shepardMotion = createShepardMotionController(
-      shepardPlane,
-      CLIP_SHEPARD_SETTINGS,
-    );
-    shepardMotionRef.current = shepardMotion;
-
-    return () => {
-      shepardMotion.dispose();
-      shepardMotionRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const shepardMotion = shepardMotionRef.current;
-
-    if (playing) {
-      shepardMotion?.start();
-    } else {
-      shepardMotion?.stop();
-    }
-  }, [playing]);
 
   return (
     <article
@@ -227,13 +186,7 @@ function ClipCard({
         ref={progressRef}
         className="clip-playback-progress"
         aria-hidden="true"
-      >
-        <div
-          ref={shepardPlaneRef}
-          className="clip-playback-shepard-plane"
-          style={CLIP_SHEPARD_CSS_VARIABLES as React.CSSProperties}
-        />
-      </div>
+      />
       <button
         className="clip-reorder-handle reorder-handle"
         aria-label={`Move ${clip.name}`}

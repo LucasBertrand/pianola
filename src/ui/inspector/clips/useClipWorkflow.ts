@@ -12,6 +12,9 @@ import {
   createDefaultTransportState,
 } from "../../../domain/transport/transport";
 import {
+  RENDERING_CONSTANTS,
+} from "../../../config/rendering-config";
+import {
   createDefaultClipTimeline,
   DEFAULT_CLIP_COLOR,
   DEFAULT_MEASURE_COUNT,
@@ -82,11 +85,16 @@ export function useClipWorkflow({
     }
 
     clipSequenceRef.current += 1;
+    const color = RENDERING_CONSTANTS.userInstrumentColors[
+      state.clipOrder.length % RENDERING_CONSTANTS.userInstrumentColors.length
+    ] ?? DEFAULT_CLIP_COLOR;
+
     const clip = createEmptyClip(
       state.instrumentOrder,
       state.clock,
       state.clipOrder.length,
       clipSequenceRef.current,
+      color,
     );
 
     beginClipChange();
@@ -264,6 +272,7 @@ function createEmptyClip(
   clock: Parameters<typeof createDefaultClipTimeline>[0],
   clipIndex: number,
   sequence: number,
+  color: string,
 ): Clip {
   const tracksByInstrumentId: Record<InstrumentId, Track> = {};
   const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
@@ -279,7 +288,7 @@ function createEmptyClip(
   return {
     id: createClipId(sequence),
     name: `Clip ${clipIndex + 1}`,
-    color: DEFAULT_CLIP_COLOR,
+    color,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
     instrumentStatesById,

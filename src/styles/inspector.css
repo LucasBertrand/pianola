@@ -233,29 +233,6 @@
   will-change: clip-path;
 }
 
-.clip-playback-shepard-plane {
-  position: absolute;
-  inset: -96px;
-  background: repeating-linear-gradient(
-    var(--clip-shepard-angle, 122deg),
-    transparent 0 var(--clip-shepard-hatch-start, 10px),
-    color-mix(
-      in srgb,
-      color-mix(
-        in srgb,
-        var(--instrument-color) 78%,
-        var(--color-text-bright)
-      )
-        var(--clip-shepard-hatch-opacity, 18%),
-      transparent
-    ) var(--clip-shepard-hatch-start, 10px)
-      var(--clip-shepard-hatch-end, 18px),
-    transparent var(--clip-shepard-hatch-end, 18px)
-      var(--clip-shepard-period, 28px)
-  );
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-}
 
 .clip-card > :not(.clip-playhead-background):not(.clip-playback-progress) {
   position: relative;
@@ -293,11 +270,6 @@
     24px minmax(0, max-content) minmax(0, 1fr) repeat(4, 30px);
   grid-template-rows: auto;
   gap: 6px;
-  background: color-mix(
-    in srgb,
-    var(--instrument-color) 14%,
-    var(--color-surface-panel)
-  );
 }
 
 .project-instrument-card::before {
@@ -360,14 +332,6 @@
   min-width: 0;
   grid-column: 2;
   grid-row: 1;
-}
-
-.project-instrument-card.clip-card.is-selected {
-  background: color-mix(
-    in srgb,
-    var(--instrument-color) 22%,
-    var(--color-surface-selected)
-  );
 }
 
 .clip-card .instrument-copy {
