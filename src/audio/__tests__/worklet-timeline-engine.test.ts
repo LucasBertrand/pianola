@@ -2,6 +2,7 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 import {
   getActiveClip,
@@ -254,6 +255,110 @@ describe("AudioWorklet timeline engine", () => {
     expect(engine.status).toBe("playing");
   });
 
+  test("uses a free oscillator phase only when it is enabled", () => {
+    const instrument = createSnapshotWithNotes([]).instruments[0];
+
+    expect(instrument).toBeDefined();
+
+    if (instrument === undefined) {
+      return;
+    }
+
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.25);
+    const config = {
+      ...instrument.instrument,
+      oscillatorWaveform: "sine" as const,
+      filterCutoffHz: 20_000,
+      filterEnvelopeAmountOctaves: 0,
+      envelope: {
+        ...instrument.instrument.envelope,
+        attackSeconds: 0.001,
+      },
+    };
+    const resetVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const freeVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+
+    resetVoice.start(
+      instrument.instrumentId,
+      60,
+      { ...config, oscillatorFreePhase: false },
+      440,
+      1,
+      null,
+      null,
+    );
+    freeVoice.start(
+      instrument.instrumentId,
+      60,
+      { ...config, oscillatorFreePhase: true },
+      440,
+      2,
+      null,
+      null,
+    );
+
+    expect(resetVoice.render()).toBe(0);
+    expect(Math.abs(freeVoice.render())).toBeGreaterThan(0);
+    expect(random).toHaveBeenCalledOnce();
+    random.mockRestore();
+  });
+
+  test("opens the filter higher for high notes with key tracking", () => {
+    const instrument = createSnapshotWithNotes([]).instruments[0];
+
+    expect(instrument).toBeDefined();
+
+    if (instrument === undefined) {
+      return;
+    }
+
+    const config = {
+      ...instrument.instrument,
+      oscillatorWaveform: "square" as const,
+      filterCutoffHz: 200,
+      filterEnvelopeAmountOctaves: 0,
+      filterResonance: 0,
+      envelope: {
+        ...instrument.instrument.envelope,
+        attackSeconds: 0.001,
+        decaySeconds: 0,
+        sustainLevel: 1,
+      },
+    };
+    const fixedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const trackedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+
+    fixedVoice.start(
+      instrument.instrumentId,
+      84,
+      { ...config, filterKeyTracking: 0 },
+      440,
+      1,
+      null,
+      null,
+    );
+    trackedVoice.start(
+      instrument.instrumentId,
+      84,
+      { ...config, filterKeyTracking: 1 },
+      440,
+      2,
+      null,
+      null,
+    );
+
+    const fixedEnergy = Array.from(
+      { length: 512 },
+      () => Math.abs(fixedVoice.render()),
+    ).reduce((sum, sample) => sum + sample, 0);
+    const trackedEnergy = Array.from(
+      { length: 512 },
+      () => Math.abs(trackedVoice.render()),
+    ).reduce((sum, sample) => sum + sample, 0);
+
+    expect(trackedEnergy).toBeGreaterThan(fixedEnergy * 2);
+  });
+
   test("switches a queued clip on the audio-clock boundary without stopping", () => {
     const diagnostics: TimelineEngineDiagnostic[] = [];
     const snapshot = createSnapshotWithNotes([createTestNote({
@@ -373,6 +478,7 @@ describe("AudioWorklet timeline engine", () => {
         decaySeconds: 0,
         sustainLevel: 1,
         releaseSeconds: 0.1,
+        curve: 0,
       },
       filterCutoffHz: 20_000,
       filterEnvelopeAmountOctaves: 0,
@@ -423,6 +529,7 @@ describe("AudioWorklet timeline engine", () => {
         decaySeconds: 0,
         sustainLevel: 1,
         releaseSeconds: 0.1,
+        curve: 0,
       },
       filterCutoffHz: 200,
       filterEnvelopeAmountOctaves: 6,
@@ -431,6 +538,7 @@ describe("AudioWorklet timeline engine", () => {
         decaySeconds: 0,
         sustainLevel: 1,
         releaseSeconds: 0.1,
+        curve: 0,
       },
     };
     const previewedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);

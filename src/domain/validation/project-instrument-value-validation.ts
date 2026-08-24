@@ -67,6 +67,13 @@ export function appendInstrumentConfigIssues(
     "instrument.oscillatorDetuneCents",
     issues,
   );
+  if (typeof instrument.oscillatorFreePhase !== "boolean") {
+    pushProjectInstrumentIssue(
+      issues,
+      "instrument.oscillatorFreePhase",
+      "Oscillator free phase must be a boolean.",
+    );
+  }
   validateNumberInRange(
     instrument.pulseWidth,
     "instrument.pulseWidth",
@@ -87,6 +94,13 @@ export function appendInstrumentConfigIssues(
     "instrument.filterResonance",
     INSTRUMENT_CONSTANTS.minimumFilterResonance,
     INSTRUMENT_CONSTANTS.maximumFilterResonance,
+    issues,
+  );
+  validateNumberInRange(
+    instrument.filterKeyTracking,
+    "instrument.filterKeyTracking",
+    INSTRUMENT_CONSTANTS.minimumFilterKeyTracking,
+    INSTRUMENT_CONSTANTS.maximumFilterKeyTracking,
     issues,
   );
   validateNumberInRange(
@@ -140,6 +154,13 @@ function validateEnvelope(
     `${path}.releaseSeconds`,
     0,
     INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+    issues,
+  );
+  validateNumberInRange(
+    envelope.curve,
+    `${path}.curve`,
+    INSTRUMENT_CONSTANTS.minimumEnvelopeCurve,
+    INSTRUMENT_CONSTANTS.maximumEnvelopeCurve,
     issues,
   );
 }
@@ -376,4 +397,3 @@ function validateNumberInRange(
     );
   }
 }
-

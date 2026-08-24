@@ -27,6 +27,9 @@ export class SubtractiveWorkletVoice {
     "sine";
   private pulseWidth = 0.5;
   private filterEnvelopeAmountOctaves = 0;
+  private pitch = 69;
+  private filterKeyTracking = 0;
+  private targetFilterKeyTracking = 0;
   private phase = 0;
   private integratedTriangle = 0;
   private filterIntegratorOne = 0;
@@ -74,10 +77,13 @@ export class SubtractiveWorkletVoice {
     this.auditionSamples = auditionSamples;
     this.baseFrequencyHz = tuningFrequencyHz
       * 2 ** ((pitch - 69) / 12);
+    this.pitch = pitch;
     this.waveform = config.oscillatorWaveform;
     this.pulseWidth = config.pulseWidth;
     this.filterEnvelopeAmountOctaves =
       config.filterEnvelopeAmountOctaves;
+    this.filterKeyTracking = config.filterKeyTracking;
+    this.targetFilterKeyTracking = config.filterKeyTracking;
     this.frequencyHz = this.baseFrequencyHz
       * 2 ** (config.oscillatorDetuneCents / 1_200);
     this.targetFrequencyHz = this.frequencyHz;
@@ -86,11 +92,10 @@ export class SubtractiveWorkletVoice {
     this.filterResonance = config.filterResonance;
     this.targetFilterResonance = this.filterResonance;
     if (!preserveContinuity) {
-      this.phase = 0;
-      // The integrated square represents a triangle at -1 when phase is 0.
-      // Starting the integrator at 0 would add a frequency-dependent fade-in
-      // of roughly half a period, most audible with a zero attack.
-      this.integratedTriangle = -1;
+      this.phase = config.oscillatorFreePhase ? Math.random() : 0;
+      // Seed the leaky integrator at the ideal triangle value for the chosen
+      // phase. Starting it at 0 adds a frequency-dependent fade-in.
+      this.integratedTriangle = 1 - 4 * Math.abs(this.phase - 0.5);
       this.filterIntegratorOne = 0;
       this.filterIntegratorTwo = 0;
     }
@@ -133,9 +138,12 @@ export class SubtractiveWorkletVoice {
     );
     this.targetFilterCutoffHz = config.filterCutoffHz;
     this.targetFilterResonance = config.filterResonance;
+    this.targetFilterKeyTracking = config.filterKeyTracking;
     this.filterEnvelope.previewSustainLevel(
       config.filterEnvelope.sustainLevel,
     );
+    this.amplitudeEnvelope.previewCurve(config.envelope.curve);
+    this.filterEnvelope.previewCurve(config.filterEnvelope.curve);
   }
 
   public configureMix(gain: number, pan: number, audible: boolean): void {
@@ -187,6 +195,9 @@ export class SubtractiveWorkletVoice {
     ) * this.smoothingCoefficient;
     this.filterResonance += (
       this.targetFilterResonance - this.filterResonance
+    ) * this.smoothingCoefficient;
+    this.filterKeyTracking += (
+      this.targetFilterKeyTracking - this.filterKeyTracking
     ) * this.smoothingCoefficient;
 
     const frequencyHz = Math.min(
@@ -252,7 +263,10 @@ export class SubtractiveWorkletVoice {
   ): number {
     if (this.filterCoefficientCountdown <= 0) {
       const cutoffHz = this.filterCutoffHz
-        * 2 ** (this.filterEnvelopeAmountOctaves * filterEnvelope);
+        * 2 ** (
+          this.filterEnvelopeAmountOctaves * filterEnvelope
+          + ((this.pitch - 60) / 12) * this.filterKeyTracking
+        );
       const clampedCutoff = Math.min(
         this.sampleRate * 0.45,
         Math.max(20, cutoffHz),

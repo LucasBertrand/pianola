@@ -395,6 +395,12 @@ function parseSubtractiveSynth(
       instrument["oscillatorDetuneCents"],
       `${path}.oscillatorDetuneCents`,
     ),
+    oscillatorFreePhase: instrument["oscillatorFreePhase"] === undefined
+      ? INSTRUMENT_CONSTANTS.oscillatorFreePhase
+      : readBoolean(
+        instrument["oscillatorFreePhase"],
+        `${path}.oscillatorFreePhase`,
+      ),
     polyphony: readIntegerInRange(
       instrument["polyphony"],
       `${path}.polyphony`,
@@ -423,6 +429,14 @@ function parseSubtractiveSynth(
       INSTRUMENT_CONSTANTS.minimumFilterResonance,
       INSTRUMENT_CONSTANTS.maximumFilterResonance,
     ),
+    filterKeyTracking: instrument["filterKeyTracking"] === undefined
+      ? INSTRUMENT_CONSTANTS.filterKeyTracking
+      : readNumberInRange(
+        instrument["filterKeyTracking"],
+        `${path}.filterKeyTracking`,
+        INSTRUMENT_CONSTANTS.minimumFilterKeyTracking,
+        INSTRUMENT_CONSTANTS.maximumFilterKeyTracking,
+      ),
     filterEnvelopeAmountOctaves: readNumberInRange(
       instrument["filterEnvelopeAmountOctaves"],
       `${path}.filterEnvelopeAmountOctaves`,
@@ -482,6 +496,14 @@ function parseEnvelope(
       envelope["releaseSeconds"],
       `${path}.releaseSeconds`,
     ),
+    curve: envelope["curve"] === undefined
+      ? INSTRUMENT_CONSTANTS.legacyEnvelopeCurve
+      : readNumberInRange(
+        envelope["curve"],
+        `${path}.curve`,
+        INSTRUMENT_CONSTANTS.minimumEnvelopeCurve,
+        INSTRUMENT_CONSTANTS.maximumEnvelopeCurve,
+      ),
   };
 }
 

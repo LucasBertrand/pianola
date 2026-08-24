@@ -37,6 +37,7 @@ export interface PlaybackEnvelope {
   readonly decaySeconds: number;
   readonly sustainLevel: number;
   readonly releaseSeconds: number;
+  readonly curve: number;
 }
 
 export interface SubtractivePlaybackPresetSnapshot {
@@ -44,10 +45,12 @@ export interface SubtractivePlaybackPresetSnapshot {
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
+  readonly oscillatorFreePhase: boolean;
   readonly pulseWidth: number;
   readonly envelope: PlaybackEnvelope;
   readonly filterCutoffHz: number;
   readonly filterResonance: number;
+  readonly filterKeyTracking: number;
   readonly filterEnvelopeAmountOctaves: number;
   readonly filterEnvelope: PlaybackEnvelope;
 }

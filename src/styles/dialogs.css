@@ -368,6 +368,75 @@
   margin-bottom: 12px;
 }
 
+.instrument-preset-manager {
+  min-width: 0;
+}
+
+.instrument-preset-manager .instrument-preset-dialog-control {
+  margin-bottom: 5px;
+}
+
+.instrument-preset-manager-actions,
+.instrument-preset-action-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.instrument-preset-manager-actions button,
+.instrument-preset-action-buttons button {
+  min-height: 25px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 6px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-control);
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.instrument-preset-manager-actions button.is-danger,
+.instrument-preset-action-buttons button.is-danger {
+  border-color: var(--color-border-danger);
+  color: var(--color-accent-danger);
+}
+
+.instrument-preset-action-buttons button.is-primary {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-primary);
+  color: var(--color-text-bright);
+}
+
+.instrument-preset-action-buttons button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.instrument-preset-action-panel {
+  display: grid;
+  margin: 0 0 12px 62px;
+  padding: 10px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 9px;
+  background: var(--color-surface-information);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  gap: 8px;
+}
+
+.instrument-preset-action-panel .instrument-preset-dialog-control {
+  margin: 0;
+}
+
+.instrument-preset-action-buttons {
+  justify-content: flex-end;
+}
+
+.instrument-preset-action-error {
+  color: var(--color-accent-danger);
+  font-size: 9px;
+}
+
 .instrument-editor-modules {
   display: grid;
   margin-bottom: 18px;
@@ -392,6 +461,7 @@
 }
 
 .instrument-editor-select-control,
+.instrument-editor-toggle-control,
 .instrument-editor-parameter {
   display: grid;
   min-width: 0;
@@ -403,8 +473,43 @@
   font-size: 9px;
 }
 
+.instrument-editor-toggle-control {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  cursor: pointer;
+  gap: 7px;
+}
+
+.instrument-editor-toggle-control input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent-primary);
+}
+
 .instrument-editor-select-control {
   grid-template-columns: minmax(64px, 1fr) minmax(90px, 1.2fr);
+}
+
+.instrument-editor-oscillator-waveform-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.instrument-editor-oscillator-waveform-row
+  .instrument-editor-select-control {
+  grid-template-columns: minmax(60px, auto) minmax(72px, 1fr);
+}
+
+.instrument-editor-oscillator-waveform-row
+  .instrument-editor-toggle-control {
+  white-space: nowrap;
 }
 
 .instrument-editor-select-control select {
@@ -439,7 +544,7 @@
 
 .instrument-editor-envelope-controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: end;
   gap: 8px;
 }

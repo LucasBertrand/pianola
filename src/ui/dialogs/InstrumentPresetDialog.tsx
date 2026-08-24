@@ -1,4 +1,6 @@
-import React from "react";
+import React, {
+  useState,
+} from "react";
 import {
   EDITOR_CONSTANTS,
 } from "../../config/editor-config";
@@ -21,6 +23,7 @@ export interface InstrumentPresetDialogProps {
   readonly mode: "create" | "edit";
   readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly presetOrder: readonly PresetId[];
+  readonly personalPresetIds: ReadonlySet<PresetId>;
   readonly selectedPresetId: PresetId | "";
   readonly instrumentName: string;
   readonly instrumentColor: string;
@@ -29,6 +32,11 @@ export interface InstrumentPresetDialogProps {
   readonly onInstrumentNameChange: (name: string) => void;
   readonly onInstrumentColorChange: (color: string) => void;
   readonly onInstrumentChange: (instrument: SubtractiveSynthConfig) => void;
+  readonly selectedPresetIsPersonal: boolean;
+  readonly onCreatePreset: (name: string) => Promise<void>;
+  readonly onSavePreset: () => Promise<void>;
+  readonly onRenamePreset: (name: string) => Promise<void>;
+  readonly onDeletePreset: () => Promise<void>;
   readonly onConfirm: () => void;
   readonly onDelete?: (() => void) | undefined;
   readonly onCancel: () => void;
@@ -39,6 +47,7 @@ export function InstrumentPresetDialog({
   mode,
   presetsById,
   presetOrder,
+  personalPresetIds,
   selectedPresetId,
   instrumentName,
   instrumentColor,
@@ -47,14 +56,78 @@ export function InstrumentPresetDialog({
   onInstrumentNameChange,
   onInstrumentColorChange,
   onInstrumentChange,
+  selectedPresetIsPersonal,
+  onCreatePreset,
+  onSavePreset,
+  onRenamePreset,
+  onDeletePreset,
   onConfirm,
   onDelete,
   onCancel,
 }: InstrumentPresetDialogProps): React.JSX.Element {
+  const [presetAction, setPresetAction] = useState<
+    "create" | "overwrite" | "rename" | "delete" | null
+  >(null);
+  const [presetName, setPresetName] = useState("");
+  const [presetActionPending, setPresetActionPending] = useState(false);
+  const [presetActionError, setPresetActionError] = useState<string | null>(null);
   const update = (
     changes: Partial<SubtractiveSynthConfig>,
   ): void => {
     onInstrumentChange({ ...instrument, ...changes });
+  };
+  const beginPresetAction = (
+    action: "create" | "overwrite" | "rename" | "delete",
+  ): void => {
+    const selectedPreset = selectedPresetId === ""
+      ? undefined
+      : presetsById[selectedPresetId];
+
+    setPresetAction(action);
+    setPresetName(
+      action === "create"
+        ? instrumentName.trim()
+        : selectedPreset?.name ?? "",
+    );
+    setPresetActionError(null);
+  };
+  const commitPresetAction = async (): Promise<void> => {
+    if (presetAction === null || presetActionPending) {
+      return;
+    }
+
+    const normalizedName = presetName.trim();
+
+    if (
+      (presetAction === "create" || presetAction === "rename")
+      && normalizedName.length === 0
+    ) {
+      setPresetActionError("Preset name is required.");
+      return;
+    }
+
+    setPresetActionPending(true);
+    setPresetActionError(null);
+
+    try {
+      if (presetAction === "create") {
+        await onCreatePreset(normalizedName);
+      } else if (presetAction === "overwrite") {
+        await onSavePreset();
+      } else if (presetAction === "rename") {
+        await onRenamePreset(normalizedName);
+      } else {
+        await onDeletePreset();
+      }
+
+      setPresetAction(null);
+    } catch (error: unknown) {
+      setPresetActionError(
+        error instanceof Error ? error.message : "Unable to update the preset.",
+      );
+    } finally {
+      setPresetActionPending(false);
+    }
   };
 
   return (
@@ -113,51 +186,171 @@ export function InstrumentPresetDialog({
               <option value="subtractive">Subtractive</option>
             </select>
           </label>
-          <label className="instrument-preset-dialog-control">
-            <span>Start from preset</span>
-            <select
-              value={selectedPresetId}
-              onChange={(event) => {
-                onPresetSelectionChange(event.currentTarget.value);
-              }}
-            >
-              {selectedPresetId === "" ? (
-                <option value="" disabled>Custom settings</option>
+          <div className="instrument-preset-manager">
+            <label className="instrument-preset-dialog-control">
+              <span>Start from preset</span>
+              <select
+                value={selectedPresetId}
+                onChange={(event) => {
+                  setPresetAction(null);
+                  onPresetSelectionChange(event.currentTarget.value);
+                }}
+              >
+                {selectedPresetId === "" ? (
+                  <option value="" disabled>Custom settings</option>
+                ) : null}
+                <PresetOptions
+                  label="Project presets"
+                  presetIds={presetOrder.filter(
+                    (presetId) => !personalPresetIds.has(presetId),
+                  )}
+                  presetsById={presetsById}
+                />
+                <PresetOptions
+                  label="Personal presets"
+                  presetIds={presetOrder.filter(
+                    (presetId) => personalPresetIds.has(presetId),
+                  )}
+                  presetsById={presetsById}
+                />
+              </select>
+            </label>
+            <div className="instrument-preset-manager-actions">
+              <button
+                type="button"
+                onClick={() => beginPresetAction("create")}
+              >
+                Create preset
+              </button>
+              {selectedPresetIsPersonal ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => beginPresetAction("overwrite")}
+                  >
+                    Save preset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => beginPresetAction("rename")}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    className="is-danger"
+                    type="button"
+                    onClick={() => beginPresetAction("delete")}
+                  >
+                    Delete
+                  </button>
+                </>
               ) : null}
-              {presetOrder.map((presetId) => {
-                const preset = presetsById[presetId];
-
-                return preset === undefined ? null : (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
+            </div>
+          </div>
         </div>
+
+        {presetAction === null ? null : (
+          <div className="instrument-preset-action-panel">
+            {presetAction === "delete" ? (
+              <span>Delete this preset from your personal library?</span>
+            ) : presetAction === "overwrite" ? (
+              <span>
+                Replace this preset with the current instrument settings?
+              </span>
+            ) : (
+              <label className="instrument-preset-dialog-control">
+                <span>
+                  {presetAction === "create" ? "New preset name" : "Preset name"}
+                </span>
+                <input
+                  type="text"
+                  value={presetName}
+                  maxLength={MAXIMUM_INSTRUMENT_NAME_LENGTH}
+                  autoComplete="off"
+                  autoFocus
+                  onChange={(event) => setPresetName(event.currentTarget.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void commitPresetAction();
+                    } else if (event.key === "Escape") {
+                      event.preventDefault();
+                      setPresetAction(null);
+                    }
+                  }}
+                />
+              </label>
+            )}
+            {presetActionError === null ? null : (
+              <span className="instrument-preset-action-error">
+                {presetActionError}
+              </span>
+            )}
+            <div className="instrument-preset-action-buttons">
+              <button
+                type="button"
+                disabled={presetActionPending}
+                onClick={() => setPresetAction(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className={presetAction === "delete" ? "is-danger" : "is-primary"}
+                type="button"
+                disabled={
+                  presetActionPending
+                  || ((presetAction === "create" || presetAction === "rename")
+                    && presetName.trim().length === 0)
+                }
+                onClick={() => void commitPresetAction()}
+              >
+                {presetActionPending
+                  ? "Saving…"
+                  : presetAction === "delete"
+                    ? "Delete preset"
+                    : presetAction === "overwrite"
+                      ? "Save preset"
+                      : presetAction === "rename"
+                        ? "Rename preset"
+                        : "Create preset"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="instrument-editor-modules">
           <fieldset className="instrument-editor-module">
             <legend>Oscillator</legend>
-            <label className="instrument-editor-select-control">
-              <span>Waveform</span>
-              <select
-                value={instrument.oscillatorWaveform}
-                onChange={(event) => {
-                  update({
-                    oscillatorWaveform:
-                      event.currentTarget.value as OscillatorWaveform,
-                  });
-                }}
-              >
-                {INSTRUMENT_CONSTANTS.oscillatorWaveformOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="instrument-editor-oscillator-waveform-row">
+              <label className="instrument-editor-select-control">
+                <span>Waveform</span>
+                <select
+                  value={instrument.oscillatorWaveform}
+                  onChange={(event) => {
+                    update({
+                      oscillatorWaveform:
+                        event.currentTarget.value as OscillatorWaveform,
+                    });
+                  }}
+                >
+                  {INSTRUMENT_CONSTANTS.oscillatorWaveformOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="instrument-editor-toggle-control">
+                <input
+                  type="checkbox"
+                  checked={instrument.oscillatorFreePhase}
+                  onChange={(event) => {
+                    update({ oscillatorFreePhase: event.currentTarget.checked });
+                  }}
+                />
+                <span>Free phase</span>
+              </label>
+            </div>
             <label className="instrument-editor-select-control">
               <span>Polyphony</span>
               <select
@@ -222,6 +415,15 @@ export function InstrumentPresetDialog({
               onChange={(value) => update({ filterResonance: value })}
             />
             <ParameterControl
+              label="Key tracking"
+              value={instrument.filterKeyTracking}
+              minimum={INSTRUMENT_CONSTANTS.minimumFilterKeyTracking}
+              maximum={INSTRUMENT_CONSTANTS.maximumFilterKeyTracking}
+              step={EDITOR_CONSTANTS.filterKeyTrackingStep}
+              format={(value) => `${Math.round(value * 100)}%`}
+              onChange={(value) => update({ filterKeyTracking: value })}
+            />
+            <ParameterControl
               label="Envelope amount"
               value={instrument.filterEnvelopeAmountOctaves}
               minimum={INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
@@ -278,6 +480,36 @@ export function InstrumentPresetDialog({
   );
 }
 
+interface PresetOptionsProps {
+  readonly label: string;
+  readonly presetIds: readonly PresetId[];
+  readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
+}
+
+function PresetOptions({
+  label,
+  presetIds,
+  presetsById,
+}: PresetOptionsProps): React.JSX.Element | null {
+  if (presetIds.length === 0) {
+    return null;
+  }
+
+  return (
+    <optgroup label={label}>
+      {presetIds.map((presetId) => {
+        const preset = presetsById[presetId];
+
+        return preset === undefined ? null : (
+          <option key={preset.id} value={preset.id}>
+            {preset.name}
+          </option>
+        );
+      })}
+    </optgroup>
+  );
+}
+
 interface EnvelopeControlsProps {
   readonly title: string;
   readonly envelope: SubtractiveSynthConfig["envelope"];
@@ -297,6 +529,7 @@ function EnvelopeControls({
         <ParameterControl label="Decay" value={envelope.decaySeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(decaySeconds) => onChange({ ...envelope, decaySeconds })} />
         <ParameterControl label="Sustain" value={envelope.sustainLevel} minimum={0} maximum={1} step={EDITOR_CONSTANTS.sustainStep} format={(value) => `${Math.round(value * 100)}%`} onChange={(sustainLevel) => onChange({ ...envelope, sustainLevel })} />
         <ParameterControl label="Release" value={envelope.releaseSeconds} minimum={0} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds} step={EDITOR_CONSTANTS.envelopeTimeStepSeconds} scale="power" suffix=" s" onChange={(releaseSeconds) => onChange({ ...envelope, releaseSeconds })} />
+        <ParameterControl label="Curve" value={envelope.curve} minimum={INSTRUMENT_CONSTANTS.minimumEnvelopeCurve} maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeCurve} step={EDITOR_CONSTANTS.envelopeCurveStep} format={(value) => `${Math.round(value * 100)}%`} onChange={(curve) => onChange({ ...envelope, curve })} />
       </div>
     </fieldset>
   );

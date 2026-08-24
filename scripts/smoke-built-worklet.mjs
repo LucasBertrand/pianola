@@ -53,21 +53,25 @@ const instrument = {
   oscillatorWaveform: "sine",
   polyphony: 1,
   oscillatorDetuneCents: 0,
+  oscillatorFreePhase: false,
   pulseWidth: 0.5,
   envelope: {
     attackSeconds: 0.003,
     decaySeconds: 0,
     sustainLevel: 1,
     releaseSeconds: 0.01,
+    curve: 0,
   },
   filterCutoffHz: 8_000,
   filterResonance: 0.2,
+  filterKeyTracking: 0,
   filterEnvelopeAmountOctaves: 0,
   filterEnvelope: {
     attackSeconds: 0.003,
     decaySeconds: 0,
     sustainLevel: 1,
     releaseSeconds: 0.01,
+    curve: 0,
   },
 };
 

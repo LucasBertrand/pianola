@@ -318,6 +318,7 @@ function cloneInstrument(
     decaySeconds: instrument.envelope.decaySeconds,
     sustainLevel: instrument.envelope.sustainLevel,
     releaseSeconds: instrument.envelope.releaseSeconds,
+    curve: instrument.envelope.curve,
   });
 
   return Object.freeze({
@@ -325,10 +326,12 @@ function cloneInstrument(
     oscillatorWaveform: instrument.oscillatorWaveform,
     polyphony: instrument.polyphony,
     oscillatorDetuneCents: instrument.oscillatorDetuneCents,
+    oscillatorFreePhase: instrument.oscillatorFreePhase,
     pulseWidth: instrument.pulseWidth,
     envelope,
     filterCutoffHz: instrument.filterCutoffHz,
     filterResonance: instrument.filterResonance,
+    filterKeyTracking: instrument.filterKeyTracking,
     filterEnvelopeAmountOctaves:
       instrument.filterEnvelopeAmountOctaves,
     filterEnvelope: Object.freeze({
@@ -336,6 +339,7 @@ function cloneInstrument(
       decaySeconds: instrument.filterEnvelope.decaySeconds,
       sustainLevel: instrument.filterEnvelope.sustainLevel,
       releaseSeconds: instrument.filterEnvelope.releaseSeconds,
+      curve: instrument.filterEnvelope.curve,
     }),
   });
 }

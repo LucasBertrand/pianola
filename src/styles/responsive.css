@@ -11,6 +11,10 @@
   .instrument-editor-identity {
     gap: 0;
   }
+
+  .instrument-preset-action-panel {
+    margin-left: 0;
+  }
 }
 
 

@@ -24,6 +24,12 @@ import {
   recoverDefaultUserSettings,
   serializeUserSettings,
 } from "../user-settings-codec";
+import {
+  createDefaultInstrumentConfig,
+} from "../../domain/instrument-presets";
+import {
+  createPersonalInstrumentPreset,
+} from "../../domain/personal-instrument-presets";
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {
@@ -43,6 +49,32 @@ describe("persistence codecs", () => {
     expect(serialized).not.toContain("selectionMode");
     expect(serialized).not.toContain("pitchPreviewEnabled");
     expect(serialized).not.toContain("playheadTick");
+  });
+
+  test("keeps an embedded personal preset in portable project exports", () => {
+    const document = createTestProject();
+    const preset = createPersonalInstrumentPreset(
+      "personal-portable-preset",
+      "Portable Keys",
+      createDefaultInstrumentConfig(2),
+    );
+    const withPreset = {
+      ...document,
+      instrumentPresetsById: {
+        ...document.instrumentPresetsById,
+        [preset.id]: preset,
+      },
+      instrumentPresetOrder: [...document.instrumentPresetOrder, preset.id],
+    };
+    const serialized = serializePortableProject({
+      sourceDocumentId: "portable-personal-preset",
+      exportedAt: "2026-08-24T12:00:00.000Z",
+      document: withPreset,
+      workspace: createDefaultProjectWorkspace(withPreset),
+    });
+
+    expect(parsePortableProject(serialized)
+      .document.instrumentPresetsById[preset.id]).toEqual(preset);
   });
 
   test("refuses a future portable version", () => {
@@ -119,6 +151,46 @@ describe("persistence codecs", () => {
       settings,
       "2026-08-22T12:00:00.000Z",
     )).settings).toEqual(settings);
+  });
+
+  test("round-trips personal presets and migrates settings saved before them", () => {
+    const settings = recoverDefaultUserSettings();
+    const preset = createPersonalInstrumentPreset(
+      "personal-preset-test",
+      "My Warm Keys",
+      {
+        ...createDefaultInstrumentConfig(0),
+        filterKeyTracking: 0.75,
+      },
+    );
+    const withPreset = {
+      ...settings,
+      personalInstrumentPresetsById: { [preset.id]: preset },
+      personalInstrumentPresetOrder: [preset.id],
+    };
+    const roundTrip = parseUserSettingsEnvelope(serializeUserSettings(
+      withPreset,
+      "2026-08-24T12:00:00.000Z",
+    )).settings;
+
+    expect(roundTrip.personalInstrumentPresetOrder).toEqual([preset.id]);
+    expect(roundTrip.personalInstrumentPresetsById[preset.id])
+      .toEqual(preset);
+
+    const legacyEnvelope = JSON.parse(serializeUserSettings(
+      settings,
+      "2026-08-24T12:00:00.000Z",
+    )) as { settings: Record<string, unknown> };
+
+    delete legacyEnvelope.settings["personalInstrumentPresetsById"];
+    delete legacyEnvelope.settings["personalInstrumentPresetOrder"];
+
+    const migrated = parseUserSettingsEnvelope(
+      JSON.stringify(legacyEnvelope),
+    ).settings;
+
+    expect(migrated.personalInstrumentPresetOrder).toEqual([]);
+    expect(migrated.personalInstrumentPresetsById).toEqual({});
   });
 
   test("rejects browser-reserved shortcut bindings", () => {

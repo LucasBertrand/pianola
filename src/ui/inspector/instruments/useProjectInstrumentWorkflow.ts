@@ -7,6 +7,7 @@ import type {
 } from "../../../use-cases/commands/editor-command-service";
 import type {
   UpdateProjectInstrumentChanges,
+  PianoRollCommand,
 } from "../../../domain/commands/command-types";
 import {
   getActiveClip,
@@ -14,9 +15,11 @@ import {
 import {
   type ClipId,
   type InstrumentId,
+  type PresetId,
 } from "../../../domain/identifiers";
 import {
   type InstrumentConfig,
+  type InstrumentPreset,
   type ProjectInstrument,
 } from "../../../domain/instruments/instrument";
 import {
@@ -45,6 +48,7 @@ export interface ProjectInstrumentWorkflow {
     name: string,
     instrumentConfig: InstrumentConfig,
     color: string,
+    preset?: InstrumentPreset,
   ) => void;
   readonly reorder: (
     instrumentId: InstrumentId,
@@ -55,7 +59,10 @@ export interface ProjectInstrumentWorkflow {
     instrumentId: InstrumentId,
     changes: UpdateProjectInstrumentChanges,
     label: string,
+    preset?: InstrumentPreset,
   ) => void;
+  readonly savePreset: (preset: InstrumentPreset, label: string) => void;
+  readonly removePreset: (presetId: PresetId, label: string) => void;
   readonly updateClipState: (
     instrumentId: InstrumentId,
     changes: Partial<ClipInstrumentState>,
@@ -80,15 +87,20 @@ export function useProjectInstrumentWorkflow({
       instrumentId: InstrumentId,
       changes: UpdateProjectInstrumentChanges,
       label: string,
+      preset?: InstrumentPreset,
     ): void => {
-      commands.dispatch(
-        [{
-          type: "UpdateProjectInstrument",
-          instrumentId,
-          changes,
-        }],
-        label,
-      );
+      const pendingCommands: PianoRollCommand[] = [];
+
+      if (preset !== undefined) {
+        pendingCommands.push({ type: "SaveInstrumentPreset", preset });
+      }
+
+      pendingCommands.push({
+        type: "UpdateProjectInstrument",
+        instrumentId,
+        changes,
+      });
+      commands.dispatch(pendingCommands, label);
     },
     [commands],
   );
@@ -120,6 +132,7 @@ export function useProjectInstrumentWorkflow({
     name: string,
     instrumentConfig: InstrumentConfig,
     color: string,
+    preset?: InstrumentPreset,
   ): void => {
     const state = commands.getState();
     const normalizedName = name.trim();
@@ -139,16 +152,36 @@ export function useProjectInstrumentWorkflow({
       state.clipOrder,
     );
 
-    commands.dispatch(
-      [{
-        type: "AddProjectInstrument",
-        instrument: projectInstrument,
-        clipInstrumentStatesById,
-      }],
-      "Add instrument",
-    );
+    const pendingCommands: PianoRollCommand[] = [];
+
+    if (preset !== undefined) {
+      pendingCommands.push({ type: "SaveInstrumentPreset", preset });
+    }
+
+    pendingCommands.push({
+      type: "AddProjectInstrument",
+      instrument: projectInstrument,
+      clipInstrumentStatesById,
+    });
+    commands.dispatch(pendingCommands, "Add instrument");
     selectInstrument(projectInstrument.id);
   }, [commands, selectInstrument]);
+  const savePreset = useCallback((
+    preset: InstrumentPreset,
+    label: string,
+  ): void => {
+    commands.dispatch([{ type: "SaveInstrumentPreset", preset }], label);
+  }, [commands]);
+  const removePreset = useCallback((
+    presetId: PresetId,
+    label: string,
+  ): void => {
+    if (commands.getState().instrumentPresetsById[presetId] === undefined) {
+      return;
+    }
+
+    commands.dispatch([{ type: "DeleteInstrumentPreset", presetId }], label);
+  }, [commands]);
 
   const reorder = useCallback(
     (instrumentId: InstrumentId, targetIndex: number): void => {
@@ -277,6 +310,8 @@ export function useProjectInstrumentWorkflow({
     reorder,
     remove,
     update,
+    savePreset,
+    removePreset,
     updateClipState,
     selectNotes,
     toggleLock,

@@ -3,6 +3,7 @@ import {
   DEFAULT_CLIP_COLOR,
   type ClipTimeline,
 } from "../../../domain/clips/clip";
+import { INSTRUMENT_CONSTANTS } from "../../../config/domain-limits";
 import {
   createDefaultNativeEditorState,
   createNativeProjectFileMetadata,
@@ -97,6 +98,58 @@ describe("native project parser", () => {
 
     expect(parseNativeProjectFile(JSON.stringify(stored))
       .projectState.clipsById[TEST_CLIP_ID]?.color).toBe(DEFAULT_CLIP_COLOR);
+  });
+
+  test("adds neutral synth controls when loading projects saved before them", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const stored = JSON.parse(serialized) as {
+      project: {
+        projectInstrumentsById: Record<string, {
+          instrument: Record<string, unknown> & {
+            envelope: Record<string, unknown>;
+            filterEnvelope: Record<string, unknown>;
+          };
+        }>;
+        instrumentPresetsById: Record<string, {
+          config: Record<string, unknown> & {
+            envelope: Record<string, unknown>;
+            filterEnvelope: Record<string, unknown>;
+          };
+        }>;
+      };
+    };
+    const configs = [
+      ...Object.values(stored.project.projectInstrumentsById)
+        .map(({ instrument }) => instrument),
+      ...Object.values(stored.project.instrumentPresetsById)
+        .map(({ config }) => config),
+    ];
+
+    for (const config of configs) {
+      delete config["oscillatorFreePhase"];
+      delete config["filterKeyTracking"];
+      delete config.envelope["curve"];
+      delete config.filterEnvelope["curve"];
+    }
+
+    const loaded = parseNativeProjectFile(JSON.stringify(stored));
+    const config = loaded.projectState.projectInstrumentsById[
+      project.instrumentOrder[0]!
+    ]?.instrument;
+
+    expect(config?.oscillatorFreePhase)
+      .toBe(INSTRUMENT_CONSTANTS.oscillatorFreePhase);
+    expect(config?.filterKeyTracking)
+      .toBe(INSTRUMENT_CONSTANTS.filterKeyTracking);
+    expect(config?.envelope.curve)
+      .toBe(INSTRUMENT_CONSTANTS.legacyEnvelopeCurve);
+    expect(config?.filterEnvelope.curve)
+      .toBe(INSTRUMENT_CONSTANTS.legacyEnvelopeCurve);
   });
 
   test("reports a stable code and path for invalid JSON", () => {

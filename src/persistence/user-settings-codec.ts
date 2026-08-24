@@ -17,6 +17,9 @@ import {
   readPersistenceRecord,
   readPersistenceString,
 } from "./persistence-codec-readers";
+import {
+  parsePersonalInstrumentPresetLibrary,
+} from "./personal-instrument-preset-codec";
 
 const ACTION_IDS = [
   "editor.redo",
@@ -205,6 +208,20 @@ export function parseUserSettings(
     shortcuts[actionId] = binding;
   }
 
+  const personalPresetLibrary = (
+    settings["personalInstrumentPresetsById"] === undefined
+    && settings["personalInstrumentPresetOrder"] === undefined
+  )
+    ? {
+        presetsById: DEFAULT_USER_SETTINGS.personalInstrumentPresetsById,
+        presetOrder: DEFAULT_USER_SETTINGS.personalInstrumentPresetOrder,
+      }
+    : parsePersonalInstrumentPresetLibrary(
+        settings["personalInstrumentPresetsById"],
+        settings["personalInstrumentPresetOrder"],
+        `${path}.personalInstrumentPresets`,
+      );
+
   return {
     schemaVersion: USER_SETTINGS_SCHEMA_VERSION,
     selectionMode,
@@ -213,6 +230,8 @@ export function parseUserSettings(
       settings["pitchPreviewEnabled"],
       `${path}.pitchPreviewEnabled`,
     ),
+    personalInstrumentPresetsById: personalPresetLibrary.presetsById,
+    personalInstrumentPresetOrder: personalPresetLibrary.presetOrder,
     shortcuts,
   };
 }

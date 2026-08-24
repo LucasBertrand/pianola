@@ -20,11 +20,13 @@ import type {
   AddProjectInstrumentCommand,
   DeleteClipCommand,
   DeleteProjectInstrumentCommand,
+  DeleteInstrumentPresetCommand,
   PianoRollCommand,
   RenameClipCommand,
   ReorderClipsCommand,
   UpdateClipCommand,
   ReorderProjectInstrumentsCommand,
+  SaveInstrumentPresetCommand,
   SetAutoAdvanceEnabledCommand,
   SetMasterMutedCommand,
   UpdateMasterGainCommand,
@@ -35,7 +37,9 @@ import type {
 import {
   applyAddProjectInstrument,
   applyDeleteProjectInstrument,
+  applyDeleteInstrumentPreset,
   applyReorderProjectInstruments,
+  applySaveInstrumentPreset,
   applyUpdateClipInstrumentState,
   applyUpdateProjectInstrument,
 } from "./instrument-commands";
@@ -140,6 +144,10 @@ function applyCommand(
       return applyDeleteProjectInstrument(state, command);
     case "ReorderProjectInstruments":
       return applyReorderProjectInstruments(state, command);
+    case "SaveInstrumentPreset":
+      return applySaveInstrumentPreset(state, command);
+    case "DeleteInstrumentPreset":
+      return applyDeleteInstrumentPreset(state, command);
     case "UpdateProjectTitle":
       return applyUpdateProjectTitle(state, command);
     case "UpdateMasterGain":
@@ -166,6 +174,8 @@ type ActiveClipCommand = Exclude<
   | UpdateProjectInstrumentCommand
   | DeleteProjectInstrumentCommand
   | ReorderProjectInstrumentsCommand
+  | SaveInstrumentPresetCommand
+  | DeleteInstrumentPresetCommand
   | UpdateProjectTitleCommand
   | SetAutoAdvanceEnabledCommand
   | UpdateMasterGainCommand

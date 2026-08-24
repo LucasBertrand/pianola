@@ -12,6 +12,12 @@ import {
   TEST_CLIP_ID,
   TEST_INSTRUMENT_ID,
 } from "../../../../tests/support/test-builders";
+import {
+  createDefaultInstrumentConfig,
+} from "../../instrument-presets";
+import {
+  createPersonalInstrumentPreset,
+} from "../../personal-instrument-presets";
 
 describe("P2 command family contracts", () => {
   test("project commands support success, rejection, undo and redo", () => {
@@ -67,6 +73,35 @@ describe("P2 command family contracts", () => {
       instrumentId: "missing",
       changes: { gain: 0.25 },
     }, 2)).toThrow(CommandRejectedError);
+  });
+
+  test("project preset snapshots support save, replace, delete and undo", () => {
+    const store = new ProjectStore(createTestProject());
+    const preset = createPersonalInstrumentPreset(
+      "personal-preset-command",
+      "Command Pad",
+      createDefaultInstrumentConfig(3),
+    );
+
+    dispatch(store, { type: "SaveInstrumentPreset", preset }, 1);
+    expect(store.getState().instrumentPresetOrder.at(-1)).toBe(preset.id);
+    expect(store.getState().instrumentPresetsById[preset.id]).toEqual(preset);
+
+    dispatch(store, {
+      type: "SaveInstrumentPreset",
+      preset: { ...preset, name: "Renamed Command Pad" },
+    }, 2);
+    expect(store.getState().instrumentPresetsById[preset.id]?.name)
+      .toBe("Renamed Command Pad");
+    expect(store.getState().instrumentPresetOrder.filter(
+      (presetId) => presetId === preset.id,
+    )).toHaveLength(1);
+
+    dispatch(store, { type: "DeleteInstrumentPreset", presetId: preset.id }, 3);
+    expect(store.getState().instrumentPresetsById[preset.id]).toBeUndefined();
+    store.undo();
+    expect(store.getState().instrumentPresetsById[preset.id]?.name)
+      .toBe("Renamed Command Pad");
   });
 
   test("note commands support success, rejection, undo and redo", () => {

@@ -16,6 +16,12 @@ import {
   PianolaIndexedDb,
   PIANOLA_STORES,
 } from "../../pwa/persistence/pianola-indexed-db";
+import {
+  createDefaultInstrumentConfig,
+} from "../../domain/instrument-presets";
+import {
+  createPersonalInstrumentPreset,
+} from "../../domain/personal-instrument-presets";
 
 describe("user settings repository", () => {
   test("serializes atomic updates", async () => {
@@ -33,6 +39,68 @@ describe("user settings repository", () => {
     await expect(repository.load()).resolves.toMatchObject({
       noteColorMode: "pitch",
       pitchPreviewEnabled: false,
+    });
+  });
+
+  test("keeps independent personal preset snapshots", async () => {
+    const repository = new InMemoryUserSettingsRepository();
+    const preset = createPersonalInstrumentPreset(
+      "personal-preset-repository",
+      "Repository Lead",
+      createDefaultInstrumentConfig(0),
+    );
+
+    await repository.update((current) => ({
+      ...current,
+      personalInstrumentPresetsById: { [preset.id]: preset },
+      personalInstrumentPresetOrder: [preset.id],
+    }));
+    const loaded = await repository.load();
+
+    expect(loaded.personalInstrumentPresetsById[preset.id]).toEqual(preset);
+    expect(loaded.personalInstrumentPresetsById[preset.id])
+      .not.toBe(preset);
+    expect(loaded.personalInstrumentPresetsById[preset.id]?.config)
+      .not.toBe(preset.config);
+  });
+
+  test("updates an existing personal preset without duplicating it", async () => {
+    const repository = new InMemoryUserSettingsRepository();
+    const preset = createPersonalInstrumentPreset(
+      "personal-preset-update",
+      "Mutable Lead",
+      createDefaultInstrumentConfig(0),
+    );
+
+    await repository.update((current) => ({
+      ...current,
+      personalInstrumentPresetsById: { [preset.id]: preset },
+      personalInstrumentPresetOrder: [preset.id],
+    }));
+    await repository.update((current) => ({
+      ...current,
+      personalInstrumentPresetsById: {
+        ...current.personalInstrumentPresetsById,
+        [preset.id]: createPersonalInstrumentPreset(
+          preset.id,
+          preset.name,
+          {
+            ...preset.config,
+            filterCutoffHz: 4_200,
+          },
+        ),
+      },
+    }));
+
+    await expect(repository.load()).resolves.toMatchObject({
+      personalInstrumentPresetOrder: [preset.id],
+      personalInstrumentPresetsById: {
+        [preset.id]: {
+          id: preset.id,
+          name: preset.name,
+          config: { filterCutoffHz: 4_200 },
+        },
+      },
     });
   });
 

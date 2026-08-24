@@ -7,6 +7,15 @@ import type {
 import type {
   NoteColorMode,
 } from "../editor/model/note-color-mode";
+import type {
+  PresetId,
+} from "../domain/identifiers";
+import type {
+  InstrumentPreset,
+} from "../domain/instruments/instrument";
+import {
+  cloneInstrumentPreset,
+} from "../domain/personal-instrument-presets";
 
 export const USER_SETTINGS_FORMAT =
   "app.pianola.user-settings";
@@ -30,6 +39,10 @@ export interface UserSettings {
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
   readonly pitchPreviewEnabled: boolean;
+  readonly personalInstrumentPresetsById: Readonly<
+    Record<PresetId, InstrumentPreset>
+  >;
+  readonly personalInstrumentPresetOrder: readonly PresetId[];
   readonly shortcuts: Readonly<
     Record<ShortcutActionId, ShortcutBinding>
   >;
@@ -48,6 +61,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = Object.freeze({
   noteColorMode: EDITOR_CONSTANTS.defaultNoteColorMode,
   pitchPreviewEnabled:
     EDITOR_CONSTANTS.defaultPitchPreviewEnabled,
+  personalInstrumentPresetsById: Object.freeze({}),
+  personalInstrumentPresetOrder: Object.freeze([]),
   shortcuts: Object.freeze({
     "editor.undo": Object.freeze({
       code: "KeyZ",
@@ -78,6 +93,13 @@ export function cloneUserSettings(
 ): UserSettings {
   return {
     ...settings,
+    personalInstrumentPresetsById: Object.fromEntries(
+      Object.entries(settings.personalInstrumentPresetsById).map(
+        ([presetId, preset]) => [presetId, cloneInstrumentPreset(preset)],
+      ),
+    ),
+    personalInstrumentPresetOrder:
+      settings.personalInstrumentPresetOrder.slice(),
     shortcuts: Object.fromEntries(
       Object.entries(settings.shortcuts).map(
         ([actionId, binding]) => [actionId, { ...binding }],

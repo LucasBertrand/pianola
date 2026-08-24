@@ -17,6 +17,7 @@ import {
   selectInstrumentPresetId,
 } from "../../../domain/instrument-presets";
 import type {
+  InstrumentPreset,
   SubtractiveSynthConfig,
 } from "../../../domain/instruments/instrument";
 import type {
@@ -36,6 +37,21 @@ export interface InstrumentDialogWorkflowOptions {
     config: SubtractiveSynthConfig | null,
   ) => void;
   readonly dismissApplicationDialog: () => void;
+  readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
+  readonly personalPresetIds: ReadonlySet<PresetId>;
+  readonly createPersonalPreset: (
+    name: string,
+    config: SubtractiveSynthConfig,
+  ) => Promise<InstrumentPreset>;
+  readonly updatePersonalPreset: (
+    presetId: PresetId,
+    config: SubtractiveSynthConfig,
+  ) => Promise<InstrumentPreset>;
+  readonly renamePersonalPreset: (
+    presetId: PresetId,
+    name: string,
+  ) => Promise<InstrumentPreset>;
+  readonly deletePersonalPreset: (presetId: PresetId) => Promise<void>;
 }
 
 export interface InstrumentDialogWorkflow {
@@ -51,6 +67,11 @@ export interface InstrumentDialogWorkflow {
   readonly setName: (name: string) => void;
   readonly setColor: (color: string) => void;
   readonly setConfig: (config: SubtractiveSynthConfig) => void;
+  readonly selectedPresetIsPersonal: boolean;
+  readonly createPreset: (name: string) => Promise<void>;
+  readonly savePreset: () => Promise<void>;
+  readonly renamePreset: (name: string) => Promise<void>;
+  readonly deletePreset: () => Promise<void>;
   readonly confirm: () => void;
   readonly remove: () => void;
   readonly cancel: () => void;
@@ -64,6 +85,12 @@ export function useInstrumentDialogWorkflow({
   removeInstrument,
   previewInstrumentSettings,
   dismissApplicationDialog,
+  presetsById,
+  personalPresetIds,
+  createPersonalPreset,
+  updatePersonalPreset,
+  renamePersonalPreset,
+  deletePersonalPreset,
 }: InstrumentDialogWorkflowOptions): InstrumentDialogWorkflow {
   const [selectedPresetId, setSelectedPresetId] =
     useState<PresetId | "" | null>(null);
@@ -131,7 +158,7 @@ export function useInstrumentDialogWorkflow({
     setSelectedPresetId("");
   }, [dismissApplicationDialog, runtime]);
   const selectPreset = useCallback((presetId: PresetId): void => {
-    const preset = runtime.projectStore.getState().instrumentPresetsById[presetId];
+    const preset = presetsById[presetId];
 
     if (preset !== undefined) {
       const nextConfig = createInstrumentConfigFromPreset(preset);
@@ -143,7 +170,7 @@ export function useInstrumentDialogWorkflow({
         previewInstrumentSettings(editedInstrumentId, nextConfig);
       }
     }
-  }, [editedInstrumentId, previewInstrumentSettings, runtime]);
+  }, [editedInstrumentId, presetsById, previewInstrumentSettings]);
   const updateConfig = useCallback((
     nextConfig: SubtractiveSynthConfig,
   ): void => {
@@ -163,7 +190,14 @@ export function useInstrumentDialogWorkflow({
     }
 
     if (editedInstrumentId === null) {
-      addInstrument(name, config, color);
+      addInstrument(
+        name,
+        config,
+        color,
+        selectedPresetId !== "" && personalPresetIds.has(selectedPresetId)
+          ? presetsById[selectedPresetId]
+          : undefined,
+      );
     } else {
       updateInstrument(
         editedInstrumentId,
@@ -173,6 +207,9 @@ export function useInstrumentDialogWorkflow({
           instrument: config,
         },
         "Update instrument settings",
+        selectedPresetId !== "" && personalPresetIds.has(selectedPresetId)
+          ? presetsById[selectedPresetId]
+          : undefined,
       );
     }
 
@@ -184,9 +221,58 @@ export function useInstrumentDialogWorkflow({
     config,
     editedInstrumentId,
     name,
+    personalPresetIds,
+    presetsById,
     selectedPresetId,
     updateInstrument,
   ]);
+  const createPreset = useCallback(async (presetName: string): Promise<void> => {
+    if (config === null) {
+      return;
+    }
+
+    const preset = await createPersonalPreset(presetName, config);
+
+    setSelectedPresetId(preset.id);
+    setConfig(createInstrumentConfigFromPreset(preset));
+  }, [config, createPersonalPreset]);
+  const savePreset = useCallback(async (): Promise<void> => {
+    if (
+      config === null
+      || selectedPresetId === null
+      || selectedPresetId === ""
+      || !personalPresetIds.has(selectedPresetId)
+    ) {
+      return;
+    }
+
+    const preset = await updatePersonalPreset(selectedPresetId, config);
+
+    setConfig(createInstrumentConfigFromPreset(preset));
+  }, [config, personalPresetIds, selectedPresetId, updatePersonalPreset]);
+  const renamePreset = useCallback(async (presetName: string): Promise<void> => {
+    if (
+      selectedPresetId === null
+      || selectedPresetId === ""
+      || !personalPresetIds.has(selectedPresetId)
+    ) {
+      return;
+    }
+
+    await renamePersonalPreset(selectedPresetId, presetName);
+  }, [personalPresetIds, renamePersonalPreset, selectedPresetId]);
+  const deletePreset = useCallback(async (): Promise<void> => {
+    if (
+      selectedPresetId === null
+      || selectedPresetId === ""
+      || !personalPresetIds.has(selectedPresetId)
+    ) {
+      return;
+    }
+
+    await deletePersonalPreset(selectedPresetId);
+    setSelectedPresetId("");
+  }, [deletePersonalPreset, personalPresetIds, selectedPresetId]);
   const remove = useCallback((): void => {
     if (editedInstrumentId !== null) {
       removeInstrument(editedInstrumentId);
@@ -207,6 +293,14 @@ export function useInstrumentDialogWorkflow({
     setName,
     setColor,
     setConfig: updateConfig,
+    selectedPresetIsPersonal:
+      selectedPresetId !== null
+      && selectedPresetId !== ""
+      && personalPresetIds.has(selectedPresetId),
+    createPreset,
+    savePreset,
+    renamePreset,
+    deletePreset,
     confirm,
     remove,
     cancel,

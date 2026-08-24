@@ -163,6 +163,20 @@ import type {
 import {
   captureProjectWorkspace,
 } from "../../use-cases/persistence/project-workspace";
+import {
+  createPersonalInstrumentPreset,
+  createPersonalInstrumentPresetId,
+  mergeInstrumentPresetLibraries,
+} from "../../domain/personal-instrument-presets";
+import {
+  MAXIMUM_INSTRUMENT_NAME_LENGTH,
+  MAXIMUM_PROJECT_INSTRUMENT_COUNT,
+  type InstrumentPreset,
+  type SubtractiveSynthConfig,
+} from "../../domain/instruments/instrument";
+import type {
+  PresetId,
+} from "../../domain/identifiers";
 
 export interface PianoRollWorkspaceProps {
   readonly runtime: EditorRuntime;
@@ -244,6 +258,21 @@ export function PianoRollWorkspace({
     () => runtime.gridResolutionTicks.get(),
   );
   const activeClip = getActiveClip(projectState);
+  const mergedPresetLibrary = useMemo(() => mergeInstrumentPresetLibraries(
+    projectState.instrumentPresetsById,
+    projectState.instrumentPresetOrder,
+    initialUserSettings.personalInstrumentPresetsById,
+    initialUserSettings.personalInstrumentPresetOrder,
+  ), [
+    initialUserSettings.personalInstrumentPresetOrder,
+    initialUserSettings.personalInstrumentPresetsById,
+    projectState.instrumentPresetOrder,
+    projectState.instrumentPresetsById,
+  ]);
+  const personalPresetIds = useMemo(
+    () => new Set(initialUserSettings.personalInstrumentPresetOrder),
+    [initialUserSettings.personalInstrumentPresetOrder],
+  );
 
   useEffect(() => {
     setSelectedInstrumentId(initialWorkspace.selectedInstrumentId);
@@ -397,6 +426,8 @@ export function PianoRollWorkspace({
     reorder: handleReorderInstrument,
     remove: handleDeleteProjectInstrument,
     update: handleUpdateProjectInstrument,
+    savePreset: saveProjectInstrumentPreset,
+    removePreset: removeProjectInstrumentPreset,
     selectNotes: handleSelectInstrumentNotes,
     toggleLock: handleToggleInstrumentLock,
   } = useProjectInstrumentWorkflow({
@@ -412,12 +443,166 @@ export function PianoRollWorkspace({
     },
     confirm: showApplicationConfirmation,
   });
+  const savePersonalInstrumentPreset = useCallback(async (
+    presetName: string,
+    config: SubtractiveSynthConfig,
+  ): Promise<InstrumentPreset> => {
+    const normalizedName = validatePersonalPresetName(presetName);
+
+    const preset = createPersonalInstrumentPreset(
+      createPersonalInstrumentPresetId(),
+      normalizedName,
+      config,
+    );
+    const updatedSettings = await userSettingsRepository.update((current) => {
+      assertPersonalPresetNameAvailable(current, normalizedName);
+
+      if (
+        current.personalInstrumentPresetOrder.length
+        >= MAXIMUM_PROJECT_INSTRUMENT_COUNT
+      ) {
+        throw new Error("The personal preset library is full.");
+      }
+
+      return {
+        ...current,
+        personalInstrumentPresetsById: {
+          ...current.personalInstrumentPresetsById,
+          [preset.id]: preset,
+        },
+        personalInstrumentPresetOrder: [
+          ...current.personalInstrumentPresetOrder,
+          preset.id,
+        ],
+      };
+    });
+
+    onUserSettingsChange(updatedSettings);
+    return preset;
+  }, [onUserSettingsChange, userSettingsRepository]);
+  const updatePersonalInstrumentPreset = useCallback(async (
+    presetId: PresetId,
+    config: SubtractiveSynthConfig,
+  ): Promise<InstrumentPreset> => {
+    const updatedSettings = await userSettingsRepository.update((current) => {
+      const currentPreset = current.personalInstrumentPresetsById[presetId];
+
+      if (currentPreset === undefined) {
+        throw new Error("This personal preset no longer exists.");
+      }
+
+      return {
+        ...current,
+        personalInstrumentPresetsById: {
+          ...current.personalInstrumentPresetsById,
+          [presetId]: createPersonalInstrumentPreset(
+            presetId,
+            currentPreset.name,
+            config,
+          ),
+        },
+      };
+    });
+    const preset = updatedSettings.personalInstrumentPresetsById[presetId];
+
+    if (preset === undefined) {
+      throw new Error("The updated preset could not be loaded.");
+    }
+
+    onUserSettingsChange(updatedSettings);
+
+    if (runtime.projectStore.getState().instrumentPresetsById[presetId]) {
+      saveProjectInstrumentPreset(preset, "Update instrument preset");
+    }
+
+    return preset;
+  }, [
+    onUserSettingsChange,
+    runtime,
+    saveProjectInstrumentPreset,
+    userSettingsRepository,
+  ]);
+  const renamePersonalInstrumentPreset = useCallback(async (
+    presetId: PresetId,
+    presetName: string,
+  ): Promise<InstrumentPreset> => {
+    const normalizedName = validatePersonalPresetName(presetName);
+    const updatedSettings = await userSettingsRepository.update((current) => {
+      const preset = current.personalInstrumentPresetsById[presetId];
+
+      if (preset === undefined) {
+        throw new Error("This personal preset no longer exists.");
+      }
+
+      assertPersonalPresetNameAvailable(current, normalizedName, presetId);
+      return {
+        ...current,
+        personalInstrumentPresetsById: {
+          ...current.personalInstrumentPresetsById,
+          [presetId]: { ...preset, name: normalizedName },
+        },
+      };
+    });
+    const preset = updatedSettings.personalInstrumentPresetsById[presetId];
+
+    if (preset === undefined) {
+      throw new Error("The renamed preset could not be loaded.");
+    }
+
+    onUserSettingsChange(updatedSettings);
+
+    if (runtime.projectStore.getState().instrumentPresetsById[presetId]) {
+      saveProjectInstrumentPreset(preset, "Rename instrument preset");
+    }
+
+    return preset;
+  }, [
+    onUserSettingsChange,
+    runtime,
+    saveProjectInstrumentPreset,
+    userSettingsRepository,
+  ]);
+  const deletePersonalInstrumentPreset = useCallback(async (
+    presetId: PresetId,
+  ): Promise<void> => {
+    const updatedSettings = await userSettingsRepository.update((current) => {
+      if (current.personalInstrumentPresetsById[presetId] === undefined) {
+        throw new Error("This personal preset no longer exists.");
+      }
+
+      return {
+        ...current,
+        personalInstrumentPresetsById: Object.fromEntries(
+          Object.entries(current.personalInstrumentPresetsById).filter(
+            ([candidateId]) => candidateId !== presetId,
+          ),
+        ),
+        personalInstrumentPresetOrder:
+          current.personalInstrumentPresetOrder.filter(
+            (candidateId) => candidateId !== presetId,
+          ),
+      };
+    });
+
+    onUserSettingsChange(updatedSettings);
+    removeProjectInstrumentPreset(presetId, "Delete instrument preset");
+  }, [
+    onUserSettingsChange,
+    removeProjectInstrumentPreset,
+    userSettingsRepository,
+  ]);
   const instrumentDialog = useInstrumentDialogWorkflow({
     runtime,
     addInstrument: addProjectInstrument,
     updateInstrument: handleUpdateProjectInstrument,
     removeInstrument: handleDeleteProjectInstrument,
     previewInstrumentSettings,
+    presetsById: mergedPresetLibrary.presetsById,
+    personalPresetIds,
+    createPersonalPreset: savePersonalInstrumentPreset,
+    updatePersonalPreset: updatePersonalInstrumentPreset,
+    renamePersonalPreset: renamePersonalInstrumentPreset,
+    deletePersonalPreset: deletePersonalInstrumentPreset,
     dismissApplicationDialog(): void {
       setApplicationDialog(null);
     },
@@ -918,8 +1103,9 @@ export function PianoRollWorkspace({
       {!instrumentDialog.open || instrumentDialog.config === null ? null : (
         <InstrumentPresetDialog
           mode={instrumentDialog.mode}
-          presetsById={projectState.instrumentPresetsById}
-          presetOrder={projectState.instrumentPresetOrder}
+          presetsById={mergedPresetLibrary.presetsById}
+          presetOrder={mergedPresetLibrary.presetOrder}
+          personalPresetIds={personalPresetIds}
           selectedPresetId={instrumentDialog.selectedPresetId}
           instrumentName={instrumentDialog.name}
           instrumentColor={instrumentDialog.color}
@@ -928,6 +1114,11 @@ export function PianoRollWorkspace({
           onInstrumentNameChange={instrumentDialog.setName}
           onInstrumentColorChange={instrumentDialog.setColor}
           onInstrumentChange={instrumentDialog.setConfig}
+          selectedPresetIsPersonal={instrumentDialog.selectedPresetIsPersonal}
+          onCreatePreset={instrumentDialog.createPreset}
+          onSavePreset={instrumentDialog.savePreset}
+          onRenamePreset={instrumentDialog.renamePreset}
+          onDeletePreset={instrumentDialog.deletePreset}
           onConfirm={instrumentDialog.confirm}
           onDelete={instrumentDialog.mode === "edit" ? instrumentDialog.remove : undefined}
           onCancel={instrumentDialog.cancel}
@@ -968,6 +1159,38 @@ export function PianoRollWorkspace({
       ) : null}
     </main>
   );
+}
+
+function validatePersonalPresetName(name: string): string {
+  const normalizedName = name.trim();
+
+  if (
+    normalizedName.length === 0
+    || normalizedName.length > MAXIMUM_INSTRUMENT_NAME_LENGTH
+  ) {
+    throw new Error(
+      `Preset names must contain between 1 and ${MAXIMUM_INSTRUMENT_NAME_LENGTH} characters.`,
+    );
+  }
+
+  return normalizedName;
+}
+
+function assertPersonalPresetNameAvailable(
+  settings: UserSettings,
+  name: string,
+  ignoredPresetId?: PresetId,
+): void {
+  const normalizedName = name.toLocaleLowerCase();
+  const duplicate = settings.personalInstrumentPresetOrder.some((presetId) => (
+    presetId !== ignoredPresetId
+    && settings.personalInstrumentPresetsById[presetId]?.name
+      .toLocaleLowerCase() === normalizedName
+  ));
+
+  if (duplicate) {
+    throw new Error(`A personal preset named "${name}" already exists.`);
+  }
 }
 
 function formatAudioPlaybackError(error: unknown): string {

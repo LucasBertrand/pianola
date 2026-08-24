@@ -29,6 +29,8 @@ export interface AdsrEnvelope {
   readonly decaySeconds: number;
   readonly sustainLevel: number;
   readonly releaseSeconds: number;
+  /** Segment shape from exponential (-1) through linear (0) to logarithmic (1). */
+  readonly curve: number;
 }
 
 export type OscillatorWaveform =
@@ -42,10 +44,13 @@ export interface SubtractiveSynthConfig {
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
+  readonly oscillatorFreePhase: boolean;
   readonly pulseWidth: number;
   readonly envelope: AdsrEnvelope;
   readonly filterCutoffHz: number;
   readonly filterResonance: number;
+  /** Cutoff pitch-follow amount: 0 is fixed and 1 is one octave per octave. */
+  readonly filterKeyTracking: number;
   readonly filterEnvelopeAmountOctaves: number;
   readonly filterEnvelope: AdsrEnvelope;
 }

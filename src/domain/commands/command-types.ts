@@ -6,12 +6,14 @@ import {
   type ClipId,
   type InstrumentId,
   type NoteId,
+  type PresetId,
   type Tick,
 } from "../identifiers";
 import {
   type EffectDescriptor,
   type GenerativeRuleDescriptor,
   type InstrumentConfig,
+  type InstrumentPreset,
   type ProjectInstrument,
   type ProjectInstrumentInterpretation,
 } from "../instruments/instrument";
@@ -59,6 +61,16 @@ export interface DeleteProjectInstrumentCommand {
 export interface ReorderProjectInstrumentsCommand {
   readonly type: "ReorderProjectInstruments";
   readonly instrumentOrder: readonly InstrumentId[];
+}
+
+export interface SaveInstrumentPresetCommand {
+  readonly type: "SaveInstrumentPreset";
+  readonly preset: InstrumentPreset;
+}
+
+export interface DeleteInstrumentPresetCommand {
+  readonly type: "DeleteInstrumentPreset";
+  readonly presetId: PresetId;
 }
 
 export interface UpdateProjectTitleCommand {
@@ -353,6 +365,8 @@ export type PianoRollCommand =
   | UpdateClipInstrumentStateCommand
   | DeleteProjectInstrumentCommand
   | ReorderProjectInstrumentsCommand
+  | SaveInstrumentPresetCommand
+  | DeleteInstrumentPresetCommand
   | UpdateProjectTitleCommand
   | UpdateMasterGainCommand
   | SetMasterMutedCommand

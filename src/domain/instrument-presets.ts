@@ -3,6 +3,7 @@ import {
   PROJECT_CONSTANTS,
 } from "../config/domain-limits";
 import {
+  type AdsrEnvelope,
   type InstrumentPreset,
   type SubtractiveSynthConfig,
 } from "./instruments/instrument";
@@ -106,6 +107,15 @@ const BUILT_IN_PRESETS = Object.freeze([
       },
     }),
   ),
+  createSubtractivePreset(
+    "lead-sawtooth",
+    "Lead",
+    createSubtractiveConfig({
+      oscillatorWaveform: "sawtooth",
+      filterCutoffHz: 12_000,
+      filterEnvelopeAmountOctaves: 0.25,
+    }),
+  ),
 ] satisfies readonly InstrumentPreset[]);
 
 const BUILT_IN_PRESET_ORDER = Object.freeze(
@@ -198,19 +208,26 @@ function createSubtractivePreset(
 }
 
 function createSubtractiveConfig(
-  changes: Partial<SubtractiveSynthConfig> = {},
+  changes: Partial<
+    Omit<SubtractiveSynthConfig, "envelope" | "filterEnvelope">
+  > & {
+    readonly envelope?: Partial<AdsrEnvelope>;
+    readonly filterEnvelope?: Partial<AdsrEnvelope>;
+  } = {},
 ): SubtractiveSynthConfig {
   const defaultEnvelope = {
     attackSeconds: INSTRUMENT_CONSTANTS.attackSeconds,
     decaySeconds: INSTRUMENT_CONSTANTS.decaySeconds,
     sustainLevel: INSTRUMENT_CONSTANTS.sustainLevel,
     releaseSeconds: INSTRUMENT_CONSTANTS.releaseSeconds,
+    curve: INSTRUMENT_CONSTANTS.envelopeCurve,
   };
   const defaultFilterEnvelope = {
     attackSeconds: INSTRUMENT_CONSTANTS.filterAttackSeconds,
     decaySeconds: INSTRUMENT_CONSTANTS.filterDecaySeconds,
     sustainLevel: INSTRUMENT_CONSTANTS.filterSustainLevel,
     releaseSeconds: INSTRUMENT_CONSTANTS.filterReleaseSeconds,
+    curve: INSTRUMENT_CONSTANTS.envelopeCurve,
   };
 
   return Object.freeze({
@@ -224,6 +241,9 @@ function createSubtractiveConfig(
     oscillatorDetuneCents:
       changes.oscillatorDetuneCents
       ?? INSTRUMENT_CONSTANTS.oscillatorDetuneCents,
+    oscillatorFreePhase:
+      changes.oscillatorFreePhase
+      ?? INSTRUMENT_CONSTANTS.oscillatorFreePhase,
     pulseWidth:
       changes.pulseWidth
       ?? INSTRUMENT_CONSTANTS.pulseWidth,
@@ -237,6 +257,9 @@ function createSubtractiveConfig(
     filterResonance:
       changes.filterResonance
       ?? INSTRUMENT_CONSTANTS.filterResonance,
+    filterKeyTracking:
+      changes.filterKeyTracking
+      ?? INSTRUMENT_CONSTANTS.filterKeyTracking,
     filterEnvelopeAmountOctaves:
       changes.filterEnvelopeAmountOctaves
       ?? INSTRUMENT_CONSTANTS.filterEnvelopeAmountOctaves,

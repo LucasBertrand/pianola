@@ -5,8 +5,10 @@ import {
 } from "../clips/clip";
 import {
   type ClipId,
+  type PresetId,
 } from "../identifiers";
 import {
+  type InstrumentPreset,
   type ProjectInstrument,
 } from "../instruments/instrument";
 import {
@@ -15,13 +17,18 @@ import {
 import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
 } from "../instruments/instrument";
-import { assertValidProjectInstrument } from "../validation/instrument-validation";
+import {
+  assertValidProjectInstrument,
+  validateInstrumentPreset,
+} from "../validation/instrument-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {
   AddProjectInstrumentCommand,
   DeleteProjectInstrumentCommand,
+  DeleteInstrumentPresetCommand,
   PianoRollCommand,
   ReorderProjectInstrumentsCommand,
+  SaveInstrumentPresetCommand,
   UpdateClipInstrumentStateCommand,
   UpdateProjectInstrumentCommand,
 } from "./command-types";
@@ -230,6 +237,98 @@ export function applyReorderProjectInstruments(
     ...state,
     instrumentOrder: [...command.instrumentOrder],
   };
+}
+
+export function applySaveInstrumentPreset(
+  state: ProjectState,
+  command: SaveInstrumentPresetCommand,
+): ProjectState {
+  const validation = validateInstrumentPreset(command.preset);
+
+  if (!validation.valid) {
+    reject(
+      "INVALID_COMMAND",
+      validation.issues[0]?.message ?? "Instrument preset is invalid.",
+      command.type,
+    );
+  }
+
+  const existing = state.instrumentPresetsById[command.preset.id];
+
+  if (
+    existing === undefined
+    && state.instrumentPresetOrder.length >= MAXIMUM_PROJECT_INSTRUMENT_COUNT
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_PROJECT_INSTRUMENT_COUNT} instrument presets.`,
+      command.type,
+    );
+  }
+
+  const preset: InstrumentPreset = {
+    ...command.preset,
+    config: {
+      ...command.preset.config,
+      envelope: { ...command.preset.config.envelope },
+      filterEnvelope: { ...command.preset.config.filterEnvelope },
+    },
+  };
+
+  return {
+    ...state,
+    instrumentPresetsById: {
+      ...state.instrumentPresetsById,
+      [preset.id]: preset,
+    },
+    instrumentPresetOrder: existing === undefined
+      ? [...state.instrumentPresetOrder, preset.id]
+      : state.instrumentPresetOrder,
+  };
+}
+
+export function applyDeleteInstrumentPreset(
+  state: ProjectState,
+  command: DeleteInstrumentPresetCommand,
+): ProjectState {
+  requireInstrumentPreset(state, command.presetId, command.type);
+
+  if (state.instrumentPresetOrder.length <= 1) {
+    reject(
+      "INVALID_COMMAND",
+      "A project must retain at least one instrument preset.",
+      command.type,
+    );
+  }
+
+  return {
+    ...state,
+    instrumentPresetsById: omitRecordKey(
+      state.instrumentPresetsById,
+      command.presetId,
+    ),
+    instrumentPresetOrder: state.instrumentPresetOrder.filter(
+      (presetId) => presetId !== command.presetId,
+    ),
+  };
+}
+
+function requireInstrumentPreset(
+  state: ProjectState,
+  presetId: PresetId,
+  commandType: PianoRollCommand["type"],
+): InstrumentPreset {
+  const preset = state.instrumentPresetsById[presetId];
+
+  if (preset === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Instrument preset "${presetId}" does not exist.`,
+      commandType,
+    );
+  }
+
+  return preset;
 }
 
 export function applyUpdateClipInstrumentState(

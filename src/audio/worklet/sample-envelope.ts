@@ -22,6 +22,7 @@ export class SampleEnvelope {
   private releaseSamples = 1;
   private sustainLevel = 0;
   private attackStartValue = 0;
+  private curve = 0;
 
   public reset(
     config: PlaybackEnvelope,
@@ -34,6 +35,7 @@ export class SampleEnvelope {
     this.releaseStartValue = 0;
     this.attackStartValue = this.value;
     this.sustainLevel = config.sustainLevel;
+    this.curve = config.curve;
     this.attackSamples = secondsToSamples(
       Math.max(MINIMUM_EDGE_SECONDS, config.attackSeconds),
       sampleRate,
@@ -55,6 +57,10 @@ export class SampleEnvelope {
 
   public previewSustainLevel(sustainLevel: number): void {
     this.sustainLevel = sustainLevel;
+  }
+
+  public previewCurve(curve: number): void {
+    this.curve = curve;
   }
 
   public release(releaseSeconds?: number, sampleRate?: number): void {
@@ -81,9 +87,13 @@ export class SampleEnvelope {
     switch (this.stage) {
       case "attack":
         this.stageSample += 1;
+        const progress = shapeEnvelopeProgress(
+          Math.min(1, this.stageSample / this.attackSamples),
+          this.curve,
+        );
         this.value = this.attackStartValue + (
           1 - this.attackStartValue
-        ) * Math.min(1, this.stageSample / this.attackSamples);
+        ) * progress;
 
         if (this.stageSample >= this.attackSamples) {
           this.enterDecay();
@@ -92,7 +102,10 @@ export class SampleEnvelope {
 
       case "decay": {
         this.stageSample += 1;
-        const progress = Math.min(1, this.stageSample / this.decaySamples);
+        const progress = shapeEnvelopeProgress(
+          Math.min(1, this.stageSample / this.decaySamples),
+          this.curve,
+        );
 
         this.value = 1 + (this.sustainLevel - 1) * progress;
 
@@ -109,7 +122,10 @@ export class SampleEnvelope {
 
       case "release": {
         this.stageSample += 1;
-        const progress = Math.min(1, this.stageSample / this.releaseSamples);
+        const progress = shapeEnvelopeProgress(
+          Math.min(1, this.stageSample / this.releaseSamples),
+          this.curve,
+        );
 
         this.value = this.releaseStartValue * (1 - progress);
 
@@ -143,4 +159,22 @@ export class SampleEnvelope {
 
 function secondsToSamples(seconds: number, sampleRate: number): number {
   return Math.max(1, Math.round(seconds * sampleRate));
+}
+
+/** Maps a linear stage clock to a continuously adjustable exponential curve. */
+export function shapeEnvelopeProgress(progress: number, curve: number): number {
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const clampedCurve = Math.max(-1, Math.min(1, curve));
+
+  if (Math.abs(clampedCurve) < 0.000_001) {
+    return clampedProgress;
+  }
+
+  const exponent = Math.abs(clampedCurve) * 5;
+
+  if (clampedCurve < 0) {
+    return Math.expm1(exponent * clampedProgress) / Math.expm1(exponent);
+  }
+
+  return -Math.expm1(-exponent * clampedProgress) / -Math.expm1(-exponent);
 }
