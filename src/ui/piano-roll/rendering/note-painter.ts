@@ -22,7 +22,7 @@ import type {
 } from "../../../music/pitch-snap";
 import { getLockedNotePattern } from "./locked-note-pattern";
 import { isNoteEditable } from "../../../domain/notes/note";
-import { getNoteBodyOpacity, getNoteContentOpacity } from "./note-opacity";
+import { getNoteOpacity } from "./note-opacity";
 import {
   compareNotesByInstrumentRenderOrder,
   compareNotesByPitchRenderOrder,
@@ -115,8 +115,7 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
       );
     }
 
-    const opacity =
-      (instrumentStyle?.opacity ?? 1) * getNoteBodyOpacity(note);
+    const opacity = getNoteOpacity(note, instrumentStyle);
 
     if (!isNoteEditable(note)) {
       hasVisibleLockedNote = true;
@@ -154,7 +153,7 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
         continue;
       }
 
-      context.globalAlpha = Math.min(1, (instrumentStyle?.opacity ?? 1) * 0.68);
+      context.globalAlpha = Math.min(1, getNoteOpacity(note, instrumentStyle) * 0.68);
       fillNoteRect(context, converter, note);
     }
 
@@ -198,8 +197,7 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
 
     const instrumentStyle = stylesByInstrumentId[note.instrumentId];
 
-    context.globalAlpha =
-      (instrumentStyle?.opacity ?? 1) * getNoteContentOpacity(note);
+    context.globalAlpha = getNoteOpacity(note, instrumentStyle);
 
     for (
       const segment of getMidiNoteLabelSegments(
@@ -253,11 +251,13 @@ function fillNoteRect(
   const width = Math.max(1, endX - x - 1);
   const height = Math.max(1, nextRowY - y - 1);
 
+  const previousAlpha = context.globalAlpha;
+
   // Fill
+  context.globalAlpha = previousAlpha * 0.55;
   context.fillRect(x, y, width, height);
 
   // Border (opaque)
-  const previousAlpha = context.globalAlpha;
   context.globalAlpha = Math.min(1, previousAlpha + 0.4);
   
   // Use a slightly darker color for the border if possible, or just the same color. 

@@ -82,7 +82,7 @@ export function getNoteFillStyle(
   return colorMode === "pitch"
     ? getPitchNoteColor(note.pitch, pitchSnapSettings)
     : stylesByInstrumentId[note.instrumentId]?.fillStyle
-      ?? DEFAULT_NOTE_COLOR;
+    ?? DEFAULT_NOTE_COLOR;
 }
 
 export function getPitchNoteColor(

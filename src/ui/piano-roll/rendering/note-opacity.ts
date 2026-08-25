@@ -1,20 +1,21 @@
 import { isNoteAudible, type Note } from "../../../domain/notes/note";
+import type { InstrumentRenderStyle } from "../../../editor/model/instrument-render-style";
 
-const ACTIVE_NOTE_BODY_OPACITY = 0.55;
-const SILENT_NOTE_BODY_OPACITY = 0.25;
-const ACTIVE_NOTE_CONTENT_OPACITY = 1;
-const SILENT_NOTE_CONTENT_OPACITY = 0.36;
+const ACTIVE_NOTE_OPACITY = 1;
+const MUTED_NOTE_OPACITY = 0.16;
 
-/** Muted and disabled notes share one attenuation; lock state never stacks it. */
-export function getNoteBodyOpacity(note: Pick<Note, "status">): number {
-  return isNoteAudible(note)
-    ? ACTIVE_NOTE_BODY_OPACITY
-    : SILENT_NOTE_BODY_OPACITY;
-}
-
-/** Opacity used by labels and transient DOM projections. */
-export function getNoteContentOpacity(note: Pick<Note, "status">): number {
-  return isNoteAudible(note)
-    ? ACTIVE_NOTE_CONTENT_OPACITY
-    : SILENT_NOTE_CONTENT_OPACITY;
+/** 
+ * Returns the final opacity for a note. 
+ * A note is considered muted if it is individually muted/disabled 
+ * or if its parent instrument is muted.
+ */
+export function getNoteOpacity(
+  note: Pick<Note, "status">,
+  instrumentStyle?: Pick<InstrumentRenderStyle, "opacity">
+): number {
+  const isInstrumentMuted = (instrumentStyle?.opacity ?? 1) < 1;
+  
+  return (isInstrumentMuted || !isNoteAudible(note))
+    ? MUTED_NOTE_OPACITY
+    : ACTIVE_NOTE_OPACITY;
 }
