@@ -22,7 +22,7 @@
   color: var(--color-text-secondary);
 }
 
-.icon-button > svg {
+.icon-button>svg {
   width: 17px;
   height: 17px;
   fill: none;

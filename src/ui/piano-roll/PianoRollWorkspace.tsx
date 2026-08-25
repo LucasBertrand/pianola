@@ -67,6 +67,9 @@ import {
   ProjectInspector,
 } from "../../ui/inspector/ProjectInspector";
 import {
+  ProjectInspectorResizeHandle,
+} from "../../ui/inspector/ProjectInspectorResizeHandle";
+import {
   InstrumentPresetDialog,
 } from "../../ui/dialogs/InstrumentPresetDialog";
 import {
@@ -1053,6 +1056,7 @@ export function PianoRollWorkspace({
             onPitchSnapSettingsChange={updatePitchSnapSettings}
           />
         </div>
+        <ProjectInspectorResizeHandle inspectorOpen={projectInspectorOpen} />
         <ProjectInspector
           open={projectInspectorOpen}
           portraitSection={projectInspectorSection}

@@ -62,6 +62,13 @@ groupe précédent et Gauche sort du groupe courant. Les groupes organisent le
 document sans interrompre l’enchaînement : la lecture suit les clips dans
 l’ordre visible, en profondeur.
 
+La séparation entre l’éditeur et l’inspecteur peut être déplacée à la souris ou
+au toucher. Elle redimensionne la largeur de l’inspecteur en paysage et sa
+hauteur en portrait. Les flèches du clavier la déplacent lorsqu’elle est
+sélectionnée ; Maj accélère le déplacement et un double-clic restaure la taille
+par défaut. En portrait, l’inspecteur peut être étendu jusqu’à masquer
+complètement le panneau d’édition.
+
 ## Transport, timeline et viewport
 
 Lecture/Pause démarre ou suspend le transport du processeur audio. Stop libère

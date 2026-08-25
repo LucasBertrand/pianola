@@ -154,7 +154,45 @@
   }
 }
 
+@media (min-width: 921px) and (orientation: portrait) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows:
+      minmax(0, var(--project-inspector-panel-height))
+      var(--project-inspector-resize-handle-size)
+      minmax(0, 1fr);
+  }
+
+  .editor-panel {
+    grid-row: 3;
+  }
+
+  .project-inspector-resize-handle {
+    width: auto;
+    min-width: 0;
+    min-height: var(--project-inspector-resize-handle-size);
+    grid-row: 2;
+  }
+
+  .project-inspector-resize-handle::before {
+    width: 42px;
+    max-width: 44%;
+    height: 2px;
+    max-height: none;
+  }
+
+  .project-inspector {
+    width: 100%;
+    height: 100%;
+    grid-row: 1;
+  }
+}
+
 @media (max-width: 920px) {
+  .app-shell {
+    --project-inspector-panel-width: min(86vw, 320px);
+  }
+
   .app-header {
     padding-right: 10px;
     padding-left: 10px;
@@ -172,6 +210,21 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .project-inspector-resize-handle {
+    position: absolute;
+    z-index: 13;
+    top: 0;
+    right: var(--project-inspector-panel-width);
+    bottom: 0;
+    display: none;
+    width: var(--project-inspector-resize-handle-size);
+  }
+
+  .workspace.is-project-inspector-open
+    .project-inspector-resize-handle {
+    display: grid;
+  }
+
   /* Responsive general inspector */
 
   .project-inspector {
@@ -181,7 +234,7 @@
     right: 0;
     bottom: 0;
     display: grid;
-    width: min(86vw, 320px);
+    width: var(--project-inspector-panel-width);
     padding: 0 16px 18px;
     box-shadow: none;
     transform: translate3d(100%, 0, 0);
@@ -224,11 +277,17 @@
   }
 
   .workspace.is-project-inspector-open {
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows:
+      minmax(0, var(--project-inspector-panel-height))
+      var(--project-inspector-resize-handle-size)
+      minmax(0, 1fr);
   }
 
   .workspace.is-clips-inspector-open {
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows:
+      minmax(0, var(--project-inspector-panel-height))
+      var(--project-inspector-resize-handle-size)
+      minmax(0, 1fr);
   }
 
   .editor-panel {
@@ -237,7 +296,27 @@
   }
 
   .workspace.is-project-inspector-open .editor-panel {
+    grid-row: 3;
+  }
+
+  .workspace.is-project-inspector-open
+    .project-inspector-resize-handle {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    height: var(--project-inspector-resize-handle-size);
+    min-height: var(--project-inspector-resize-handle-size);
     grid-row: 2;
+  }
+
+  .workspace.is-project-inspector-open
+    .project-inspector-resize-handle::before {
+    width: 42px;
+    max-width: 44%;
+    height: 2px;
+    max-height: none;
   }
 
   .project-inspector {
@@ -260,6 +339,11 @@
   .project-inspector.is-clips-panel,
   .project-inspector.is-instruments-panel {
     max-height: 30vh;
+  }
+
+  .workspace.is-project-inspector-open .project-inspector {
+    height: 100%;
+    max-height: none;
   }
 
   .project-inspector:not(.is-open) {

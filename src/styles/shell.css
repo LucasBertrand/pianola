@@ -1,5 +1,8 @@
 .app-shell {
   --project-inspector-width: 306px;
+  --project-inspector-panel-width: var(--project-inspector-width);
+  --project-inspector-panel-height: 30vh;
+  --project-inspector-resize-handle-size: 10px;
   display: flex;
   width: 100%;
   height: 100%;
@@ -16,15 +19,67 @@
   background: var(--color-surface-app);
   grid-template-columns:
     minmax(0, 1fr)
-    var(--project-inspector-width);
+    var(--project-inspector-resize-handle-size)
+    var(--project-inspector-panel-width);
 }
 
 .editor-panel {
   display: flex;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   background: var(--color-surface-app);
   flex-direction: column;
 }
 
+.project-inspector-resize-handle {
+  position: relative;
+  z-index: 11;
+  display: grid;
+  min-width: var(--project-inspector-resize-handle-size);
+  min-height: 0;
+  outline: 0;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+}
 
+.project-inspector-resize-handle::before {
+  width: 2px;
+  height: 42px;
+  max-height: 44%;
+  border-radius: 999px;
+  background: var(--color-border-control);
+  content: "";
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.project-inspector-resize-handle[aria-orientation="vertical"] {
+  cursor: col-resize;
+}
+
+.project-inspector-resize-handle[aria-orientation="horizontal"] {
+  cursor: row-resize;
+}
+
+.project-inspector-resize-handle:hover::before,
+.project-inspector-resize-handle:focus-visible::before,
+.project-inspector-resize-handle.is-resizing::before {
+  background: var(--color-accent-primary-bright);
+  box-shadow: 0 0 10px color-mix(in srgb,
+      var(--color-accent-primary-bright) 45%, transparent);
+}
+
+body.is-resizing-project-inspector-vertical,
+body.is-resizing-project-inspector-vertical * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.is-resizing-project-inspector-horizontal,
+body.is-resizing-project-inspector-horizontal * {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
