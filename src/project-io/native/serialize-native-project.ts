@@ -2,6 +2,9 @@ import {
   type Clip,
 } from "../../domain/clips/clip";
 import {
+  getClipPlaybackOrder,
+} from "../../domain/clips/clip-hierarchy";
+import {
   type ClipId,
 } from "../../domain/identifiers";
 import {
@@ -30,7 +33,7 @@ export function serializeNativeProjectFile(
 ): string {
   const clipsById: Record<ClipId, Clip> = {};
 
-  for (const clipId of state.clipOrder) {
+  for (const clipId of getClipPlaybackOrder(state.clipHierarchy)) {
     const clip = state.clipsById[clipId];
 
     if (clip !== undefined) {
@@ -53,7 +56,7 @@ export function serializeNativeProjectFile(
       instrumentPresetsById: state.instrumentPresetsById,
       instrumentPresetOrder: state.instrumentPresetOrder,
       clipsById,
-      clipOrder: state.clipOrder,
+      clipHierarchy: state.clipHierarchy,
       autoAdvanceEnabled: state.autoAdvanceEnabled,
       masterBus: state.masterBus,
     }),

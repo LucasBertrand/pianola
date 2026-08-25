@@ -4,6 +4,9 @@ import {
   type Track,
 } from "../clips/clip";
 import {
+  getClipPlaybackOrder,
+} from "../clips/clip-hierarchy";
+import {
   type ClipId,
   type PresetId,
 } from "../identifiers";
@@ -63,7 +66,7 @@ export function applyAddProjectInstrument(
   const requestedClipIds = Object.keys(command.clipInstrumentStatesById);
 
   if (
-    requestedClipIds.length !== state.clipOrder.length
+    requestedClipIds.length !== getClipPlaybackOrder(state.clipHierarchy).length
     || requestedClipIds.some(
       (clipId) => state.clipsById[clipId] === undefined,
     )
@@ -81,7 +84,7 @@ export function applyAddProjectInstrument(
   };
   const clipsById: Record<ClipId, Clip> = {};
 
-  for (const clipId of state.clipOrder) {
+  for (const clipId of getClipPlaybackOrder(state.clipHierarchy)) {
     const clip = state.clipsById[clipId];
 
     if (clip === undefined) {
@@ -178,7 +181,7 @@ export function applyDeleteProjectInstrument(
   const projectInstrumentsById = omitRecordKey(state.projectInstrumentsById, command.instrumentId);
   const clipsById: Record<ClipId, Clip> = {};
 
-  for (const clipId of state.clipOrder) {
+  for (const clipId of getClipPlaybackOrder(state.clipHierarchy)) {
     const clip = state.clipsById[clipId];
 
     if (clip !== undefined) {

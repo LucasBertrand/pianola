@@ -2,9 +2,18 @@ import {
   type Clip,
 } from "../clips/clip";
 import {
+  assertValidClipHierarchy,
+  containsClipGroups,
+  createFlatClipHierarchy,
+  getClipPlaybackOrder,
+  type ClipHierarchyNode,
+} from "../clips/clip-hierarchy";
+import {
   type Note,
 } from "../notes/note";
 import {
+  type ClipId,
+  type ClipGroupId,
   type NoteId,
 } from "../identifiers";
 import {
@@ -26,9 +35,13 @@ import {
 } from "../validation/transport-validation";
 import type {
   AddClipCommand,
+  CreateClipGroupCommand,
   DeleteClipCommand,
+  DeleteClipGroupCommand,
+  MoveClipHierarchyNodeCommand,
   PianoRollCommand,
   RenameClipCommand,
+  RenameClipGroupCommand,
   ReorderClipsCommand,
   UpdateClipCommand,
 } from "./command-types";
@@ -40,7 +53,7 @@ export function applyAddClip(
   state: ProjectState,
   command: AddClipCommand,
 ): ProjectState {
-  if (state.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT) {
+  if (Object.keys(state.clipsById).length >= MAXIMUM_PROJECT_CLIP_COUNT) {
     reject(
       "INVALID_COMMAND",
       `A project cannot contain more than ${MAXIMUM_PROJECT_CLIP_COUNT} clips.`,
@@ -64,7 +77,10 @@ export function applyAddClip(
       ...state.clipsById,
       [command.clip.id]: command.clip,
     },
-    clipOrder: [...state.clipOrder, command.clip.id],
+    clipHierarchy: [
+      ...state.clipHierarchy,
+      { kind: "clip", clipId: command.clip.id },
+    ],
   };
 }
 
@@ -80,7 +96,7 @@ export function applyDeleteClip(
     );
   }
 
-  if (state.clipOrder.length <= 1) {
+  if (Object.keys(state.clipsById).length <= 1) {
     reject(
       "INVALID_COMMAND",
       "A project must contain at least one clip.",
@@ -88,14 +104,14 @@ export function applyDeleteClip(
     );
   }
 
-  const clipOrder = state.clipOrder.filter(
-    (clipId) => clipId !== command.clipId,
-  );
   const clipsById = omitRecordKey(state.clipsById, command.clipId);
   return {
     ...state,
     clipsById,
-    clipOrder,
+    clipHierarchy: removeClipAndEmptyGroups(
+      state.clipHierarchy,
+      command.clipId,
+    ),
   };
 }
 
@@ -103,25 +119,147 @@ export function applyReorderClips(
   state: ProjectState,
   command: ReorderClipsCommand,
 ): ProjectState {
-  const currentIds = new Set(state.clipOrder);
+  const currentOrder = getClipPlaybackOrder(state.clipHierarchy);
+  const currentIds = new Set(currentOrder);
   const requestedIds = new Set(command.clipOrder);
 
   if (
-    requestedIds.size !== command.clipOrder.length
+    containsClipGroups(state.clipHierarchy)
+    || requestedIds.size !== command.clipOrder.length
     || requestedIds.size !== currentIds.size
     || [...currentIds].some((clipId) => !requestedIds.has(clipId))
   ) {
     reject(
       "INVALID_COMMAND",
-      "Clip order must contain every clip exactly once.",
+      "Clip order must contain every top-level clip exactly once.",
       command.type,
     );
   }
 
   return {
     ...state,
-    clipOrder: [...command.clipOrder],
+    clipHierarchy: createFlatClipHierarchy(command.clipOrder),
   };
+}
+
+export function applyCreateClipGroup(
+  state: ProjectState,
+  command: CreateClipGroupCommand,
+): ProjectState {
+  const name = command.name.trim();
+
+  if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip group name must contain between 1 and ${MAXIMUM_CLIP_NAME_LENGTH} characters.`,
+      command.type,
+    );
+  }
+
+  if (!isValidInsertionIndex(command.index)) {
+    reject("INVALID_COMMAND", "Clip group insertion index is invalid.", command.type);
+  }
+
+  if (findGroup(state.clipHierarchy, command.groupId) !== undefined) {
+    reject("INVALID_COMMAND", `Clip group "${command.groupId}" already exists.`, command.type);
+  }
+
+  const group: ClipHierarchyNode = {
+    kind: "group",
+    id: command.groupId,
+    name,
+    children: [],
+  };
+  const hierarchy = insertIntoParent(
+    state.clipHierarchy,
+    command.parentGroupId,
+    command.index,
+    group,
+  );
+
+  if (hierarchy === null) {
+    reject("INVALID_COMMAND", "Target clip group does not exist.", command.type);
+  }
+
+  assertHierarchy(hierarchy, state, command.type);
+  return { ...state, clipHierarchy: hierarchy };
+}
+
+export function applyRenameClipGroup(
+  state: ProjectState,
+  command: RenameClipGroupCommand,
+): ProjectState {
+  const name = command.name.trim();
+
+  if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip group name must contain between 1 and ${MAXIMUM_CLIP_NAME_LENGTH} characters.`,
+      command.type,
+    );
+  }
+
+  const hierarchy = updateGroupName(state.clipHierarchy, command.groupId, name);
+
+  if (hierarchy === null) {
+    reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
+  }
+
+  return { ...state, clipHierarchy: hierarchy };
+}
+
+export function applyDeleteClipGroup(
+  state: ProjectState,
+  command: DeleteClipGroupCommand,
+): ProjectState {
+  const hierarchy = unwrapGroup(state.clipHierarchy, command.groupId);
+
+  if (hierarchy === null) {
+    reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
+  }
+
+  return { ...state, clipHierarchy: hierarchy };
+}
+
+export function applyMoveClipHierarchyNode(
+  state: ProjectState,
+  command: MoveClipHierarchyNodeCommand,
+): ProjectState {
+  if (!isValidInsertionIndex(command.targetIndex)) {
+    reject("INVALID_COMMAND", "Clip hierarchy insertion index is invalid.", command.type);
+  }
+
+  if (
+    command.node.kind === "group"
+    && command.targetParentGroupId !== null
+    && groupContainsGroup(
+      state.clipHierarchy,
+      command.node.groupId,
+      command.targetParentGroupId,
+    )
+  ) {
+    reject("INVALID_COMMAND", "A clip group cannot be moved into one of its descendants.", command.type);
+  }
+
+  const removed = removeNode(state.clipHierarchy, command.node);
+
+  if (removed === null) {
+    reject("INVALID_COMMAND", "Clip hierarchy node does not exist.", command.type);
+  }
+
+  const hierarchy = insertIntoParent(
+    removed.hierarchy,
+    command.targetParentGroupId,
+    command.targetIndex,
+    removed.node,
+  );
+
+  if (hierarchy === null) {
+    reject("INVALID_COMMAND", "Target clip group does not exist.", command.type);
+  }
+
+  assertHierarchy(hierarchy, state, command.type);
+  return { ...state, clipHierarchy: hierarchy };
 }
 
 export function applyRenameClip(
@@ -353,4 +491,230 @@ function compareNotesForOverlapValidation(left: Note, right: Note): number {
     || left.durationTicks - right.durationTicks
     || left.id.localeCompare(right.id)
   );
+}
+
+function assertHierarchy(
+  hierarchy: readonly ClipHierarchyNode[],
+  state: ProjectState,
+  commandType: PianoRollCommand["type"],
+): void {
+  try {
+    assertValidClipHierarchy(hierarchy, new Set(Object.keys(state.clipsById)));
+  } catch (error: unknown) {
+    reject(
+      "INVALID_COMMAND",
+      error instanceof Error ? error.message : "Clip hierarchy is invalid.",
+      commandType,
+    );
+  }
+}
+
+function isValidInsertionIndex(index: number): boolean {
+  return Number.isSafeInteger(index) && index >= 0;
+}
+
+function findGroup(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId,
+): ClipHierarchyNode | undefined {
+  for (const node of hierarchy) {
+    if (node.kind === "group") {
+      if (node.id === groupId) {
+        return node;
+      }
+
+      const descendant = findGroup(node.children, groupId);
+
+      if (descendant !== undefined) {
+        return descendant;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function insertIntoParent(
+  hierarchy: readonly ClipHierarchyNode[],
+  parentGroupId: ClipGroupId | null,
+  index: number,
+  node: ClipHierarchyNode,
+): readonly ClipHierarchyNode[] | null {
+  if (parentGroupId === null) {
+    if (index > hierarchy.length) {
+      return null;
+    }
+
+    const next = [...hierarchy];
+    next.splice(index, 0, node);
+    return next;
+  }
+
+  let found = false;
+  const next = hierarchy.map((candidate) => {
+    if (candidate.kind !== "group") {
+      return candidate;
+    }
+
+    if (candidate.id === parentGroupId) {
+      if (index > candidate.children.length) {
+        return candidate;
+      }
+
+      found = true;
+      const children = [...candidate.children];
+      children.splice(index, 0, node);
+      return { ...candidate, children };
+    }
+
+    const children = insertIntoParent(candidate.children, parentGroupId, index, node);
+
+    if (children === null) {
+      return candidate;
+    }
+
+    found = true;
+    return { ...candidate, children };
+  });
+
+  return found ? next : null;
+}
+
+function updateGroupName(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId,
+  name: string,
+): readonly ClipHierarchyNode[] | null {
+  let found = false;
+  const next = hierarchy.map((node) => {
+    if (node.kind !== "group") {
+      return node;
+    }
+
+    if (node.id === groupId) {
+      found = true;
+      return { ...node, name };
+    }
+
+    const children = updateGroupName(node.children, groupId, name);
+
+    if (children === null) {
+      return node;
+    }
+
+    found = true;
+    return { ...node, children };
+  });
+
+  return found ? next : null;
+}
+
+function unwrapGroup(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId,
+): readonly ClipHierarchyNode[] | null {
+  let found = false;
+  const next: ClipHierarchyNode[] = [];
+
+  for (const node of hierarchy) {
+    if (node.kind === "group" && node.id === groupId) {
+      next.push(...node.children);
+      found = true;
+      continue;
+    }
+
+    if (node.kind === "group") {
+      const children = unwrapGroup(node.children, groupId);
+
+      if (children !== null) {
+        next.push({ ...node, children });
+        found = true;
+        continue;
+      }
+    }
+
+    next.push(node);
+  }
+
+  return found ? next : null;
+}
+
+function removeClipAndEmptyGroups(
+  hierarchy: readonly ClipHierarchyNode[],
+  clipId: ClipId,
+): readonly ClipHierarchyNode[] {
+  const next: ClipHierarchyNode[] = [];
+
+  for (const node of hierarchy) {
+    if (node.kind === "clip") {
+      if (node.clipId !== clipId) {
+        next.push(node);
+      }
+      continue;
+    }
+
+    const children = removeClipAndEmptyGroups(node.children, clipId);
+
+    if (children.length > 0) {
+      next.push({ ...node, children });
+    }
+  }
+
+  return next;
+}
+
+function groupContainsGroup(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId,
+  descendantGroupId: ClipGroupId,
+): boolean {
+  const group = findGroup(hierarchy, groupId);
+
+  return group !== undefined
+    && group.kind === "group"
+    && findGroup(group.children, descendantGroupId) !== undefined;
+}
+
+function removeNode(
+  hierarchy: readonly ClipHierarchyNode[],
+  reference: MoveClipHierarchyNodeCommand["node"],
+): { readonly hierarchy: readonly ClipHierarchyNode[]; readonly node: ClipHierarchyNode } | null {
+  const next: ClipHierarchyNode[] = [];
+
+  for (const node of hierarchy) {
+    if (matchesReference(node, reference)) {
+      return {
+        hierarchy: [...next, ...hierarchy.slice(next.length + 1)],
+        node,
+      };
+    }
+
+    if (node.kind === "group") {
+      const removed = removeNode(node.children, reference);
+
+      if (removed !== null) {
+        return {
+          hierarchy: [
+            ...next,
+            { ...node, children: removed.hierarchy },
+            ...hierarchy.slice(next.length + 1),
+          ],
+          node: removed.node,
+        };
+      }
+    }
+
+    next.push(node);
+  }
+
+  return null;
+}
+
+function matchesReference(
+  node: ClipHierarchyNode,
+  reference: MoveClipHierarchyNodeCommand["node"],
+): boolean {
+  return reference.kind === "clip"
+    ? node.kind === "clip" && node.clipId === reference.clipId
+    : node.kind === "group" && node.id === reference.groupId;
 }

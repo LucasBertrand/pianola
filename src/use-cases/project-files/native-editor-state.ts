@@ -6,6 +6,9 @@ import {
   type ClipId,
 } from "../../domain/identifiers";
 import {
+  getClipPlaybackOrder,
+} from "../../domain/clips/clip-hierarchy";
+import {
   type ProjectState,
 } from "../../domain/project/project-document";
 import {
@@ -53,7 +56,7 @@ export function createDefaultNativeEditorState(
       ) * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels,
   };
 
-  for (const clipId of projectState.clipOrder) {
+  for (const clipId of getClipPlaybackOrder(projectState.clipHierarchy)) {
     const clip = projectState.clipsById[clipId];
 
     if (clip !== undefined) {

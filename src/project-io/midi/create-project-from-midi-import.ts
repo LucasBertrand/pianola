@@ -8,6 +8,10 @@ import {
   DEFAULT_CLIP_COLOR,
 } from "../../domain/clips/clip";
 import {
+  createFlatClipHierarchy,
+  getClipPlaybackOrder,
+} from "../../domain/clips/clip-hierarchy";
+import {
   type InstrumentId,
 } from "../../domain/identifiers";
 import {
@@ -211,7 +215,7 @@ export function createProjectFromMidiImport(
     clipsById: {
       [clipId]: clip,
     },
-    clipOrder: [clipId],
+    clipHierarchy: createFlatClipHierarchy([clipId]),
     autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
     workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),
@@ -238,7 +242,7 @@ function createEmptyInstrumentCandidate(): MidiImportInstrumentCandidate {
 }
 
 function assertImportedProjectState(state: ProjectState): void {
-  const clipId = state.clipOrder[0];
+  const clipId = getClipPlaybackOrder(state.clipHierarchy)[0];
 
   if (clipId === undefined) {
     throw new MidiImportError("The imported project must contain a clip.");

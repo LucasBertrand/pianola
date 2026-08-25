@@ -5,6 +5,9 @@ import type {
   Clip,
 } from "../clips/clip";
 import type {
+  ClipHierarchyNode,
+} from "../clips/clip-hierarchy";
+import type {
   ClipId,
   InstrumentId,
   PresetId,
@@ -35,7 +38,7 @@ export interface ProjectDocument {
   readonly instrumentPresetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly instrumentPresetOrder: readonly PresetId[];
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
-  readonly clipOrder: readonly ClipId[];
+  readonly clipHierarchy: readonly ClipHierarchyNode[];
   readonly autoAdvanceEnabled: boolean;
   readonly masterBus: MasterBusState;
 }

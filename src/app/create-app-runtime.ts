@@ -16,6 +16,9 @@ import {
   getClipDurationTicks,
 } from "../domain/clips/clip";
 import {
+  getClipPlaybackOrder,
+} from "../domain/clips/clip-hierarchy";
+import {
   type ClipId,
   type InstrumentId,
 } from "../domain/identifiers";
@@ -207,7 +210,7 @@ export function createEditorRuntime(
 
       const result: Record<ClipId, ClipEditorRuntimeState> = {};
 
-      for (const clipId of state.clipOrder) {
+      for (const clipId of getClipPlaybackOrder(state.clipHierarchy)) {
         const clip = state.clipsById[clipId];
 
         if (clip !== undefined) {

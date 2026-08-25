@@ -1,6 +1,12 @@
 import {
   type Clip,
 } from "../../../domain/clips/clip";
+import {
+  assertValidClipHierarchy,
+  createFlatClipHierarchy,
+  getClipPlaybackOrder,
+  type ClipHierarchyNode,
+} from "../../../domain/clips/clip-hierarchy";
 import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
 import {
   type ClipId,
@@ -37,7 +43,11 @@ import {
   readRecord,
   readSafeInteger,
 } from "./json-readers";
-import { parseClip, parseClipOrder } from "./parse-clips";
+import {
+  parseClip,
+  parseClipHierarchy,
+  parseClipOrder,
+} from "./parse-clips";
 import {
   parseInstrumentOrder,
   parseInstrumentPresets,
@@ -92,10 +102,13 @@ export function parseProjectSnapshot(
     project["masterBus"],
     `${path}.masterBus`,
   );
-  const clipOrder = parseClipOrder(
-    project["clipOrder"],
-    `${path}.clipOrder`,
-  );
+  const clipHierarchy: readonly ClipHierarchyNode[] = schemaVersion >= 4
+    ? parseClipHierarchy(project["clipHierarchy"], `${path}.clipHierarchy`)
+    : createFlatClipHierarchy(parseClipOrder(
+        project["clipOrder"],
+        `${path}.clipOrder`,
+      ));
+  const clipOrder = getClipPlaybackOrder(clipHierarchy);
   const sourceClips = readRecord(
     project["clipsById"],
     `${path}.clipsById`,
@@ -120,6 +133,16 @@ export function parseProjectSnapshot(
     );
   }
 
+  try {
+    assertValidClipHierarchy(clipHierarchy, new Set(Object.keys(clipsById)));
+  } catch (error: unknown) {
+    fail(
+      "INVALID_DATA",
+      `${path}.clipHierarchy`,
+      error instanceof Error ? error.message : "Clip hierarchy is invalid.",
+    );
+  }
+
   const projectState: ProjectDocument = {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
@@ -130,7 +153,7 @@ export function parseProjectSnapshot(
     instrumentPresetsById,
     instrumentPresetOrder,
     clipsById,
-    clipOrder,
+    clipHierarchy,
     autoAdvanceEnabled,
     masterBus,
   };

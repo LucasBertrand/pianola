@@ -5,6 +5,9 @@ import {
 import type {
   ClipId,
 } from "../../../domain/identifiers";
+import {
+  getClipPlaybackOrder,
+} from "../../../domain/clips/clip-hierarchy";
 import type {
   EditorRuntime,
 } from "../../../editor/runtime/editor-runtime";
@@ -87,7 +90,9 @@ export function useClipDialogWorkflow({
     open: editedClipId !== null,
     name,
     color,
-    canDelete: runtime.projectStore.getState().clipOrder.length > 1,
+    canDelete: getClipPlaybackOrder(
+      runtime.projectStore.getState().clipHierarchy,
+    ).length > 1,
     openEdit,
     setName,
     setColor,

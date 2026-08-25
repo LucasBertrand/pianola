@@ -4,12 +4,15 @@ import type {
 import type {
   ProjectDocument,
 } from "../project/project-document";
+import {
+  getClipPlaybackOrder,
+} from "../clips/clip-hierarchy";
 
 /** Resolves the next visible clip while preserving loop priority. */
 export function getAutoAdvanceTargetClipId(
   project: Pick<
     ProjectDocument,
-    "clipOrder" | "clipsById" | "autoAdvanceEnabled"
+    "clipHierarchy" | "clipsById" | "autoAdvanceEnabled"
   >,
   currentClipId: ClipId,
 ): ClipId | null {
@@ -23,13 +26,14 @@ export function getAutoAdvanceTargetClipId(
     return null;
   }
 
-  const currentIndex = project.clipOrder.indexOf(currentClipId);
+  const clipOrder = getClipPlaybackOrder(project.clipHierarchy);
+  const currentIndex = clipOrder.indexOf(currentClipId);
 
   if (currentIndex < 0) {
     return null;
   }
 
-  const nextClipId = project.clipOrder[currentIndex + 1];
+  const nextClipId = clipOrder[currentIndex + 1];
 
   return nextClipId !== undefined
     && project.clipsById[nextClipId] !== undefined

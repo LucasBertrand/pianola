@@ -25,6 +25,9 @@ import {
   type ClipInstrumentState,
 } from "../../../domain/clips/clip";
 import {
+  getClipPlaybackOrder,
+} from "../../../domain/clips/clip-hierarchy";
+import {
   type ClipId,
   type InstrumentId,
 } from "../../../domain/identifiers";
@@ -80,19 +83,21 @@ export function useClipWorkflow({
   const add = useCallback((): void => {
     const state = commands.getState();
 
-    if (state.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT) {
+    const clipOrder = getClipPlaybackOrder(state.clipHierarchy);
+
+    if (clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT) {
       return;
     }
 
     clipSequenceRef.current += 1;
     const color = RENDERING_CONSTANTS.userInstrumentColors[
-      state.clipOrder.length % RENDERING_CONSTANTS.userInstrumentColors.length
+      clipOrder.length % RENDERING_CONSTANTS.userInstrumentColors.length
     ] ?? DEFAULT_CLIP_COLOR;
 
     const clip = createEmptyClip(
       state.instrumentOrder,
       state.clock,
-      state.clipOrder.length,
+      clipOrder.length,
       clipSequenceRef.current,
       color,
     );
@@ -107,18 +112,19 @@ export function useClipWorkflow({
     targetIndex: number,
   ): void => {
     const state = commands.getState();
-    const currentIndex = state.clipOrder.indexOf(clipId);
+    const currentOrder = getClipPlaybackOrder(state.clipHierarchy);
+    const currentIndex = currentOrder.indexOf(clipId);
 
     if (
       currentIndex < 0
       || targetIndex < 0
-      || targetIndex >= state.clipOrder.length
+      || targetIndex >= currentOrder.length
       || targetIndex === currentIndex
     ) {
       return;
     }
 
-    const clipOrder = [...state.clipOrder];
+    const clipOrder = [...currentOrder];
     const [movedClipId] = clipOrder.splice(currentIndex, 1);
 
     if (movedClipId === undefined) {
@@ -138,7 +144,7 @@ export function useClipWorkflow({
 
     if (
       sourceClip === undefined
-      || state.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT
+      || getClipPlaybackOrder(state.clipHierarchy).length >= MAXIMUM_PROJECT_CLIP_COUNT
     ) {
       return;
     }
@@ -184,8 +190,8 @@ export function useClipWorkflow({
         },
       },
     };
-    const sourceIndex = state.clipOrder.indexOf(clipId);
-    const clipOrder = [...state.clipOrder];
+    const sourceIndex = getClipPlaybackOrder(state.clipHierarchy).indexOf(clipId);
+    const clipOrder = [...getClipPlaybackOrder(state.clipHierarchy)];
 
     clipOrder.splice(sourceIndex + 1, 0, duplicatedClipId);
     duplicateEditorState(clipId, duplicatedClipId);
@@ -204,7 +210,7 @@ export function useClipWorkflow({
     const state = commands.getState();
     const clip = state.clipsById[clipId];
 
-    if (clip === undefined || state.clipOrder.length <= 1) {
+    if (clip === undefined || getClipPlaybackOrder(state.clipHierarchy).length <= 1) {
       return;
     }
 

@@ -10,6 +10,9 @@ import type {
   ProjectDocument,
 } from "../domain/project/project-document";
 import {
+  getClipPlaybackOrder,
+} from "../domain/clips/clip-hierarchy";
+import {
   createGridSettings,
   parseGridSubdivision,
 } from "../editor/model/grid-settings";
@@ -74,7 +77,8 @@ export function parseProjectWorkspace(
     `${path}.clipStatesById`,
   );
   const storedKeys = Object.keys(storedClipStates).sort();
-  const expectedKeys = [...document.clipOrder].sort();
+  const clipOrder = getClipPlaybackOrder(document.clipHierarchy);
+  const expectedKeys = [...clipOrder].sort();
 
   if (
     storedKeys.length !== expectedKeys.length
@@ -88,7 +92,7 @@ export function parseProjectWorkspace(
 
   const clipStatesById: Record<ClipId, ProjectClipWorkspaceState> = {};
 
-  for (const clipId of document.clipOrder) {
+  for (const clipId of clipOrder) {
     const clip = document.clipsById[clipId];
     const clipPath = `${path}.clipStatesById.${clipId}`;
     const stored = readPersistenceRecord(

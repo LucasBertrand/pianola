@@ -7,6 +7,9 @@ import {
   type ProjectDocument,
 } from "../../../domain/project/project-document";
 import {
+  getClipPlaybackOrder,
+} from "../../../domain/clips/clip-hierarchy";
+import {
   MAXIMUM_ENTITY_ID_LENGTH,
 } from "../../../domain/identifiers";
 import { createGridSettings, parseGridSubdivision, type GridSettings } from "../../../editor/model/grid-settings";
@@ -108,14 +111,15 @@ export function parseEditorState(
     editor["clipStatesById"],
     `${path}.clipStatesById`,
   );
+  const clipOrder = getClipPlaybackOrder(projectState.clipHierarchy);
   assertExactRecordKeys(
     sourceClipStates,
-    projectState.clipOrder,
+    clipOrder,
     `${path}.clipStatesById`,
   );
   const clipStatesById: Record<ClipId, NativeClipEditorState> = {};
 
-  for (const clipId of projectState.clipOrder) {
+  for (const clipId of clipOrder) {
     const clip = projectState.clipsById[clipId];
     const clipStatePath = `${path}.clipStatesById.${clipId}`;
     const clipState = readRecord(

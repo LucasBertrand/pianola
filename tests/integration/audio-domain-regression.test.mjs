@@ -62,6 +62,9 @@ import {
   createDefaultClipTimeline,
 } from "../../src/domain/clips/clip";
 import {
+  getClipPlaybackOrder,
+} from "../../src/domain/clips/clip-hierarchy";
+import {
   getMeasureCount,
 } from "../../src/domain/transport/time-map";
 import {
@@ -1391,7 +1394,7 @@ function getActiveTestMeasureCount(state) {
     );
 
     assert.deepEqual(
-      loaded.projectState.clipOrder,
+      getClipPlaybackOrder(loaded.projectState.clipHierarchy),
       ["clip-test", "clip-native-second"],
     );
     assert.equal(
@@ -2418,7 +2421,7 @@ function getActiveTestMeasureCount(state) {
       },
     });
 
-    for (const clipId of withInstrument.clipOrder) {
+    for (const clipId of getClipPlaybackOrder(withInstrument.clipHierarchy)) {
       assert.ok(
         withInstrument.clipsById[clipId].tracksByInstrumentId["voice-b"],
       );
@@ -2438,7 +2441,7 @@ function getActiveTestMeasureCount(state) {
       instrumentId: "voice-b",
     });
 
-    for (const clipId of withoutInstrument.clipOrder) {
+    for (const clipId of getClipPlaybackOrder(withoutInstrument.clipHierarchy)) {
       assert.equal(
         withoutInstrument.clipsById[clipId].tracksByInstrumentId["voice-b"],
         undefined,

@@ -137,8 +137,9 @@ ClipInspector
 
 Cette navigation ne consomme pas Undo/Redo et ne modifie pas le clip joué.
 Le bouton Play d’une carte passe directement par `useAudioPlayback`; à la fin,
-`clipOrder` détermine la carte suivante, sauf si la boucle ou l’arrêt en fin du
-clip courant est actif.
+`clipHierarchy` est la source de vérité pour l’organisation des clips ; son
+parcours en profondeur détermine la carte suivante, sauf si la boucle ou
+l’arrêt en fin du clip courant est actif.
 
 ## Styles propriétaires
 

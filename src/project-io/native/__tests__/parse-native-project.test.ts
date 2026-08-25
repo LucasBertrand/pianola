@@ -9,6 +9,9 @@ import {
   createNativeProjectFileMetadata,
 } from "../../../use-cases/project-files/native-editor-state";
 import {
+  getClipPlaybackOrder,
+} from "../../../domain/clips/clip-hierarchy";
+import {
   createTestProject,
   TEST_CLIP_ID,
 } from "../../../../tests/support/test-builders";
@@ -53,6 +56,9 @@ describe("native project parser", () => {
     expect(storedClip).toBeDefined();
     stored.formatVersion = 2;
     stored.project.schemaVersion = 2;
+    const legacyProject = stored.project as unknown as Record<string, unknown>;
+    legacyProject["clipOrder"] = getClipPlaybackOrder(project.clipHierarchy);
+    delete legacyProject["clipHierarchy"];
     delete stored.project.autoAdvanceEnabled;
     storedClip!.transportSettings["autoAdvanceEnabled"] = false;
 
@@ -199,8 +205,11 @@ describe("native project parser", () => {
 
     legacy.formatVersion = 1;
     legacy.project.schemaVersion = 1;
+    const legacyProject = legacy.project as unknown as Record<string, unknown>;
+    legacyProject["clipOrder"] = getClipPlaybackOrder(project.clipHierarchy);
+    delete legacyProject["clipHierarchy"];
 
-    for (const clipId of project.clipOrder) {
+    for (const clipId of getClipPlaybackOrder(project.clipHierarchy)) {
       legacy.project.clipsById[clipId]!.transportSettings["anchorTick"] = 240;
       legacy.editor.clipStatesById[clipId]!["playheadTick"] = 240;
     }
@@ -209,7 +218,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(3);
+    expect(loaded.projectState.schemaVersion).toBe(4);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

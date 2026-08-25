@@ -11,6 +11,9 @@ import {
   type Clip,
 } from "../../src/domain/clips/clip";
 import {
+  createFlatClipHierarchy,
+} from "../../src/domain/clips/clip-hierarchy";
+import {
   createDefaultProjectClock,
   createDefaultTransportState,
 } from "../../src/domain/transport/transport";
@@ -115,7 +118,7 @@ export function createTestProject({
     instrumentPresetsById: presetLibrary.instrumentPresetsById,
     instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById,
-    clipOrder: clips.map((clip) => clip.id),
+    clipHierarchy: createFlatClipHierarchy(clips.map((clip) => clip.id)),
     autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
     workspace: { activeClipId },
     masterBus: createDefaultMasterBusState(),

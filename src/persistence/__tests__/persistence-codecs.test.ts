@@ -30,6 +30,9 @@ import {
 import {
   createPersonalInstrumentPreset,
 } from "../../domain/personal-instrument-presets";
+import {
+  getClipPlaybackOrder,
+} from "../../domain/clips/clip-hierarchy";
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {
@@ -115,17 +118,20 @@ describe("persistence codecs", () => {
 
     legacy.schemaVersion = 1;
     legacy.document.schemaVersion = 1;
+    const legacyDocument = legacy.document as unknown as Record<string, unknown>;
+    legacyDocument["clipOrder"] = getClipPlaybackOrder(document.clipHierarchy);
+    delete legacyDocument["clipHierarchy"];
 
-    for (const clipId of document.clipOrder) {
+    for (const clipId of getClipPlaybackOrder(document.clipHierarchy)) {
       legacy.document.clipsById[clipId]!
         .transportSettings["anchorTick"] = 480;
       legacy.workspace.clipStatesById[clipId]!["playheadTick"] = 480;
     }
 
     const migrated = parsePortableProject(JSON.stringify(legacy));
-    const clipId = document.clipOrder[0]!;
+    const clipId = getClipPlaybackOrder(document.clipHierarchy)[0]!;
 
-    expect(migrated.document.schemaVersion).toBe(3);
+    expect(migrated.document.schemaVersion).toBe(4);
     expect("anchorTick" in migrated.document.clipsById[clipId]!
       .transportSettings).toBe(false);
     expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)

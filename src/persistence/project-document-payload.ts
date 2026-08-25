@@ -15,7 +15,7 @@ export function createProjectDocumentPayload(
     instrumentPresetsById: document.instrumentPresetsById,
     instrumentPresetOrder: document.instrumentPresetOrder,
     clipsById: document.clipsById,
-    clipOrder: document.clipOrder,
+    clipHierarchy: document.clipHierarchy,
     autoAdvanceEnabled: document.autoAdvanceEnabled,
     masterBus: document.masterBus,
   };

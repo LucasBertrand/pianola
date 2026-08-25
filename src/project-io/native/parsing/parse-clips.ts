@@ -7,6 +7,11 @@ import {
   DEFAULT_CLIP_COLOR,
 } from "../../../domain/clips/clip";
 import {
+  MAXIMUM_CLIP_GROUP_DEPTH,
+  MAXIMUM_CLIP_GROUP_NAME_LENGTH,
+  type ClipHierarchyNode,
+} from "../../../domain/clips/clip-hierarchy";
+import {
   type ClipId,
   type InstrumentId,
   type NoteId,
@@ -95,6 +100,72 @@ export function parseClipOrder(
   }
 
   return clipOrder;
+}
+
+export function parseClipHierarchy(
+  source: unknown,
+  path: string,
+): readonly ClipHierarchyNode[] {
+  return readBoundedArray(
+    source,
+    path,
+    PROJECT_CONSTANTS.maximumClipCount + PROJECT_CONSTANTS.maximumClipGroupCount,
+  ).map((node, index) => parseClipHierarchyNode(
+    node,
+    `${path}[${String(index)}]`,
+    1,
+  ));
+}
+
+function parseClipHierarchyNode(
+  source: unknown,
+  path: string,
+  depth: number,
+): ClipHierarchyNode {
+  const node = readRecord(source, path);
+  const kind = readString(node["kind"], `${path}.kind`, 16);
+
+  if (kind === "clip") {
+    assertExactRecordKeys(node, ["kind", "clipId"], path);
+    return {
+      kind,
+      clipId: readNonEmptyString(
+        node["clipId"],
+        `${path}.clipId`,
+        MAXIMUM_ID_LENGTH,
+      ),
+    };
+  }
+
+  if (kind !== "group") {
+    fail("INVALID_DATA", `${path}.kind`, "Clip hierarchy node kind is invalid.");
+  }
+
+  if (depth > MAXIMUM_CLIP_GROUP_DEPTH) {
+    fail("INVALID_DATA", path, "Clip hierarchy exceeds the maximum group depth.");
+  }
+
+  assertExactRecordKeys(node, ["kind", "id", "name", "children"], path);
+  const children = readBoundedArray(
+    node["children"],
+    `${path}.children`,
+    PROJECT_CONSTANTS.maximumClipCount + PROJECT_CONSTANTS.maximumClipGroupCount,
+  ).map((child, index) => parseClipHierarchyNode(
+    child,
+    `${path}.children[${String(index)}]`,
+    depth + 1,
+  ));
+
+  return {
+    kind,
+    id: readNonEmptyString(node["id"], `${path}.id`, MAXIMUM_ID_LENGTH),
+    name: readNonEmptyString(
+      node["name"],
+      `${path}.name`,
+      MAXIMUM_CLIP_GROUP_NAME_LENGTH,
+    ),
+    children,
+  };
 }
 
 export function parseClip(

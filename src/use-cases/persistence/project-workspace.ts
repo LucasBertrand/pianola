@@ -4,6 +4,9 @@ import {
 import {
   getClipDurationTicks,
 } from "../../domain/clips/clip";
+import {
+  getClipPlaybackOrder,
+} from "../../domain/clips/clip-hierarchy";
 import type {
   ClipId,
   InstrumentId,
@@ -34,7 +37,8 @@ import type {
 export function createDefaultProjectWorkspace(
   document: ProjectDocument,
 ): ProjectWorkspaceState {
-  const activeClipId = document.clipOrder[0];
+  const clipOrder = getClipPlaybackOrder(document.clipHierarchy);
+  const activeClipId = clipOrder[0];
 
   if (activeClipId === undefined) {
     throw new Error("A project must contain at least one clip.");
@@ -42,7 +46,7 @@ export function createDefaultProjectWorkspace(
 
   const clipStatesById: Record<ClipId, ProjectClipWorkspaceState> = {};
 
-  for (const clipId of document.clipOrder) {
+  for (const clipId of clipOrder) {
     const clip = document.clipsById[clipId];
 
     if (clip !== undefined) {
@@ -90,7 +94,7 @@ export function captureProjectWorkspace(
   const runtimeStates = runtime.captureClipEditorStates();
   const clipStatesById: Record<ClipId, ProjectClipWorkspaceState> = {};
 
-  for (const clipId of document.clipOrder) {
+  for (const clipId of getClipPlaybackOrder(document.clipHierarchy)) {
     const clip = document.clipsById[clipId];
     const state = runtimeStates[clipId];
 

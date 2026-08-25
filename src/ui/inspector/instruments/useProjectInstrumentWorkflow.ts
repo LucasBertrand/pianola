@@ -26,6 +26,9 @@ import {
   type ClipInstrumentState,
 } from "../../../domain/clips/clip";
 import {
+  getClipPlaybackOrder,
+} from "../../../domain/clips/clip-hierarchy";
+import {
   createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
 } from "../../../domain/project-instrument-factory";
@@ -149,7 +152,7 @@ export function useProjectInstrumentWorkflow({
       color,
     );
     const clipInstrumentStatesById = createInitialClipInstrumentStates(
-      state.clipOrder,
+      getClipPlaybackOrder(state.clipHierarchy),
     );
 
     const pendingCommands: PianoRollCommand[] = [];

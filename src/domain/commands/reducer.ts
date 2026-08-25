@@ -8,8 +8,12 @@ import { DomainValidationError } from "../validation/validation-result";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import {
   applyAddClip,
+  applyCreateClipGroup,
   applyDeleteClip,
+  applyDeleteClipGroup,
+  applyMoveClipHierarchyNode,
   applyRenameClip,
+  applyRenameClipGroup,
   applyReorderClips,
   applyUpdateClip,
 } from "./clip-commands";
@@ -18,12 +22,16 @@ import { assertNever, reject } from "./command-context";
 import type {
   AddClipCommand,
   AddProjectInstrumentCommand,
+  CreateClipGroupCommand,
   DeleteClipCommand,
+  DeleteClipGroupCommand,
   DeleteProjectInstrumentCommand,
   DeleteInstrumentPresetCommand,
   PianoRollCommand,
   RenameClipCommand,
   ReorderClipsCommand,
+  MoveClipHierarchyNodeCommand,
+  RenameClipGroupCommand,
   UpdateClipCommand,
   ReorderProjectInstrumentsCommand,
   SaveInstrumentPresetCommand,
@@ -130,6 +138,14 @@ function applyCommand(
       return applyAddClip(state, command);
     case "DeleteClip":
       return applyDeleteClip(state, command);
+    case "CreateClipGroup":
+      return applyCreateClipGroup(state, command);
+    case "RenameClipGroup":
+      return applyRenameClipGroup(state, command);
+    case "DeleteClipGroup":
+      return applyDeleteClipGroup(state, command);
+    case "MoveClipHierarchyNode":
+      return applyMoveClipHierarchyNode(state, command);
     case "ReorderClips":
       return applyReorderClips(state, command);
     case "RenameClip":
@@ -166,9 +182,13 @@ function applyCommand(
 type ActiveClipCommand = Exclude<
   PianoRollCommand,
   | AddClipCommand
+  | CreateClipGroupCommand
   | DeleteClipCommand
+  | DeleteClipGroupCommand
+  | MoveClipHierarchyNodeCommand
   | ReorderClipsCommand
   | RenameClipCommand
+  | RenameClipGroupCommand
   | UpdateClipCommand
   | AddProjectInstrumentCommand
   | UpdateProjectInstrumentCommand

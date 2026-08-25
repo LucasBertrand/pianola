@@ -4,6 +4,7 @@ import {
 } from "../clips/clip";
 import {
   type ClipId,
+  type ClipGroupId,
   type InstrumentId,
   type NoteId,
   type PresetId,
@@ -126,6 +127,37 @@ export interface DeleteClipCommand {
 export interface ReorderClipsCommand {
   readonly type: "ReorderClips";
   readonly clipOrder: readonly ClipId[];
+}
+
+export interface CreateClipGroupCommand {
+  readonly type: "CreateClipGroup";
+  readonly groupId: ClipGroupId;
+  readonly name: string;
+  readonly parentGroupId: ClipGroupId | null;
+  readonly index: number;
+}
+
+export interface RenameClipGroupCommand {
+  readonly type: "RenameClipGroup";
+  readonly groupId: ClipGroupId;
+  readonly name: string;
+}
+
+/** Removes a group while preserving its children at the same location. */
+export interface DeleteClipGroupCommand {
+  readonly type: "DeleteClipGroup";
+  readonly groupId: ClipGroupId;
+}
+
+export type ClipHierarchyNodeReference =
+  | { readonly kind: "clip"; readonly clipId: ClipId }
+  | { readonly kind: "group"; readonly groupId: ClipGroupId };
+
+export interface MoveClipHierarchyNodeCommand {
+  readonly type: "MoveClipHierarchyNode";
+  readonly node: ClipHierarchyNodeReference;
+  readonly targetParentGroupId: ClipGroupId | null;
+  readonly targetIndex: number;
 }
 
 export interface RenameClipCommand {
@@ -358,6 +390,10 @@ export type PianoRollCommand =
   | AddClipCommand
   | DeleteClipCommand
   | ReorderClipsCommand
+  | CreateClipGroupCommand
+  | RenameClipGroupCommand
+  | DeleteClipGroupCommand
+  | MoveClipHierarchyNodeCommand
   | RenameClipCommand
   | UpdateClipCommand
   | AddProjectInstrumentCommand

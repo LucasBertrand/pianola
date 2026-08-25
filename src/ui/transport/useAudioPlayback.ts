@@ -232,7 +232,7 @@ export function useAudioPlayback(
         if (
           nextClipId !== queuedClipIdRef.current
           || queuedPlaybackChanged
-          || state.clipOrder !== previousState.clipOrder
+          || state.clipHierarchy !== previousState.clipHierarchy
           || state.autoAdvanceEnabled !== previousState.autoAdvanceEnabled
           || state.masterBus.gain !== previousState.masterBus.gain
         ) {

@@ -10,6 +10,9 @@ import {
   type ClipId,
 } from "../../../domain/identifiers";
 import {
+  getClipPlaybackOrder,
+} from "../../../domain/clips/clip-hierarchy";
+import {
   type ProjectState,
 } from "../../../domain/project/project-document";
 import {
@@ -52,12 +55,13 @@ export function ClipInspector({
   onSelectNotes,
   onEdit,
 }: ClipInspectorProps): React.JSX.Element {
-  const reorder = useCardReorder(projectState.clipOrder, onReorder);
+  const clipOrder = getClipPlaybackOrder(projectState.clipHierarchy);
+  const reorder = useCardReorder(clipOrder, onReorder);
 
   return (
     <section className="clip-inspector-section">
       <div className="instrument-list clip-list">
-        {projectState.clipOrder.map((clipId, clipIndex) => {
+        {clipOrder.map((clipId, clipIndex) => {
           const clip = projectState.clipsById[clipId];
 
           if (clip === undefined) {
@@ -74,7 +78,7 @@ export function ClipInspector({
               }
               playing={clip.id === playingClipId}
               playheadPosition={playheadPosition}
-              clipCount={projectState.clipOrder.length}
+              clipCount={clipOrder.length}
               reorder={reorder}
               onSelect={onSelect}
               onTogglePlayback={onTogglePlayback}
@@ -90,7 +94,7 @@ export function ClipInspector({
           type="button"
           aria-label="Add clip"
           disabled={
-            projectState.clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT
+            clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT
           }
           onClick={onAdd}
         >

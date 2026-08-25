@@ -1,7 +1,7 @@
 /** Persistent project defaults, hard limits, and instrument defaults. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 3,
+  schemaVersion: 4,
   defaultMeasureCount: 16,
   defaultTempoBpm: 120,
   minimumTempoBpm: 30,
@@ -29,6 +29,8 @@ export const PROJECT_CONSTANTS = Object.freeze({
   // Clip limits protect native-file parsing and inspector usability.
   maximumClipNameLength: 128,
   maximumClipCount: 256,
+  maximumClipGroupCount: 256,
+  maximumClipGroupDepth: 16,
   maximumInstrumentNameLength: 128,
   maximumInstrumentCount: 256,
   // This rendering and validation budget is applied independently per clip.

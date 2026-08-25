@@ -8,6 +8,7 @@ master bus, validations, commandes, transformations, collisions et historique.
 ## Quel fichier lire en premier ?
 
 Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
+`clips/clip-hierarchy.ts`,
 `instruments/instrument.ts` ou `notes/note.ts`. Une mutation commence dans
 `commands/command-types.ts` et aboutit au reducer. La structure temporelle
 d’un clip — marqueurs de tempo et de métrique, dérivation des mesures — vit

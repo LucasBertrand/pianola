@@ -28,6 +28,9 @@ import {
   type Track,
 } from "../../src/domain/clips/clip";
 import {
+  createFlatClipHierarchy,
+} from "../../src/domain/clips/clip-hierarchy";
+import {
   type InstrumentId,
 } from "../../src/domain/identifiers";
 import {
@@ -217,7 +220,7 @@ export function createAudioTestProject({
         transportSettings,
       },
     },
-    clipOrder: [clipId],
+    clipHierarchy: createFlatClipHierarchy([clipId]),
     autoAdvanceEnabled,
     workspace: { activeClipId: clipId },
     masterBus: {

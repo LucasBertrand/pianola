@@ -9,6 +9,9 @@ import {
   DEFAULT_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
+  createFlatClipHierarchy,
+} from "../../domain/clips/clip-hierarchy";
+import {
   createDefaultInstrumentPresetLibrary,
 } from "../../domain/instrument-presets";
 import {
@@ -48,7 +51,7 @@ export function createBlankProjectState(): ProjectState {
     instrumentPresetsById: presetLibrary.instrumentPresetsById,
     instrumentPresetOrder: presetLibrary.instrumentPresetOrder,
     clipsById: { [clipId]: clip },
-    clipOrder: [clipId],
+    clipHierarchy: createFlatClipHierarchy([clipId]),
     autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
     workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),

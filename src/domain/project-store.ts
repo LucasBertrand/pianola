@@ -9,6 +9,9 @@ import {
   type ClipId,
 } from "./identifiers";
 import {
+  getClipPlaybackOrder,
+} from "./clips/clip-hierarchy";
+import {
   type ProjectDocument,
   type ProjectState,
 } from "./project/project-document";
@@ -232,7 +235,7 @@ function resolveWorkspace(
     return currentState.workspace;
   }
 
-  const fallbackClipId = projectDocument.clipOrder[0];
+  const fallbackClipId = getClipPlaybackOrder(projectDocument.clipHierarchy)[0];
 
   if (fallbackClipId === undefined) {
     throw new Error("A project document must contain at least one clip.");

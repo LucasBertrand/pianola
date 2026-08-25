@@ -7,6 +7,9 @@ import {
   getAutoAdvanceTargetClipId,
 } from "../clip-playback-sequence";
 import {
+  createFlatClipHierarchy,
+} from "../../clips/clip-hierarchy";
+import {
   projectReducer,
 } from "../../commands/reducer";
 import {
@@ -46,6 +49,30 @@ describe("clip playback sequence", () => {
     const project = createSequenceProject();
 
     expect(getAutoAdvanceTargetClipId(project, NEXT_CLIP_ID)).toBeNull();
+  });
+
+  test("follows leaf order through nested groups", () => {
+    const project = createSequenceProject();
+    const nestedProject = {
+      ...project,
+      clipHierarchy: [{
+        kind: "group" as const,
+        id: "group-song",
+        name: "Song",
+        children: [{
+          kind: "group" as const,
+          id: "group-section",
+          name: "Section",
+          children: [
+            { kind: "clip" as const, clipId: TEST_CLIP_ID },
+            { kind: "clip" as const, clipId: NEXT_CLIP_ID },
+          ],
+        }],
+      }],
+    };
+
+    expect(getAutoAdvanceTargetClipId(nestedProject, TEST_CLIP_ID))
+      .toBe(NEXT_CLIP_ID);
   });
 
   test("gives the current clip loop priority", () => {
@@ -111,6 +138,6 @@ function createSequenceProject(
         name: "Next clip",
       },
     },
-    clipOrder: [TEST_CLIP_ID, NEXT_CLIP_ID],
+    clipHierarchy: createFlatClipHierarchy([TEST_CLIP_ID, NEXT_CLIP_ID]),
   };
 }

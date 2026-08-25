@@ -17,6 +17,9 @@ import {
   concatenateClips,
   type ConcatenateClipsOptions,
 } from "../concatenate-clips";
+import {
+  getClipPlaybackOrder,
+} from "../clip-hierarchy";
 
 const INSTRUMENT_ID = "instrument-a";
 
@@ -204,7 +207,7 @@ describe("clip concatenation", () => {
         },
       ],
     });
-    const clips = project.clipOrder.map(
+    const clips = getClipPlaybackOrder(project.clipHierarchy).map(
       (clipId) => project.clipsById[clipId]!,
     );
 
