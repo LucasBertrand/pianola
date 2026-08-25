@@ -9,13 +9,13 @@ import type {
 
 export type MidiPitch = number;
 export type MidiVelocity = number;
-export type NoteStatus = "active" | "muted" | "locked" | "frozen";
+export type NoteStatus = "active" | "muted" | "locked" | "disabled";
 
 export const NOTE_STATUSES: readonly NoteStatus[] = [
   "active",
   "muted",
   "locked",
-  "frozen",
+  "disabled",
 ];
 
 export function isNoteStatus(value: unknown): value is NoteStatus {
@@ -36,10 +36,10 @@ export function setNoteMuted(
   muted: boolean,
 ): NoteStatus {
   if (muted) {
-    return status === "locked" || status === "frozen" ? "frozen" : "muted";
+    return status === "locked" || status === "disabled" ? "disabled" : "muted";
   }
 
-  return status === "locked" || status === "frozen" ? "locked" : "active";
+  return status === "locked" || status === "disabled" ? "locked" : "active";
 }
 
 export function setNoteLocked(
@@ -47,10 +47,10 @@ export function setNoteLocked(
   locked: boolean,
 ): NoteStatus {
   if (locked) {
-    return status === "muted" || status === "frozen" ? "frozen" : "locked";
+    return status === "muted" || status === "disabled" ? "disabled" : "locked";
   }
 
-  return status === "muted" || status === "frozen" ? "muted" : "active";
+  return status === "muted" || status === "disabled" ? "muted" : "active";
 }
 
 export const MAXIMUM_CLIP_NOTE_COUNT =

@@ -3,25 +3,25 @@ import {
   getNoteBodyOpacity,
   getNoteContentOpacity,
 } from "../rendering/note-opacity";
-import { getFrozenToggleStatus } from "../usePianoRollSelectionCommands";
+import { getDisabledToggleStatus } from "../usePianoRollSelectionCommands";
 
 describe("note status UI", () => {
-  test("freezes a mixed selection and reactivates an entirely frozen one", () => {
-    expect(getFrozenToggleStatus([
+  test("disables a mixed selection and reactivates an entirely disabled one", () => {
+    expect(getDisabledToggleStatus([
       { status: "active" },
       { status: "muted" },
       { status: "locked" },
-    ])).toBe("frozen");
-    expect(getFrozenToggleStatus([
-      { status: "frozen" },
-      { status: "frozen" },
+    ])).toBe("disabled");
+    expect(getDisabledToggleStatus([
+      { status: "disabled" },
+      { status: "disabled" },
     ])).toBe("active");
   });
 
-  test("uses one silent opacity for muted and frozen notes", () => {
-    expect(getNoteBodyOpacity({ status: "frozen" }))
+  test("uses one silent opacity for muted and disabled notes", () => {
+    expect(getNoteBodyOpacity({ status: "disabled" }))
       .toBe(getNoteBodyOpacity({ status: "muted" }));
-    expect(getNoteContentOpacity({ status: "frozen" }))
+    expect(getNoteContentOpacity({ status: "disabled" }))
       .toBe(getNoteContentOpacity({ status: "muted" }));
     expect(getNoteBodyOpacity({ status: "locked" }))
       .toBe(getNoteBodyOpacity({ status: "active" }));

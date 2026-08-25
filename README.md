@@ -183,7 +183,7 @@ un schéma, un parseur ou un export.
   transactions cohérentes.
 - Une collision demande explicitement de fusionner ou de découper aux ancres.
 - Les clips partagent les instruments globaux mais gardent leurs notes et leurs
-  statuts (`active`, `muted`, `locked`, `frozen`), leur timeline et leur boucle.
+  statuts (`active`, `muted`, `locked`, `disabled`), leur timeline et leur boucle.
 
 Tous les gestes et contrôles sont détaillés dans
 [`docs/guides/usage.md`](docs/guides/usage.md).

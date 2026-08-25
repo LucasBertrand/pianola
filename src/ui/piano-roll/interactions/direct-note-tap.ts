@@ -44,8 +44,8 @@ export function handleDirectNoteTap(
     tapState.noteId = null;
     const note = selectionController.selection.find(noteId);
 
-    if (note !== undefined && workflow.commitDelete(note)) {
-      selectionController.clearSelection();
+    if (note !== undefined) {
+      workflow.commitDelete(note);
     }
 
     return;

@@ -25,7 +25,7 @@ describe("note status commands", () => {
       }),
     );
 
-    setStatus(store, "frozen", 3);
+    setStatus(store, "disabled", 3);
     expect(getPlaybackNoteIds(store)).toEqual([]);
     expect(() => moveNote(store, 4)).toThrowError(
       expect.objectContaining<Partial<CommandRejectedError>>({
@@ -45,7 +45,7 @@ describe("note status commands", () => {
 
 function setStatus(
   store: ProjectStore,
-  status: "active" | "muted" | "locked" | "frozen",
+  status: "active" | "muted" | "locked" | "disabled",
   createdAt: number,
 ): void {
   store.dispatch({

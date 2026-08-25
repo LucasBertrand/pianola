@@ -67,10 +67,7 @@ export function completePianoRollLasso({
   for (const note of resultBuffer) {
     if (completion.selectionMode === "subtract") {
       selection.delete(note.id);
-    } else if (
-      selectionController.isNoteEditable(note)
-      && !selection.has(note.id)
-    ) {
+    } else if (!selection.has(note.id)) {
       selection.add(note);
     }
   }

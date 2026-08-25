@@ -755,11 +755,15 @@ function parseNoteStatus(
   if ("status" in note) {
     const status = readString(note["status"], `${path}.status`, 16);
 
+    if (schemaVersion === 8 && status === "frozen") {
+      return "disabled";
+    }
+
     if (!isNoteStatus(status)) {
       fail(
         "INVALID_DATA",
         `${path}.status`,
-        "Note status must be active, muted, locked, or frozen.",
+        "Note status must be active, muted, locked, or disabled.",
       );
     }
 
@@ -770,7 +774,7 @@ function parseNoteStatus(
     const enabled = readBoolean(note["enabled"], `${path}.enabled`);
 
     if (legacyLocked) {
-      return enabled ? "locked" : "frozen";
+      return enabled ? "locked" : "disabled";
     }
 
     return enabled ? "active" : "muted";

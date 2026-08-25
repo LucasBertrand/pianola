@@ -20,6 +20,7 @@ import {
 import {
   getMeasureCount,
 } from "../../domain/transport/time-map";
+import { isNoteEditable } from "../../domain/notes/note";
 import type {
   LoopRegion,
 } from "../../domain/transport/transport";
@@ -237,7 +238,6 @@ export function PianoRollWorkspace({
   const {
     project: projectState,
     selectedInstrumentId,
-    selectionAvailable,
     selectedNotes,
     selectedMarkerCount,
     selectInstrument: setSelectedInstrumentId,
@@ -732,7 +732,7 @@ export function PianoRollWorkspace({
     copy: handleCopy,
     cut: handleCut,
     remove: handleDeleteSelection,
-    toggleFrozen: handleToggleSelectionFrozen,
+    toggleDisabled: handleToggleSelectionDisabled,
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
     sliceAtLoopAnchors: handleSliceSelectionAtLoopAnchors,
@@ -768,22 +768,25 @@ export function PianoRollWorkspace({
     handleSliceSelectionAtPlayhead,
     setApplicationDialog,
   ]);
-  const selectedNotesContainNonFrozenNote = selectedNotes.some(
-    (note) => note.status !== "frozen",
+  const editableNoteSelectionAvailable = selectedNotes.some(isNoteEditable);
+  const editableTimelineSelectionAvailable =
+    editableNoteSelectionAvailable || selectedMarkerCount > 0;
+  const selectedNotesContainNonDisabledNote = selectedNotes.some(
+    (note) => note.status !== "disabled",
   );
   const radialMenuItems = useMemo<readonly FloatingRadialMenuItem[]>(() => [
     {
       id: "copy",
       label: "Copier",
       icon: <CommandIcon kind="copy" />,
-      disabled: !selectionAvailable,
+      disabled: !editableTimelineSelectionAvailable,
       onSelect: handleCopy,
     },
     {
       id: "cut",
       label: "Couper",
       icon: <CommandIcon kind="cut" />,
-      disabled: !selectionAvailable,
+      disabled: !editableTimelineSelectionAvailable,
       tone: "danger",
       onSelect: handleCut,
     },
@@ -798,20 +801,20 @@ export function PianoRollWorkspace({
       id: "slice",
       label: "Slice",
       icon: <CommandIcon kind="slice" />,
-      disabled: selectedNotes.length === 0,
+      disabled: !editableNoteSelectionAvailable,
       onSelect: handleOpenSliceSelection,
     },
     {
-      id: "toggle-frozen",
-      label: selectedNotesContainNonFrozenNote ? "Geler" : "Dégeler",
+      id: "toggle-disabled",
+      label: selectedNotesContainNonDisabledNote ? "Désactiver" : "Activer",
       icon: (
         <CommandIcon
-          kind={selectedNotesContainNonFrozenNote ? "disable" : "enable"}
+          kind={selectedNotesContainNonDisabledNote ? "disable" : "enable"}
         />
       ),
       disabled: selectedNotes.length === 0,
-      tone: selectedNotesContainNonFrozenNote ? "danger" : "default",
-      onSelect: handleToggleSelectionFrozen,
+      tone: selectedNotesContainNonDisabledNote ? "danger" : "default",
+      onSelect: handleToggleSelectionDisabled,
     },
     {
       id: "playback",
@@ -830,11 +833,12 @@ export function PianoRollWorkspace({
     handleCut,
     handleOpenSliceSelection,
     handlePaste,
-    handleToggleSelectionFrozen,
+    handleToggleSelectionDisabled,
     playbackStatus,
     selectedNotes.length,
-    selectedNotesContainNonFrozenNote,
-    selectionAvailable,
+    selectedNotesContainNonDisabledNote,
+    editableNoteSelectionAvailable,
+    editableTimelineSelectionAvailable,
     togglePlayback,
   ]);
   const handleNoteColorModeToggle = useCallback((): void => {
@@ -1030,10 +1034,11 @@ export function PianoRollWorkspace({
               activeClip.timeline.timeMap,
               activeClip.timeline.durationTicks,
             )}
-            selectionAvailable={selectionAvailable}
+            selectionAvailable={editableTimelineSelectionAvailable}
             noteSelectionAvailable={selectedNotes.length > 0}
-            selectedNotesContainNonFrozenNote={selectedNotesContainNonFrozenNote}
-            clipboardSelectionAvailable={selectionAvailable}
+            editableNoteSelectionAvailable={editableNoteSelectionAvailable}
+            selectedNotesContainNonDisabledNote={selectedNotesContainNonDisabledNote}
+            clipboardSelectionAvailable={editableTimelineSelectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
             noteColorMode={noteColorMode}
@@ -1054,7 +1059,7 @@ export function PianoRollWorkspace({
             onManageMeasures={() => setManageMeasuresDialogOpen(true)}
             onRemoveMeasure={handleRemoveMeasureAtPlayhead}
             onDeleteSelection={handleDeleteSelection}
-            onToggleSelectionFrozen={handleToggleSelectionFrozen}
+            onToggleSelectionDisabled={handleToggleSelectionDisabled}
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={handlePaste}
@@ -1161,7 +1166,7 @@ export function PianoRollWorkspace({
             autoScrollEnabled && playbackStatus === "playing"
           }
           selectedInstrumentId={selectedInstrumentId}
-          selectionAvailable={selectedNotes.length > 0}
+          selectionAvailable={editableNoteSelectionAvailable}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClipSelect={handleClipSelectionRequest}
           onToggleClipBypass={handleToggleClipBypass}

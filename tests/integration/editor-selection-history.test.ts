@@ -20,6 +20,52 @@ import {
 } from "../support/test-builders";
 
 describe("editor selection history", () => {
+  test("edits only eligible notes while retaining a mixed selection", () => {
+    const activeNote = createTestNote({
+      id: "active-note",
+      startTick: 0,
+      status: "active",
+    });
+    const disabledNote = createTestNote({
+      id: "disabled-note",
+      startTick: 960,
+      status: "disabled",
+    });
+    const runtime = createEditorRuntime(createTestProject({
+      clips: [{ id: TEST_CLIP_ID, notes: [activeNote, disabledNote] }],
+    }));
+    const workflow = new NoteGestureWorkflow(
+      runtime.editorCommands,
+      runtime.selection,
+      {
+        onCollision: undefined,
+        onTransactionRejected: undefined,
+        onSelectionChanged: undefined,
+      },
+    );
+
+    runtime.selection.replace([activeNote, disabledNote]);
+
+    expect(workflow.commitMove([
+      { ...activeNote, startTick: 240 },
+      { ...disabledNote, startTick: 1_200 },
+    ], 240)).toBe("committed");
+    expect(activeNoteById(runtime, activeNote.id)?.startTick).toBe(240);
+    expect(activeNoteById(runtime, disabledNote.id)?.startTick).toBe(960);
+    expect(selectedNoteIds(runtime)).toEqual([
+      activeNote.id,
+      disabledNote.id,
+    ]);
+
+    expect(workflow.commitDelete(
+      runtime.selection.notes,
+      "Delete selected notes",
+    )).toBe("committed");
+    expect(activeNoteById(runtime, activeNote.id)).toBeUndefined();
+    expect(activeNoteById(runtime, disabledNote.id)).toEqual(disabledNote);
+    expect(selectedNoteIds(runtime)).toEqual([disabledNote.id]);
+  });
+
   test("restores a deleted selection on undo and clears it again on redo", () => {
     const firstNote = createTestNote({ id: "first-selected-note" });
     const secondNote = createTestNote({
@@ -158,6 +204,14 @@ function activeNoteIds(
     .tracksByInstrumentId[TEST_INSTRUMENT_ID];
 
   return Object.keys(track?.notesById ?? {}).sort();
+}
+
+function activeNoteById(
+  runtime: ReturnType<typeof createEditorRuntime>,
+  noteId: string,
+) {
+  return getActiveClip(runtime.projectStore.getState())
+    .tracksByInstrumentId[TEST_INSTRUMENT_ID]?.notesById[noteId];
 }
 
 function selectedNoteIds(

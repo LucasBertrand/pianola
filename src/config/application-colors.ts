@@ -117,7 +117,7 @@ interface PianoRollThemeColors {
   readonly rulerText: string;
   /** Temporary full-width lane highlight after piano-key interaction. */
   readonly activePitchLane: string;
-  /** Hatch stroke rendered over locked and frozen notes. */
+  /** Hatch stroke rendered over locked and disabled notes. */
   readonly lockedNoteHatch: string;
 }
 

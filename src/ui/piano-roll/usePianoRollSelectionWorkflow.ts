@@ -93,7 +93,7 @@ export interface PianoRollSelectionWorkflow {
   readonly copy: () => void;
   readonly cut: () => void;
   readonly remove: () => void;
-  readonly toggleFrozen: () => void;
+  readonly toggleDisabled: () => void;
   readonly transform: (
     kind: SelectionTransformationKind,
     label: string,
@@ -126,7 +126,7 @@ export function usePianoRollSelectionWorkflow({
     undo,
     redo,
     remove,
-    toggleFrozen,
+    toggleDisabled,
   } = usePianoRollSelectionCommands(
     commands,
     selection,
@@ -145,6 +145,10 @@ export function usePianoRollSelectionWorkflow({
   }, []);
 
   const cut = useCallback((): void => {
+    const selectedNotes = getController()?.getSelectedNotes() ?? [];
+    const retainedNoteIds = selectedNotes
+      .filter((note) => !isNoteEditable(note))
+      .map((note) => note.id);
     const clipboard = copyCurrentSelection();
 
     if (clipboard === null) {
@@ -167,12 +171,16 @@ export function usePianoRollSelectionWorkflow({
           getClipboardActionLabel("Cut", clipboard),
           {
             clipId: activeClip.id,
-            noteIds: [],
+            noteIds: retainedNoteIds,
             markerGroups: [],
           },
         ) !== null
       ) {
-        getController()?.clearSelection();
+        const controller = getController();
+
+        controller?.replaceSelection(
+          findNotesByIds(commands.getState(), activeClip.id, retainedNoteIds),
+        );
       }
     } catch (error: unknown) {
       alert(
@@ -191,7 +199,11 @@ export function usePianoRollSelectionWorkflow({
       label: string,
     ): void => {
       const controller = getController();
-      const originalNotes = controller?.getSelectedNotes() ?? [];
+      const selectedNotes = controller?.getSelectedNotes() ?? [];
+      const originalNotes = selectedNotes.filter(isNoteEditable);
+      const retainedNoteIds = selectedNotes
+        .filter((note) => !isNoteEditable(note))
+        .map((note) => note.id);
 
       if (controller === null || originalNotes.length === 0) {
         return;
@@ -203,15 +215,10 @@ export function usePianoRollSelectionWorkflow({
       for (const note of originalNotes) {
         const instrument = state.projectInstrumentsById[note.instrumentId];
 
-        if (
-          instrument === undefined
-          || !isNoteEditable(note)
-        ) {
+        if (instrument === undefined) {
           alert(
             "Transformation unavailable",
-            instrument === undefined
-              ? "The selection contains a note whose instrument is unavailable."
-              : `Unlock note "${note.id}" before transforming it.`,
+            "The selection contains a note whose instrument is unavailable.",
           );
           return;
         }
@@ -238,6 +245,7 @@ export function usePianoRollSelectionWorkflow({
               intent,
             ),
             ...intent,
+            retainedSelectionNoteIds: retainedNoteIds,
             onResolved(nextState, selectedNoteIds): void {
               controller.replaceSelection(
                 findNotesByIds(
@@ -256,12 +264,15 @@ export function usePianoRollSelectionWorkflow({
           label,
           {
             clipId: activeClip.id,
-            noteIds: proposedNotes.map((note) => note.id),
+            noteIds: [
+              ...proposedNotes.map((note) => note.id),
+              ...retainedNoteIds,
+            ],
           },
         );
 
         if (nextState !== null) {
-          const noteIds: NoteId[] = [];
+          const noteIds: NoteId[] = [...retainedNoteIds];
 
           for (const note of proposedNotes) {
             noteIds.push(note.id);
@@ -290,7 +301,11 @@ export function usePianoRollSelectionWorkflow({
     unavailableMessage: string,
   ): void => {
     const controller = getController();
-    const selectedNotes = controller?.getSelectedNotes() ?? [];
+    const allSelectedNotes = controller?.getSelectedNotes() ?? [];
+    const selectedNotes = allSelectedNotes.filter(isNoteEditable);
+    const retainedNoteIds = allSelectedNotes
+      .filter((note) => !isNoteEditable(note))
+      .map((note) => note.id);
 
     if (controller === null || selectedNotes.length === 0) {
       return;
@@ -317,12 +332,19 @@ export function usePianoRollSelectionWorkflow({
       const nextState = commands.dispatch(
         plan.commands,
         label,
-        { clipId, noteIds: plan.resultingNoteIds },
+        {
+          clipId,
+          noteIds: [...plan.resultingNoteIds, ...retainedNoteIds],
+        },
       );
 
       if (nextState !== null) {
         controller.replaceSelection(
-          findNotesByIds(nextState, clipId, plan.resultingNoteIds),
+          findNotesByIds(
+            nextState,
+            clipId,
+            [...plan.resultingNoteIds, ...retainedNoteIds],
+          ),
         );
       }
     } catch (error: unknown) {
@@ -568,7 +590,7 @@ export function usePianoRollSelectionWorkflow({
     copy,
     cut,
     remove,
-    toggleFrozen,
+    toggleDisabled,
     transform,
     sliceAtPlayhead,
     sliceAtLoopAnchors,

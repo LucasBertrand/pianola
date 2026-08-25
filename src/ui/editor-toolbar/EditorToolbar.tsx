@@ -24,7 +24,8 @@ export interface EditorToolbarProps {
   readonly measureCount: number;
   readonly selectionAvailable: boolean;
   readonly noteSelectionAvailable: boolean;
-  readonly selectedNotesContainNonFrozenNote: boolean;
+  readonly editableNoteSelectionAvailable: boolean;
+  readonly selectedNotesContainNonDisabledNote: boolean;
   readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
@@ -35,7 +36,7 @@ export interface EditorToolbarProps {
   readonly onManageMeasures: () => void;
   readonly onRemoveMeasure: () => void;
   readonly onDeleteSelection: () => void;
-  readonly onToggleSelectionFrozen: () => void;
+  readonly onToggleSelectionDisabled: () => void;
   readonly onCopy: () => void;
   readonly onCut: () => void;
   readonly onPaste: () => void;
@@ -57,7 +58,8 @@ export function EditorToolbar({
   measureCount,
   selectionAvailable,
   noteSelectionAvailable,
-  selectedNotesContainNonFrozenNote,
+  editableNoteSelectionAvailable,
+  selectedNotesContainNonDisabledNote,
   clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
@@ -68,7 +70,7 @@ export function EditorToolbar({
   onManageMeasures,
   onRemoveMeasure,
   onDeleteSelection,
-  onToggleSelectionFrozen,
+  onToggleSelectionDisabled,
   onCopy,
   onCut,
   onPaste,
@@ -217,17 +219,17 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title={selectedNotesContainNonFrozenNote
-            ? "Freeze selected notes"
-            : "Unfreeze selected notes"}
-          aria-label={selectedNotesContainNonFrozenNote
-            ? "Freeze selected notes"
-            : "Unfreeze selected notes"}
+          title={selectedNotesContainNonDisabledNote
+            ? "Disable selected notes"
+            : "Enable selected notes"}
+          aria-label={selectedNotesContainNonDisabledNote
+            ? "Disable selected notes"
+            : "Enable selected notes"}
           disabled={!noteSelectionAvailable}
-          onClick={onToggleSelectionFrozen}
+          onClick={onToggleSelectionDisabled}
         >
           <CommandIcon
-            kind={selectedNotesContainNonFrozenNote ? "disable" : "enable"}
+            kind={selectedNotesContainNonDisabledNote ? "disable" : "enable"}
           />
         </button>
         <button
@@ -342,7 +344,7 @@ export function EditorToolbar({
           type="button"
           title="Slice selected notes..."
           aria-label="Choose how to slice selected notes"
-          disabled={!noteSelectionAvailable}
+          disabled={!editableNoteSelectionAvailable}
           onClick={onOpenSliceSelection}
         >
           <CommandIcon kind="slice" />
@@ -351,7 +353,7 @@ export function EditorToolbar({
           type="button"
           title="Invert selected intervals"
           aria-label="Invert selected intervals"
-          disabled={!noteSelectionAvailable}
+          disabled={!editableNoteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "invert",
@@ -378,7 +380,7 @@ export function EditorToolbar({
           type="button"
           title="Retrograde selected motif"
           aria-label="Retrograde selected motif"
-          disabled={!noteSelectionAvailable}
+          disabled={!editableNoteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "retrograde",
@@ -407,7 +409,7 @@ export function EditorToolbar({
           type="button"
           title="Augment selected motif"
           aria-label="Augment selected motif"
-          disabled={!noteSelectionAvailable}
+          disabled={!editableNoteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "augment",
@@ -432,7 +434,7 @@ export function EditorToolbar({
           type="button"
           title="Diminish selected motif"
           aria-label="Diminish selected motif"
-          disabled={!noteSelectionAvailable}
+          disabled={!editableNoteSelectionAvailable}
           onClick={() => {
             onTransformSelection(
               "diminish",

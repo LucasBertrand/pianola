@@ -220,7 +220,7 @@ export function createPianoRollGestureStrategy(
       pointerTick,
       pointerPitch,
       bodyEnvelope,
-      (note) => selectionController.isNoteEditable(note),
+      () => true,
       (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
     );
     const edgeEnvelope = createTouchEnvelope(
@@ -284,9 +284,17 @@ export function createPianoRollGestureStrategy(
       targetNote,
       draft.selectionMode === "add",
     );
-    const noteSelectionBounds = measureNoteSelection(selection.notes);
+    if (!selectionController.isNoteEditable(targetNote)) {
+      gesture.beginPendingNoteSelection();
+      return;
+    }
+
+    const editableNotes = selection.notes.filter(
+      (note) => selectionController.isNoteEditable(note),
+    );
+    const noteSelectionBounds = measureNoteSelection(editableNotes);
     const timelineTickBounds = measureTimelineSelectionTickBounds(
-      selection.notes,
+      editableNotes,
       selection.markerGroups,
     );
     const selectionBounds = timelineTickBounds === null
@@ -302,7 +310,7 @@ export function createPianoRollGestureStrategy(
       handledDragNote = targetNote;
       gesture.beginDrag(selectionBounds);
       getVisuals()?.beginDrag(
-        selection.notes,
+        editableNotes,
         converter,
         instrumentStyles.get(),
         draft.getSnapSettingsAtTick,
@@ -325,7 +333,7 @@ export function createPianoRollGestureStrategy(
       ? targetNote.startTick
       : targetNote.startTick + targetNote.durationTicks;
     const resizeBounds = calculateResizeDeltaBounds(
-      selection.notes,
+      editableNotes,
       resizeEdge,
       resolutionTicks,
       totalTicks,
@@ -338,7 +346,7 @@ export function createPianoRollGestureStrategy(
       resizeBounds,
     );
     getVisuals()?.beginResize(
-      selection.notes,
+      editableNotes,
       converter,
       instrumentStyles.get(),
       resizeEdge,
@@ -489,6 +497,7 @@ export function createPianoRollGestureStrategy(
       mode === "PENDING_NOTE_SELECTION"
       && pointerWasTap
       && targetNoteId !== null
+      && completion.selectionMode === "subtract"
     ) {
       selectionController.removeHitNote(targetNoteId);
     }
@@ -519,8 +528,8 @@ export function createPianoRollGestureStrategy(
       (a, b) => compareNotesByInstrumentRenderOrder(a, b, getInstrumentOrder()),
     );
 
-    if (note !== undefined && workflow.commitDelete(note)) {
-      selectionController.clearSelection();
+    if (note !== undefined) {
+      workflow.commitDelete(note);
     }
   };
   const handleLongPress = (event: PointerSample): void => {

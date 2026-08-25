@@ -3,11 +3,8 @@ import {
 } from "react";
 import type {
   InstrumentId,
-  NoteId,
 } from "../../domain/identifiers";
-import type {
-  Note,
-} from "../../domain/notes/note";
+import { isNoteEditable } from "../../domain/notes/note";
 import {
   getActiveClip,
 } from "../../domain/project/project-document";
@@ -59,12 +56,19 @@ export function usePianoRollInstrumentTransfer({
     }
 
     const selectedNotes = controller.getSelectedNotes();
+    const editableNotes = selectedNotes.filter(isNoteEditable);
+    const retainedNoteIds = selectedNotes
+      .filter(
+        (note) => !isNoteEditable(note)
+          || note.instrumentId === targetInstrumentId,
+      )
+      .map((note) => note.id);
     const state = commands.getState();
     const activeClip = getActiveClip(state);
     const transferPlan = createInstrumentTransferPlan(
       state,
       activeClip.id,
-      selectedNotes,
+      editableNotes,
       targetInstrumentId,
     );
 
@@ -83,10 +87,6 @@ export function usePianoRollInstrumentTransfer({
     };
 
     if (hasNoteEditCollisions(state, activeClip.id, intent)) {
-      const retainedTargetNoteIds: NoteId[] = selectedNotes
-        .filter((note) => note.instrumentId === targetInstrumentId)
-        .map((note) => note.id);
-
       resolveCollision({
         clipId: activeClip.id,
         label: "Transfer notes to instrument",
@@ -96,7 +96,7 @@ export function usePianoRollInstrumentTransfer({
           intent,
         ),
         ...intent,
-        retainedSelectionNoteIds: retainedTargetNoteIds,
+        retainedSelectionNoteIds: retainedNoteIds,
         onResolved(nextState, selectedNoteIds): void {
           controller.replaceSelection(
             findNotesByIds(
@@ -124,19 +124,13 @@ export function usePianoRollInstrumentTransfer({
         return;
       }
 
-      const targetTrack = getActiveClip(nextState)
-        .tracksByInstrumentId[targetInstrumentId];
-      const nextSelection: Note[] = [];
-
-      for (const note of selectedNotes) {
-        const transferredNote = targetTrack?.notesById[note.id];
-
-        if (transferredNote !== undefined) {
-          nextSelection.push(transferredNote);
-        }
-      }
-
-      controller.replaceSelection(nextSelection);
+      controller.replaceSelection(
+        findNotesByIds(
+          nextState,
+          activeClip.id,
+          selectedNotes.map((note) => note.id),
+        ),
+      );
     } catch (error: unknown) {
       alert(
         "Transfer cancelled",

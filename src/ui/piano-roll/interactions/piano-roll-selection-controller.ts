@@ -94,7 +94,7 @@ implements PianoRollControllerPort {
   public restoreGestureSelection(): void {
     if (
       this.options.session.restoreGestureSelectionOnce(
-        (note) => this.isNoteEditable(note),
+        () => true,
       )
     ) {
       this.showSelection();

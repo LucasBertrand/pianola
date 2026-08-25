@@ -2,7 +2,7 @@ import type {
   PianoRollCommand,
 } from "../../../domain/commands/command-types";
 import {
-  isNoteEditable as isEditableNote,
+  isNoteEditable,
   type Note,
 } from "../../../domain/notes/note";
 import {
@@ -14,7 +14,6 @@ import {
 } from "../../../domain/project/project-document";
 import {
   getActiveClip,
-  getClip,
 } from "../../../domain/project/project-document";
 import {
   countNoteEditCollisions,
@@ -94,11 +93,17 @@ export class NoteGestureWorkflow {
     proposedNotes: readonly Note[],
     requestedDeltaTicks?: number,
   ): NoteGestureCommitResult {
-    const originalNotes = this.selection.copyNotes();
+    const eligibleProposedNotes = proposedNotes.filter(isNoteEditable);
+    const proposedNoteIds = new Set(
+      eligibleProposedNotes.map((note) => note.id),
+    );
+    const originalNotes = this.selection.copyNotes().filter(
+      (note) => proposedNoteIds.has(note.id) && isNoteEditable(note),
+    );
     const state = this.commands.getState();
     const clipId = getActiveClip(state).id;
     const deltaTicks = requestedDeltaTicks
-      ?? inferCommonDeltaTicks(originalNotes, proposedNotes);
+      ?? inferCommonDeltaTicks(originalNotes, eligibleProposedNotes);
     let markerPlan;
     let markerOverwriteCommands: readonly PianoRollCommand[] | undefined;
 
@@ -124,7 +129,7 @@ export class NoteGestureWorkflow {
     }
 
     if (
-      !hasChangedPosition(originalNotes, proposedNotes)
+      !hasChangedPosition(originalNotes, eligibleProposedNotes)
       && markerPlan.commands.length === 0
       && markerPlan.collisions.length === 0
     ) {
@@ -134,10 +139,10 @@ export class NoteGestureWorkflow {
     return this.commitNoteEdit({
       clipId,
       originalNotes,
-      proposedNotes,
+      proposedNotes: eligibleProposedNotes,
       commands: [
         ...markerPlan.commands,
-        ...buildRepositionNoteCommands(clipId, proposedNotes),
+        ...buildRepositionNoteCommands(clipId, eligibleProposedNotes),
       ],
       label: markerPlan.commands.length > 0
         || markerPlan.collisions.length > 0
@@ -161,7 +166,7 @@ export class NoteGestureWorkflow {
       return "unchanged";
     }
 
-    const originalNotes = this.selection.copyNotes();
+    const originalNotes = this.selection.copyNotes().filter(isNoteEditable);
     const clipId = getActiveClip(this.commands.getState()).id;
     const proposedNotes = resizeNotes(
       originalNotes,
@@ -201,7 +206,9 @@ export class NoteGestureWorkflow {
     notes: readonly Note[],
     label: string,
   ): NoteGestureCommitResult {
-    if (notes.length === 0) {
+    const editableNotes = notes.filter(isNoteEditable);
+
+    if (editableNotes.length === 0) {
       return "unchanged";
     }
 
@@ -211,9 +218,14 @@ export class NoteGestureWorkflow {
       const clipId = getActiveClip(this.commands.getState()).id;
 
       nextState = this.commands.dispatch(
-        buildDeleteNoteCommands(clipId, notes),
+        buildDeleteNoteCommands(clipId, editableNotes),
         label,
-        { clipId, noteIds: [] },
+        {
+          clipId,
+          noteIds: this.selection.notes
+            .filter((note) => !isNoteEditable(note))
+            .map((note) => note.id),
+        },
       );
     } catch (error: unknown) {
       this.callbacks.onTransactionRejected?.(error);
@@ -224,7 +236,12 @@ export class NoteGestureWorkflow {
       return "unchanged";
     }
 
-    this.selection.clear();
+    this.selection.replaceFromNoteIds(
+      nextState,
+      this.selection.notes
+        .filter((note) => !isNoteEditable(note))
+        .map((note) => note.id),
+    );
     return "committed";
   }
 
@@ -249,6 +266,13 @@ export class NoteGestureWorkflow {
         collisionCount,
         originalNotes,
         proposedNotes,
+        retainedSelectionNoteIds: this.selection.notes
+          .filter(
+            (note) => !originalNotes.some(
+              (originalNote) => originalNote.id === note.id,
+            ),
+          )
+          .map((note) => note.id),
         ...(options.markerCommands === undefined
           ? {}
           : { prefixCommands: options.markerCommands }),
@@ -265,11 +289,7 @@ export class NoteGestureWorkflow {
           this.selection.replaceFromNoteIds(
             resolvedState,
             selectedNoteIds,
-            (note) => isNoteEditable(
-              resolvedState,
-              options.clipId,
-              note,
-            ),
+            () => true,
           );
           this.selection.replaceMarkerGroups(
             options.markerGroupsAfterCommit ?? this.selection.markerGroups,
@@ -312,7 +332,7 @@ export class NoteGestureWorkflow {
           noteIds: collectNoteIds(
             options.selectionAfterCommit === "proposed"
               ? options.proposedNotes
-              : options.originalNotes,
+              : this.selection.notes,
           ),
           ...(options.markerGroupsAfterCommit === undefined
             ? {}
@@ -332,7 +352,7 @@ export class NoteGestureWorkflow {
       this.selection.replaceFromNoteIds(
         nextState,
         collectNoteIds(options.proposedNotes),
-        (note) => isNoteEditable(nextState, options.clipId, note),
+        () => true,
       );
     } else {
       if (options.markerGroupsAfterCommit !== undefined) {
@@ -342,7 +362,7 @@ export class NoteGestureWorkflow {
       }
       this.selection.reconcile(
         nextState,
-        (note) => isNoteEditable(nextState, options.clipId, note),
+        () => true,
       );
     }
 
@@ -365,7 +385,7 @@ export class NoteGestureWorkflow {
           ?? collectNoteIds(
             options.selectionAfterCommit === "proposed"
               ? options.proposedNotes
-              : options.originalNotes,
+              : this.selection.notes,
           );
         let nextState: ProjectState | null;
 
@@ -393,7 +413,7 @@ export class NoteGestureWorkflow {
         this.selection.replaceFromNoteIds(
           nextState,
           selectedNoteIds,
-          (note) => isNoteEditable(nextState, options.clipId, note),
+          () => true,
         );
         if (options.markerGroupsAfterCommit !== undefined) {
           this.selection.replaceMarkerGroups(
@@ -404,16 +424,6 @@ export class NoteGestureWorkflow {
       },
     });
   }
-}
-
-function isNoteEditable(
-  state: ProjectState,
-  clipId: ClipId,
-  note: Note,
-): boolean {
-  return getClip(state, clipId).tracksByInstrumentId[note.instrumentId]
-    ?.notesById[note.id] !== undefined
-    && isEditableNote(note);
 }
 
 function collectNoteIds(notes: readonly Note[]): readonly NoteId[] {

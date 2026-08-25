@@ -3,8 +3,11 @@ import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../../../music/pitch-snap";
 import {
+  filterEditableInteractionNotes,
   getGhostNoteLabelLayout,
+  getSelectionNoteClassName,
 } from "../dom-interaction-layers";
+import { createTestNote } from "../../../../../tests/support/test-builders";
 
 const TONAL_BOUNDARIES = [
   { startTick: 0 },
@@ -60,5 +63,30 @@ describe("drag note label layout", () => {
         widthCssPixels: 80,
       },
     ]);
+  });
+});
+
+describe("non-editable note interaction visuals", () => {
+  test("hides resize anchors for locked and disabled selections", () => {
+    expect(getSelectionNoteClassName({ status: "active" }))
+      .toBe("interaction-note-selection");
+    expect(getSelectionNoteClassName({ status: "muted" }))
+      .toBe("interaction-note-selection");
+    expect(getSelectionNoteClassName({ status: "locked" }))
+      .toContain("is-non-editable");
+    expect(getSelectionNoteClassName({ status: "disabled" }))
+      .toContain("is-non-editable");
+  });
+
+  test("excludes locked and disabled notes from ghost layers", () => {
+    const notes = [
+      createTestNote({ id: "active", status: "active" }),
+      createTestNote({ id: "muted", status: "muted" }),
+      createTestNote({ id: "locked", status: "locked" }),
+      createTestNote({ id: "disabled", status: "disabled" }),
+    ];
+
+    expect(filterEditableInteractionNotes(notes).map((note) => note.id))
+      .toEqual(["active", "muted"]);
   });
 });

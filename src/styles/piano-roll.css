@@ -540,6 +540,11 @@
   right: -7px;
 }
 
+.interaction-note-selection.is-non-editable::before,
+.interaction-note-selection.is-non-editable::after {
+  content: none;
+}
+
 .interaction-note-ghost.is-resizing-start,
 .interaction-note-ghost.is-resizing-end {
   opacity: 0.9;

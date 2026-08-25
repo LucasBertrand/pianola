@@ -24,13 +24,17 @@ import type {
 import type {
   EditorSelection,
 } from "../../editor/selection/editor-selection";
-import type { Note, NoteStatus } from "../../domain/notes/note";
+import {
+  isNoteEditable,
+  type Note,
+  type NoteStatus,
+} from "../../domain/notes/note";
 
 export interface PianoRollSelectionCommands {
   readonly undo: () => void;
   readonly redo: () => void;
   readonly remove: () => void;
-  readonly toggleFrozen: () => void;
+  readonly toggleDisabled: () => void;
 }
 
 /** Owns history and direct commands for the current note selection. */
@@ -59,12 +63,16 @@ export function usePianoRollSelectionCommands(
   }, [commands, prepareHistoryNavigation]);
   const remove = useCallback((): void => {
     const controller = getController();
-    const notes = controller?.getSelectedNotes() ?? [];
+    const selectedNotes = controller?.getSelectedNotes() ?? [];
+    const editableNotes = selectedNotes.filter(isNoteEditable);
+    const retainedNoteIds = selectedNotes
+      .filter((note) => !isNoteEditable(note))
+      .map((note) => note.id);
     const markerGroups = selection.markerGroups;
     const state = commands.getState();
     const clipId = getActiveClip(state).id;
     const deleteCommands = [
-      ...buildDeleteNoteCommands(clipId, notes),
+      ...buildDeleteNoteCommands(clipId, editableNotes),
       ...buildDeleteSelectedMarkerCommands(clipId, markerGroups),
     ];
 
@@ -72,22 +80,24 @@ export function usePianoRollSelectionCommands(
       deleteCommands.length > 0
       && commands.dispatch(
         deleteCommands,
-        notes.length > 0 && markerGroups.length > 0
+        editableNotes.length > 0 && markerGroups.length > 0
           ? "Delete timeline selection"
           : markerGroups.length > 0
             ? "Delete markers"
             : "Delete notes",
         {
           clipId,
-          noteIds: [],
+          noteIds: retainedNoteIds,
           markerGroups: [],
         },
       ) !== null
     ) {
-      controller?.clearSelection();
+      controller?.replaceSelection(
+        findNotesByIds(commands.getState(), clipId, retainedNoteIds),
+      );
     }
   }, [commands, getController, selection]);
-  const toggleFrozen = useCallback((): void => {
+  const toggleDisabled = useCallback((): void => {
     const controller = getController();
     const notes = controller?.getSelectedNotes() ?? [];
 
@@ -95,7 +105,7 @@ export function usePianoRollSelectionCommands(
       return;
     }
 
-    const targetStatus = getFrozenToggleStatus(notes);
+    const targetStatus = getDisabledToggleStatus(notes);
     const clipId = getActiveClip(commands.getState()).id;
     const nextState = commands.dispatch(
       buildSetNotesStatusCommands(
@@ -103,9 +113,9 @@ export function usePianoRollSelectionCommands(
         notes,
         targetStatus,
       ),
-      targetStatus === "frozen"
-        ? "Freeze selected notes"
-        : "Unfreeze selected notes",
+      targetStatus === "disabled"
+        ? "Disable selected notes"
+        : "Enable selected notes",
       { clipId, noteIds: notes.map((note) => note.id) },
     );
 
@@ -118,13 +128,13 @@ export function usePianoRollSelectionCommands(
     }
   }, [commands, getController]);
 
-  return { undo, redo, remove, toggleFrozen };
+  return { undo, redo, remove, toggleDisabled };
 }
 
-export function getFrozenToggleStatus(
+export function getDisabledToggleStatus(
   notes: readonly Pick<Note, "status">[],
-): Extract<NoteStatus, "active" | "frozen"> {
-  return notes.every((note) => note.status === "frozen")
+): Extract<NoteStatus, "active" | "disabled"> {
+  return notes.every((note) => note.status === "disabled")
     ? "active"
-    : "frozen";
+    : "disabled";
 }

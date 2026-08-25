@@ -1,8 +1,8 @@
 import {
   APPLICATION_COLORS,
 } from "../../../config/application-colors";
-import {
-  type Note,
+import type {
+  Note,
 } from "../../../domain/notes/note";
 import {
   type InstrumentId,
@@ -54,6 +54,7 @@ import type {
 import {
   clearSelectionLayer,
   clearLayer,
+  filterEditableInteractionNotes,
   populateGhostLayer,
   populateSelectionLayer,
   resetLayerTransform,
@@ -106,12 +107,14 @@ export class DomInteractionVisualController
     getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
     scaleMarkers: readonly ScaleMarker[],
   ): void {
-    this.editingNoteMask.replace(notes);
+    const editableNotes = filterEditableInteractionNotes(notes);
+
+    this.editingNoteMask.replace(editableNotes);
     this.dragScaleMarkers = scaleMarkers;
-    resetLayerTransform(this.selectionLayer);
+    this.showSelection(editableNotes, converter);
     this.ghostGeometry = populateGhostLayer(
       this.ghostLayer,
-      notes,
+      editableNotes,
       converter,
       stylesByInstrumentId,
       this.noteColorMode.get(),
@@ -209,11 +212,13 @@ export class DomInteractionVisualController
     edge: ResizeEdge,
     getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   ): void {
-    this.editingNoteMask.replace(notes);
-    resetLayerTransform(this.selectionLayer);
+    const editableNotes = filterEditableInteractionNotes(notes);
+
+    this.editingNoteMask.replace(editableNotes);
+    this.showSelection(editableNotes, converter);
     this.ghostGeometry = populateGhostLayer(
       this.ghostLayer,
-      notes,
+      editableNotes,
       converter,
       stylesByInstrumentId,
       this.noteColorMode.get(),

@@ -40,6 +40,26 @@ const SOURCE_MARKER_TICK = 3_840;
 const SECOND_MARKER_TICK = 4_080;
 
 describe("timeline clipboard", () => {
+  test("excludes locked and disabled notes from copied selections", () => {
+    const notes = [
+      createTestNote({ id: "active-note", status: "active" }),
+      createTestNote({ id: "muted-note", status: "muted", startTick: 240 }),
+      createTestNote({ id: "locked-note", status: "locked", startTick: 480 }),
+      createTestNote({ id: "disabled-note", status: "disabled", startTick: 720 }),
+    ];
+    const state = createClipboardProject(notes[0]!);
+    const clipboard = createPianoRollClipboard(
+      notes,
+      [],
+      getActiveClip(state).timeline.timeMap,
+    );
+
+    expect(clipboard?.notes.map((note) => note.id)).toEqual([
+      "active-note",
+      "muted-note",
+    ]);
+  });
+
   test("captures selected marker components and preserves mixed offsets", () => {
     const note = createTestNote({
       id: "clipboard-note",

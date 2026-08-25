@@ -2,6 +2,7 @@ import {
   EDITOR_CONSTANTS,
 } from "../../../config/editor-config";
 import {
+  isNoteEditable,
   type Note,
 } from "../../../domain/notes/note";
 import {
@@ -69,12 +70,11 @@ export class NoteGestureWorkflowAdapter {
     const { selection } = this.options;
     const deleteSelection = includeSelection && selection.has(note.id);
     const result = this.workflow.commitDelete(
-      deleteSelection ? selection.notes : [note],
+      (deleteSelection ? selection.notes : [note]).filter(isNoteEditable),
       deleteSelection ? "Delete selected notes" : "Delete note",
     );
 
     if (result === "committed") {
-      selection.clear();
       return true;
     }
 
@@ -88,7 +88,7 @@ export class NoteGestureWorkflowAdapter {
 
     this.workflow.commitMove(
       buildRepositionedNotes(
-        this.options.selection.notes,
+        this.options.selection.notes.filter(isNoteEditable),
         completion.deltaTicks,
         completion.deltaPitch,
         completion.getSnapSettingsAtTick,

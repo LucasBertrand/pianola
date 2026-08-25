@@ -138,7 +138,7 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
     const previousCompositeOperation =
       context.globalCompositeOperation || "source-over";
 
-    // Preserve the alpha already painted for muted/frozen notes. The hatch
+    // Preserve the alpha already painted for muted/disabled notes. The hatch
     // changes their pixels but does not add a second opacity layer.
     context.globalCompositeOperation = "source-atop";
     context.fillStyle = lockedPattern;

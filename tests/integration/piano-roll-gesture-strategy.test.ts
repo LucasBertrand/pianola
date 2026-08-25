@@ -44,6 +44,84 @@ function createPointerSample(changes: Partial<PointerSample>): PointerSample {
 }
 
 describe("PianoRollGestureStrategy pitch highlight during selection drag", () => {
+  test("selects a disabled note without starting an edit gesture", () => {
+    const disabledNote = createTestNote({
+      id: "disabled-note",
+      pitch: 64,
+      startTick: 480,
+      durationTicks: 480,
+      status: "disabled",
+    });
+    const runtime = createEditorRuntime(createTestProject({
+      clips: [{ id: TEST_CLIP_ID, notes: [disabledNote] }],
+    }));
+    const session = new PianoRollInteractionSession(
+      runtime.viewport.get(),
+      runtime.viewport.version,
+      runtime.selection,
+    );
+    const selectionController = new PianoRollSelectionController({
+      session,
+      viewport: runtime.viewport,
+      editorCommands: runtime.editorCommands,
+      getVisuals: () => null,
+      onSelectionChange: () => undefined,
+    });
+    const workflow = new NoteGestureWorkflowAdapter({
+      editorCommands: runtime.editorCommands,
+      selection: session.selection,
+      onSelectionChanged: () => undefined,
+      onCollision: undefined,
+      onTransactionRejected: undefined,
+    });
+    const overlay = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        right: 1000,
+        bottom: 800,
+        width: 1000,
+        height: 800,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    } as unknown as HTMLElement;
+    const strategy = createPianoRollGestureStrategy({
+      overlay,
+      getVisuals: () => null,
+      session,
+      viewport: runtime.viewport,
+      selectionController,
+      workflow,
+      spatialIndex: runtime.spatialIndex,
+      instrumentStyles: runtime.instrumentStyles,
+      editorCommands: runtime.editorCommands,
+      getActiveInstrumentId: () => TEST_INSTRUMENT_ID,
+      getInstrumentOrder: () => [TEST_INSTRUMENT_ID],
+      totalTicks: 7680,
+      selectionMode: "replace",
+      gridResolutionTicks: runtime.gridResolutionTicks,
+      pitchSnapSettings: runtime.pitchSnapSettings,
+      onGridSeek: undefined,
+      onPitchHighlightChange: undefined,
+    });
+    const pointer = createPointerSample({
+      clientX: session.converter.tickToCssPixelX(720),
+      clientY: session.converter.pitchToCssPixelY(64) + 5,
+    });
+
+    strategy.onPointerDown(pointer);
+    strategy.onPointerUp(pointer);
+
+    expect(runtime.selection.notes.map((note) => note.id)).toEqual([
+      disabledNote.id,
+    ]);
+    expect(getActiveClip(runtime.projectStore.getState())
+      .tracksByInstrumentId[TEST_INSTRUMENT_ID]
+      ?.notesById[disabledNote.id]).toEqual(disabledNote);
+  });
+
   test("publishes handled note pitch on pointerDown, updates on drag move, and clears on pointerUp", () => {
     const noteA = createTestNote({
       id: "note-a",

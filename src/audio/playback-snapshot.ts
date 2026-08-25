@@ -434,7 +434,7 @@ function assertCompilableNote(
 
   if (!isNoteStatus(note.status)) {
     throw new PlaybackSnapshotCompilationError(
-      `Note "${note.id}" status must be active, muted, locked, or frozen.`,
+      `Note "${note.id}" status must be active, muted, locked, or disabled.`,
     );
   }
 

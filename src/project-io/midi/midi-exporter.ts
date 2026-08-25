@@ -157,7 +157,7 @@ export function createMidiExport(
     let trackEndTick = projectEndTick;
 
     for (const note of notes) {
-      if (note.status === "muted" || note.status === "frozen") {
+      if (note.status === "muted" || note.status === "disabled") {
         continue;
       }
 

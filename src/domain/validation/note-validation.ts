@@ -105,7 +105,7 @@ export function validateNote(note: Note): ValidationResult {
     issues.push({
       code: "INVALID_NOTE_STATUS",
       path: "status",
-      message: "Note status must be active, muted, locked, or frozen.",
+      message: "Note status must be active, muted, locked, or disabled.",
     });
   }
 

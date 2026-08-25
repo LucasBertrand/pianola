@@ -40,12 +40,14 @@ Une note appartient toujours à un instrument ; une sélection peut être
 transférée vers tout instrument disponible.
 
 Chaque note possède un statut unique : `active` (audible et éditable), `muted`
-(silencieuse et éditable), `locked` (audible et non éditable) ou `frozen`
+(silencieuse et éditable), `locked` (audible et non éditable) ou `disabled`
 (silencieuse et non éditable). Les commandes de sourdine et de verrouillage
 préservent l’autre dimension du statut.
 Le bouton de statut de la barre d’outils et du menu radial bascule la sélection
-entre `frozen` et `active` : une sélection mixte est entièrement gelée, puis
-entièrement réactivée au prochain déclenchement.
+entre `disabled` et `active` : une sélection mixte est entièrement désactivée,
+puis entièrement réactivée au prochain déclenchement. Toutes les notes restent
+sélectionnables, mais les notes verrouillées ou désactivées sont exclues des
+transformations, de la suppression et des opérations copier/couper.
 
 Quand un instrument est édité pendant la lecture, les changements de synthèse
 sont prévisualisés sans interrompre le transport. Les paramètres continus sont

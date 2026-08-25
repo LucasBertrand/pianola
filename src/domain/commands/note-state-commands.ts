@@ -61,7 +61,7 @@ export function applySetNotesStatus(
   if (!isNoteStatus(command.status)) {
     reject(
       "INVALID_COMMAND",
-      "Note status must be active, muted, locked, or frozen.",
+      "Note status must be active, muted, locked, or disabled.",
       command.type,
     );
   }

@@ -267,7 +267,9 @@ export function createPianoRollClipboard(
   selectedMarkerGroups: readonly SelectedTimeMapMarkerGroup[],
   timeMap: TimeMap,
 ): PianoRollClipboard | null {
-  const clipboardNotes = notes.map((note) => ({ ...note }));
+  const clipboardNotes = notes
+    .filter(isNoteEditable)
+    .map((note) => ({ ...note }));
   const markerGroups: PianoRollClipboardMarkerGroup[] = [];
   let originTick = Number.POSITIVE_INFINITY;
 

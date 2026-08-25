@@ -1,8 +1,9 @@
 import type {
   InstrumentId,
 } from "../../../domain/identifiers";
-import type {
-  Note,
+import {
+  isNoteEditable,
+  type Note,
 } from "../../../domain/notes/note";
 import { getNoteContentOpacity } from "../rendering/note-opacity";
 import type {
@@ -61,22 +62,23 @@ export function populateGhostLayer(
     return null;
   }
 
+  const editableNotes = filterEditableInteractionNotes(notes);
   ghostLayer.replaceChildren();
   ghostLayer.style.transform = "translate3d(0, 0, 0)";
   elements.length = 0;
-  const left = new Float64Array(notes.length);
-  const width = new Float64Array(notes.length);
-  const pitch = new Int16Array(notes.length);
-  const startTick = new Int32Array(notes.length);
-  const durationTicks = new Int32Array(notes.length);
+  const left = new Float64Array(editableNotes.length);
+  const width = new Float64Array(editableNotes.length);
+  const pitch = new Int16Array(editableNotes.length);
+  const startTick = new Int32Array(editableNotes.length);
+  const durationTicks = new Int32Array(editableNotes.length);
   const fragment = document.createDocumentFragment();
 
   for (
     let noteIndex = 0;
-    noteIndex < notes.length;
+    noteIndex < editableNotes.length;
     noteIndex += 1
   ) {
-    const note = notes[noteIndex];
+    const note = editableNotes[noteIndex];
 
     if (note === undefined) {
       continue;
@@ -202,7 +204,7 @@ export function populateSelectionLayer(
     const element = document.createElement("div");
     const noteWidth = Math.max(1, endX - x);
 
-    element.className = "interaction-note-selection";
+    element.className = getSelectionNoteClassName(note);
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
     element.style.width = `${noteWidth}px`;
@@ -222,6 +224,18 @@ export function populateSelectionLayer(
   selectionLayer.appendChild(fragment);
 
   return { left, width, pitch, startTick, durationTicks };
+}
+
+export function getSelectionNoteClassName(note: Pick<Note, "status">): string {
+  return isNoteEditable(note)
+    ? "interaction-note-selection"
+    : "interaction-note-selection is-non-editable";
+}
+
+export function filterEditableInteractionNotes(
+  notes: readonly Note[],
+): readonly Note[] {
+  return notes.filter(isNoteEditable);
 }
 
 export function clearSelectionLayer(
