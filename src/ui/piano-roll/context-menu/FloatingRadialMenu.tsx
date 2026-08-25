@@ -29,6 +29,11 @@ export interface FloatingRadialMenuProps {
   readonly revision: number;
   readonly closing: boolean;
   readonly items: readonly FloatingRadialMenuItem[];
+  readonly centerButton?: {
+    readonly label: string;
+    readonly icon: ReactNode;
+    readonly onSelect: () => void;
+  };
   readonly onClose: () => void;
 }
 
@@ -52,6 +57,7 @@ export function FloatingRadialMenu({
   revision,
   closing,
   items,
+  centerButton,
   onClose,
 }: FloatingRadialMenuProps): React.JSX.Element | null {
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -209,15 +215,32 @@ export function FloatingRadialMenu({
             );
           })}
         </svg>
-        <button
-          className="radial-menu-center"
-          type="button"
-          aria-label="Fermer le menu"
-          title="Fermer"
-          onClick={onClose}
-        >
-          <span aria-hidden="true" />
-        </button>
+        {centerButton ? (
+          <button
+            className="radial-menu-center"
+            type="button"
+            aria-label={centerButton.label}
+            title={centerButton.label}
+            onClick={() => {
+              centerButton.onSelect();
+              onClose();
+            }}
+          >
+            <span className="radial-menu-segment-icon" aria-hidden="true">
+              {centerButton.icon}
+            </span>
+          </button>
+        ) : (
+          <button
+            className="radial-menu-center"
+            type="button"
+            aria-label="Close"
+            title="Close"
+            onClick={onClose}
+          >
+            <span className="radial-menu-center-close" aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>,
     document.body,

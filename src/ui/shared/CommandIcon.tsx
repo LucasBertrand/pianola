@@ -9,7 +9,8 @@ interface CommandIconProps {
     | "disable"
     | "enable"
     | "play"
-    | "pause";
+    | "pause"
+    | "marker";
 }
 
 /** Small dependency-free line icons sharing the menu's visual language. */
@@ -39,5 +40,7 @@ function renderIconPaths(kind: CommandIconProps["kind"]): React.ReactNode {
       return <><path d="M9 7v10M15 7v10" /></>;
     case "play":
       return <path d="m9 6 9 6-9 6Z" />;
+    case "marker":
+      return <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" /></>;
   }
 }

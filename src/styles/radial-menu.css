@@ -177,8 +177,9 @@
   transform: translate(-50%, -50%) scale(1.04);
 }
 
-.radial-menu-center span,
-.radial-menu-center span::after {
+.radial-menu-center-close,
+.radial-menu-center-close::after {
+  display: block;
   width: 20px;
   height: 2px;
   border-radius: 999px;
@@ -186,11 +187,11 @@
   content: "";
 }
 
-.radial-menu-center span {
+.radial-menu-center-close {
   transform: rotate(45deg);
 }
 
-.radial-menu-center span::after {
+.radial-menu-center-close::after {
   display: block;
   transform: rotate(90deg);
 }

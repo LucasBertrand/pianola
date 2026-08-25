@@ -777,14 +777,14 @@ export function PianoRollWorkspace({
   const radialMenuItems = useMemo<readonly FloatingRadialMenuItem[]>(() => [
     {
       id: "copy",
-      label: "Copier",
+      label: "Copy",
       icon: <CommandIcon kind="copy" />,
       disabled: !editableTimelineSelectionAvailable,
       onSelect: handleCopy,
     },
     {
       id: "cut",
-      label: "Couper",
+      label: "Cut",
       icon: <CommandIcon kind="cut" />,
       disabled: !editableTimelineSelectionAvailable,
       tone: "danger",
@@ -792,7 +792,7 @@ export function PianoRollWorkspace({
     },
     {
       id: "paste",
-      label: "Coller",
+      label: "Paste",
       icon: <CommandIcon kind="paste" />,
       disabled: !clipboardAvailable,
       onSelect: handlePaste,
@@ -806,7 +806,7 @@ export function PianoRollWorkspace({
     },
     {
       id: "toggle-disabled",
-      label: selectedNotesContainNonDisabledNote ? "Désactiver" : "Activer",
+      label: selectedNotesContainNonDisabledNote ? "Disable" : "Enable",
       icon: (
         <CommandIcon
           kind={selectedNotesContainNonDisabledNote ? "disable" : "enable"}
@@ -817,15 +817,11 @@ export function PianoRollWorkspace({
       onSelect: handleToggleSelectionDisabled,
     },
     {
-      id: "playback",
-      label: playbackStatus === "playing" ? "Pause" : "Play",
-      icon: (
-        <CommandIcon
-          kind={playbackStatus === "playing" ? "pause" : "play"}
-        />
-      ),
-      tone: "transport",
-      onSelect: togglePlayback,
+      id: "add-marker",
+      label: "Mark",
+      icon: <CommandIcon kind="marker" />,
+      tone: "default",
+      onSelect: timeMapMarkers.openMarkerAtPlayhead,
     },
   ], [
     clipboardAvailable,
@@ -834,12 +830,11 @@ export function PianoRollWorkspace({
     handleOpenSliceSelection,
     handlePaste,
     handleToggleSelectionDisabled,
-    playbackStatus,
     selectedNotes.length,
     selectedNotesContainNonDisabledNote,
     editableNoteSelectionAvailable,
     editableTimelineSelectionAvailable,
-    togglePlayback,
+    timeMapMarkers.openMarkerAtPlayhead,
   ]);
   const handleNoteColorModeToggle = useCallback((): void => {
     setNoteColorMode((currentMode) => {
@@ -1201,6 +1196,15 @@ export function PianoRollWorkspace({
           revision={radialMenu.state.revision}
           closing={radialMenu.state.closing}
           items={radialMenuItems}
+          centerButton={{
+            label: playbackStatus === "playing" ? "Pause" : "Play",
+            icon: (
+              <CommandIcon
+                kind={playbackStatus === "playing" ? "pause" : "play"}
+              />
+            ),
+            onSelect: togglePlayback,
+          }}
           onClose={radialMenu.close}
         />
       )}

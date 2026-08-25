@@ -169,7 +169,7 @@ export function EditorToolbar({
           onClick={onAddMarkerAtPlayhead}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
-             <path d="M5 21V3h9l2 3h5v9h-6l-2-3H7v9H5Z" />
+             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" />
           </svg>
         </button>
         <button
