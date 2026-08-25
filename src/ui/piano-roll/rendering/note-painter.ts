@@ -21,6 +21,8 @@ import type {
   PitchSnapSettings,
 } from "../../../music/pitch-snap";
 import { getLockedNotePattern } from "./locked-note-pattern";
+import { isNoteEditable } from "../../../domain/notes/note";
+import { getNoteBodyOpacity, getNoteContentOpacity } from "./note-opacity";
 import {
   compareNotesByInstrumentRenderOrder,
   compareNotesByPitchRenderOrder,
@@ -114,9 +116,9 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
     }
 
     const opacity =
-      (instrumentStyle?.opacity ?? 1) * (note.enabled ? 0.55 : 0.25);
+      (instrumentStyle?.opacity ?? 1) * getNoteBodyOpacity(note);
 
-    if (instrumentStyle?.locked === true) {
+    if (!isNoteEditable(note)) {
       hasVisibleLockedNote = true;
     }
 
@@ -133,6 +135,12 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
     : null;
 
   if (lockedPattern !== null) {
+    const previousCompositeOperation =
+      context.globalCompositeOperation || "source-over";
+
+    // Preserve the alpha already painted for muted/frozen notes. The hatch
+    // changes their pixels but does not add a second opacity layer.
+    context.globalCompositeOperation = "source-atop";
     context.fillStyle = lockedPattern;
 
     for (const note of visibleNotes) {
@@ -142,13 +150,15 @@ export function paintNotes(snapshot: NotePaintSnapshot): void {
 
       const instrumentStyle = stylesByInstrumentId[note.instrumentId];
 
-      if (instrumentStyle?.locked !== true) {
+      if (isNoteEditable(note)) {
         continue;
       }
 
-      context.globalAlpha = Math.min(1, instrumentStyle.opacity * 0.68);
+      context.globalAlpha = Math.min(1, (instrumentStyle?.opacity ?? 1) * 0.68);
       fillNoteRect(context, converter, note);
     }
+
+    context.globalCompositeOperation = previousCompositeOperation;
   }
 
   paintNoteLabels(snapshot);
@@ -189,7 +199,7 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
     const instrumentStyle = stylesByInstrumentId[note.instrumentId];
 
     context.globalAlpha =
-      (instrumentStyle?.opacity ?? 1) * (note.enabled ? 1 : 0.36);
+      (instrumentStyle?.opacity ?? 1) * getNoteContentOpacity(note);
 
     for (
       const segment of getMidiNoteLabelSegments(

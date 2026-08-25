@@ -732,7 +732,7 @@ export function PianoRollWorkspace({
     copy: handleCopy,
     cut: handleCut,
     remove: handleDeleteSelection,
-    toggleEnabled: handleToggleSelectionEnabled,
+    toggleFrozen: handleToggleSelectionFrozen,
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
     sliceAtLoopAnchors: handleSliceSelectionAtLoopAnchors,
@@ -768,8 +768,8 @@ export function PianoRollWorkspace({
     handleSliceSelectionAtPlayhead,
     setApplicationDialog,
   ]);
-  const selectedNotesContainEnabledNote = selectedNotes.some(
-    (note) => note.enabled,
+  const selectedNotesContainNonFrozenNote = selectedNotes.some(
+    (note) => note.status !== "frozen",
   );
   const radialMenuItems = useMemo<readonly FloatingRadialMenuItem[]>(() => [
     {
@@ -802,16 +802,16 @@ export function PianoRollWorkspace({
       onSelect: handleOpenSliceSelection,
     },
     {
-      id: "toggle-enabled",
-      label: selectedNotesContainEnabledNote ? "Désactiver" : "Activer",
+      id: "toggle-frozen",
+      label: selectedNotesContainNonFrozenNote ? "Geler" : "Dégeler",
       icon: (
         <CommandIcon
-          kind={selectedNotesContainEnabledNote ? "disable" : "enable"}
+          kind={selectedNotesContainNonFrozenNote ? "disable" : "enable"}
         />
       ),
       disabled: selectedNotes.length === 0,
-      tone: selectedNotesContainEnabledNote ? "danger" : "default",
-      onSelect: handleToggleSelectionEnabled,
+      tone: selectedNotesContainNonFrozenNote ? "danger" : "default",
+      onSelect: handleToggleSelectionFrozen,
     },
     {
       id: "playback",
@@ -830,10 +830,10 @@ export function PianoRollWorkspace({
     handleCut,
     handleOpenSliceSelection,
     handlePaste,
-    handleToggleSelectionEnabled,
+    handleToggleSelectionFrozen,
     playbackStatus,
     selectedNotes.length,
-    selectedNotesContainEnabledNote,
+    selectedNotesContainNonFrozenNote,
     selectionAvailable,
     togglePlayback,
   ]);
@@ -1032,7 +1032,7 @@ export function PianoRollWorkspace({
             )}
             selectionAvailable={selectionAvailable}
             noteSelectionAvailable={selectedNotes.length > 0}
-            selectedNotesContainEnabledNote={selectedNotesContainEnabledNote}
+            selectedNotesContainNonFrozenNote={selectedNotesContainNonFrozenNote}
             clipboardSelectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
@@ -1054,7 +1054,7 @@ export function PianoRollWorkspace({
             onManageMeasures={() => setManageMeasuresDialogOpen(true)}
             onRemoveMeasure={handleRemoveMeasureAtPlayhead}
             onDeleteSelection={handleDeleteSelection}
-            onToggleSelectionEnabled={handleToggleSelectionEnabled}
+            onToggleSelectionFrozen={handleToggleSelectionFrozen}
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={handlePaste}

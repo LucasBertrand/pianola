@@ -123,7 +123,7 @@ export class NoteGestureWorkflowAdapter {
       durationTicks: completion.drawDurationTicks,
       velocity: EDITOR_CONSTANTS.defaultDrawVelocity,
       instrumentId: completion.drawInstrumentId,
-      enabled: true,
+      status: "active",
     });
   }
 }

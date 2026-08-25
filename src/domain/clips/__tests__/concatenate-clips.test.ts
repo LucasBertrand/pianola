@@ -34,7 +34,7 @@ describe("clip concatenation", () => {
             id: "shared-note",
             startTick: 120,
             velocity: 84,
-            enabled: false,
+            status: "muted",
           })],
         },
         {
@@ -56,9 +56,6 @@ describe("clip concatenation", () => {
     const sources: readonly Clip[] = [
       {
         ...firstClip,
-        instrumentStatesById: {
-          [INSTRUMENT_ID]: { locked: true },
-        },
         timeline: {
           ...firstClip.timeline,
           timeMap: {
@@ -129,9 +126,6 @@ describe("clip concatenation", () => {
       id: "joined-1-shared-note",
       startTick: 4_080,
     });
-    expect(result.instrumentStatesById[INSTRUMENT_ID]).toEqual({
-      locked: true,
-    });
     expect(result.transportSettings).toEqual({
       loop: { startTick: 0, endTick: 7_200 },
       loopEnabled: false,
@@ -162,8 +156,6 @@ describe("clip concatenation", () => {
     expect(result.timeline.timeMap).not.toBe(source.timeline.timeMap);
     expect(result.tracksByInstrumentId[INSTRUMENT_ID])
       .not.toBe(source.tracksByInstrumentId[INSTRUMENT_ID]);
-    expect(result.instrumentStatesById[INSTRUMENT_ID])
-      .not.toBe(source.instrumentStatesById[INSTRUMENT_ID]);
     expect(result.tracksByInstrumentId[INSTRUMENT_ID]?.notesById)
       .toHaveProperty("joined-0-source-note");
   });
@@ -371,9 +363,6 @@ describe("clip concatenation", () => {
       ...second,
       tracksByInstrumentId: {
         "instrument-a": second.tracksByInstrumentId["instrument-a"]!,
-      },
-      instrumentStatesById: {
-        "instrument-a": second.instrumentStatesById["instrument-a"]!,
       },
     };
 

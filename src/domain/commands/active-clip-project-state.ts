@@ -12,6 +12,5 @@ export type ActiveClipProjectState = Pick<
   Clip,
   | "timeline"
   | "tracksByInstrumentId"
-  | "instrumentStatesById"
   | "transportSettings"
 >;

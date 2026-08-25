@@ -2,5 +2,4 @@
 export interface InstrumentRenderStyle {
   readonly fillStyle: string;
   readonly opacity: number;
-  readonly locked: boolean;
 }

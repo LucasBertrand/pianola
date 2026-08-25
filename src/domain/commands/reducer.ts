@@ -52,7 +52,6 @@ import {
   applyDeleteInstrumentPreset,
   applyReorderProjectInstruments,
   applySaveInstrumentPreset,
-  applyUpdateClipInstrumentState,
   applyUpdateProjectInstrument,
 } from "./instrument-commands";
 import { applyAddNotes, applyMoveNotes } from "./note-commands";
@@ -66,7 +65,7 @@ import {
 } from "./note-shape-commands";
 import {
   applyDeleteNotes,
-  applySetNotesEnabled,
+  applySetNotesStatus,
 } from "./note-state-commands";
 import {
   applySetAutoAdvanceEnabled,
@@ -233,15 +232,11 @@ function applyActiveClipCommand(
     clock: state.clock,
     timeline: clip.timeline,
     tracksByInstrumentId: clip.tracksByInstrumentId,
-    instrumentStatesById: clip.instrumentStatesById,
     transportSettings: clip.transportSettings,
   };
   let nextContext: ActiveClipProjectState;
 
   switch (command.type) {
-    case "UpdateClipInstrumentState":
-      nextContext = applyUpdateClipInstrumentState(context, command);
-      break;
     case "InsertMeasure":
       nextContext = applyInsertMeasure(context, command);
       break;
@@ -272,8 +267,8 @@ function applyActiveClipCommand(
     case "DeleteNotes":
       nextContext = applyDeleteNotes(context, command);
       break;
-    case "SetNotesEnabled":
-      nextContext = applySetNotesEnabled(context, command);
+    case "SetNotesStatus":
+      nextContext = applySetNotesStatus(context, command);
       break;
     case "UpdateTimeSignature":
       nextContext = applyUpdateTimeSignature(context, command);
@@ -335,7 +330,6 @@ function applyActiveClipCommand(
     ...clip,
     timeline: nextContext.timeline,
     tracksByInstrumentId: nextContext.tracksByInstrumentId,
-    instrumentStatesById: nextContext.instrumentStatesById,
     transportSettings: nextContext.transportSettings,
   };
 

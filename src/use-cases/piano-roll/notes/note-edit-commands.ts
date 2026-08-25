@@ -10,6 +10,7 @@ import {
 } from "../../../domain/identifiers";
 import {
   type Note,
+  type NoteStatus,
 } from "../../../domain/notes/note";
 
 export type NoteResizeEdge = "start" | "end";
@@ -66,28 +67,39 @@ export function buildDeleteNoteCommands(
   return commands;
 }
 
-/** Creates explicit enabled-state updates grouped by instrument. */
-export function buildSetNotesEnabledCommands(
+/** Creates explicit status updates grouped by instrument and target status. */
+export function buildSetNotesStatusCommands(
   clipId: ClipId,
   notes: readonly Note[],
-  enabled: boolean,
+  target: NoteStatus | ((note: Note) => NoteStatus),
 ): readonly PianoRollCommand[] {
-  const notesByInstrument = groupNotesByInstrument(notes);
+  const noteIdsByTarget = new Map<string, {
+    instrumentId: InstrumentId;
+    status: NoteStatus;
+    noteIds: NoteId[];
+  }>();
   const commands: PianoRollCommand[] = [];
 
-  for (const [instrumentId, instrumentNotes] of notesByInstrument) {
-    const noteIds: NoteId[] = [];
+  for (const note of notes) {
+    const status = typeof target === "function" ? target(note) : target;
+    const key = `${note.instrumentId}\u0000${status}`;
+    let group = noteIdsByTarget.get(key);
 
-    for (const note of instrumentNotes) {
-      noteIds.push(note.id);
+    if (group === undefined) {
+      group = { instrumentId: note.instrumentId, status, noteIds: [] };
+      noteIdsByTarget.set(key, group);
     }
 
+    group.noteIds.push(note.id);
+  }
+
+  for (const { instrumentId, status, noteIds } of noteIdsByTarget.values()) {
     commands.push({
-      type: "SetNotesEnabled",
+      type: "SetNotesStatus",
       clipId,
       trackInstrumentId: instrumentId,
       noteIds,
-      enabled,
+      status,
     });
   }
 

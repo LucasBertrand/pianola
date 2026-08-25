@@ -4,6 +4,7 @@ import type {
 import type {
   Note,
 } from "../../../domain/notes/note";
+import { getNoteContentOpacity } from "../rendering/note-opacity";
 import type {
   CoordinateConverter,
 } from "../../../editor/geometry/converter";
@@ -120,7 +121,7 @@ export function populateGhostLayer(
     element.style.background = fillStyle;
     element.style.opacity = String(
       (stylesByInstrumentId[note.instrumentId]?.opacity ?? 1)
-      * (note.enabled ? 1 : 0.36),
+      * getNoteContentOpacity(note),
     );
     renderGhostNoteLabels(
       element,

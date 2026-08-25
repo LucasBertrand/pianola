@@ -16,7 +16,7 @@ import {
   replaceTrack,
 } from "./active-clip-command-helpers";
 import {
-  assertProjectInstrumentEditable,
+  assertNoteEditable,
   assertUniqueNoteIds,
   countClipNotes,
   findNoteInstrumentId,
@@ -31,7 +31,6 @@ export function applyAddNotes(
   command: AddNotesCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
-  assertProjectInstrumentEditable(state, command.trackInstrumentId, command.type);
   const commandNoteIds = new Set<NoteId>();
   const acceptedNotes: Note[] = [];
 
@@ -149,18 +148,13 @@ export function applyMoveNotes(
     command.targetInstrumentId,
     command.type,
   );
-  assertProjectInstrumentEditable(state, command.sourceInstrumentId, command.type);
-
-  if (command.targetInstrumentId !== command.sourceInstrumentId) {
-    assertProjectInstrumentEditable(state, command.targetInstrumentId, command.type);
-  }
-
   assertUniqueNoteIds(command.noteIds, command.type);
 
   const movedNotes: Note[] = [];
 
   for (const noteId of command.noteIds) {
     const note = requireNote(sourceTrack, noteId, command.type);
+    assertNoteEditable(note, command.type);
     const movedNote: Note = {
       ...note,
       pitch: note.pitch + command.deltaPitch,

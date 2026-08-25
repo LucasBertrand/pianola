@@ -29,7 +29,6 @@ import {
 } from "../../domain/commands/command-errors";
 import {
   getActiveClip,
-  getClip,
   type ProjectState,
 } from "../../domain/project/project-document";
 import {
@@ -39,6 +38,7 @@ import {
   type NoteId,
   type InstrumentId,
 } from "../../domain/identifiers";
+import { isNoteEditable } from "../../domain/notes/note";
 import {
   countNoteEditCollisions,
   hasNoteEditCollisions,
@@ -93,7 +93,7 @@ export interface PianoRollSelectionWorkflow {
   readonly copy: () => void;
   readonly cut: () => void;
   readonly remove: () => void;
-  readonly toggleEnabled: () => void;
+  readonly toggleFrozen: () => void;
   readonly transform: (
     kind: SelectionTransformationKind,
     label: string,
@@ -126,7 +126,7 @@ export function usePianoRollSelectionWorkflow({
     undo,
     redo,
     remove,
-    toggleEnabled,
+    toggleFrozen,
   } = usePianoRollSelectionCommands(
     commands,
     selection,
@@ -205,13 +205,13 @@ export function usePianoRollSelectionWorkflow({
 
         if (
           instrument === undefined
-          || activeClip.instrumentStatesById[note.instrumentId]?.locked !== false
+          || !isNoteEditable(note)
         ) {
           alert(
             "Transformation unavailable",
             instrument === undefined
               ? "The selection contains a note whose instrument is unavailable."
-              : `Unlock instrument "${instrument.name}" before transforming its notes.`,
+              : `Unlock note "${note.id}" before transforming it.`,
           );
           return;
         }
@@ -410,7 +410,7 @@ export function usePianoRollSelectionWorkflow({
     ) {
       alert(
         "Paste unavailable",
-        "Paste is unavailable because it exceeds the clip limit, contains an invalid timeline position, or targets an unavailable or locked instrument.",
+        "Paste is unavailable because it exceeds the clip limit, contains an invalid timeline position, or targets an unavailable instrument.",
       );
       return;
     }
@@ -446,8 +446,7 @@ export function usePianoRollSelectionWorkflow({
         nextState,
         selectedNoteIds,
         markerGroupsAfterPaste,
-        (note) => getClip(nextState, activeClip.id)
-          .instrumentStatesById[note.instrumentId]?.locked === false,
+        () => true,
       );
       getController()?.refreshSelection();
     };
@@ -569,7 +568,7 @@ export function usePianoRollSelectionWorkflow({
     copy,
     cut,
     remove,
-    toggleEnabled,
+    toggleFrozen,
     transform,
     sliceAtPlayhead,
     sliceAtLoopAnchors,

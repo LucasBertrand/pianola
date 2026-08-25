@@ -29,7 +29,7 @@ const SMALL_NOTE: Note = {
   startTick: 100,
   durationTicks: 60,
   velocity: 100,
-  enabled: true,
+  status: "active",
 };
 const LONG_NOTE: Note = {
   ...SMALL_NOTE,

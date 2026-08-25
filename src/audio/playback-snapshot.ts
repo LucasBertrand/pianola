@@ -3,6 +3,8 @@ import {
   type ProjectInstrument,
 } from "../domain/instruments/instrument";
 import {
+  isNoteAudible,
+  isNoteStatus,
   type Note,
 } from "../domain/notes/note";
 import {
@@ -124,7 +126,6 @@ export function compilePlaybackPlan(
 
     const projectInstrument = projectState.projectInstrumentsById[instrumentId];
     const track = clip.tracksByInstrumentId[instrumentId];
-    const instrumentState = clip.instrumentStatesById[instrumentId];
 
     if (projectInstrument === undefined) {
       throw new PlaybackSnapshotCompilationError(
@@ -135,12 +136,6 @@ export function compilePlaybackPlan(
     if (track === undefined || track.instrumentId !== instrumentId) {
       throw new PlaybackSnapshotCompilationError(
         `Track "${instrumentId}" is missing or belongs to another instrument.`,
-      );
-    }
-
-    if (instrumentState === undefined) {
-      throw new PlaybackSnapshotCompilationError(
-        `Project instrument state "${instrumentId}" is missing from playback source "${source.sourceId}".`,
       );
     }
 
@@ -240,7 +235,7 @@ function compileInstrumentSnapshot(
       projectDurationTicks,
     );
 
-    if (!note.enabled) {
+    if (!isNoteAudible(note)) {
       continue;
     }
 
@@ -437,9 +432,9 @@ function assertCompilableNote(
     );
   }
 
-  if (typeof note.enabled !== "boolean") {
+  if (!isNoteStatus(note.status)) {
     throw new PlaybackSnapshotCompilationError(
-      `Note "${note.id}" enabled state must be a boolean.`,
+      `Note "${note.id}" status must be active, muted, locked, or frozen.`,
     );
   }
 

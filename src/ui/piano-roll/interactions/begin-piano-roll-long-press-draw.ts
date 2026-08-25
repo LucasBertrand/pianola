@@ -114,7 +114,6 @@ export function beginPianoRollLongPressDraw({
     pitch < 0
     || pitch > 127
     || state.projectInstrumentsById[activeInstrumentId] === undefined
-    || activeClip.instrumentStatesById[activeInstrumentId]?.locked !== false
     || activeClip.tracksByInstrumentId[activeInstrumentId] === undefined
   ) {
     return;

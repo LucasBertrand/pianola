@@ -17,7 +17,6 @@ import {
 } from "../validation/transport-validation";
 import type {
   Clip,
-  ClipInstrumentState,
   Track,
 } from "./clip";
 
@@ -76,10 +75,6 @@ export function concatenateClips(
   }
 
   const tracksByInstrumentId = createEmptyTracks(instrumentIds);
-  const instrumentStatesById = cloneInstrumentStates(
-    firstClip.instrumentStatesById,
-    instrumentIds,
-  );
   const meterMarkers = [];
   const tempoMarkers = [];
   const scaleMarkers = [];
@@ -175,7 +170,6 @@ export function concatenateClips(
       },
     },
     tracksByInstrumentId,
-    instrumentStatesById,
     transportSettings: {
       loop: {
         startTick: 0,
@@ -194,13 +188,10 @@ function assertCompatibleInstrumentIds(
   expectedInstrumentIds: ReadonlySet<InstrumentId>,
 ): void {
   const trackIds = Object.keys(clip.tracksByInstrumentId);
-  const stateIds = Object.keys(clip.instrumentStatesById);
 
   if (
     trackIds.length !== expectedInstrumentIds.size
-    || stateIds.length !== expectedInstrumentIds.size
     || trackIds.some((instrumentId) => !expectedInstrumentIds.has(instrumentId))
-    || stateIds.some((instrumentId) => !expectedInstrumentIds.has(instrumentId))
   ) {
     throw new Error(
       `Clip "${clip.id}" does not contain the same instruments as the first clip.`,
@@ -224,27 +215,6 @@ function createEmptyTracks(
   }
 
   return tracks;
-}
-
-function cloneInstrumentStates(
-  sourceStates: Readonly<Record<InstrumentId, ClipInstrumentState>>,
-  instrumentIds: readonly InstrumentId[],
-): Record<InstrumentId, ClipInstrumentState> {
-  const states: Record<InstrumentId, ClipInstrumentState> = {};
-
-  for (const instrumentId of instrumentIds) {
-    const sourceState = sourceStates[instrumentId];
-
-    if (sourceState === undefined) {
-      throw new Error(
-        `The first clip is missing instrument state "${instrumentId}".`,
-      );
-    }
-
-    states[instrumentId] = { ...sourceState };
-  }
-
-  return states;
 }
 
 function assertValidGeneratedNoteId(

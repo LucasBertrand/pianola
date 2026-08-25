@@ -12,6 +12,7 @@ import type {
   MidiFile,
   MidiTrack,
 } from "./standard-midi-file";
+import type { NoteStatus } from "../../domain/notes/note";
 
 export interface MidiExportNote {
   readonly origin: {
@@ -23,7 +24,7 @@ export interface MidiExportNote {
   readonly velocity: number;
   readonly startTick: number;
   readonly durationTicks: number;
-  readonly enabled: boolean;
+  readonly status: NoteStatus;
 }
 
 export interface MidiExportTrack {
@@ -156,7 +157,7 @@ export function createMidiExport(
     let trackEndTick = projectEndTick;
 
     for (const note of notes) {
-      if (!note.enabled) {
+      if (note.status === "muted" || note.status === "frozen") {
         continue;
       }
 

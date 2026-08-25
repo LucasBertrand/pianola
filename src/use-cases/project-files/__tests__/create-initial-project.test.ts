@@ -24,6 +24,5 @@ describe("createBlankProjectState", () => {
     expect(state.instrumentOrder).toEqual([]);
     expect(state.projectInstrumentsById).toEqual({});
     expect(clip.tracksByInstrumentId).toEqual({});
-    expect(clip.instrumentStatesById).toEqual({});
   });
 });

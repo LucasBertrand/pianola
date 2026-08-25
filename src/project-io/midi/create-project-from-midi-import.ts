@@ -3,7 +3,6 @@ import { PROJECT_CONSTANTS } from "../../config/domain-limits";
 import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
 import {
   type Clip,
-  type ClipInstrumentState,
   type Track,
   DEFAULT_CLIP_COLOR,
 } from "../../domain/clips/clip";
@@ -38,10 +37,7 @@ import {
   getClip,
   PROJECT_SCHEMA_VERSION,
 } from "../../domain/project/project-document";
-import {
-  createDefaultClipInstrumentState,
-  createDefaultProjectInstrument,
-} from "../../domain/project-instrument-factory";
+import { createDefaultProjectInstrument } from "../../domain/project-instrument-factory";
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
@@ -80,7 +76,6 @@ export function createProjectFromMidiImport(
       : [createEmptyInstrumentCandidate()];
   const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
   const tracksByInstrumentId: Record<InstrumentId, Track> = {};
-  const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
   const mutableTracks: Record<
     InstrumentId,
     {
@@ -119,8 +114,6 @@ export function createProjectFromMidiImport(
     resolvedNoteCount += resolvedNotes.length;
     projectInstrumentsById[candidate.projectInstrument.id] =
       candidate.projectInstrument;
-    instrumentStatesById[candidate.projectInstrument.id] =
-      createDefaultClipInstrumentState();
     instrumentOrder.push(candidate.projectInstrument.id);
     mutableTracks[candidate.projectInstrument.id] = {
       instrumentId: candidate.projectInstrument.id,
@@ -190,7 +183,6 @@ export function createProjectFromMidiImport(
       timeMap,
     },
     tracksByInstrumentId,
-    instrumentStatesById,
     transportSettings: {
       ...transport,
       loop: {
@@ -280,12 +272,9 @@ function assertImportedProjectState(state: ProjectState): void {
     orderedInstrumentIds.add(instrumentId);
     const instrument = state.projectInstrumentsById[instrumentId];
     const track = importedClip.tracksByInstrumentId[instrumentId];
-    const instrumentState = importedClip.instrumentStatesById[instrumentId];
-
     if (
       instrument === undefined
       || track === undefined
-      || instrumentState === undefined
       || instrument.id !== instrumentId
       || track.instrumentId !== instrumentId
     ) {

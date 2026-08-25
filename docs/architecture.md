@@ -55,7 +55,7 @@ Le domaine est réparti par propriétaire :
 | Propriétaire | Contenu |
 | --- | --- |
 | `src/domain/identifiers.ts` | identifiants et tick |
-| `src/domain/notes/note.ts` | note, pitch et vélocité |
+| `src/domain/notes/note.ts` | note, pitch, vélocité et statut lecture/édition |
 | `src/domain/instruments/instrument.ts` | sons, presets et instruments |
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
 | `src/domain/transport/transport.ts` | horloge (PPQN) et boucle locale au clip |

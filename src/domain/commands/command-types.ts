@@ -1,6 +1,5 @@
 import {
   type Clip,
-  type ClipInstrumentState,
 } from "../clips/clip";
 import {
   type ClipId,
@@ -27,6 +26,7 @@ import {
 import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
 import {
   type Note,
+  type NoteStatus,
 } from "../notes/note";
 import type {
   ClipHierarchyNodeIdentity,
@@ -35,7 +35,6 @@ import type {
 export interface AddProjectInstrumentCommand {
   readonly type: "AddProjectInstrument";
   readonly instrument: ProjectInstrument;
-  readonly clipInstrumentStatesById: Readonly<Record<ClipId, ClipInstrumentState>>;
 }
 
 export interface UpdateProjectInstrumentChanges {
@@ -108,13 +107,6 @@ export interface RemoveMeasureCommand {
   readonly type: "RemoveMeasure";
   readonly clipId: ClipId;
   readonly measureIndex: number;
-}
-
-export interface UpdateClipInstrumentStateCommand {
-  readonly type: "UpdateClipInstrumentState";
-  readonly clipId: ClipId;
-  readonly instrumentId: InstrumentId;
-  readonly changes: Partial<ClipInstrumentState>;
 }
 
 export interface AddClipCommand {
@@ -281,12 +273,12 @@ export interface DeleteNotesCommand {
   readonly noteIds: readonly NoteId[];
 }
 
-export interface SetNotesEnabledCommand {
-  readonly type: "SetNotesEnabled";
+export interface SetNotesStatusCommand {
+  readonly type: "SetNotesStatus";
   readonly clipId: ClipId;
   readonly trackInstrumentId: InstrumentId;
   readonly noteIds: readonly NoteId[];
-  readonly enabled: boolean;
+  readonly status: NoteStatus;
 }
 
 export interface UpdateTempoCommand {
@@ -421,7 +413,6 @@ export type PianoRollCommand =
   | UpdateClipCommand
   | AddProjectInstrumentCommand
   | UpdateProjectInstrumentCommand
-  | UpdateClipInstrumentStateCommand
   | DeleteProjectInstrumentCommand
   | ReorderProjectInstrumentsCommand
   | SaveInstrumentPresetCommand
@@ -440,7 +431,7 @@ export type PianoRollCommand =
   | TransformNotesCommand
   | SliceNotesCommand
   | DeleteNotesCommand
-  | SetNotesEnabledCommand
+  | SetNotesStatusCommand
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
   | AddMeterMarkerCommand

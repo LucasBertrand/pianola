@@ -3,9 +3,6 @@ import {
   INSTRUMENT_CONSTANTS,
 } from "../config/domain-limits";
 import {
-  type ClipInstrumentState,
-} from "./clips/clip";
-import {
   type InstrumentConfig,
   type ProjectInstrument,
 } from "./instruments/instrument";
@@ -43,12 +40,5 @@ export function createDefaultProjectInstrument(
       velocityScale: INSTRUMENT_CONSTANTS.velocityScale,
       probability: INSTRUMENT_CONSTANTS.probability,
     },
-  };
-}
-
-/** Creates the default clip-local editing state for one instrument. */
-export function createDefaultClipInstrumentState(): ClipInstrumentState {
-  return {
-    locked: PROJECT_CONSTANTS.defaultClipInstrumentLocked,
   };
 }

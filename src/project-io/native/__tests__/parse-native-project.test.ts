@@ -14,7 +14,9 @@ import {
 } from "../../../domain/clips/clip-hierarchy";
 import {
   createTestProject,
+  createTestNote,
   TEST_CLIP_ID,
+  TEST_INSTRUMENT_ID,
 } from "../../../../tests/support/test-builders";
 import { NativeProjectFileError } from "../native-project-error";
 import { parseNativeProjectFile } from "../parse-native-project";
@@ -35,6 +37,52 @@ describe("native project parser", () => {
       projectState: project,
       editorState: editor,
     });
+  });
+
+  test("combines legacy note mute and instrument lock into a frozen status", () => {
+    const project = createTestProject({
+      clips: [{
+        id: TEST_CLIP_ID,
+        notes: [createTestNote({ id: "legacy-note" })],
+      }],
+    });
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const legacy = JSON.parse(serialized) as {
+      project: {
+        schemaVersion: number;
+        clipsById: Record<string, {
+          tracksByInstrumentId: Record<string, {
+            notesById: Record<string, {
+              status?: string;
+              enabled?: boolean;
+            }>;
+          }>;
+          instrumentStatesById?: Record<string, { locked: boolean }>;
+        }>;
+      };
+    };
+    const clip = legacy.project.clipsById[TEST_CLIP_ID]!;
+    const note = clip.tracksByInstrumentId[TEST_INSTRUMENT_ID]!
+      .notesById["legacy-note"]!;
+
+    legacy.project.schemaVersion = 7;
+    delete note.status;
+    note.enabled = false;
+    clip.instrumentStatesById = {
+      [TEST_INSTRUMENT_ID]: { locked: true },
+    };
+
+    const loaded = parseNativeProjectFile(JSON.stringify(legacy));
+
+    expect(loaded.projectState.clipsById[TEST_CLIP_ID]!
+      .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
+      .notesById["legacy-note"]!.status).toBe("frozen");
+    expect("instrumentStatesById" in loaded.projectState.clipsById[TEST_CLIP_ID]!)
+      .toBe(false);
   });
 
   test("round-trips bypassed clip groups", () => {
@@ -224,7 +272,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(7);
+    expect(loaded.projectState.schemaVersion).toBe(8);
     expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
       kind: "group",
       id: "legacy-group",
@@ -344,7 +392,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(7);
+    expect(loaded.projectState.schemaVersion).toBe(8);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

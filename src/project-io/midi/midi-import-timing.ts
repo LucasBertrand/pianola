@@ -71,7 +71,7 @@ export function convertSourceNotes(
       durationTicks: endTick - startTick,
       velocity: sourceNote.velocity,
       instrumentId,
-      enabled: true,
+      status: "active",
     });
   }
 

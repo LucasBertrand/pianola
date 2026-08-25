@@ -19,7 +19,7 @@ import {
   replaceTrack,
 } from "./active-clip-command-helpers";
 import {
-  assertProjectInstrumentEditable,
+  assertNoteEditable,
   countClipNotes,
   findNoteInstrumentId,
   reject,
@@ -32,7 +32,6 @@ export function applyTransformNotes(
   command: TransformNotesCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
-  assertProjectInstrumentEditable(state, command.trackInstrumentId, command.type);
   const changedNoteIds = new Set<NoteId>();
   const updatedNotes: Note[] = [];
   let hasChanges = false;
@@ -59,6 +58,7 @@ export function applyTransformNotes(
     }
 
     const note = requireNote(track, change.noteId, command.type);
+    assertNoteEditable(note, command.type);
     const updatedNote: Note = {
       ...note,
       startTick: change.startTick,
@@ -150,7 +150,6 @@ export function applySliceNotes(
   command: SliceNotesCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
-  assertProjectInstrumentEditable(state, command.trackInstrumentId, command.type);
 
   if (!Number.isSafeInteger(command.sliceTick)) {
     reject(
@@ -198,6 +197,7 @@ export function applySliceNotes(
     }
 
     const note = requireNote(track, slice.noteId, command.type);
+    assertNoteEditable(note, command.type);
     const noteEndTick = note.startTick + note.durationTicks;
 
     if (

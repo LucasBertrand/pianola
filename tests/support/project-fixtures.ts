@@ -24,7 +24,6 @@ import {
   type ProjectState,
 } from "../../src/domain/project/project-document";
 import {
-  type ClipInstrumentState,
   type Track,
 } from "../../src/domain/clips/clip";
 import {
@@ -33,9 +32,7 @@ import {
 import {
   type InstrumentId,
 } from "../../src/domain/identifiers";
-import {
-  type Note,
-} from "../../src/domain/notes/note";
+import { setNoteLocked, type Note } from "../../src/domain/notes/note";
 import {
   type ProjectInstrument,
 } from "../../src/domain/instruments/instrument";
@@ -73,7 +70,7 @@ interface AudioTestProjectOptions {
     Record<InstrumentId, Partial<ProjectInstrument>>
   >;
   readonly instrumentStateChangesById?: Readonly<
-    Record<InstrumentId, Partial<ClipInstrumentState>>
+    Record<InstrumentId, { readonly locked?: boolean }>
   >;
 }
 
@@ -156,7 +153,6 @@ export function createAudioTestProject({
   };
   const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
   const tracksByInstrumentId: Record<InstrumentId, Track> = {};
-  const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
 
   for (
     let instrumentIndex = 0;
@@ -175,13 +171,13 @@ export function createAudioTestProject({
       ...createAudioTestProjectInstrument(instrumentId, instrumentIndex),
       ...projectInstrumentChangesById[instrumentId],
     };
+    const locked = instrumentStateChangesById[instrumentId]?.locked ?? false;
     tracksByInstrumentId[instrumentId] = {
       instrumentId,
-      notesById: Object.fromEntries(notes.map((note) => [note.id, note])),
-    };
-    instrumentStatesById[instrumentId] = {
-      locked: false,
-      ...instrumentStateChangesById[instrumentId],
+      notesById: Object.fromEntries(notes.map((note) => [
+        note.id,
+        { ...note, status: setNoteLocked(note.status, locked) },
+      ])),
     };
   }
 
@@ -217,7 +213,6 @@ export function createAudioTestProject({
           },
         },
         tracksByInstrumentId,
-        instrumentStatesById,
         transportSettings,
       },
     },
@@ -309,7 +304,7 @@ export const CRITICAL_BEHAVIOR_EXPECTATION = Object.freeze({
     startTick: 360,
     durationTicks: 120,
     velocity: 96,
-    enabled: true,
+    status: "active",
   },
   mergedCollision: {
     id: "collision-proposal",
@@ -318,6 +313,6 @@ export const CRITICAL_BEHAVIOR_EXPECTATION = Object.freeze({
     startTick: 0,
     durationTicks: 180,
     velocity: 100,
-    enabled: true,
+    status: "active",
   },
 });

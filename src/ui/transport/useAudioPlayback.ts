@@ -626,15 +626,9 @@ function didPlaybackStateChange(
 
     const instrument = state.projectInstrumentsById[instrumentId];
     const previousInstrument = previousState.projectInstrumentsById[instrumentId];
-    const instrumentState = clip.instrumentStatesById[instrumentId];
-    const previousInstrumentState =
-      previousClip.instrumentStatesById[instrumentId];
-
     if (
       instrument === undefined
       || previousInstrument === undefined
-      || instrumentState === undefined
-      || previousInstrumentState === undefined
       || instrument.pan !== previousInstrument.pan
       || instrument.instrument !== previousInstrument.instrument
       || instrument.gain !== previousInstrument.gain

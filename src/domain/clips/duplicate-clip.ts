@@ -1,6 +1,5 @@
 import type {
   Clip,
-  ClipInstrumentState,
   Track,
 } from "./clip";
 import type {
@@ -19,9 +18,6 @@ export function duplicateClipValue(
     id,
     name,
     tracksByInstrumentId: cloneTracks(source.tracksByInstrumentId),
-    instrumentStatesById: cloneInstrumentStates(
-      source.instrumentStatesById,
-    ),
     transportSettings: {
       ...source.transportSettings,
       loop: { ...source.transportSettings.loop },
@@ -66,16 +62,4 @@ function cloneTracks(
   }
 
   return tracks;
-}
-
-function cloneInstrumentStates(
-  sourceStates: Readonly<Record<InstrumentId, ClipInstrumentState>>,
-): Record<InstrumentId, ClipInstrumentState> {
-  const states: Record<InstrumentId, ClipInstrumentState> = {};
-
-  for (const [instrumentId, state] of Object.entries(sourceStates)) {
-    states[instrumentId] = { ...state };
-  }
-
-  return states;
 }

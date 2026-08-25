@@ -38,7 +38,6 @@ export function createBlankProjectState(): ProjectState {
     bypassEnabled: DEFAULT_CLIP_BYPASS_ENABLED,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId: {},
-    instrumentStatesById: {},
     transportSettings: createDefaultTransportState(),
   };
   const presetLibrary = createDefaultInstrumentPresetLibrary();

@@ -13,6 +13,7 @@ import {
   getMeasureCountCoveringTick,
 } from "../../../domain/transport/time-map";
 import {
+  isNoteEditable,
   type Note,
 } from "../../../domain/notes/note";
 import {
@@ -527,7 +528,6 @@ export function canPlacePastedNotes(
 
     if (
       instrument === undefined
-      || clip.instrumentStatesById[note.instrumentId]?.locked !== false
       || track === undefined
       || note.startTick < 0
     ) {
@@ -560,7 +560,6 @@ export function canPlacePastedTimelineContent(
 
     if (
       instrument === undefined
-      || clip.instrumentStatesById[note.instrumentId]?.locked !== false
       || track === undefined
       || note.startTick < 0
     ) {
@@ -665,13 +664,6 @@ export function createInstrumentTransferPlan(
     };
   }
 
-  if (clip.instrumentStatesById[targetInstrumentId]?.locked !== false) {
-    return {
-      valid: false,
-      message: "Unlock the selected target instrument before transferring notes.",
-    };
-  }
-
   const transferredNotes: Note[] = [];
   const originalNotes: Note[] = [];
   const noteIdsBySourceInstrument = new Map<InstrumentId, NoteId[]>();
@@ -700,10 +692,10 @@ export function createInstrumentTransferPlan(
       };
     }
 
-    if (clip.instrumentStatesById[selectedNote.instrumentId]?.locked !== false) {
+    if (!isNoteEditable(selectedNote)) {
       return {
         valid: false,
-        message: `Unlock instrument "${sourceInstrument.name}" before transferring its notes.`,
+        message: `Unlock note "${selectedNote.id}" before transferring it.`,
       };
     }
 

@@ -26,12 +26,10 @@ import {
   type InstrumentId,
 } from "../../src/domain/identifiers";
 import {
+  type NoteStatus,
   type Note,
 } from "../../src/domain/notes/note";
-import {
-  createDefaultClipInstrumentState,
-  createDefaultProjectInstrument,
-} from "../../src/domain/project-instrument-factory";
+import { createDefaultProjectInstrument } from "../../src/domain/project-instrument-factory";
 import { PROJECT_CONSTANTS } from "../../src/config/domain-limits";
 
 export const TEST_INSTRUMENT_ID = "instrument-a";
@@ -44,7 +42,7 @@ export interface TestNoteOptions {
   readonly startTick?: number;
   readonly durationTicks?: number;
   readonly velocity?: number;
-  readonly enabled?: boolean;
+  readonly status?: NoteStatus;
 }
 
 export interface TestClipOptions {
@@ -70,7 +68,7 @@ export function createTestNote({
   startTick = 0,
   durationTicks = 120,
   velocity = 100,
-  enabled = true,
+  status = "active",
 }: TestNoteOptions): Note {
   return {
     id,
@@ -79,7 +77,7 @@ export function createTestNote({
     startTick,
     durationTicks,
     velocity,
-    enabled,
+    status,
   };
 }
 
@@ -149,13 +147,6 @@ function createTestClip(
       },
     ]),
   );
-  const instrumentStatesById = Object.fromEntries(
-    instrumentIds.map((instrumentId) => [
-      instrumentId,
-      createDefaultClipInstrumentState(),
-    ]),
-  );
-
   return {
     id,
     name,
@@ -166,7 +157,6 @@ function createTestClip(
       measureCount,
     ),
     tracksByInstrumentId,
-    instrumentStatesById,
     transportSettings: createDefaultTransportState(),
   };
 }

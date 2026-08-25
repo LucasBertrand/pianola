@@ -33,10 +33,19 @@ note est ajustée avec la gamme active à sa nouvelle position.
 ## Instruments
 
 L’inspecteur projet ajoute, édite, réordonne et supprime les instruments
-globaux. Gain, mute, solo et verrouillage s’appliquent selon leur propriétaire.
+globaux. Gain, mute et solo restent globaux. Le bouton de verrouillage applique
+un statut verrouillé à toutes les notes de l’instrument dans le clip actif.
 Les notes des instruments non réglés sur « solo » apparaissent grisées pour faciliter la lecture.
 Une note appartient toujours à un instrument ; une sélection peut être
-transférée vers un instrument déverrouillé.
+transférée vers tout instrument disponible.
+
+Chaque note possède un statut unique : `active` (audible et éditable), `muted`
+(silencieuse et éditable), `locked` (audible et non éditable) ou `frozen`
+(silencieuse et non éditable). Les commandes de sourdine et de verrouillage
+préservent l’autre dimension du statut.
+Le bouton de statut de la barre d’outils et du menu radial bascule la sélection
+entre `frozen` et `active` : une sélection mixte est entièrement gelée, puis
+entièrement réactivée au prochain déclenchement.
 
 Quand un instrument est édité pendant la lecture, les changements de synthèse
 sont prévisualisés sans interrompre le transport. Les paramètres continus sont
@@ -46,8 +55,8 @@ Save changes crée une seule étape Undo/Redo avec le résultat final.
 
 ## Clips
 
-Chaque clip possède ses notes, sa timeline, sa boucle et ses verrouillages par
-instrument. Ajouter, dupliquer, renommer, réordonner ou supprimer un clip passe
+Chaque clip possède ses notes — avec leur statut —, sa timeline et sa boucle.
+Ajouter, dupliquer, renommer, réordonner ou supprimer un clip passe
 par l’inspecteur. Changer de clip vide la sélection de notes sans arrêter la
 lecture. Le bouton au cercle barré bypass le clip dans toute séquence démarrée
 en amont. Le clip reste éditable et son bouton Play le lance immédiatement,

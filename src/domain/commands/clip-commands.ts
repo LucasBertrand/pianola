@@ -49,7 +49,6 @@ import type {
   UpdateClipGroupCommand,
   UngroupClipGroupCommand,
 } from "./command-types";
-import { assertValidClipInstrumentState } from "./instrument-commands";
 import { notesOverlapInInstrument } from "./active-clip-command-helpers";
 import { hasOwn, omitRecordKey, reject } from "./command-context";
 
@@ -540,27 +539,11 @@ function assertValidClip(
   assertValidTransportState(clip.transportSettings);
   const durationTicks = clip.timeline.durationTicks;
 
-  if (
-    clip.instrumentStatesById === null
-    || typeof clip.instrumentStatesById !== "object"
-  ) {
-    reject(
-      "INVALID_COMMAND",
-      `Clip "${clip.id}" must contain instrument state data.`,
-      commandType,
-    );
-  }
-
   const trackIds = Object.keys(clip.tracksByInstrumentId);
-  const instrumentStateIds = Object.keys(clip.instrumentStatesById);
 
   if (
     trackIds.length !== state.instrumentOrder.length
-    || instrumentStateIds.length !== state.instrumentOrder.length
     || trackIds.some(
-      (instrumentId) => state.projectInstrumentsById[instrumentId] === undefined,
-    )
-    || instrumentStateIds.some(
       (instrumentId) => state.projectInstrumentsById[instrumentId] === undefined,
     )
   ) {
@@ -584,25 +567,14 @@ function assertValidClip(
 
   for (const instrumentId of state.instrumentOrder) {
     const track = clip.tracksByInstrumentId[instrumentId];
-    const instrumentState = clip.instrumentStatesById[instrumentId];
 
-    if (
-      track === undefined
-      || track.instrumentId !== instrumentId
-      || instrumentState === undefined
-    ) {
+    if (track === undefined || track.instrumentId !== instrumentId) {
       reject(
         "INVALID_COMMAND",
-        `Clip "${clip.id}" must contain a track and state for instrument "${instrumentId}".`,
+        `Clip "${clip.id}" must contain a track for instrument "${instrumentId}".`,
         commandType,
       );
     }
-
-    assertValidClipInstrumentState(
-      instrumentState,
-      commandType,
-      `Clip "${clip.id}" instrument "${instrumentId}"`,
-    );
 
     const notes = Object.values(track.notesById);
     noteCount += notes.length;

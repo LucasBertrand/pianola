@@ -5,7 +5,7 @@ export type CommandErrorCode =
   | "INVALID_COMMAND"
   | "INSTRUMENT_NOT_FOUND"
   | "INSTRUMENT_ALREADY_EXISTS"
-  | "INSTRUMENT_LOCKED"
+  | "NOTE_LOCKED"
   | "TRACK_NOT_FOUND"
   | "TRACK_ALREADY_EXISTS"
   | "NOTE_NOT_FOUND"
@@ -29,4 +29,3 @@ export class CommandRejectedError extends Error {
     this.commandType = commandType;
   }
 }
-

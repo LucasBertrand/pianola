@@ -13,7 +13,6 @@ import {
   getActiveClip,
 } from "../../../domain/project/project-document";
 import {
-  type ClipId,
   type InstrumentId,
   type PresetId,
 } from "../../../domain/identifiers";
@@ -23,15 +22,10 @@ import {
   type ProjectInstrument,
 } from "../../../domain/instruments/instrument";
 import {
-  type ClipInstrumentState,
-} from "../../../domain/clips/clip";
-import {
-  getClipPlaybackOrder,
-} from "../../../domain/clips/clip-hierarchy";
-import {
-  createDefaultClipInstrumentState,
   createDefaultProjectInstrument,
 } from "../../../domain/project-instrument-factory";
+import { isNoteEditable, setNoteLocked } from "../../../domain/notes/note";
+import { buildSetNotesStatusCommands } from "../../../use-cases/piano-roll/notes/note-edit-commands";
 import type {
   ShowApplicationConfirmation,
 } from "../../../use-cases/dialogs/application-dialog-port";
@@ -66,11 +60,6 @@ export interface ProjectInstrumentWorkflow {
   ) => void;
   readonly savePreset: (preset: InstrumentPreset, label: string) => void;
   readonly removePreset: (presetId: PresetId, label: string) => void;
-  readonly updateClipState: (
-    instrumentId: InstrumentId,
-    changes: Partial<ClipInstrumentState>,
-    label: string,
-  ) => void;
   readonly selectNotes: (instrumentId: InstrumentId) => void;
   readonly toggleLock: (projectInstrument: ProjectInstrument) => void;
 }
@@ -115,29 +104,12 @@ export function useProjectInstrumentWorkflow({
     [selectInstrument],
   );
 
-  const updateClipState = useCallback((
-    instrumentId: InstrumentId,
-    changes: Partial<ClipInstrumentState>,
-    label: string,
-  ): void => {
-    commands.dispatch(
-      [{
-        type: "UpdateClipInstrumentState",
-        clipId: getActiveClip(commands.getState()).id,
-        instrumentId,
-        changes,
-      }],
-      label,
-    );
-  }, [commands]);
-
   const add = useCallback((
     name: string,
     instrumentConfig: InstrumentConfig,
     color: string,
     preset?: InstrumentPreset,
   ): void => {
-    const state = commands.getState();
     const normalizedName = name.trim();
 
     if (normalizedName.length === 0) {
@@ -151,10 +123,6 @@ export function useProjectInstrumentWorkflow({
       normalizedName,
       color,
     );
-    const clipInstrumentStatesById = createInitialClipInstrumentStates(
-      getClipPlaybackOrder(state.clipHierarchy),
-    );
-
     const pendingCommands: PianoRollCommand[] = [];
 
     if (preset !== undefined) {
@@ -164,7 +132,6 @@ export function useProjectInstrumentWorkflow({
     pendingCommands.push({
       type: "AddProjectInstrument",
       instrument: projectInstrument,
-      clipInstrumentStatesById,
     });
     commands.dispatch(pendingCommands, "Add instrument");
     selectInstrument(projectInstrument.id);
@@ -271,7 +238,6 @@ export function useProjectInstrumentWorkflow({
 
       if (
         state.projectInstrumentsById[instrumentId] === undefined
-        || getActiveClip(state).instrumentStatesById[instrumentId]?.locked !== false
       ) {
         return;
       }
@@ -284,27 +250,30 @@ export function useProjectInstrumentWorkflow({
 
   const toggleLock = useCallback(
     (projectInstrument: ProjectInstrument): void => {
-      const clipInstrumentState = getActiveClip(
-        commands.getState(),
-      ).instrumentStatesById[projectInstrument.id];
+      const clip = getActiveClip(commands.getState());
+      const notes = Object.values(
+        clip.tracksByInstrumentId[projectInstrument.id]?.notesById ?? {},
+      );
 
-      if (clipInstrumentState === undefined) {
+      if (notes.length === 0) {
         return;
       }
 
-      updateClipState(
-        projectInstrument.id,
-        {
-          locked: !clipInstrumentState.locked,
-        },
-        clipInstrumentState.locked ? "Unlock instrument" : "Lock instrument",
+      const lockNotes = notes.some(isNoteEditable);
+      commands.dispatch(
+        buildSetNotesStatusCommands(
+          clip.id,
+          notes,
+          (note) => setNoteLocked(note.status, lockNotes),
+        ),
+        lockNotes ? "Lock instrument notes" : "Unlock instrument notes",
       );
 
-      if (!clipInstrumentState.locked) {
+      if (lockNotes) {
         removeInstrumentFromSelection(projectInstrument.id);
       }
     },
-    [commands, removeInstrumentFromSelection, updateClipState],
+    [commands, removeInstrumentFromSelection],
   );
 
   return {
@@ -315,7 +284,6 @@ export function useProjectInstrumentWorkflow({
     update,
     savePreset,
     removePreset,
-    updateClipState,
     selectNotes,
     toggleLock,
   };
@@ -341,16 +309,4 @@ function cloneInstrumentConfig(config: InstrumentConfig): InstrumentConfig {
     envelope: { ...config.envelope },
     filterEnvelope: { ...config.filterEnvelope },
   };
-}
-
-function createInitialClipInstrumentStates(
-  clipIds: readonly ClipId[],
-): Record<ClipId, ClipInstrumentState> {
-  const states: Record<ClipId, ClipInstrumentState> = {};
-
-  for (const clipId of clipIds) {
-    states[clipId] = createDefaultClipInstrumentState();
-  }
-
-  return states;
 }

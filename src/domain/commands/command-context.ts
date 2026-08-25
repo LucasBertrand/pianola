@@ -1,12 +1,10 @@
-import {
-  type Clip,
-  type Track,
-} from "../clips/clip";
+import { type Track } from "../clips/clip";
 import {
   type InstrumentId,
   type NoteId,
 } from "../identifiers";
 import {
+  isNoteEditable,
   type Note,
 } from "../notes/note";
 import {
@@ -60,17 +58,14 @@ export function requireTrack(
   return track;
 }
 
-export function assertProjectInstrumentEditable(
-  state: Pick<ProjectState, "projectInstrumentsById"> & Pick<Clip, "instrumentStatesById">,
-  instrumentId: InstrumentId,
+export function assertNoteEditable(
+  note: Note,
   commandType: PianoRollCommand["type"],
 ): void {
-  requireProjectInstrument(state, instrumentId, commandType);
-
-  if (state.instrumentStatesById[instrumentId]?.locked !== false) {
+  if (!isNoteEditable(note)) {
     reject(
-      "INSTRUMENT_LOCKED",
-      `ProjectInstrument "${instrumentId}" is locked.`,
+      "NOTE_LOCKED",
+      `Note "${note.id}" is locked.`,
       commandType,
     );
   }

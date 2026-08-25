@@ -24,7 +24,7 @@ export interface EditorToolbarProps {
   readonly measureCount: number;
   readonly selectionAvailable: boolean;
   readonly noteSelectionAvailable: boolean;
-  readonly selectedNotesContainEnabledNote: boolean;
+  readonly selectedNotesContainNonFrozenNote: boolean;
   readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
@@ -35,7 +35,7 @@ export interface EditorToolbarProps {
   readonly onManageMeasures: () => void;
   readonly onRemoveMeasure: () => void;
   readonly onDeleteSelection: () => void;
-  readonly onToggleSelectionEnabled: () => void;
+  readonly onToggleSelectionFrozen: () => void;
   readonly onCopy: () => void;
   readonly onCut: () => void;
   readonly onPaste: () => void;
@@ -57,7 +57,7 @@ export function EditorToolbar({
   measureCount,
   selectionAvailable,
   noteSelectionAvailable,
-  selectedNotesContainEnabledNote,
+  selectedNotesContainNonFrozenNote,
   clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
@@ -68,7 +68,7 @@ export function EditorToolbar({
   onManageMeasures,
   onRemoveMeasure,
   onDeleteSelection,
-  onToggleSelectionEnabled,
+  onToggleSelectionFrozen,
   onCopy,
   onCut,
   onPaste,
@@ -217,17 +217,17 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title={selectedNotesContainEnabledNote
-            ? "Disable selected notes"
-            : "Enable selected notes"}
-          aria-label={selectedNotesContainEnabledNote
-            ? "Disable selected notes"
-            : "Enable selected notes"}
+          title={selectedNotesContainNonFrozenNote
+            ? "Freeze selected notes"
+            : "Unfreeze selected notes"}
+          aria-label={selectedNotesContainNonFrozenNote
+            ? "Freeze selected notes"
+            : "Unfreeze selected notes"}
           disabled={!noteSelectionAvailable}
-          onClick={onToggleSelectionEnabled}
+          onClick={onToggleSelectionFrozen}
         >
           <CommandIcon
-            kind={selectedNotesContainEnabledNote ? "disable" : "enable"}
+            kind={selectedNotesContainNonFrozenNote ? "disable" : "enable"}
           />
         </button>
         <button

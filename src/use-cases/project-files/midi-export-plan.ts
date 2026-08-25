@@ -31,7 +31,7 @@ export function createMidiExportPlan(
         velocity: note.velocity,
         startTick: note.startTick,
         durationTicks: note.durationTicks,
-        enabled: note.enabled,
+        status: note.status,
       })),
     }];
   });

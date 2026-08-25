@@ -37,11 +37,6 @@ export const DEFAULT_CLIP_COLOR =
 export const DEFAULT_CLIP_BYPASS_ENABLED =
   PROJECT_CONSTANTS.defaultClipBypassEnabled;
 
-/** Per-clip editing state for one global instrument. */
-export interface ClipInstrumentState {
-  readonly locked: boolean;
-}
-
 export interface Track {
   readonly instrumentId: InstrumentId;
   readonly notesById: Readonly<Record<NoteId, Note>>;
@@ -60,7 +55,6 @@ export interface Clip {
   readonly bypassEnabled: boolean;
   readonly timeline: ClipTimeline;
   readonly tracksByInstrumentId: Readonly<Record<InstrumentId, Track>>;
-  readonly instrumentStatesById: Readonly<Record<InstrumentId, ClipInstrumentState>>;
   readonly transportSettings: TransportState;
 }
 

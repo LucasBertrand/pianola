@@ -6,10 +6,7 @@ import {
   type ClipId,
   type NoteId,
 } from "../../domain/identifiers";
-import {
-  getActiveClip,
-  type ProjectState,
-} from "../../domain/project/project-document";
+import { type ProjectState } from "../../domain/project/project-document";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -199,14 +196,11 @@ export class EditorCommandService implements EditorCommandPort {
       return;
     }
 
-    const activeClip = getActiveClip(state);
-
     this.selection.replaceFromIdentifiers(
       state,
       target.noteIds,
       target.markerGroups ?? [],
-      (note) =>
-        activeClip.instrumentStatesById[note.instrumentId]?.locked === false,
+      () => true,
     );
   }
 

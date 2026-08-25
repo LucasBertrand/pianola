@@ -33,6 +33,7 @@ import type {
 import type {
   PlayheadPosition,
 } from "../../editor/model/playhead-position";
+import { isNoteEditable } from "../../domain/notes/note";
 
 export interface ProjectInspectorProps {
   readonly open: boolean;
@@ -159,11 +160,14 @@ export function ProjectInspector({
             <div className="instrument-list">
               {projectState.instrumentOrder.map((instrumentId, instrumentIndex) => {
                 const instrument = projectState.projectInstrumentsById[instrumentId];
-                const instrumentState = activeClip.instrumentStatesById[instrumentId];
+                const track = activeClip.tracksByInstrumentId[instrumentId];
 
-                if (instrument === undefined || instrumentState === undefined) {
+                if (instrument === undefined || track === undefined) {
                   return null;
                 }
+                const notes = Object.values(track.notesById);
+                const instrumentLocked = notes.length > 0
+                  && notes.every((note) => !isNoteEditable(note));
 
                 return (
                   <article
@@ -171,7 +175,7 @@ export function ProjectInspector({
                       `project-instrument-card${instrument.id === selectedInstrumentId
                         ? " is-selected"
                         : ""
-                      }${instrument.muted ? " is-muted" : ""}${instrumentState.locked ? " is-locked" : ""
+                      }${instrument.muted ? " is-muted" : ""}${instrumentLocked ? " is-locked" : ""
                       }`
                     }
                     key={instrument.id}
@@ -226,7 +230,6 @@ export function ProjectInspector({
                           type="button"
                           aria-label={`Select all notes from ${instrument.name}`}
                           title="Select all notes"
-                          disabled={instrumentState.locked}
                           onClick={(event) => {
                             event.stopPropagation();
                             onSelectInstrumentNotes(instrument.id);
@@ -247,7 +250,7 @@ export function ProjectInspector({
                           type="button"
                           aria-label={`Move selected notes to ${instrument.name}`}
                           title="Move selected notes to this instrument"
-                          disabled={!selectionAvailable || instrumentState.locked}
+                          disabled={!selectionAvailable}
                           onClick={(event) => {
                             event.stopPropagation();
                             onTransferSelectionToInstrument(instrument.id);
@@ -260,14 +263,15 @@ export function ProjectInspector({
                         </button>
                         <button
                           className={
-                            instrumentState.locked
+                            instrumentLocked
                               ? "instrument-lock-button is-active"
                               : "instrument-lock-button"
                           }
                           type="button"
-                          aria-label={`${instrumentState.locked ? "Unlock" : "Lock"} ${instrument.name}`}
-                          aria-pressed={instrumentState.locked}
-                          title={instrumentState.locked ? "Unlock instrument" : "Lock instrument"}
+                          aria-label={`${instrumentLocked ? "Unlock" : "Lock"} notes from ${instrument.name}`}
+                          aria-pressed={instrumentLocked}
+                          title={instrumentLocked ? "Unlock instrument notes" : "Lock instrument notes"}
+                          disabled={notes.length === 0}
                           onClick={(event) => {
                             event.stopPropagation();
                             onToggleInstrumentLock(instrument);

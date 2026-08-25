@@ -2,6 +2,7 @@ import type {
   PianoRollCommand,
 } from "../../../domain/commands/command-types";
 import {
+  isNoteEditable as isEditableNote,
   type Note,
 } from "../../../domain/notes/note";
 import {
@@ -410,8 +411,9 @@ function isNoteEditable(
   clipId: ClipId,
   note: Note,
 ): boolean {
-  return getClip(state, clipId).instrumentStatesById[note.instrumentId]
-    ?.locked === false;
+  return getClip(state, clipId).tracksByInstrumentId[note.instrumentId]
+    ?.notesById[note.id] !== undefined
+    && isEditableNote(note);
 }
 
 function collectNoteIds(notes: readonly Note[]): readonly NoteId[] {

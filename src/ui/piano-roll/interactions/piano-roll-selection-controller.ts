@@ -6,6 +6,7 @@ import {
   type NoteId,
 } from "../../../domain/identifiers";
 import {
+  isNoteEditable,
   type Note,
 } from "../../../domain/notes/note";
 import type {
@@ -64,15 +65,8 @@ implements PianoRollControllerPort {
     this.publishSelectionState();
   }
 
-  public isInstrumentLocked(instrumentId: InstrumentId): boolean {
-    const state = this.options.editorCommands.getState();
-
-    return getActiveClip(state).instrumentStatesById[instrumentId]?.locked
-      ?? true;
-  }
-
   public isNoteEditable(note: Note): boolean {
-    return !this.isInstrumentLocked(note.instrumentId);
+    return isNoteEditable(note);
   }
 
   public isSelectedNoteEditable(note: Note): boolean {
@@ -80,10 +74,6 @@ implements PianoRollControllerPort {
   }
 
   public selectHitNote(note: Note, additive: boolean): void {
-    if (this.isInstrumentLocked(note.instrumentId)) {
-      return;
-    }
-
     if (!this.selection.has(note.id)) {
       if (!additive) {
         this.clearSelection();
@@ -119,8 +109,7 @@ implements PianoRollControllerPort {
 
     const state = this.options.editorCommands.getState();
     const activeClip = getActiveClip(state);
-    const isSelectable = (note: Note): boolean =>
-      activeClip.instrumentStatesById[note.instrumentId]?.locked === false;
+    const isSelectable = (): boolean => true;
 
     this.selection.reconcile(state, isSelectable);
 
@@ -130,10 +119,7 @@ implements PianoRollControllerPort {
       for (const instrumentId of state.instrumentOrder) {
         const track = activeClip.tracksByInstrumentId[instrumentId];
 
-        if (
-          track === undefined
-          || activeClip.instrumentStatesById[instrumentId]?.locked !== false
-        ) {
+        if (track === undefined) {
           continue;
         }
 
@@ -147,7 +133,6 @@ implements PianoRollControllerPort {
 
     if (
       state.projectInstrumentsById[request.instrumentId] === undefined
-      || activeClip.instrumentStatesById[request.instrumentId]?.locked !== false
     ) {
       this.showSelection();
       return;
@@ -185,12 +170,10 @@ implements PianoRollControllerPort {
     }
 
     const state = this.options.editorCommands.getState();
-    const activeClip = getActiveClip(state);
     const changed = this.selection.togglePitch(
       state,
       pitch,
-      (note) =>
-        activeClip.instrumentStatesById[note.instrumentId]?.locked === false,
+      () => true,
     );
 
     if (changed) {

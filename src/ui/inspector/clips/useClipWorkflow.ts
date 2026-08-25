@@ -24,7 +24,6 @@ import {
   MAXIMUM_CLIP_NAME_LENGTH,
   type Clip,
   type Track,
-  type ClipInstrumentState,
 } from "../../../domain/clips/clip";
 import { duplicateClipValue } from "../../../domain/clips/duplicate-clip";
 import {
@@ -40,9 +39,6 @@ import {
   type ClipId,
   type InstrumentId,
 } from "../../../domain/identifiers";
-import {
-  createDefaultClipInstrumentState,
-} from "../../../domain/project-instrument-factory";
 import type {
   ShowApplicationConfirmation,
   ShowApplicationAlert,
@@ -455,14 +451,12 @@ function createEmptyClip(
   name?: string,
 ): Clip {
   const tracksByInstrumentId: Record<InstrumentId, Track> = {};
-  const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
 
   for (const instrumentId of instrumentOrder) {
     tracksByInstrumentId[instrumentId] = {
       instrumentId,
       notesById: {},
     };
-    instrumentStatesById[instrumentId] = createDefaultClipInstrumentState();
   }
 
   return {
@@ -472,7 +466,6 @@ function createEmptyClip(
     bypassEnabled: DEFAULT_CLIP_BYPASS_ENABLED,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
-    instrumentStatesById,
     transportSettings: createDefaultTransportState(),
   };
 }

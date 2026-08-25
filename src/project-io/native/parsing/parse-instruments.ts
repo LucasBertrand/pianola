@@ -12,9 +12,6 @@ import {
   type SubtractiveSynthConfig,
 } from "../../../domain/instruments/instrument";
 import {
-  type ClipInstrumentState,
-} from "../../../domain/clips/clip";
-import {
   type InstrumentId,
   type PresetId,
 } from "../../../domain/identifiers";
@@ -219,28 +216,6 @@ export function parseInstrumentPresets(
   }
 
   return presetsById;
-}
-
-export function parseClipInstrumentStates(
-  source: unknown,
-  instrumentOrder: readonly InstrumentId[],
-  path: string,
-): Readonly<Record<InstrumentId, ClipInstrumentState>> {
-  const sourceStates = readRecord(source, path);
-
-  assertExactRecordKeys(sourceStates, instrumentOrder, path);
-  const states = Object.create(null) as Record<InstrumentId, ClipInstrumentState>;
-
-  for (const instrumentId of instrumentOrder) {
-    const statePath = `${path}.${instrumentId}`;
-    const state = readRecord(sourceStates[instrumentId], statePath);
-
-    states[instrumentId] = {
-      locked: readBoolean(state["locked"], `${statePath}.locked`),
-    };
-  }
-
-  return states;
 }
 
 export function parseProjectInstruments(

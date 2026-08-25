@@ -3,7 +3,7 @@ import {
 } from "react";
 import {
   buildDeleteNoteCommands,
-  buildSetNotesEnabledCommands,
+  buildSetNotesStatusCommands,
 } from "../../use-cases/piano-roll/notes/note-edit-commands";
 import {
   buildDeleteSelectedMarkerCommands,
@@ -24,12 +24,13 @@ import type {
 import type {
   EditorSelection,
 } from "../../editor/selection/editor-selection";
+import type { Note, NoteStatus } from "../../domain/notes/note";
 
 export interface PianoRollSelectionCommands {
   readonly undo: () => void;
   readonly redo: () => void;
   readonly remove: () => void;
-  readonly toggleEnabled: () => void;
+  readonly toggleFrozen: () => void;
 }
 
 /** Owns history and direct commands for the current note selection. */
@@ -86,7 +87,7 @@ export function usePianoRollSelectionCommands(
       controller?.clearSelection();
     }
   }, [commands, getController, selection]);
-  const toggleEnabled = useCallback((): void => {
+  const toggleFrozen = useCallback((): void => {
     const controller = getController();
     const notes = controller?.getSelectedNotes() ?? [];
 
@@ -94,11 +95,17 @@ export function usePianoRollSelectionCommands(
       return;
     }
 
-    const enableNotes = !notes.some((note) => note.enabled);
+    const targetStatus = getFrozenToggleStatus(notes);
     const clipId = getActiveClip(commands.getState()).id;
     const nextState = commands.dispatch(
-      buildSetNotesEnabledCommands(clipId, notes, enableNotes),
-      enableNotes ? "Enable selected notes" : "Disable selected notes",
+      buildSetNotesStatusCommands(
+        clipId,
+        notes,
+        targetStatus,
+      ),
+      targetStatus === "frozen"
+        ? "Freeze selected notes"
+        : "Unfreeze selected notes",
       { clipId, noteIds: notes.map((note) => note.id) },
     );
 
@@ -111,5 +118,13 @@ export function usePianoRollSelectionCommands(
     }
   }, [commands, getController]);
 
-  return { undo, redo, remove, toggleEnabled };
+  return { undo, redo, remove, toggleFrozen };
+}
+
+export function getFrozenToggleStatus(
+  notes: readonly Pick<Note, "status">[],
+): Extract<NoteStatus, "active" | "frozen"> {
+  return notes.every((note) => note.status === "frozen")
+    ? "active"
+    : "frozen";
 }

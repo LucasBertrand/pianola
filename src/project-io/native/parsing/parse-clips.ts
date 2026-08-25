@@ -31,6 +31,8 @@ import {
   type TimeSignature,
 } from "../../../domain/transport/time-map";
 import {
+  isNoteStatus,
+  type NoteStatus,
   type Note,
 } from "../../../domain/notes/note";
 import {
@@ -58,7 +60,6 @@ import {
   readSafeInteger,
   readString,
 } from "./json-readers";
-import { parseClipInstrumentStates } from "./parse-instruments";
 
 const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
 const MAXIMUM_NOTE_COUNT = MAXIMUM_CLIP_NOTE_COUNT;
@@ -244,16 +245,20 @@ export function parseClip(
     `${path}.transportSettings`,
   );
   const durationTicks = timeline.durationTicks;
+  const legacyLockedInstrumentIds = schemaVersion < 8
+    ? parseLegacyLockedInstrumentIds(
+        clip["instrumentStatesById"],
+        instrumentOrder,
+        `${path}.instrumentStatesById`,
+      )
+    : new Set<InstrumentId>();
   const tracksByInstrumentId = parseTracks(
     clip["tracksByInstrumentId"],
     instrumentOrder,
     durationTicks,
+    schemaVersion,
+    legacyLockedInstrumentIds,
     `${path}.tracksByInstrumentId`,
-  );
-  const instrumentStatesById = parseClipInstrumentStates(
-    clip["instrumentStatesById"],
-    instrumentOrder,
-    `${path}.instrumentStatesById`,
   );
   const parsedClip: Clip = {
     id: clipId,
@@ -262,7 +267,6 @@ export function parseClip(
     bypassEnabled,
     timeline,
     tracksByInstrumentId,
-    instrumentStatesById,
     transportSettings,
   };
 
@@ -554,6 +558,8 @@ function parseTracks(
   source: unknown,
   instrumentOrder: readonly InstrumentId[],
   projectDurationTicks: number,
+  schemaVersion: number,
+  legacyLockedInstrumentIds: ReadonlySet<InstrumentId>,
   path: string,
 ): Readonly<Record<InstrumentId, Track>> {
   const sourceTracks = readRecord(source, path);
@@ -596,6 +602,8 @@ function parseTracks(
       instrumentId,
       projectDurationTicks,
       globalNoteIds,
+      schemaVersion,
+      legacyLockedInstrumentIds.has(instrumentId),
       trackPath,
     );
 
@@ -623,6 +631,8 @@ function parseNotes(
   instrumentId: InstrumentId,
   projectDurationTicks: number,
   globalNoteIds: Set<NoteId>,
+  schemaVersion: number,
+  legacyLocked: boolean,
   trackPath: string,
 ): Readonly<Record<NoteId, Note>> {
   const sourceNotes = readRecord(
@@ -656,10 +666,7 @@ function parseNotes(
         noteRecord["velocity"],
         `${notePath}.velocity`,
       ),
-      enabled: readBoolean(
-        noteRecord["enabled"],
-        `${notePath}.enabled`,
-      ),
+      status: parseNoteStatus(noteRecord, notePath, schemaVersion, legacyLocked),
       instrumentId: readNonEmptyString(
         noteRecord["instrumentId"],
         `${notePath}.instrumentId`,
@@ -711,6 +718,65 @@ function parseNotes(
   }
 
   return notesById;
+}
+
+function parseLegacyLockedInstrumentIds(
+  source: unknown,
+  instrumentOrder: readonly InstrumentId[],
+  path: string,
+): ReadonlySet<InstrumentId> {
+  if (source === undefined) {
+    return new Set();
+  }
+
+  const sourceStates = readRecord(source, path);
+
+  assertExactRecordKeys(sourceStates, instrumentOrder, path);
+  const lockedIds = new Set<InstrumentId>();
+
+  for (const instrumentId of instrumentOrder) {
+    const statePath = `${path}.${instrumentId}`;
+    const state = readRecord(sourceStates[instrumentId], statePath);
+
+    if (readBoolean(state["locked"], `${statePath}.locked`)) {
+      lockedIds.add(instrumentId);
+    }
+  }
+
+  return lockedIds;
+}
+
+function parseNoteStatus(
+  note: Readonly<Record<string, unknown>>,
+  path: string,
+  schemaVersion: number,
+  legacyLocked: boolean,
+): NoteStatus {
+  if ("status" in note) {
+    const status = readString(note["status"], `${path}.status`, 16);
+
+    if (!isNoteStatus(status)) {
+      fail(
+        "INVALID_DATA",
+        `${path}.status`,
+        "Note status must be active, muted, locked, or frozen.",
+      );
+    }
+
+    return status;
+  }
+
+  if (schemaVersion < 8) {
+    const enabled = readBoolean(note["enabled"], `${path}.enabled`);
+
+    if (legacyLocked) {
+      return enabled ? "locked" : "frozen";
+    }
+
+    return enabled ? "active" : "muted";
+  }
+
+  fail("INVALID_DATA", `${path}.status`, "Note status is required.");
 }
 
 function assertTransportWithinClip(

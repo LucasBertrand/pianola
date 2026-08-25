@@ -169,7 +169,6 @@ describe("P3 Canvas painter contracts", () => {
         instrument: {
           fillStyle: "#abcdef",
           opacity: 1,
-          locked: false,
         },
       },
       instrumentOrder: ["instrument"],
@@ -198,7 +197,6 @@ describe("P3 Canvas painter contracts", () => {
         instrument: {
           fillStyle: "#abcdef",
           opacity: 1,
-          locked: false,
         },
       },
       instrumentOrder: ["instrument"],
@@ -227,7 +225,6 @@ describe("P3 Canvas painter contracts", () => {
         instrument: {
           fillStyle: "#abcdef",
           opacity: 1,
-          locked: false,
         },
       },
       instrumentOrder: ["instrument"],
@@ -284,7 +281,7 @@ function createNote(id: string, pitch: number, startTick: number): Note {
     startTick,
     durationTicks: 480,
     velocity: 100,
-    enabled: true,
+    status: "active",
   };
 }
 

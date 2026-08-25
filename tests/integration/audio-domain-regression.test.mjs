@@ -14,7 +14,7 @@ import {
 import {
   buildDeleteNoteCommands,
   buildRepositionNoteCommands,
-  buildSetNotesEnabledCommands,
+  buildSetNotesStatusCommands,
 } from "../../src/use-cases/piano-roll/notes/note-edit-commands";
 import {
   NoteGestureWorkflow,
@@ -1056,7 +1056,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("keeps disabled notes editable while excluding them from playback", () => {
+  test("keeps muted notes editable while excluding them from playback", () => {
     const note = createNote("toggle", "voice-a", 60, 0, 240);
     const store = new ProjectStore(createProject({
       notesByInstrumentId: {
@@ -1066,14 +1066,14 @@ function getActiveTestMeasureCount(state) {
     const commands = new EditorCommandService(store);
 
     commands.dispatch(
-      buildSetNotesEnabledCommands("clip-test", [note], false),
-      "Disable selected notes",
+      buildSetNotesStatusCommands("clip-test", [note], "muted"),
+      "Mute selected notes",
     );
 
     const disabledNote = getActiveTestClip(store.getState())
       .tracksByInstrumentId["voice-a"].notesById["toggle"];
 
-    assert.equal(disabledNote.enabled, false);
+    assert.equal(disabledNote.status, "muted");
     assert.deepEqual(
       compileActiveClipPlaybackSnapshot(store.getState()).instruments[0].noteIds,
       [],
@@ -1094,8 +1094,8 @@ function getActiveTestMeasureCount(state) {
     );
     assert.equal(
       getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
-        .notesById["toggle"].enabled,
-      false,
+        .notesById["toggle"].status,
+      "muted",
     );
   });
 
@@ -1205,10 +1205,7 @@ function getActiveTestMeasureCount(state) {
     const state = createProject();
     const projectInstrument = state.projectInstrumentsById["voice-a"];
 
-    assert.equal(
-      "instrument" in getActiveTestClip(state).instrumentStatesById["voice-a"],
-      false,
-    );
+    assert.equal("instrumentStatesById" in getActiveTestClip(state), false);
     const replacement = createDefaultInstrumentConfig(1);
     const renamedState = dispatch(state, {
       type: "UpdateProjectInstrument",
@@ -1257,11 +1254,6 @@ function getActiveTestMeasureCount(state) {
             polyphony: 0,
           },
         },
-        clipInstrumentStatesById: {
-          "clip-test": {
-            locked: false,
-          },
-        },
       }),
       (error) => (
         error instanceof CommandRejectedError
@@ -1278,7 +1270,7 @@ function getActiveTestMeasureCount(state) {
       notesByInstrumentId: {
         "voice-a": [{
           ...createNote("disabled", "voice-a", 60, 0, 240),
-          enabled: false,
+          status: "muted",
         }],
       },
     });
@@ -1301,8 +1293,8 @@ function getActiveTestMeasureCount(state) {
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
     assert.equal(
       getActiveTestClip(loaded.projectState).tracksByInstrumentId["voice-a"]
-        .notesById["disabled"].enabled,
-      false,
+        .notesById["disabled"].status,
+      "muted",
     );
     assert.deepEqual(loaded.editorState, editorState);
     assert.equal(
@@ -1342,13 +1334,11 @@ function getActiveTestMeasureCount(state) {
           "voice-a": {
             instrumentId: "voice-a",
             notesById: {
-              second: createNote("second", "voice-a", 65, 240),
+              second: {
+                ...createNote("second", "voice-a", 65, 240),
+                status: "locked",
+              },
             },
-          },
-        },
-        instrumentStatesById: {
-          "voice-a": {
-            locked: true,
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -1407,12 +1397,10 @@ function getActiveTestMeasureCount(state) {
         .timeline.timeMap.tempoMarkers[0].bpm,
       84,
     );
-    assert.deepEqual(
+    assert.equal(
       loaded.projectState.clipsById["clip-native-second"]
-        .instrumentStatesById["voice-a"],
-      {
-        locked: true,
-      },
+        .tracksByInstrumentId["voice-a"].notesById.second.status,
+      "locked",
     );
     assert.deepEqual(loaded.editorState, editorState);
   });
@@ -2195,11 +2183,6 @@ function getActiveTestMeasureCount(state) {
           notesById: {},
         },
       },
-      instrumentStatesById: {
-        "voice-a": {
-          locked: false,
-        },
-      },
       transportSettings: {
         ...createDefaultTransportState(),
         loopEnabled: true,
@@ -2258,7 +2241,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("keeps instrument playback global and editing state clip-local", () => {
+  test("keeps instrument playback global and note status clip-local", () => {
     const initialState = createProject();
     const withSecondClip = dispatch(initialState, {
       type: "AddClip",
@@ -2271,12 +2254,9 @@ function getActiveTestMeasureCount(state) {
         tracksByInstrumentId: {
           "voice-a": {
             instrumentId: "voice-a",
-            notesById: {},
-          },
-        },
-        instrumentStatesById: {
-          "voice-a": {
-            locked: false,
+            notesById: {
+              local: createNote("local", "voice-a", 64, 0),
+            },
           },
         },
         transportSettings: createDefaultTransportState(),
@@ -2298,27 +2278,24 @@ function getActiveTestMeasureCount(state) {
           },
         },
         {
-          type: "UpdateClipInstrumentState",
+          type: "SetNotesStatus",
           clipId: "clip-voice-state-second",
-          instrumentId: "voice-a",
-          changes: { locked: true },
+          trackInstrumentId: "voice-a",
+          noteIds: ["local"],
+          status: "locked",
         },
       ],
     });
 
     assert.deepEqual(
-      store.getState().clipsById["clip-test"]
-        .instrumentStatesById["voice-a"],
-      {
-        locked: false,
-      },
+      store.getState().clipsById["clip-test"].tracksByInstrumentId["voice-a"]
+        .notesById,
+      {},
     );
     assert.deepEqual(
       store.getState().clipsById["clip-voice-state-second"]
-        .instrumentStatesById["voice-a"],
-      {
-        locked: true,
-      },
+        .tracksByInstrumentId["voice-a"].notesById.local.status,
+      "locked",
     );
     assert.deepEqual(
       {
@@ -2335,39 +2312,38 @@ function getActiveTestMeasureCount(state) {
     );
 
     store.undo();
-    assert.deepEqual(
+    assert.equal(
       store.getState().clipsById["clip-voice-state-second"]
-        .instrumentStatesById["voice-a"],
-      {
-        locked: false,
-      },
+        .tracksByInstrumentId["voice-a"].notesById.local.status,
+      "active",
     );
 
     store.redo();
-    assert.deepEqual(
+    assert.equal(
       store.getState().clipsById["clip-voice-state-second"]
-        .instrumentStatesById["voice-a"],
-      {
-        locked: true,
-      },
+        .tracksByInstrumentId["voice-a"].notesById.local.status,
+      "locked",
     );
   });
 
-  test("combines global mute with clip-local lock in rendered styles", () => {
-    const runtime = createEditorRuntime(createProject());
+  test("keeps note lock separate from global instrument render styles", () => {
+    const note = createNote("rendered", "voice-a", 60, 0);
+    const runtime = createEditorRuntime(createProject({
+      notesByInstrumentId: { "voice-a": [note] },
+    }));
 
     assert.deepEqual(runtime.instrumentStyles.get()["voice-a"], {
       fillStyle: "#79a7ff",
       opacity: 1,
-      locked: false,
     });
 
     runtime.editorCommands.dispatch(
       [{
-        type: "UpdateClipInstrumentState",
+        type: "SetNotesStatus",
         clipId: "clip-test",
-        instrumentId: "voice-a",
-        changes: { locked: true },
+        trackInstrumentId: "voice-a",
+        noteIds: ["rendered"],
+        status: "locked",
       }],
       "Update rendered instrument state",
     );
@@ -2384,7 +2360,6 @@ function getActiveTestMeasureCount(state) {
     assert.deepEqual(runtime.instrumentStyles.get()["voice-a"], {
       fillStyle: "#79a7ff",
       opacity: 0.16,
-      locked: true,
     });
   });
 
@@ -2404,35 +2379,17 @@ function getActiveTestMeasureCount(state) {
             notesById: {},
           },
         },
-        instrumentStatesById: {
-          "voice-a": {
-            locked: false,
-          },
-        },
         transportSettings: createDefaultTransportState(),
       },
     });
     const withInstrument = dispatch(withSecondClip, {
       type: "AddProjectInstrument",
       instrument: createProjectInstrument("voice-b", 1),
-      clipInstrumentStatesById: {
-        "clip-test": {
-          locked: false,
-        },
-        "clip-second": {
-          locked: false,
-        },
-      },
     });
 
     for (const clipId of getClipPlaybackOrder(withInstrument.clipHierarchy)) {
       assert.ok(
         withInstrument.clipsById[clipId].tracksByInstrumentId["voice-b"],
-      );
-      assert.equal(
-        withInstrument.clipsById[clipId]
-          .instrumentStatesById["voice-b"].locked,
-        false,
       );
       assert.equal(
         withInstrument.projectInstrumentsById["voice-b"].instrument.oscillatorWaveform,
@@ -2448,10 +2405,6 @@ function getActiveTestMeasureCount(state) {
     for (const clipId of getClipPlaybackOrder(withoutInstrument.clipHierarchy)) {
       assert.equal(
         withoutInstrument.clipsById[clipId].tracksByInstrumentId["voice-b"],
-        undefined,
-      );
-      assert.equal(
-        withoutInstrument.clipsById[clipId].instrumentStatesById["voice-b"],
         undefined,
       );
     }
@@ -2476,11 +2429,6 @@ function getActiveTestMeasureCount(state) {
               instrumentId: "voice-a",
               notesById: {},
             },
-          },
-          instrumentStatesById: {
-          "voice-a": {
-            locked: false,
-          },
           },
           transportSettings: createDefaultTransportState(),
         },
@@ -2527,11 +2475,6 @@ function getActiveTestMeasureCount(state) {
         "voice-a": {
           instrumentId: "voice-a",
           notesById: {},
-        },
-      },
-      instrumentStatesById: {
-        "voice-a": {
-          locked: false,
         },
       },
       transportSettings: createDefaultTransportState(),

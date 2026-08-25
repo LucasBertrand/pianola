@@ -16,7 +16,7 @@ import {
   replaceTrack,
 } from "./active-clip-command-helpers";
 import {
-  assertProjectInstrumentEditable,
+  assertNoteEditable,
   reject,
   requireNote,
   requireTrack,
@@ -27,12 +27,6 @@ export function applyRepositionNotes(
   command: RepositionNotesCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(
-    state,
-    command.trackInstrumentId,
-    command.type,
-  );
-
-  assertProjectInstrumentEditable(
     state,
     command.trackInstrumentId,
     command.type,
@@ -67,6 +61,7 @@ export function applyRepositionNotes(
       change.noteId,
       command.type,
     );
+    assertNoteEditable(note, command.type);
     const updatedNote: Note = {
       ...note,
       startTick: change.startTick,
@@ -156,7 +151,6 @@ export function applyResizeNotes(
   command: ResizeNotesCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
-  assertProjectInstrumentEditable(state, command.trackInstrumentId, command.type);
   const changedNoteIds = new Set<NoteId>();
   const updatedNotes: Note[] = [];
 
@@ -170,6 +164,7 @@ export function applyResizeNotes(
     }
 
     const note = requireNote(track, change.noteId, command.type);
+    assertNoteEditable(note, command.type);
     const updatedNote: Note = {
       ...note,
       startTick: change.startTick ?? note.startTick,

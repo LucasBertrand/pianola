@@ -1,6 +1,5 @@
 import {
   type Clip,
-  type ClipInstrumentState,
   type Track,
 } from "../clips/clip";
 import {
@@ -24,7 +23,6 @@ import {
   assertValidProjectInstrument,
   validateInstrumentPreset,
 } from "../validation/instrument-validation";
-import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {
   AddProjectInstrumentCommand,
   DeleteProjectInstrumentCommand,
@@ -32,7 +30,6 @@ import type {
   PianoRollCommand,
   ReorderProjectInstrumentsCommand,
   SaveInstrumentPresetCommand,
-  UpdateClipInstrumentStateCommand,
   UpdateProjectInstrumentCommand,
 } from "./command-types";
 import {
@@ -63,21 +60,6 @@ export function applyAddProjectInstrument(
     );
   }
 
-  const requestedClipIds = Object.keys(command.clipInstrumentStatesById);
-
-  if (
-    requestedClipIds.length !== getClipPlaybackOrder(state.clipHierarchy).length
-    || requestedClipIds.some(
-      (clipId) => state.clipsById[clipId] === undefined,
-    )
-  ) {
-    reject(
-      "INVALID_COMMAND",
-      "Adding an instrument requires exactly one initial state per clip.",
-      command.type,
-    );
-  }
-
   const track: Track = {
     instrumentId: command.instrument.id,
     notesById: {},
@@ -99,31 +81,11 @@ export function applyAddProjectInstrument(
       );
     }
 
-    const clipInstrumentState = command.clipInstrumentStatesById[clipId];
-
-    if (clipInstrumentState === undefined) {
-      reject(
-        "INVALID_COMMAND",
-        `Initial instrument state is missing for clip "${clipId}".`,
-        command.type,
-      );
-    }
-
-    assertValidClipInstrumentState(
-      clipInstrumentState,
-      command.type,
-      `Clip "${clipId}" instrument "${command.instrument.id}"`,
-    );
-
     clipsById[clipId] = {
       ...clip,
       tracksByInstrumentId: {
         ...clip.tracksByInstrumentId,
         [command.instrument.id]: track,
-      },
-      instrumentStatesById: {
-        ...clip.instrumentStatesById,
-        [command.instrument.id]: clipInstrumentState,
       },
     };
   }
@@ -189,10 +151,6 @@ export function applyDeleteProjectInstrument(
         ...clip,
         tracksByInstrumentId: omitRecordKey(
           clip.tracksByInstrumentId,
-          command.instrumentId,
-        ),
-        instrumentStatesById: omitRecordKey(
-          clip.instrumentStatesById,
           command.instrumentId,
         ),
       };
@@ -332,57 +290,4 @@ function requireInstrumentPreset(
   }
 
   return preset;
-}
-
-export function applyUpdateClipInstrumentState(
-  state: ActiveClipProjectState,
-  command: UpdateClipInstrumentStateCommand,
-): ActiveClipProjectState {
-  requireProjectInstrument(state, command.instrumentId, command.type);
-  const current = state.instrumentStatesById[command.instrumentId];
-
-  if (current === undefined) {
-    reject(
-      "INSTRUMENT_NOT_FOUND",
-      `ProjectInstrument state "${command.instrumentId}" does not exist in the active clip.`,
-      command.type,
-    );
-  }
-
-  const updated: ClipInstrumentState = {
-    locked: command.changes.locked ?? current.locked,
-  };
-
-  assertValidClipInstrumentState(
-    updated,
-    command.type,
-    `Active clip instrument "${command.instrumentId}"`,
-  );
-
-  if (updated.locked === current.locked) {
-    return state;
-  }
-
-  return {
-    ...state,
-    instrumentStatesById: {
-      ...state.instrumentStatesById,
-      [command.instrumentId]: updated,
-    },
-  };
-}
-
-export function assertValidClipInstrumentState(
-  state: ClipInstrumentState,
-  commandType: PianoRollCommand["type"],
-  context: string,
-): void {
-  if (typeof state.locked !== "boolean") {
-    reject(
-      "INVALID_COMMAND",
-      `${context} has an invalid lock state.`,
-      commandType,
-    );
-  }
-
 }

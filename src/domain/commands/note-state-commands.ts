@@ -1,4 +1,5 @@
 import {
+  isNoteStatus,
   type Note,
 } from "../notes/note";
 import {
@@ -7,13 +8,13 @@ import {
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {
   DeleteNotesCommand,
-  SetNotesEnabledCommand,
+  SetNotesStatusCommand,
 } from "./command-types";
 import {
   replaceTrack,
 } from "./active-clip-command-helpers";
 import {
-  assertProjectInstrumentEditable,
+  assertNoteEditable,
   assertUniqueNoteIds,
   reject,
   requireNote,
@@ -25,11 +26,10 @@ export function applyDeleteNotes(
   command: DeleteNotesCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
-  assertProjectInstrumentEditable(state, command.trackInstrumentId, command.type);
   assertUniqueNoteIds(command.noteIds, command.type);
 
   for (const noteId of command.noteIds) {
-    requireNote(track, noteId, command.type);
+    assertNoteEditable(requireNote(track, noteId, command.type), command.type);
   }
 
   if (command.noteIds.length === 0) {
@@ -50,19 +50,18 @@ export function applyDeleteNotes(
   });
 }
 
-export function applySetNotesEnabled(
+export function applySetNotesStatus(
   state: ActiveClipProjectState,
-  command: SetNotesEnabledCommand,
+  command: SetNotesStatusCommand,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
 
-  assertProjectInstrumentEditable(state, command.trackInstrumentId, command.type);
   assertUniqueNoteIds(command.noteIds, command.type);
 
-  if (typeof command.enabled !== "boolean") {
+  if (!isNoteStatus(command.status)) {
     reject(
       "INVALID_COMMAND",
-      "Note enabled state must be a boolean.",
+      "Note status must be active, muted, locked, or frozen.",
       command.type,
     );
   }
@@ -72,7 +71,7 @@ export function applySetNotesEnabled(
   for (const noteId of command.noteIds) {
     const note = requireNote(track, noteId, command.type);
 
-    if (note.enabled === command.enabled) {
+    if (note.status === command.status) {
       continue;
     }
 
@@ -84,7 +83,7 @@ export function applySetNotesEnabled(
 
     notesById[noteId] = {
       ...note,
-      enabled: command.enabled,
+      status: command.status,
     };
   }
 

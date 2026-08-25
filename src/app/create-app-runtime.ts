@@ -164,7 +164,6 @@ export function createEditorRuntime(
 
     if (
       state.projectInstrumentsById !== previousState.projectInstrumentsById
-      || nextClip.instrumentStatesById !== previousClip.instrumentStatesById
       || state.workspace.activeClipId !== previousState.workspace.activeClipId
     ) {
       instrumentStyles.set(createInstrumentRenderStyles(state));
@@ -319,23 +318,18 @@ function createInstrumentRenderStyles(
   state: ProjectState,
 ): Readonly<Record<InstrumentId, InstrumentRenderStyle>> {
   const styles: Record<InstrumentId, InstrumentRenderStyle> = {};
-  const activeClip = getActiveClip(state);
-
   const hasSolo = state.instrumentOrder.some(
     (id) => state.projectInstrumentsById[id]?.solo
   );
 
   for (const instrumentId of state.instrumentOrder) {
     const instrument = state.projectInstrumentsById[instrumentId];
-    const instrumentState = activeClip.instrumentStatesById[instrumentId];
-
-    if (instrument !== undefined && instrumentState !== undefined) {
+    if (instrument !== undefined) {
       const isMuted = instrument.muted || (hasSolo && !instrument.solo);
       
       styles[instrumentId] = {
         fillStyle: instrument.color,
         opacity: isMuted ? 0.16 : 1,
-        locked: instrumentState.locked,
       };
     }
   }
