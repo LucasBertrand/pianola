@@ -37,17 +37,21 @@ export interface ConcatenateClipsOptions {
 }
 
 /**
- * Creates a new clip by placing the supplied clips consecutively. Source clips
- * are left untouched and every note receives a new ID in the target clip.
+ * Creates a new clip by placing the non-bypassed supplied clips consecutively.
+ * Source clips are left untouched and every note receives a new ID in the
+ * target clip.
  */
 export function concatenateClips(
   clips: readonly Clip[],
   options: ConcatenateClipsOptions,
 ): Clip {
-  const firstClip = clips[0];
+  const includedClips = clips.filter((clip) => !clip.bypassEnabled);
+  const firstClip = includedClips[0];
 
   if (firstClip === undefined) {
-    throw new RangeError("At least one clip is required for concatenation.");
+    throw new RangeError(
+      "At least one non-bypassed clip is required for concatenation.",
+    );
   }
 
   const instrumentIds = Object.keys(
@@ -56,7 +60,7 @@ export function concatenateClips(
   const expectedInstrumentIds = new Set(instrumentIds);
   let noteCount = 0;
 
-  for (const clip of clips) {
+  for (const clip of includedClips) {
     assertValidClipTimeline(clip.timeline, options.clock);
     assertCompatibleInstrumentIds(clip, expectedInstrumentIds);
     noteCount += Object.values(clip.tracksByInstrumentId).reduce(
@@ -82,8 +86,12 @@ export function concatenateClips(
   const generatedNoteIds = new Set<NoteId>();
   let offsetTicks = 0;
 
-  for (let clipIndex = 0; clipIndex < clips.length; clipIndex += 1) {
-    const clip = clips[clipIndex];
+  for (
+    let clipIndex = 0;
+    clipIndex < includedClips.length;
+    clipIndex += 1
+  ) {
+    const clip = includedClips[clipIndex];
 
     if (clip === undefined) {
       continue;
@@ -157,6 +165,7 @@ export function concatenateClips(
     id: options.id,
     name: options.name,
     color: options.color,
+    bypassEnabled: false,
     timeline: {
       durationTicks: offsetTicks,
       timeMap: {

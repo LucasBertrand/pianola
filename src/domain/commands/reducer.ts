@@ -8,6 +8,7 @@ import { DomainValidationError } from "../validation/validation-result";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import {
   applyAddClip,
+  applyConcatenateClipGroup,
   applyCreateClipGroup,
   applyDeleteClip,
   applyDeleteClipGroup,
@@ -22,6 +23,7 @@ import { CommandRejectedError } from "./command-errors";
 import { assertNever, reject } from "./command-context";
 import type {
   AddClipCommand,
+  ConcatenateClipGroupCommand,
   AddProjectInstrumentCommand,
   CreateClipGroupCommand,
   DeleteClipCommand,
@@ -146,6 +148,8 @@ function applyCommand(
       return applyUpdateClipGroup(state, command);
     case "DeleteClipGroup":
       return applyDeleteClipGroup(state, command);
+    case "ConcatenateClipGroup":
+      return applyConcatenateClipGroup(state, command);
     case "UngroupClipGroup":
       return applyUngroupClipGroup(state, command);
     case "MoveClipHierarchyNode":
@@ -189,6 +193,7 @@ type ActiveClipCommand = Exclude<
   | CreateClipGroupCommand
   | DeleteClipCommand
   | DeleteClipGroupCommand
+  | ConcatenateClipGroupCommand
   | UngroupClipGroupCommand
   | MoveClipHierarchyNodeCommand
   | ReorderClipsCommand

@@ -133,6 +133,7 @@ export function parseProjectSnapshot(
       clipId,
       instrumentOrder,
       clock,
+      schemaVersion,
       `${path}.clipsById.${clipId}`,
     );
   }

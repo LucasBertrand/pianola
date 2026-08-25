@@ -34,6 +34,8 @@ export const MAXIMUM_PROJECT_CLIP_COUNT =
   PROJECT_CONSTANTS.maximumClipCount;
 export const DEFAULT_CLIP_COLOR =
   PROJECT_CONSTANTS.defaultClipColor;
+export const DEFAULT_CLIP_BYPASS_ENABLED =
+  PROJECT_CONSTANTS.defaultClipBypassEnabled;
 
 /** Per-clip editing state for one global instrument. */
 export interface ClipInstrumentState {
@@ -55,6 +57,7 @@ export interface Clip {
   readonly id: ClipId;
   readonly name: string;
   readonly color: string;
+  readonly bypassEnabled: boolean;
   readonly timeline: ClipTimeline;
   readonly tracksByInstrumentId: Readonly<Record<InstrumentId, Track>>;
   readonly instrumentStatesById: Readonly<Record<InstrumentId, ClipInstrumentState>>;

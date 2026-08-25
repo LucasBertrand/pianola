@@ -620,10 +620,12 @@ export function PianoRollWorkspace({
   }, [clearInteractionSelection]);
   const {
     select: handleClipSelect,
+    toggleBypass: handleToggleClipBypass,
     add: handleAddClip,
     duplicate: handleDuplicateClip,
     createGroup: handleCreateClipGroup,
     updateGroup: handleUpdateClipGroup,
+    concatenateGroup: handleConcatenateClipGroup,
     ungroup: handleUngroupClips,
     deleteGroup: handleDeleteClipGroup,
     moveNode: handleMoveClipNode,
@@ -634,6 +636,7 @@ export function PianoRollWorkspace({
     beginClipChange,
     duplicateEditorState: runtime.duplicateClipEditorState,
     confirm: showApplicationConfirmation,
+    alert: showApplicationAlert,
   });
   const clipDialog = useClipDialogWorkflow({
     runtime,
@@ -1072,11 +1075,13 @@ export function PianoRollWorkspace({
           selectionAvailable={selectedNotes.length > 0}
           setToolbarHost={setGeneralInspectorToolbarHost}
           onClipSelect={handleClipSelectionRequest}
+          onToggleClipBypass={handleToggleClipBypass}
           onToggleClipPlayback={toggleClipPlayback}
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
           onCreateClipGroup={handleCreateClipGroup}
           onUpdateClipGroup={handleUpdateClipGroup}
+          onConcatenateClipGroup={handleConcatenateClipGroup}
           onUngroupClips={handleUngroupClips}
           onDeleteClipGroup={handleDeleteClipGroup}
           onMoveClipNode={handleMoveClipNode}

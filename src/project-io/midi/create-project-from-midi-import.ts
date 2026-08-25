@@ -184,6 +184,7 @@ export function createProjectFromMidiImport(
     id: clipId,
     name: "Imported Clip",
     color: DEFAULT_CLIP_COLOR,
+    bypassEnabled: PROJECT_CONSTANTS.defaultClipBypassEnabled,
     timeline: {
       durationTicks: projectDurationTicks,
       timeMap,

@@ -23,7 +23,9 @@ import { NATIVE_PROJECT_FILE_FORMAT } from "../version";
 
 describe("native project parser", () => {
   test("builds domain and workspace state from the current document", () => {
-    const project = createTestProject();
+    const project = createTestProject({
+      clips: [{ id: TEST_CLIP_ID, bypassEnabled: true }],
+    });
     const editor = createDefaultNativeEditorState(project);
     const metadata = createNativeProjectFileMetadata();
     const storedFixture = serializeNativeProjectFile(project, metadata, editor);
@@ -33,6 +35,34 @@ describe("native project parser", () => {
       projectState: project,
       editorState: editor,
     });
+  });
+
+  test("defaults clip bypass to disabled when loading a schema v5 project", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const stored = JSON.parse(serialized) as {
+      project: {
+        schemaVersion: number;
+        clipsById: Record<string, { bypassEnabled?: boolean }>;
+      };
+    };
+
+    stored.project.schemaVersion = 5;
+    delete stored.project.clipsById[TEST_CLIP_ID]?.bypassEnabled;
+
+    const loaded = parseNativeProjectFile(JSON.stringify(stored));
+
+    expect(loaded.projectState.clipsById[TEST_CLIP_ID]?.bypassEnabled)
+      .toBe(false);
+    expect(serializeNativeProjectFile(
+      loaded.projectState,
+      loaded.metadata,
+      loaded.editorState,
+    )).toContain('"bypassEnabled": false');
   });
 
   test("migrates the first legacy clip auto-advance to project scope", () => {
@@ -132,7 +162,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(5);
+    expect(loaded.projectState.schemaVersion).toBe(6);
     expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
       kind: "group",
       id: "legacy-group",
@@ -252,7 +282,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(5);
+    expect(loaded.projectState.schemaVersion).toBe(6);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

@@ -18,6 +18,7 @@ import {
 } from "../../../../tests/support/test-builders";
 
 const NEXT_CLIP_ID = "clip-next";
+const LAST_CLIP_ID = "clip-last";
 
 describe("clip playback sequence", () => {
   test("follows the visible clip order", () => {
@@ -49,6 +50,67 @@ describe("clip playback sequence", () => {
     const project = createSequenceProject();
 
     expect(getAutoAdvanceTargetClipId(project, NEXT_CLIP_ID)).toBeNull();
+  });
+
+  test("skips bypassed clips when advancing from upstream", () => {
+    const project = createSequenceProject();
+    const bypassedProject = {
+      ...project,
+      clipsById: {
+        ...project.clipsById,
+        [NEXT_CLIP_ID]: {
+          ...project.clipsById[NEXT_CLIP_ID]!,
+          bypassEnabled: true,
+        },
+        [LAST_CLIP_ID]: {
+          ...project.clipsById[NEXT_CLIP_ID]!,
+          id: LAST_CLIP_ID,
+          name: "Last clip",
+        },
+      },
+      clipHierarchy: createFlatClipHierarchy([
+        TEST_CLIP_ID,
+        NEXT_CLIP_ID,
+        LAST_CLIP_ID,
+      ]),
+    };
+
+    expect(getAutoAdvanceTargetClipId(bypassedProject, TEST_CLIP_ID))
+      .toBe(LAST_CLIP_ID);
+  });
+
+  test("a directly started bypassed clip can trigger the remaining sequence", () => {
+    const project = createSequenceProject();
+    const bypassedProject = {
+      ...project,
+      clipsById: {
+        ...project.clipsById,
+        [TEST_CLIP_ID]: {
+          ...project.clipsById[TEST_CLIP_ID]!,
+          bypassEnabled: true,
+        },
+      },
+    };
+
+    expect(getAutoAdvanceTargetClipId(bypassedProject, TEST_CLIP_ID))
+      .toBe(NEXT_CLIP_ID);
+  });
+
+  test("stops when every remaining clip is bypassed", () => {
+    const project = createSequenceProject();
+    const bypassedProject = {
+      ...project,
+      clipsById: {
+        ...project.clipsById,
+        [NEXT_CLIP_ID]: {
+          ...project.clipsById[NEXT_CLIP_ID]!,
+          bypassEnabled: true,
+        },
+      },
+    };
+
+    expect(getAutoAdvanceTargetClipId(bypassedProject, TEST_CLIP_ID))
+      .toBeNull();
   });
 
   test("follows leaf order through nested groups", () => {

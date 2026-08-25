@@ -36,18 +36,30 @@ describe("P2 command family contracts", () => {
     dispatch(store, {
       type: "UpdateClip",
       clipId: TEST_CLIP_ID,
-      changes: { name: "Verse", color: "#ff9b71" },
+      changes: {
+        name: "Verse",
+        color: "#ff9b71",
+        bypassEnabled: true,
+      },
     }, 1);
     expect(store.getState().clipsById[TEST_CLIP_ID]?.name).toBe("Verse");
     expect(store.getState().clipsById[TEST_CLIP_ID]?.color).toBe("#ff9b71");
+    expect(store.getState().clipsById[TEST_CLIP_ID]?.bypassEnabled).toBe(true);
     store.undo();
     expect(store.getState().clipsById[TEST_CLIP_ID]?.name).toBe(TEST_CLIP_ID);
+    expect(store.getState().clipsById[TEST_CLIP_ID]?.bypassEnabled).toBe(false);
     store.redo();
     expect(store.getState().clipsById[TEST_CLIP_ID]?.name).toBe("Verse");
+    expect(store.getState().clipsById[TEST_CLIP_ID]?.bypassEnabled).toBe(true);
     expect(() => dispatch(store, {
       type: "UpdateClip",
       clipId: TEST_CLIP_ID,
       changes: { color: "orange" },
+    }, 2)).toThrow(CommandRejectedError);
+    expect(() => dispatch(store, {
+      type: "UpdateClip",
+      clipId: TEST_CLIP_ID,
+      changes: { bypassEnabled: "yes" as unknown as boolean },
     }, 2)).toThrow(CommandRejectedError);
     expect(() => dispatch(store, { type: "DeleteClip", clipId: "missing" }, 2))
       .toThrow(CommandRejectedError);

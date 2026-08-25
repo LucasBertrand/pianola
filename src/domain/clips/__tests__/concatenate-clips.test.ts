@@ -168,9 +168,192 @@ describe("clip concatenation", () => {
       .toHaveProperty("joined-0-source-note");
   });
 
+  test("excludes bypassed clips from the concatenated timeline", () => {
+    const project = createTestProject({
+      clips: [
+        {
+          id: "clip-a",
+          measureCount: 1,
+          notes: [createTestNote({ id: "note-a" })],
+        },
+        {
+          id: "clip-bypassed",
+          measureCount: 1,
+          bypassEnabled: true,
+          notes: [createTestNote({ id: "note-bypassed" })],
+        },
+        {
+          id: "clip-c",
+          measureCount: 1,
+          notes: [createTestNote({ id: "note-c" })],
+        },
+      ],
+    });
+    const clips = getClipPlaybackOrder(project.clipHierarchy).map(
+      (clipId) => project.clipsById[clipId]!,
+    );
+
+    const result = concatenateClips(clips, {
+      ...createOptions(),
+      clock: project.clock,
+    });
+    const firstDuration = project.clipsById["clip-a"]!.timeline.durationTicks;
+    const notes = result.tracksByInstrumentId[INSTRUMENT_ID]?.notesById;
+
+    expect(result.timeline.durationTicks).toBe(firstDuration * 2);
+    expect(notes).toHaveProperty("joined-0-note-a");
+    expect(notes).toHaveProperty("joined-1-note-c");
+    expect(Object.values(notes ?? {}).some(
+      (note) => note.id.includes("bypassed"),
+    )).toBe(false);
+  });
+
+  test("rejects concatenation when every supplied clip is bypassed", () => {
+    const project = createTestProject({
+      clips: [{ id: "clip-bypassed", bypassEnabled: true }],
+    });
+
+    expect(() => concatenateClips([
+      project.clipsById["clip-bypassed"]!,
+    ], createOptions())).toThrow("non-bypassed clip");
+  });
+
+  test("atomically replaces a nested group at the same hierarchy position", () => {
+    const project = createTestProject({
+      clips: [
+        { id: "clip-before" },
+        { id: "clip-a" },
+        { id: "clip-b" },
+        { id: "clip-after" },
+      ],
+      activeClipId: "clip-before",
+    });
+    const groupedProject = {
+      ...project,
+      clipHierarchy: [{
+        kind: "group" as const,
+        id: "group-outer",
+        name: "Outer",
+        color: "#79a7ff",
+        children: [
+          { kind: "clip" as const, clipId: "clip-before" },
+          {
+            kind: "group" as const,
+            id: "group-section",
+            name: "Section",
+            color: "#a77bf3",
+            children: [
+              { kind: "clip" as const, clipId: "clip-a" },
+              { kind: "clip" as const, clipId: "clip-b" },
+            ],
+          },
+          { kind: "clip" as const, clipId: "clip-after" },
+        ],
+      }],
+    };
+    const result = concatenateClips([
+      project.clipsById["clip-a"]!,
+      project.clipsById["clip-b"]!,
+    ], {
+      ...createOptions(),
+      id: "clip-section",
+      name: "Combined section",
+      color: "#a77bf3",
+      clock: project.clock,
+    });
+    const store = new ProjectStore(groupedProject);
+
+    store.dispatch({
+      transactionId: "concatenate-group",
+      createdAt: 1,
+      commands: [{
+        type: "ConcatenateClipGroup",
+        groupId: "group-section",
+        clip: result,
+      }],
+    });
+
+    expect(store.getState().clipHierarchy).toEqual([{
+      kind: "group",
+      id: "group-outer",
+      name: "Outer",
+      color: "#79a7ff",
+      children: [
+        { kind: "clip", clipId: "clip-before" },
+        { kind: "clip", clipId: "clip-section" },
+        { kind: "clip", clipId: "clip-after" },
+      ],
+    }]);
+    expect(Object.keys(store.getState().clipsById).sort()).toEqual([
+      "clip-after",
+      "clip-before",
+      "clip-section",
+    ]);
+    expect(store.getState().clipsById["clip-section"]?.name)
+      .toBe("Combined section");
+
+    store.undo();
+    expect(getClipPlaybackOrder(store.getState().clipHierarchy)).toEqual([
+      "clip-before",
+      "clip-a",
+      "clip-b",
+      "clip-after",
+    ]);
+    store.redo();
+    expect(getClipPlaybackOrder(store.getState().clipHierarchy)).toEqual([
+      "clip-before",
+      "clip-section",
+      "clip-after",
+    ]);
+  });
+
+  test("can replace a group containing every project clip", () => {
+    const project = createTestProject({
+      clips: [{ id: "clip-a" }, { id: "clip-b" }],
+    });
+    const groupedProject = {
+      ...project,
+      clipHierarchy: [{
+        kind: "group" as const,
+        id: "group-all",
+        name: "Complete song",
+        color: "#62d6b4",
+        children: [
+          { kind: "clip" as const, clipId: "clip-a" },
+          { kind: "clip" as const, clipId: "clip-b" },
+        ],
+      }],
+    };
+    const result = concatenateClips([
+      project.clipsById["clip-a"]!,
+      project.clipsById["clip-b"]!,
+    ], {
+      ...createOptions(),
+      id: "clip-complete-song",
+      name: "Complete song",
+      color: "#62d6b4",
+      clock: project.clock,
+    });
+    const store = new ProjectStore(groupedProject);
+
+    expect(() => store.dispatch({
+      transactionId: "concatenate-only-group",
+      createdAt: 1,
+      commands: [{
+        type: "ConcatenateClipGroup",
+        groupId: "group-all",
+        clip: result,
+      }],
+    })).not.toThrow();
+    expect(getClipPlaybackOrder(store.getState().clipHierarchy))
+      .toEqual(["clip-complete-song"]);
+    expect(store.getState().clipsById["clip-complete-song"]?.name)
+      .toBe("Complete song");
+  });
+
   test("rejects an empty source list", () => {
     expect(() => concatenateClips([], createOptions()))
-      .toThrow("At least one clip is required");
+      .toThrow("At least one non-bypassed clip is required");
   });
 
   test("rejects clips with different instrument sets", () => {

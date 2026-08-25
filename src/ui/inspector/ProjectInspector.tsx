@@ -45,6 +45,7 @@ export interface ProjectInspectorProps {
   readonly selectionAvailable: boolean;
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClipSelect: (clipId: ClipId) => void;
+  readonly onToggleClipBypass: (clipId: ClipId) => void;
   readonly onToggleClipPlayback: (clipId: ClipId) => void;
   readonly onAddClip: (
     parentGroupId?: ClipGroupId | null,
@@ -60,6 +61,10 @@ export interface ProjectInspectorProps {
     groupId: ClipGroupId,
     changes: { readonly name: string; readonly color: string },
   ) => void;
+  readonly onConcatenateClipGroup: (
+    groupId: ClipGroupId,
+    name: string,
+  ) => ClipId | null;
   readonly onUngroupClips: (groupId: ClipGroupId) => void;
   readonly onDeleteClipGroup: (groupId: ClipGroupId) => void;
   readonly onMoveClipNode: (
@@ -104,11 +109,13 @@ export function ProjectInspector({
   selectionAvailable,
   setToolbarHost,
   onClipSelect,
+  onToggleClipBypass,
   onToggleClipPlayback,
   onAddClip,
   onDuplicateClip,
   onCreateClipGroup,
   onUpdateClipGroup,
+  onConcatenateClipGroup,
   onUngroupClips,
   onDeleteClipGroup,
   onMoveClipNode,
@@ -375,11 +382,13 @@ export function ProjectInspector({
           playheadPosition={playheadPosition}
           suppressSelectionHighlight={suppressClipSelectionHighlight}
           onSelect={onClipSelect}
+          onToggleBypass={onToggleClipBypass}
           onTogglePlayback={onToggleClipPlayback}
           onAdd={onAddClip}
           onDuplicate={onDuplicateClip}
           onCreateGroup={onCreateClipGroup}
           onUpdateGroup={onUpdateClipGroup}
+          onConcatenateGroup={onConcatenateClipGroup}
           onUngroup={onUngroupClips}
           onDeleteGroup={onDeleteClipGroup}
           onMoveNode={onMoveClipNode}

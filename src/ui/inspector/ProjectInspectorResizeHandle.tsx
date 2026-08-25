@@ -19,7 +19,7 @@ const MINIMUM_COMPACT_EDITOR_WIDTH = 120;
 const MINIMUM_PORTRAIT_EDITOR_HEIGHT = 0;
 // This is the outer width used by Master Tuning (including its own padding).
 // The inspector's padding stays within this drag limit.
-const PREFERRED_MINIMUM_INSPECTOR_WIDTH = 190;
+const PREFERRED_MINIMUM_INSPECTOR_WIDTH = 400;
 const PREFERRED_MAXIMUM_INSPECTOR_WIDTH = 520;
 const PREFERRED_MINIMUM_INSPECTOR_HEIGHT = 140;
 const KEYBOARD_RESIZE_STEP = 16;
@@ -229,7 +229,7 @@ function readSizeBounds(
     ? MINIMUM_COMPACT_EDITOR_WIDTH
     : MINIMUM_LANDSCAPE_EDITOR_WIDTH;
   const maximum = Math.max(
-    0,
+    PREFERRED_MINIMUM_INSPECTOR_WIDTH,
     Math.min(
       PREFERRED_MAXIMUM_INSPECTOR_WIDTH,
       bounds.width - minimumEditorWidth - RESIZE_HANDLE_SIZE,
@@ -237,7 +237,7 @@ function readSizeBounds(
   );
 
   return {
-    minimum: Math.min(PREFERRED_MINIMUM_INSPECTOR_WIDTH, maximum),
+    minimum: PREFERRED_MINIMUM_INSPECTOR_WIDTH,
     maximum,
   };
 }

@@ -130,6 +130,8 @@ export interface ClipGroupEditorDialogProps {
   readonly onNameChange: (name: string) => void;
   readonly onColorChange: (color: string) => void;
   readonly onConfirm: () => void;
+  readonly onConcatenate: () => void;
+  readonly canConcatenate: boolean;
   readonly onDelete: () => void;
   readonly onCancel: () => void;
 }
@@ -140,6 +142,8 @@ export function ClipGroupEditorDialog({
   onNameChange,
   onColorChange,
   onConfirm,
+  onConcatenate,
+  canConcatenate,
   onDelete,
   onCancel,
 }: ClipGroupEditorDialogProps): React.JSX.Element {
@@ -183,13 +187,22 @@ export function ClipGroupEditorDialog({
           </label>
         </div>
 
-        <div className="application-dialog-actions has-alternate">
+        <div className="application-dialog-actions has-two-alternates">
           <button
             className="application-dialog-button is-danger"
             type="button"
             onClick={onDelete}
           >
             Delete group
+          </button>
+          <button
+            className="application-dialog-button is-neutral"
+            type="button"
+            title="Replace this group with its descendant clips concatenated in playback order"
+            disabled={!canConcatenate}
+            onClick={onConcatenate}
+          >
+            Concatenate clips
           </button>
           <button
             className="application-dialog-button is-neutral"

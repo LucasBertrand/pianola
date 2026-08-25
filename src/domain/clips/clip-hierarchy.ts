@@ -165,6 +165,29 @@ export function getClipGroupChildren(
   return null;
 }
 
+export function findClipHierarchyGroup(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId,
+): ClipHierarchyGroupNode | undefined {
+  for (const node of hierarchy) {
+    if (node.kind !== "group") {
+      continue;
+    }
+
+    if (node.id === groupId) {
+      return node;
+    }
+
+    const descendant = findClipHierarchyGroup(node.children, groupId);
+
+    if (descendant !== undefined) {
+      return descendant;
+    }
+  }
+
+  return undefined;
+}
+
 export function countDescendantClips(node: ClipHierarchyNode): number {
   return node.kind === "clip"
     ? 1

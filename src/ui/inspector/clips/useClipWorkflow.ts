@@ -17,6 +17,7 @@ import {
 } from "../../../config/rendering-config";
 import {
   createDefaultClipTimeline,
+  DEFAULT_CLIP_BYPASS_ENABLED,
   DEFAULT_CLIP_COLOR,
   DEFAULT_MEASURE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
@@ -42,7 +43,11 @@ import {
 } from "../../../domain/project-instrument-factory";
 import type {
   ShowApplicationConfirmation,
+  ShowApplicationAlert,
 } from "../../../use-cases/dialogs/application-dialog-port";
+import {
+  useClipGroupConcatenation,
+} from "./useClipGroupConcatenation";
 
 export interface ClipWorkflowOptions {
   readonly commands: EditorCommandPort;
@@ -52,10 +57,12 @@ export interface ClipWorkflowOptions {
     targetClipId: ClipId,
   ) => void;
   readonly confirm: ShowApplicationConfirmation;
+  readonly alert: ShowApplicationAlert;
 }
 
 export interface ClipWorkflow {
   readonly select: (clipId: ClipId) => void;
+  readonly toggleBypass: (clipId: ClipId) => void;
   readonly add: (
     parentGroupId?: ClipGroupId | null,
     name?: string,
@@ -67,6 +74,10 @@ export interface ClipWorkflow {
     name?: string,
     color?: string,
   ) => ClipGroupId | null;
+  readonly concatenateGroup: (
+    groupId: ClipGroupId,
+    name: string,
+  ) => ClipId | null;
   readonly updateGroup: (
     groupId: ClipGroupId,
     changes: UpdateClipGroupChanges,
@@ -88,9 +99,16 @@ export function useClipWorkflow({
   beginClipChange,
   duplicateEditorState,
   confirm,
+  alert,
 }: ClipWorkflowOptions): ClipWorkflow {
   const clipSequenceRef = useRef(0);
   const groupSequenceRef = useRef(0);
+  const concatenateGroup = useClipGroupConcatenation({
+    commands,
+    beginClipChange,
+    duplicateEditorState,
+    alert,
+  });
 
   const select = useCallback((clipId: ClipId): void => {
     const state = commands.getState();
@@ -384,12 +402,28 @@ export function useClipWorkflow({
     );
   }, [commands]);
 
+  const toggleBypass = useCallback((clipId: ClipId): void => {
+    const clip = commands.getState().clipsById[clipId];
+
+    if (clip === undefined) {
+      return;
+    }
+
+    commands.dispatch([{
+      type: "UpdateClip",
+      clipId,
+      changes: { bypassEnabled: !clip.bypassEnabled },
+    }], clip.bypassEnabled ? "Disable clip bypass" : "Enable clip bypass");
+  }, [commands]);
+
   return {
     select,
+    toggleBypass,
     add,
     duplicate,
     reorder,
     createGroup,
+    concatenateGroup,
     updateGroup,
     ungroup,
     deleteGroup,
@@ -451,6 +485,7 @@ function createEmptyClip(
     id: createClipId(sequence),
     name: name?.trim() || `Clip ${clipIndex + 1}`,
     color,
+    bypassEnabled: DEFAULT_CLIP_BYPASS_ENABLED,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,
     instrumentStatesById,

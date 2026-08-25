@@ -50,6 +50,7 @@ export interface TestNoteOptions {
 export interface TestClipOptions {
   readonly id: ClipId;
   readonly name?: string;
+  readonly bypassEnabled?: boolean;
   readonly measureCount?: number;
   readonly notes?: readonly Note[];
 }
@@ -129,6 +130,7 @@ function createTestClip(
   {
     id,
     name = id,
+    bypassEnabled = false,
     measureCount = 4,
     notes = [],
   }: TestClipOptions,
@@ -158,6 +160,7 @@ function createTestClip(
     id,
     name,
     color: DEFAULT_CLIP_COLOR,
+    bypassEnabled,
     timeline: createDefaultClipTimeline(
       createDefaultProjectClock(),
       measureCount,

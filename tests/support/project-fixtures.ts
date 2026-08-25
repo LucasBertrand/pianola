@@ -202,6 +202,7 @@ export function createAudioTestProject({
         id: clipId,
         name: "Test Clip",
         color: PROJECT_CONSTANTS.defaultClipColor,
+        bypassEnabled: PROJECT_CONSTANTS.defaultClipBypassEnabled,
         timeline: {
           durationTicks:
             measureCount * getTicksPerMeasure(clock.ppqn, timeSignature),

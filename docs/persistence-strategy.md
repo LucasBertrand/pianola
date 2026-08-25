@@ -294,7 +294,7 @@ ignorés, mais conservés, sur un appareil tactile.
 
 L’enveloppe portable utilise `schemaVersion: 3` sous l'identité
 `app.pianola.project`, tandis que le document musical embarqué utilise
-actuellement le schéma métier v5. Son lecteur convertit les anciens documents
+actuellement le schéma métier v6. Son lecteur convertit les anciens documents
 vers la version courante et ignore les positions de playhead historiques. La
 v3 remonte `autoAdvanceEnabled` des transports de clips vers le document projet,
 la v4 introduit la hiérarchie de groupes et la v5 ajoute leur couleur. Les

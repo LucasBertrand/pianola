@@ -8,7 +8,7 @@ import {
   getClipPlaybackOrder,
 } from "../clips/clip-hierarchy";
 
-/** Resolves the next visible clip while preserving loop priority. */
+/** Resolves the next playable visible clip while preserving loop priority. */
 export function getAutoAdvanceTargetClipId(
   project: Pick<
     ProjectDocument,
@@ -33,10 +33,23 @@ export function getAutoAdvanceTargetClipId(
     return null;
   }
 
-  const nextClipId = clipOrder[currentIndex + 1];
+  for (
+    let candidateIndex = currentIndex + 1;
+    candidateIndex < clipOrder.length;
+    candidateIndex += 1
+  ) {
+    const candidateClipId = clipOrder[candidateIndex];
 
-  return nextClipId !== undefined
-    && project.clipsById[nextClipId] !== undefined
-    ? nextClipId
-    : null;
+    if (candidateClipId === undefined) {
+      continue;
+    }
+
+    const candidateClip = project.clipsById[candidateClipId];
+
+    if (candidateClip !== undefined && !candidateClip.bypassEnabled) {
+      return candidateClipId;
+    }
+  }
+
+  return null;
 }

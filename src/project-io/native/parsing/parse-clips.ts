@@ -1,6 +1,7 @@
 import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
 import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
 import {
+  DEFAULT_CLIP_BYPASS_ENABLED,
   type Clip,
   type ClipTimeline,
   type Track,
@@ -198,6 +199,7 @@ export function parseClip(
   clipId: ClipId,
   instrumentOrder: readonly InstrumentId[],
   clock: ProjectClock,
+  schemaVersion: number,
   path: string,
 ): Clip {
   const clip = readRecord(source, path);
@@ -227,6 +229,9 @@ export function parseClip(
       "Clip color must use the #RRGGBB format.",
     );
   }
+  const bypassEnabled = schemaVersion >= 6 || "bypassEnabled" in clip
+    ? readBoolean(clip["bypassEnabled"], `${path}.bypassEnabled`)
+    : DEFAULT_CLIP_BYPASS_ENABLED;
   const timeline = parseClipTimeline(clip["timeline"], clock, `${path}.timeline`);
   const transportSettings = parseTransport(
     clip["transportSettings"],
@@ -248,6 +253,7 @@ export function parseClip(
     id: clipId,
     name,
     color,
+    bypassEnabled,
     timeline,
     tracksByInstrumentId,
     instrumentStatesById,

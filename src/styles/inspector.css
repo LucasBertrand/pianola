@@ -303,7 +303,7 @@
   --instrument-color: var(--color-accent-primary);
   min-height: 0;
   grid-template-columns:
-    24px minmax(0, 1fr) repeat(4, 30px);
+    24px minmax(0, 1fr) repeat(5, 30px);
   grid-template-rows: auto;
 }
 
@@ -346,17 +346,33 @@
   grid-column: 5;
 }
 
-.clip-card .clip-play-button {
+.clip-card .clip-bypass-button {
   grid-column: 6;
+}
+
+.clip-card .clip-play-button {
+  grid-column: 7;
   border-color: var(--instrument-color);
   color: var(--instrument-color);
 }
 
+.clip-bypass-button svg,
 .clip-play-button svg {
   display: block;
   width: 17px;
   height: 17px;
   margin: auto;
+}
+
+.clip-bypass-button svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.clip-play-button svg {
   fill: currentColor;
   stroke: none;
 }
@@ -429,7 +445,7 @@
   min-height: 0;
   padding-left: 11px;
   grid-template-columns:
-    24px minmax(0, 1fr) repeat(4, 30px);
+    24px minmax(0, 1fr) repeat(5, 30px);
   grid-template-rows: auto;
   gap: 6px;
 }
@@ -652,6 +668,12 @@
   border-color: var(--color-warm-medium);
   background: var(--color-warm-soft);
   color: var(--color-accent-warm);
+}
+
+.project-instrument-card .clip-bypass-button.is-active {
+  border-color: var(--color-danger-strong);
+  background: var(--color-danger-soft);
+  color: var(--color-accent-danger);
 }
 
 .project-instrument-card .clip-play-button.is-active {

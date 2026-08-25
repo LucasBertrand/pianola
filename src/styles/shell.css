@@ -1,5 +1,5 @@
 .app-shell {
-  --project-inspector-width: 306px;
+  --project-inspector-width: 400px;
   --project-inspector-panel-width: var(--project-inspector-width);
   --project-inspector-panel-height: 30vh;
   --project-inspector-resize-handle-size: 10px;

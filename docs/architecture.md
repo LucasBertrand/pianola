@@ -78,7 +78,10 @@ n’est persisté.
 
 Les mutations durables passent par `EditorCommandPort`, une transaction et les
 reducers de `src/domain/commands/`. `ProjectStore` est le propriétaire de
-l’historique musical.
+l’historique musical. La concaténation d’un groupe construit d’abord un clip
+indépendant à partir des descendants non bypassés dans
+`src/domain/clips/concatenate-clips.ts`, puis une commande
+atomique remplace le nœud du groupe à la même position et retire ses descendants.
 
 ## Noyau du piano roll
 
@@ -150,8 +153,9 @@ retarder l’affichage du playhead, jamais la lecture.
 `EditorRuntime.playheadPosition` est l’unique position de lecture et contient le
 clip ainsi que son tick. `WorkspaceState.activeClipId` reste une sélection
 d’édition indépendante. Une fin naturelle déplace ce playhead selon l’ordre
-visible et charge le clip suivant ; la boucle du clip courant reste prioritaire
-et le dernier clip s’arrête. Le suivi visuel sélectionne le clip joué puis suit
+visible et charge le prochain clip non bypassé ; la boucle du clip courant
+reste prioritaire et le dernier clip jouable s’arrête. Un clip bypassé lancé
+directement reste jouable et peut amorcer la suite. Le suivi visuel sélectionne le clip joué puis suit
 son tick uniquement lorsqu’il est activé ; il est désactivé au montage et ne
 publie alors aucune modification de viewport.
 

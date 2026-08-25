@@ -5,6 +5,7 @@ import { PROJECT_CONSTANTS } from "../../config/domain-limits";
 import {
   type Clip,
   createDefaultClipTimeline,
+  DEFAULT_CLIP_BYPASS_ENABLED,
   DEFAULT_CLIP_COLOR,
   DEFAULT_MEASURE_COUNT,
 } from "../../domain/clips/clip";
@@ -34,6 +35,7 @@ export function createBlankProjectState(): ProjectState {
     id: clipId,
     name: "Main Clip",
     color: DEFAULT_CLIP_COLOR,
+    bypassEnabled: DEFAULT_CLIP_BYPASS_ENABLED,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId: {},
     instrumentStatesById: {},

@@ -110,7 +110,7 @@
 
 @media (min-width: 1121px) and (max-width: 1300px) {
   .app-shell {
-    --project-inspector-width: 276px;
+    --project-inspector-width: 400px;
   }
 
   .app-header {
@@ -123,7 +123,7 @@
 
 @media (max-width: 1120px) {
   .app-shell {
-    --project-inspector-width: 250px;
+    --project-inspector-width: 400px;
   }
 
   .app-header {
@@ -190,7 +190,7 @@
 
 @media (max-width: 920px) {
   .app-shell {
-    --project-inspector-panel-width: min(86vw, 320px);
+    --project-inspector-panel-width: clamp(400px, 86vw, 520px);
   }
 
   .app-header {

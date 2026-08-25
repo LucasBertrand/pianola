@@ -164,6 +164,13 @@ export interface DeleteClipGroupCommand {
   readonly groupId: ClipGroupId;
 }
 
+/** Atomically replaces one group and all its descendants with one clip. */
+export interface ConcatenateClipGroupCommand {
+  readonly type: "ConcatenateClipGroup";
+  readonly groupId: ClipGroupId;
+  readonly clip: Clip;
+}
+
 export interface MoveClipHierarchyNodeCommand {
   readonly type: "MoveClipHierarchyNode";
   readonly node: ClipHierarchyNodeIdentity;
@@ -180,6 +187,7 @@ export interface RenameClipCommand {
 export interface UpdateClipChanges {
   readonly name?: string;
   readonly color?: string;
+  readonly bypassEnabled?: boolean;
 }
 
 export interface UpdateClipCommand {
@@ -405,6 +413,7 @@ export type PianoRollCommand =
   | UpdateClipGroupCommand
   | UngroupClipGroupCommand
   | DeleteClipGroupCommand
+  | ConcatenateClipGroupCommand
   | MoveClipHierarchyNodeCommand
   | RenameClipCommand
   | UpdateClipCommand

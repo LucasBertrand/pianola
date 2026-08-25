@@ -11,6 +11,7 @@ export interface ClipGroupPlaybackAction {
 export function resolveClipGroupPlaybackAction(
   descendantClipIds: readonly ClipId[],
   playingClipId: ClipId | null,
+  bypassedClipIds: ReadonlySet<ClipId> = new Set(),
 ): ClipGroupPlaybackAction {
   const active = playingClipId !== null
     && descendantClipIds.includes(playingClipId);
@@ -19,6 +20,7 @@ export function resolveClipGroupPlaybackAction(
     active,
     targetClipId: active
       ? playingClipId
-      : descendantClipIds[0] ?? null,
+      : descendantClipIds.find((clipId) => !bypassedClipIds.has(clipId))
+        ?? null,
   };
 }
