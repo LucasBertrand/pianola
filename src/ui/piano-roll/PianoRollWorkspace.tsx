@@ -619,7 +619,10 @@ export function PianoRollWorkspace({
     select: handleClipSelect,
     add: handleAddClip,
     duplicate: handleDuplicateClip,
-    reorder: handleReorderClip,
+    createGroup: handleCreateClipGroup,
+    renameGroup: handleRenameClipGroup,
+    ungroup: handleUngroupClips,
+    moveNode: handleMoveClipNode,
     remove: handleDeleteClip,
     update: handleUpdateClip,
   } = useClipWorkflow({
@@ -1067,7 +1070,10 @@ export function PianoRollWorkspace({
           onToggleClipPlayback={toggleClipPlayback}
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
-          onReorderClip={handleReorderClip}
+          onCreateClipGroup={handleCreateClipGroup}
+          onRenameClipGroup={handleRenameClipGroup}
+          onUngroupClips={handleUngroupClips}
+          onMoveClipNode={handleMoveClipNode}
           onSelectClipNotes={handleSelectClipNotes}
           onEditClip={clipDialog.openEdit}
           onReorderInstrument={handleReorderInstrument}

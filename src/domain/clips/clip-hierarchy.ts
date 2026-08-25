@@ -28,6 +28,15 @@ export type ClipHierarchyNode =
   | ClipHierarchyClipNode
   | ClipHierarchyGroupNode;
 
+export type ClipHierarchyNodeIdentity =
+  | { readonly kind: "clip"; readonly clipId: ClipId }
+  | { readonly kind: "group"; readonly groupId: ClipGroupId };
+
+export interface ClipHierarchyNodeLocation {
+  readonly parentGroupId: ClipGroupId | null;
+  readonly index: number;
+}
+
 /** Flattens the hierarchy into the deterministic project playback order. */
 export function getClipPlaybackOrder(
   hierarchy: readonly ClipHierarchyNode[],
@@ -85,6 +94,81 @@ export function containsClipGroups(
   hierarchy: readonly ClipHierarchyNode[],
 ): boolean {
   return hierarchy.some((node) => node.kind === "group");
+}
+
+export function findClipHierarchyNodeLocation(
+  hierarchy: readonly ClipHierarchyNode[],
+  identity: ClipHierarchyNodeIdentity,
+  parentGroupId: ClipGroupId | null = null,
+): ClipHierarchyNodeLocation | null {
+  for (let index = 0; index < hierarchy.length; index += 1) {
+    const node = hierarchy[index];
+
+    if (node === undefined) {
+      continue;
+    }
+
+    if (
+      (identity.kind === "clip"
+        && node.kind === "clip"
+        && node.clipId === identity.clipId)
+      || (identity.kind === "group"
+        && node.kind === "group"
+        && node.id === identity.groupId)
+    ) {
+      return { parentGroupId, index };
+    }
+
+    if (node.kind === "group") {
+      const descendant = findClipHierarchyNodeLocation(
+        node.children,
+        identity,
+        node.id,
+      );
+
+      if (descendant !== null) {
+        return descendant;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function getClipGroupChildren(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId | null,
+): readonly ClipHierarchyNode[] | null {
+  if (groupId === null) {
+    return hierarchy;
+  }
+
+  for (const node of hierarchy) {
+    if (node.kind !== "group") {
+      continue;
+    }
+
+    if (node.id === groupId) {
+      return node.children;
+    }
+
+    const children = getClipGroupChildren(node.children, groupId);
+
+    if (children !== null) {
+      return children;
+    }
+  }
+
+  return null;
+}
+
+export function countDescendantClips(node: ClipHierarchyNode): number {
+  return node.kind === "clip"
+    ? 1
+    : node.children.reduce(
+        (count, child) => count + countDescendantClips(child),
+        0,
+      );
 }
 
 function collectClipIds(node: ClipHierarchyNode, clipIds: ClipId[]): void {

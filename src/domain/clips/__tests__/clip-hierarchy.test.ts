@@ -5,6 +5,9 @@ import {
 } from "vitest";
 import {
   assertValidClipHierarchy,
+  countDescendantClips,
+  findClipHierarchyNodeLocation,
+  getClipGroupChildren,
   getClipPlaybackOrder,
 } from "../clip-hierarchy";
 
@@ -38,6 +41,12 @@ describe("clip hierarchy", () => {
       "clip-verse-a",
       "clip-verse-b",
     ]))).not.toThrow();
+    expect(findClipHierarchyNodeLocation(
+      hierarchy,
+      { kind: "clip", clipId: "clip-verse-b" },
+    )).toEqual({ parentGroupId: "group-verse", index: 1 });
+    expect(getClipGroupChildren(hierarchy, "group-verse")).toHaveLength(2);
+    expect(countDescendantClips(hierarchy[0]!)).toBe(3);
   });
 
   test("rejects a duplicate leaf clip", () => {

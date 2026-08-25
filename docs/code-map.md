@@ -11,7 +11,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
-| clips | `src/ui/inspector/clips/ClipInspector.tsx` | clips du document, ordre, `WorkspaceState.activeClipId` et identité transitoire du clip joué | suite centrale de régression |
+| clips et groupes | `src/ui/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `WorkspaceState.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
 | transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` et boucle du clip, enchaînement global du document, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
 | persistance locale | `src/persistence/project-persistence-model.ts` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/persistence/__tests__/project-repository-contract.test.ts` |
 | fichiers `.pianola` | `src/project-io/portable/portable-project-codec.ts` | document + `ProjectWorkspaceState` | `src/persistence/__tests__/persistence-codecs.test.ts` |

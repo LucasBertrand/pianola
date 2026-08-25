@@ -11,9 +11,13 @@ import {
   type ProjectInstrument,
 } from "../../domain/instruments/instrument";
 import {
+  type ClipGroupId,
   type ClipId,
   type InstrumentId,
 } from "../../domain/identifiers";
+import type {
+  ClipHierarchyNodeIdentity,
+} from "../../domain/clips/clip-hierarchy";
 import {
   ClipInspector,
 } from "./clips/ClipInspector";
@@ -42,9 +46,18 @@ export interface ProjectInspectorProps {
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClipSelect: (clipId: ClipId) => void;
   readonly onToggleClipPlayback: (clipId: ClipId) => void;
-  readonly onAddClip: () => void;
+  readonly onAddClip: (parentGroupId?: ClipGroupId | null) => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
-  readonly onReorderClip: (clipId: ClipId, targetIndex: number) => void;
+  readonly onCreateClipGroup: (
+    parentGroupId: ClipGroupId | null,
+  ) => ClipGroupId | null;
+  readonly onRenameClipGroup: (groupId: ClipGroupId, name: string) => void;
+  readonly onUngroupClips: (groupId: ClipGroupId) => void;
+  readonly onMoveClipNode: (
+    node: ClipHierarchyNodeIdentity,
+    targetParentGroupId: ClipGroupId | null,
+    targetIndex: number,
+  ) => void;
   readonly onSelectClipNotes: (clipId: ClipId) => void;
   readonly onEditClip: (clipId: ClipId) => void;
   readonly onReorderInstrument: (
@@ -85,7 +98,10 @@ export function ProjectInspector({
   onToggleClipPlayback,
   onAddClip,
   onDuplicateClip,
-  onReorderClip,
+  onCreateClipGroup,
+  onRenameClipGroup,
+  onUngroupClips,
+  onMoveClipNode,
   onSelectClipNotes,
   onEditClip,
   onReorderInstrument,
@@ -352,7 +368,10 @@ export function ProjectInspector({
           onTogglePlayback={onToggleClipPlayback}
           onAdd={onAddClip}
           onDuplicate={onDuplicateClip}
-          onReorder={onReorderClip}
+          onCreateGroup={onCreateClipGroup}
+          onRenameGroup={onRenameClipGroup}
+          onUngroup={onUngroupClips}
+          onMoveNode={onMoveClipNode}
           onSelectNotes={onSelectClipNotes}
           onEdit={onEditClip}
         />

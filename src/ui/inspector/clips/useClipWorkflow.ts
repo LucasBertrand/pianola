@@ -25,9 +25,13 @@ import {
   type ClipInstrumentState,
 } from "../../../domain/clips/clip";
 import {
+  findClipHierarchyNodeLocation,
+  getClipGroupChildren,
   getClipPlaybackOrder,
+  type ClipHierarchyNodeIdentity,
 } from "../../../domain/clips/clip-hierarchy";
 import {
+  type ClipGroupId,
   type ClipId,
   type InstrumentId,
 } from "../../../domain/identifiers";
@@ -50,9 +54,17 @@ export interface ClipWorkflowOptions {
 
 export interface ClipWorkflow {
   readonly select: (clipId: ClipId) => void;
-  readonly add: () => void;
+  readonly add: (parentGroupId?: ClipGroupId | null) => void;
   readonly duplicate: (clipId: ClipId) => void;
   readonly reorder: (clipId: ClipId, targetIndex: number) => void;
+  readonly createGroup: (parentGroupId: ClipGroupId | null) => ClipGroupId | null;
+  readonly renameGroup: (groupId: ClipGroupId, name: string) => void;
+  readonly ungroup: (groupId: ClipGroupId) => void;
+  readonly moveNode: (
+    node: ClipHierarchyNodeIdentity,
+    targetParentGroupId: ClipGroupId | null,
+    targetIndex: number,
+  ) => void;
   readonly remove: (clipId: ClipId) => void;
   readonly update: (clipId: ClipId, changes: UpdateClipChanges) => void;
 }
@@ -65,6 +77,7 @@ export function useClipWorkflow({
   confirm,
 }: ClipWorkflowOptions): ClipWorkflow {
   const clipSequenceRef = useRef(0);
+  const groupSequenceRef = useRef(0);
 
   const select = useCallback((clipId: ClipId): void => {
     const state = commands.getState();
@@ -80,7 +93,7 @@ export function useClipWorkflow({
     commands.selectClip(clipId);
   }, [beginClipChange, commands]);
 
-  const add = useCallback((): void => {
+  const add = useCallback((parentGroupId: ClipGroupId | null = null): void => {
     const state = commands.getState();
 
     const clipOrder = getClipPlaybackOrder(state.clipHierarchy);
@@ -103,9 +116,84 @@ export function useClipWorkflow({
     );
 
     beginClipChange();
-    commands.dispatch([{ type: "AddClip", clip }], "Add clip");
+    const parentChildren = getClipGroupChildren(
+      state.clipHierarchy,
+      parentGroupId,
+    );
+
+    if (parentChildren === null) {
+      return;
+    }
+
+    const pendingCommands = parentGroupId === null
+      ? [{ type: "AddClip", clip } as const]
+      : [
+          { type: "AddClip", clip } as const,
+          {
+            type: "MoveClipHierarchyNode",
+            node: { kind: "clip", clipId: clip.id },
+            targetParentGroupId: parentGroupId,
+            targetIndex: parentChildren.length,
+          } as const,
+        ];
+
+    commands.dispatch(pendingCommands, "Add clip");
     commands.selectClip(clip.id);
   }, [beginClipChange, commands]);
+
+  const moveNode = useCallback((
+    node: ClipHierarchyNodeIdentity,
+    targetParentGroupId: ClipGroupId | null,
+    targetIndex: number,
+  ): void => {
+    commands.dispatch([{
+      type: "MoveClipHierarchyNode",
+      node,
+      targetParentGroupId,
+      targetIndex,
+    }], "Move clip hierarchy item");
+  }, [commands]);
+
+  const createGroup = useCallback((
+    parentGroupId: ClipGroupId | null,
+  ): ClipGroupId | null => {
+    const state = commands.getState();
+    const children = getClipGroupChildren(state.clipHierarchy, parentGroupId);
+
+    if (children === null) {
+      return null;
+    }
+
+    groupSequenceRef.current += 1;
+    const groupId = createClipGroupId(groupSequenceRef.current);
+    const result = commands.dispatch([{
+      type: "CreateClipGroup",
+      groupId,
+      name: "New group",
+      parentGroupId,
+      index: children.length,
+    }], "Create clip group");
+
+    return result === null ? null : groupId;
+  }, [commands]);
+
+  const renameGroup = useCallback((
+    groupId: ClipGroupId,
+    name: string,
+  ): void => {
+    commands.dispatch([{
+      type: "RenameClipGroup",
+      groupId,
+      name,
+    }], "Rename clip group");
+  }, [commands]);
+
+  const ungroup = useCallback((groupId: ClipGroupId): void => {
+    commands.dispatch([{
+      type: "DeleteClipGroup",
+      groupId,
+    }], "Ungroup clips");
+  }, [commands]);
 
   const reorder = useCallback((
     clipId: ClipId,
@@ -190,16 +278,26 @@ export function useClipWorkflow({
         },
       },
     };
-    const sourceIndex = getClipPlaybackOrder(state.clipHierarchy).indexOf(clipId);
-    const clipOrder = [...getClipPlaybackOrder(state.clipHierarchy)];
+    const sourceLocation = findClipHierarchyNodeLocation(
+      state.clipHierarchy,
+      { kind: "clip", clipId },
+    );
 
-    clipOrder.splice(sourceIndex + 1, 0, duplicatedClipId);
+    if (sourceLocation === null) {
+      return;
+    }
+
     duplicateEditorState(clipId, duplicatedClipId);
     beginClipChange();
     commands.dispatch(
       [
         { type: "AddClip", clip: duplicatedClip },
-        { type: "ReorderClips", clipOrder },
+        {
+          type: "MoveClipHierarchyNode",
+          node: { kind: "clip", clipId: duplicatedClipId },
+          targetParentGroupId: sourceLocation.parentGroupId,
+          targetIndex: sourceLocation.index + 1,
+        },
       ],
       "Duplicate clip",
     );
@@ -247,9 +345,21 @@ export function useClipWorkflow({
     add,
     duplicate,
     reorder,
+    createGroup,
+    renameGroup,
+    ungroup,
+    moveNode,
     remove,
     update,
   };
+}
+
+function createClipGroupId(sequence: number): ClipGroupId {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return `clip-group-${globalThis.crypto.randomUUID()}`;
+  }
+
+  return `clip-group-${Date.now()}-${sequence}`;
 }
 
 function cloneClipTracks(

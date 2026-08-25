@@ -28,6 +28,9 @@ import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
 import {
   type Note,
 } from "../notes/note";
+import type {
+  ClipHierarchyNodeIdentity,
+} from "../clips/clip-hierarchy";
 
 export interface AddProjectInstrumentCommand {
   readonly type: "AddProjectInstrument";
@@ -149,13 +152,9 @@ export interface DeleteClipGroupCommand {
   readonly groupId: ClipGroupId;
 }
 
-export type ClipHierarchyNodeReference =
-  | { readonly kind: "clip"; readonly clipId: ClipId }
-  | { readonly kind: "group"; readonly groupId: ClipGroupId };
-
 export interface MoveClipHierarchyNodeCommand {
   readonly type: "MoveClipHierarchyNode";
-  readonly node: ClipHierarchyNodeReference;
+  readonly node: ClipHierarchyNodeIdentity;
   readonly targetParentGroupId: ClipGroupId | null;
   readonly targetIndex: number;
 }

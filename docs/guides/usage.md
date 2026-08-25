@@ -47,6 +47,13 @@ lecture. Le bouton Play d’une carte lance immédiatement ce clip ; cliquer dan
 la grille déplace l’unique playhead dans le clip affiché et repositionne aussi
 la lecture en cours.
 
+L’inspecteur permet de créer des groupes de clips imbriqués. Un groupe peut être
+replié, renommé, dégroupé ou recevoir directement un clip ou un sous-groupe.
+La poignée déplace les clips et groupes à la souris ou au toucher ; au clavier,
+Haut/Bas change la position, Droite entre dans le groupe précédent et Gauche
+sort du groupe courant. Les groupes organisent le document sans interrompre
+l’enchaînement : la lecture suit les clips dans l’ordre visible, en profondeur.
+
 ## Transport, timeline et viewport
 
 Lecture/Pause démarre ou suspend le transport du processeur audio. Stop libère
