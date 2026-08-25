@@ -343,7 +343,6 @@ export function usePianoRollLoopGesture({
 
         interactionStrategyRef.current?.cancel();
         gestureMode = "draw";
-        onClearSelection();
         updateDraft(originClientX);
       }, delay);
     };
@@ -380,9 +379,6 @@ export function usePianoRollLoopGesture({
         return;
       }
 
-      if (resolvedMode !== "pending-layer") {
-        onClearSelection();
-      }
       const state = projectStore.getState();
       const clip = getActiveClip(state);
       const loop = clip.transportSettings.loop;
