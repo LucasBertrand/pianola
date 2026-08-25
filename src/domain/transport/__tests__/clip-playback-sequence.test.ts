@@ -122,11 +122,13 @@ describe("clip playback sequence", () => {
         id: "group-song",
         name: "Song",
         color: "#79a7ff",
+        bypassEnabled: false,
         children: [{
           kind: "group" as const,
           id: "group-section",
           name: "Section",
           color: "#a77bf3",
+          bypassEnabled: false,
           children: [
             { kind: "clip" as const, clipId: TEST_CLIP_ID },
             { kind: "clip" as const, clipId: NEXT_CLIP_ID },
@@ -137,6 +139,70 @@ describe("clip playback sequence", () => {
 
     expect(getAutoAdvanceTargetClipId(nestedProject, TEST_CLIP_ID))
       .toBe(NEXT_CLIP_ID);
+  });
+
+  test("skips every clip contained by a bypassed group", () => {
+    const project = createSequenceProject();
+    const lastClip = {
+      ...project.clipsById[NEXT_CLIP_ID]!,
+      id: LAST_CLIP_ID,
+      name: "Last clip",
+    };
+    const groupedProject = {
+      ...project,
+      clipsById: {
+        ...project.clipsById,
+        [LAST_CLIP_ID]: lastClip,
+      },
+      clipHierarchy: [
+        { kind: "clip" as const, clipId: TEST_CLIP_ID },
+        {
+          kind: "group" as const,
+          id: "group-bypassed",
+          name: "Bypassed",
+          color: "#79a7ff",
+          bypassEnabled: true,
+          children: [{ kind: "clip" as const, clipId: NEXT_CLIP_ID }],
+        },
+        { kind: "clip" as const, clipId: LAST_CLIP_ID },
+      ],
+    };
+
+    expect(getAutoAdvanceTargetClipId(groupedProject, TEST_CLIP_ID))
+      .toBe(LAST_CLIP_ID);
+  });
+
+  test("a clip started inside a bypassed group exits after that group", () => {
+    const project = createSequenceProject();
+    const lastClip = {
+      ...project.clipsById[NEXT_CLIP_ID]!,
+      id: LAST_CLIP_ID,
+      name: "Last clip",
+    };
+    const groupedProject = {
+      ...project,
+      clipsById: {
+        ...project.clipsById,
+        [LAST_CLIP_ID]: lastClip,
+      },
+      clipHierarchy: [
+        {
+          kind: "group" as const,
+          id: "group-bypassed",
+          name: "Bypassed",
+          color: "#79a7ff",
+          bypassEnabled: true,
+          children: [
+            { kind: "clip" as const, clipId: TEST_CLIP_ID },
+            { kind: "clip" as const, clipId: NEXT_CLIP_ID },
+          ],
+        },
+        { kind: "clip" as const, clipId: LAST_CLIP_ID },
+      ],
+    };
+
+    expect(getAutoAdvanceTargetClipId(groupedProject, TEST_CLIP_ID))
+      .toBe(LAST_CLIP_ID);
   });
 
   test("gives the current clip loop priority", () => {

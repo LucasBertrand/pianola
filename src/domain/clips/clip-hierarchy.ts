@@ -13,6 +13,8 @@ export const MAXIMUM_CLIP_GROUP_DEPTH =
   PROJECT_CONSTANTS.maximumClipGroupDepth;
 export const DEFAULT_CLIP_GROUP_COLOR =
   PROJECT_CONSTANTS.defaultClipGroupColor;
+export const DEFAULT_CLIP_GROUP_BYPASS_ENABLED =
+  PROJECT_CONSTANTS.defaultClipGroupBypassEnabled;
 
 export interface ClipHierarchyClipNode {
   readonly kind: "clip";
@@ -24,6 +26,7 @@ export interface ClipHierarchyGroupNode {
   readonly id: ClipGroupId;
   readonly name: string;
   readonly color: string;
+  readonly bypassEnabled: boolean;
   readonly children: readonly ClipHierarchyNode[];
 }
 
@@ -197,6 +200,27 @@ export function countDescendantClips(node: ClipHierarchyNode): number {
       );
 }
 
+export function countClipGroups(
+  hierarchy: readonly ClipHierarchyNode[],
+): number {
+  return hierarchy.reduce(
+    (count, node) => count + (node.kind === "group"
+      ? 1 + countClipGroups(node.children)
+      : 0),
+    0,
+  );
+}
+
+/** Returns leaves ignored because at least one containing group is bypassed. */
+export function getGroupBypassedClipIds(
+  hierarchy: readonly ClipHierarchyNode[],
+): ReadonlySet<ClipId> {
+  const clipIds = new Set<ClipId>();
+
+  collectGroupBypassedClipIds(hierarchy, false, clipIds);
+  return clipIds;
+}
+
 export function getFirstDescendantClipId(
   node: ClipHierarchyNode,
 ): ClipId | null {
@@ -252,6 +276,7 @@ function validateNode(
     || node.name.trim().length === 0
     || node.name.length > MAXIMUM_CLIP_GROUP_NAME_LENGTH
     || !/^#[0-9a-f]{6}$/i.test(node.color)
+    || typeof node.bypassEnabled !== "boolean"
     || !Array.isArray(node.children)
   ) {
     throw new Error("Clip hierarchy contains an invalid group.");
@@ -262,6 +287,27 @@ function validateNode(
 
   for (const child of node.children) {
     validateNode(child, depth + 1, discoveredClipIds, groupIds, onGroup);
+  }
+}
+
+function collectGroupBypassedClipIds(
+  hierarchy: readonly ClipHierarchyNode[],
+  ancestorBypassed: boolean,
+  clipIds: Set<ClipId>,
+): void {
+  for (const node of hierarchy) {
+    if (node.kind === "clip") {
+      if (ancestorBypassed) {
+        clipIds.add(node.clipId);
+      }
+      continue;
+    }
+
+    collectGroupBypassedClipIds(
+      node.children,
+      ancestorBypassed || node.bypassEnabled,
+      clipIds,
+    );
   }
 }
 

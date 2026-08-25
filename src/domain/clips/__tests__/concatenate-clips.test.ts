@@ -235,6 +235,7 @@ describe("clip concatenation", () => {
         id: "group-outer",
         name: "Outer",
         color: "#79a7ff",
+        bypassEnabled: false,
         children: [
           { kind: "clip" as const, clipId: "clip-before" },
           {
@@ -242,6 +243,7 @@ describe("clip concatenation", () => {
             id: "group-section",
             name: "Section",
             color: "#a77bf3",
+            bypassEnabled: false,
             children: [
               { kind: "clip" as const, clipId: "clip-a" },
               { kind: "clip" as const, clipId: "clip-b" },
@@ -278,6 +280,7 @@ describe("clip concatenation", () => {
       id: "group-outer",
       name: "Outer",
       color: "#79a7ff",
+      bypassEnabled: false,
       children: [
         { kind: "clip", clipId: "clip-before" },
         { kind: "clip", clipId: "clip-section" },
@@ -318,6 +321,7 @@ describe("clip concatenation", () => {
         id: "group-all",
         name: "Complete song",
         color: "#62d6b4",
+        bypassEnabled: false,
         children: [
           { kind: "clip" as const, clipId: "clip-a" },
           { kind: "clip" as const, clipId: "clip-b" },

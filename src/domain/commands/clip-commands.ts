@@ -5,6 +5,7 @@ import {
   assertValidClipHierarchy,
   containsClipGroups,
   createFlatClipHierarchy,
+  DEFAULT_CLIP_GROUP_BYPASS_ENABLED,
   findClipHierarchyGroup,
   getClipPlaybackOrder,
   type ClipHierarchyNode,
@@ -151,6 +152,8 @@ export function applyCreateClipGroup(
 ): ProjectState {
   const name = command.name.trim();
   const color = command.color;
+  const bypassEnabled = command.bypassEnabled
+    ?? DEFAULT_CLIP_GROUP_BYPASS_ENABLED;
 
   if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
     reject(
@@ -168,6 +171,10 @@ export function applyCreateClipGroup(
     );
   }
 
+  if (typeof bypassEnabled !== "boolean") {
+    reject("INVALID_COMMAND", "Clip group bypass must be a boolean.", command.type);
+  }
+
   if (!isValidInsertionIndex(command.index)) {
     reject("INVALID_COMMAND", "Clip group insertion index is invalid.", command.type);
   }
@@ -181,6 +188,7 @@ export function applyCreateClipGroup(
     id: command.groupId,
     name,
     color,
+    bypassEnabled,
     children: [],
   };
   const hierarchy = insertIntoParent(
@@ -210,6 +218,7 @@ export function applyUpdateClipGroup(
 
   const name = command.changes.name?.trim() ?? group.name;
   const color = command.changes.color ?? group.color;
+  const bypassEnabled = command.changes.bypassEnabled ?? group.bypassEnabled;
 
   if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
     reject(
@@ -228,7 +237,16 @@ export function applyUpdateClipGroup(
     );
   }
 
-  if (name === group.name && color === group.color) {
+
+  if (typeof bypassEnabled !== "boolean") {
+    reject("INVALID_COMMAND", "Clip group bypass must be a boolean.", command.type);
+  }
+
+  if (
+    name === group.name
+    && color === group.color
+    && bypassEnabled === group.bypassEnabled
+  ) {
     return state;
   }
 
@@ -237,6 +255,7 @@ export function applyUpdateClipGroup(
     command.groupId,
     name,
     color,
+    bypassEnabled,
   );
 
   if (hierarchy === null) {
@@ -716,6 +735,7 @@ function updateGroup(
   groupId: ClipGroupId,
   name: string,
   color: string,
+  bypassEnabled: boolean,
 ): readonly ClipHierarchyNode[] | null {
   let found = false;
   const next = hierarchy.map((node) => {
@@ -725,10 +745,16 @@ function updateGroup(
 
     if (node.id === groupId) {
       found = true;
-      return { ...node, name, color };
+      return { ...node, name, color, bypassEnabled };
     }
 
-    const children = updateGroup(node.children, groupId, name, color);
+    const children = updateGroup(
+      node.children,
+      groupId,
+      name,
+      color,
+      bypassEnabled,
+    );
 
     if (children === null) {
       return node;

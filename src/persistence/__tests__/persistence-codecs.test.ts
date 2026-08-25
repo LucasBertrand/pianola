@@ -131,7 +131,7 @@ describe("persistence codecs", () => {
     const migrated = parsePortableProject(JSON.stringify(legacy));
     const clipId = getClipPlaybackOrder(document.clipHierarchy)[0]!;
 
-    expect(migrated.document.schemaVersion).toBe(6);
+    expect(migrated.document.schemaVersion).toBe(7);
     expect("anchorTick" in migrated.document.clipsById[clipId]!
       .transportSettings).toBe(false);
     expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)

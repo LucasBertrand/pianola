@@ -623,8 +623,10 @@ export function PianoRollWorkspace({
     toggleBypass: handleToggleClipBypass,
     add: handleAddClip,
     duplicate: handleDuplicateClip,
+    duplicateGroup: handleDuplicateClipGroup,
     createGroup: handleCreateClipGroup,
     updateGroup: handleUpdateClipGroup,
+    toggleGroupBypass: handleToggleClipGroupBypass,
     concatenateGroup: handleConcatenateClipGroup,
     ungroup: handleUngroupClips,
     deleteGroup: handleDeleteClipGroup,
@@ -1079,6 +1081,8 @@ export function PianoRollWorkspace({
           onToggleClipPlayback={toggleClipPlayback}
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
+          onDuplicateClipGroup={handleDuplicateClipGroup}
+          onToggleClipGroupBypass={handleToggleClipGroupBypass}
           onCreateClipGroup={handleCreateClipGroup}
           onUpdateClipGroup={handleUpdateClipGroup}
           onConcatenateClipGroup={handleConcatenateClipGroup}

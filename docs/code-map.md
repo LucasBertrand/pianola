@@ -32,6 +32,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le playhead | `src/editor/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier l’indicateur de lecture des clips | `src/ui/inspector/clips/clip-playhead-visual.ts` | `src/ui/inspector/clips/ClipInspector.tsx`, puis `src/styles/inspector.css` |
 | modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-commands.ts` |
+| modifier la duplication d’un groupe | `src/ui/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
 | modifier Copy/Cut/Paste | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
@@ -139,9 +140,11 @@ ClipInspector
 Cette navigation ne consomme pas Undo/Redo et ne modifie pas le clip joué.
 Le bouton Play d’une carte passe directement par `useAudioPlayback`; à la fin,
 `clipHierarchy` est la source de vérité pour l’organisation des clips ; son
-parcours en profondeur détermine la prochaine carte non bypassée, sauf si la
+parcours en profondeur détermine la prochaine carte non bypassée et sans ancêtre
+de groupe bypassé, sauf si la
 boucle ou l’arrêt en fin du clip courant est actif. Le lancement direct d’une
-carte ignore son propre bypass et peut donc amorcer la suite.
+carte ignore son propre bypass et peut donc amorcer la suite. Si elle se trouve
+dans un groupe bypassé, la suite reprend après ce groupe.
 
 ## Styles propriétaires
 

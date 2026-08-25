@@ -6,6 +6,7 @@ import type {
 } from "../project/project-document";
 import {
   getClipPlaybackOrder,
+  getGroupBypassedClipIds,
 } from "../clips/clip-hierarchy";
 
 /** Resolves the next playable visible clip while preserving loop priority. */
@@ -27,6 +28,9 @@ export function getAutoAdvanceTargetClipId(
   }
 
   const clipOrder = getClipPlaybackOrder(project.clipHierarchy);
+  const groupBypassedClipIds = getGroupBypassedClipIds(
+    project.clipHierarchy,
+  );
   const currentIndex = clipOrder.indexOf(currentClipId);
 
   if (currentIndex < 0) {
@@ -46,7 +50,11 @@ export function getAutoAdvanceTargetClipId(
 
     const candidateClip = project.clipsById[candidateClipId];
 
-    if (candidateClip !== undefined && !candidateClip.bypassEnabled) {
+    if (
+      candidateClip !== undefined
+      && !candidateClip.bypassEnabled
+      && !groupBypassedClipIds.has(candidateClipId)
+    ) {
       return candidateClipId;
     }
   }

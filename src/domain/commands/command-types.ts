@@ -137,6 +137,7 @@ export interface CreateClipGroupCommand {
   readonly groupId: ClipGroupId;
   readonly name: string;
   readonly color: string;
+  readonly bypassEnabled?: boolean;
   readonly parentGroupId: ClipGroupId | null;
   readonly index: number;
 }
@@ -144,6 +145,7 @@ export interface CreateClipGroupCommand {
 export interface UpdateClipGroupChanges {
   readonly name?: string;
   readonly color?: string;
+  readonly bypassEnabled?: boolean;
 }
 
 export interface UpdateClipGroupCommand {

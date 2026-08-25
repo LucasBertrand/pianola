@@ -1,7 +1,7 @@
 /** Persistent project defaults, hard limits, and instrument defaults. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 6,
+  schemaVersion: 7,
   defaultMeasureCount: 16,
   defaultTempoBpm: 120,
   minimumTempoBpm: 30,
@@ -41,6 +41,7 @@ export const PROJECT_CONSTANTS = Object.freeze({
   defaultLoopEnabled: false,
   defaultAutoAdvanceEnabled: true,
   defaultClipBypassEnabled: false,
+  defaultClipGroupBypassEnabled: false,
   defaultInstrumentMuted: false,
   defaultClipColor: "#171a20",
   defaultClipGroupColor: "#79a7ff",

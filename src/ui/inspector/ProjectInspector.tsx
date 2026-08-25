@@ -52,6 +52,8 @@ export interface ProjectInspectorProps {
     name?: string,
   ) => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
+  readonly onDuplicateClipGroup: (groupId: ClipGroupId) => ClipGroupId | null;
+  readonly onToggleClipGroupBypass: (groupId: ClipGroupId) => void;
   readonly onCreateClipGroup: (
     parentGroupId: ClipGroupId | null,
     name?: string,
@@ -113,6 +115,8 @@ export function ProjectInspector({
   onToggleClipPlayback,
   onAddClip,
   onDuplicateClip,
+  onDuplicateClipGroup,
+  onToggleClipGroupBypass,
   onCreateClipGroup,
   onUpdateClipGroup,
   onConcatenateClipGroup,
@@ -386,6 +390,8 @@ export function ProjectInspector({
           onTogglePlayback={onToggleClipPlayback}
           onAdd={onAddClip}
           onDuplicate={onDuplicateClip}
+          onDuplicateGroup={onDuplicateClipGroup}
+          onToggleGroupBypass={onToggleClipGroupBypass}
           onCreateGroup={onCreateClipGroup}
           onUpdateGroup={onUpdateClipGroup}
           onConcatenateGroup={onConcatenateClipGroup}

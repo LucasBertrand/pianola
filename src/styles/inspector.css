@@ -246,6 +246,7 @@
 }
 
 .clip-group-actions button:disabled {
+  cursor: not-allowed;
   opacity: 0.3;
 }
 
@@ -253,6 +254,17 @@
   border-color: var(--group-color);
   background: color-mix(in srgb, var(--group-color) 20%, transparent);
   color: var(--group-color);
+}
+
+.clip-group-actions button.group-bypass-action.is-active {
+  border-color: var(--color-danger-strong);
+  background: var(--color-danger-soft);
+  color: var(--color-accent-danger);
+}
+
+.clip-group-actions button.group-bypass-action.is-inherited-bypass,
+.project-instrument-card .clip-bypass-button.is-inherited-bypass {
+  opacity: 0.65;
 }
 
 .clip-group-actions button:last-child svg {

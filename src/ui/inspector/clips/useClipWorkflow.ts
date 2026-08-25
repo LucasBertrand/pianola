@@ -26,8 +26,10 @@ import {
   type Track,
   type ClipInstrumentState,
 } from "../../../domain/clips/clip";
+import { duplicateClipValue } from "../../../domain/clips/duplicate-clip";
 import {
   findClipHierarchyNodeLocation,
+  findClipHierarchyGroup,
   getClipGroupChildren,
   getClipPlaybackOrder,
   DEFAULT_CLIP_GROUP_COLOR,
@@ -48,6 +50,9 @@ import type {
 import {
   useClipGroupConcatenation,
 } from "./useClipGroupConcatenation";
+import {
+  useClipGroupDuplication,
+} from "./useClipGroupDuplication";
 
 export interface ClipWorkflowOptions {
   readonly commands: EditorCommandPort;
@@ -68,6 +73,7 @@ export interface ClipWorkflow {
     name?: string,
   ) => void;
   readonly duplicate: (clipId: ClipId) => void;
+  readonly duplicateGroup: (groupId: ClipGroupId) => ClipGroupId | null;
   readonly reorder: (clipId: ClipId, targetIndex: number) => void;
   readonly createGroup: (
     parentGroupId: ClipGroupId | null,
@@ -82,6 +88,7 @@ export interface ClipWorkflow {
     groupId: ClipGroupId,
     changes: UpdateClipGroupChanges,
   ) => void;
+  readonly toggleGroupBypass: (groupId: ClipGroupId) => void;
   readonly ungroup: (groupId: ClipGroupId) => void;
   readonly deleteGroup: (groupId: ClipGroupId) => void;
   readonly moveNode: (
@@ -108,6 +115,11 @@ export function useClipWorkflow({
     beginClipChange,
     duplicateEditorState,
     alert,
+  });
+  const duplicateGroup = useClipGroupDuplication({
+    commands,
+    beginClipChange,
+    duplicateEditorState,
   });
 
   const select = useCallback((clipId: ClipId): void => {
@@ -301,45 +313,11 @@ export function useClipWorkflow({
 
     clipSequenceRef.current += 1;
     const duplicatedClipId = createClipId(clipSequenceRef.current);
-    const duplicatedClip: Clip = {
-      ...sourceClip,
-      id: duplicatedClipId,
-      name: createCopyName(sourceClip.name, MAXIMUM_CLIP_NAME_LENGTH),
-      tracksByInstrumentId: cloneClipTracks(sourceClip.tracksByInstrumentId),
-      instrumentStatesById: cloneClipInstrumentStates(
-        sourceClip.instrumentStatesById,
-      ),
-      transportSettings: {
-        ...sourceClip.transportSettings,
-        loop: { ...sourceClip.transportSettings.loop },
-      },
-      timeline: {
-        ...sourceClip.timeline,
-        timeMap: {
-          meterMarkers: sourceClip.timeline.timeMap.meterMarkers.map(
-            (marker) => ({
-              startTick: marker.startTick,
-              timeSignature: marker.timeSignature.beatGroups === undefined
-                ? {
-                    numerator: marker.timeSignature.numerator,
-                    denominator: marker.timeSignature.denominator,
-                  }
-                : {
-                    numerator: marker.timeSignature.numerator,
-                    denominator: marker.timeSignature.denominator,
-                    beatGroups: [...marker.timeSignature.beatGroups],
-                  },
-            }),
-          ),
-          tempoMarkers: sourceClip.timeline.timeMap.tempoMarkers.map(
-            (marker) => ({ ...marker }),
-          ),
-          scaleMarkers: sourceClip.timeline.timeMap.scaleMarkers.map(
-            (marker) => ({ ...marker }),
-          ),
-        },
-      },
-    };
+    const duplicatedClip = duplicateClipValue(
+      sourceClip,
+      duplicatedClipId,
+      createCopyName(sourceClip.name, MAXIMUM_CLIP_NAME_LENGTH),
+    );
     const sourceLocation = findClipHierarchyNodeLocation(
       state.clipHierarchy,
       { kind: "clip", clipId },
@@ -416,15 +394,36 @@ export function useClipWorkflow({
     }], clip.bypassEnabled ? "Disable clip bypass" : "Enable clip bypass");
   }, [commands]);
 
+  const toggleGroupBypass = useCallback((groupId: ClipGroupId): void => {
+    const group = findClipHierarchyGroup(
+      commands.getState().clipHierarchy,
+      groupId,
+    );
+
+    if (group === undefined) {
+      return;
+    }
+
+    commands.dispatch([{
+      type: "UpdateClipGroup",
+      groupId,
+      changes: { bypassEnabled: !group.bypassEnabled },
+    }], group.bypassEnabled
+      ? "Disable clip group bypass"
+      : "Enable clip group bypass");
+  }, [commands]);
+
   return {
     select,
     toggleBypass,
     add,
     duplicate,
+    duplicateGroup,
     reorder,
     createGroup,
     concatenateGroup,
     updateGroup,
+    toggleGroupBypass,
     ungroup,
     deleteGroup,
     moveNode,
@@ -439,21 +438,6 @@ function createClipGroupId(sequence: number): ClipGroupId {
   }
 
   return `clip-group-${Date.now()}-${sequence}`;
-}
-
-function cloneClipTracks(
-  sourceTracks: Readonly<Record<InstrumentId, Track>>,
-): Record<InstrumentId, Track> {
-  const tracks: Record<InstrumentId, Track> = {};
-
-  for (const [instrumentId, track] of Object.entries(sourceTracks)) {
-    tracks[instrumentId] = {
-      instrumentId,
-      notesById: { ...track.notesById },
-    };
-  }
-
-  return tracks;
 }
 
 function createCopyName(name: string, maximumLength: number): string {
@@ -491,20 +475,6 @@ function createEmptyClip(
     instrumentStatesById,
     transportSettings: createDefaultTransportState(),
   };
-}
-
-function cloneClipInstrumentStates(
-  sourceStates: Readonly<Record<InstrumentId, ClipInstrumentState>>,
-): Record<InstrumentId, ClipInstrumentState> {
-  const states: Record<InstrumentId, ClipInstrumentState> = {};
-
-  for (const [instrumentId, state] of Object.entries(sourceStates)) {
-    states[instrumentId] = {
-      ...state,
-    };
-  }
-
-  return states;
 }
 
 function createClipId(sequence: number): ClipId {

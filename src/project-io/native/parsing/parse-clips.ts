@@ -9,6 +9,7 @@ import {
 } from "../../../domain/clips/clip";
 import {
   DEFAULT_CLIP_GROUP_COLOR,
+  DEFAULT_CLIP_GROUP_BYPASS_ENABLED,
   MAXIMUM_CLIP_GROUP_DEPTH,
   MAXIMUM_CLIP_GROUP_NAME_LENGTH,
   type ClipHierarchyNode,
@@ -150,8 +151,10 @@ function parseClipHierarchyNode(
     fail("INVALID_DATA", path, "Clip hierarchy exceeds the maximum group depth.");
   }
 
-  const groupKeys = schemaVersion >= 5
-    ? ["kind", "id", "name", "color", "children"]
+  const groupKeys = schemaVersion >= 7
+    ? ["kind", "id", "name", "color", "bypassEnabled", "children"]
+    : schemaVersion >= 5
+      ? ["kind", "id", "name", "color", "children"]
     : ["kind", "id", "name", "children"];
   assertExactRecordKeys(node, groupKeys, path);
   const children = readBoundedArray(
@@ -176,6 +179,9 @@ function parseClipHierarchyNode(
     color: schemaVersion >= 5
       ? parseGroupColor(node["color"], `${path}.color`)
       : DEFAULT_CLIP_GROUP_COLOR,
+    bypassEnabled: schemaVersion >= 7
+      ? readBoolean(node["bypassEnabled"], `${path}.bypassEnabled`)
+      : DEFAULT_CLIP_GROUP_BYPASS_ENABLED,
     children,
   };
 }

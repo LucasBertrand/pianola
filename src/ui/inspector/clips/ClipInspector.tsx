@@ -5,6 +5,7 @@ import {
   DEFAULT_CLIP_GROUP_COLOR,
   findClipHierarchyNodeLocation,
   getClipPlaybackOrder,
+  getGroupBypassedClipIds,
   MAXIMUM_CLIP_GROUP_COUNT,
   MAXIMUM_CLIP_GROUP_DEPTH,
   type ClipHierarchyGroupNode,
@@ -39,6 +40,8 @@ export interface ClipInspectorProps {
     name?: string,
   ) => void;
   readonly onDuplicate: (clipId: ClipId) => void;
+  readonly onDuplicateGroup: (groupId: ClipGroupId) => ClipGroupId | null;
+  readonly onToggleGroupBypass: (groupId: ClipGroupId) => void;
   readonly onCreateGroup: (
     parentGroupId: ClipGroupId | null,
     name?: string,
@@ -154,6 +157,8 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
     parentGroupId: null,
     projectState: props.projectState,
     clipCount: clipOrder.length,
+    groupCount,
+    bypassControlsDisabled: false,
     playingClipId: props.playingClipId,
     playheadPosition: props.playheadPosition,
     suppressSelectionHighlight: props.suppressSelectionHighlight,
@@ -179,6 +184,8 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
     onToggleBypass: props.onToggleBypass,
     onTogglePlayback: props.onTogglePlayback,
     onDuplicate: props.onDuplicate,
+    onDuplicateGroup: props.onDuplicateGroup,
+    onToggleGroupBypass: props.onToggleGroupBypass,
     onSelectNotes: props.onSelectNotes,
     onEdit: props.onEdit,
   };
@@ -323,6 +330,8 @@ interface HierarchyListProps {
   readonly parentGroupId: ClipGroupId | null;
   readonly projectState: ProjectState;
   readonly clipCount: number;
+  readonly groupCount: number;
+  readonly bypassControlsDisabled: boolean;
   readonly playingClipId: ClipId | null;
   readonly playheadPosition: ReadonlyRenderSignal<PlayheadPosition>;
   readonly suppressSelectionHighlight: boolean;
@@ -341,6 +350,8 @@ interface HierarchyListProps {
   readonly onToggleBypass: (clipId: ClipId) => void;
   readonly onTogglePlayback: (clipId: ClipId) => void;
   readonly onDuplicate: (clipId: ClipId) => void;
+  readonly onDuplicateGroup: (groupId: ClipGroupId) => ClipGroupId | null;
+  readonly onToggleGroupBypass: (groupId: ClipGroupId) => void;
   readonly onSelectNotes: (clipId: ClipId) => void;
   readonly onEdit: (clipId: ClipId) => void;
 }
@@ -380,13 +391,20 @@ function ClipGroupNode({
 }): React.JSX.Element {
   const collapsed = props.collapsedGroupIds.has(group.id);
   const descendantClipIds = getClipPlaybackOrder(group.children);
+  const groupBypassedClipIds = getGroupBypassedClipIds(group.children);
   const playback = resolveClipGroupPlaybackAction(
     descendantClipIds,
     props.playingClipId,
-    new Set(descendantClipIds.filter(
-      (clipId) => props.projectState.clipsById[clipId]?.bypassEnabled === true,
-    )),
+    new Set(descendantClipIds.filter((clipId) => (
+      props.projectState.clipsById[clipId]?.bypassEnabled === true
+      || groupBypassedClipIds.has(clipId)
+    ))),
   );
+  const duplicatedClipCount = descendantClipIds.length;
+  const duplicatedGroupCount = countGroups([group]);
+  const duplicationDisabled =
+    props.clipCount + duplicatedClipCount > MAXIMUM_PROJECT_CLIP_COUNT
+    || props.groupCount + duplicatedGroupCount > MAXIMUM_CLIP_GROUP_COUNT;
   const identity = { kind: "group", groupId: group.id } as const;
 
   return (
@@ -429,8 +447,30 @@ function ClipGroupNode({
           <small>{countDescendantClips(group)} clips</small>
         </div>
         <div className="clip-group-actions">
+          <GroupAction
+            label={`Duplicate ${group.name}`}
+            disabled={duplicationDisabled}
+            onClick={() => { props.onDuplicateGroup(group.id); }}
+          >
+            <DuplicateIcon />
+          </GroupAction>
           <GroupAction label="Edit group" onClick={() => props.onEditGroup(group)}>
             <SettingsIcon />
+          </GroupAction>
+          <GroupAction
+            className={`group-bypass-action${props.bypassControlsDisabled
+              ? " is-inherited-bypass"
+              : ""}`}
+            label={props.bypassControlsDisabled
+              ? `Bypass for ${group.name} is controlled by a parent group`
+              : `${group.bypassEnabled ? "Disable" : "Enable"} bypass for ${group.name}`}
+            disabled={props.bypassControlsDisabled}
+            active={group.bypassEnabled || props.bypassControlsDisabled}
+            pressed={group.bypassEnabled}
+            toggle
+            onClick={() => props.onToggleGroupBypass(group.id)}
+          >
+            <BypassIcon />
           </GroupAction>
           <GroupAction
             label={playback.active ? `Stop ${group.name}` : `Play ${group.name}`}
@@ -452,7 +492,14 @@ function ClipGroupNode({
           {group.children.length === 0 ? (
             <p className="clip-group-empty">Empty group</p>
           ) : (
-            <ClipHierarchyList {...props} nodes={group.children} parentGroupId={group.id} />
+            <ClipHierarchyList
+              {...props}
+              nodes={group.children}
+              parentGroupId={group.id}
+              bypassControlsDisabled={
+                props.bypassControlsDisabled || group.bypassEnabled
+              }
+            />
           )}
         </div>
       )}
@@ -493,6 +540,7 @@ function ClipNode({
       )}
       onSelect={props.onSelect}
       onToggleBypass={props.onToggleBypass}
+      bypassControlDisabled={props.bypassControlsDisabled}
       onTogglePlayback={props.onTogglePlayback}
       onDuplicate={props.onDuplicate}
       onSelectNotes={props.onSelectNotes}
@@ -511,6 +559,7 @@ interface ClipCardProps {
   readonly onMoveKeyDown: (key: string) => void;
   readonly onSelect: (clipId: ClipId) => void;
   readonly onToggleBypass: (clipId: ClipId) => void;
+  readonly bypassControlDisabled: boolean;
   readonly onTogglePlayback: (clipId: ClipId) => void;
   readonly onDuplicate: (clipId: ClipId) => void;
   readonly onSelectNotes: (clipId: ClipId) => void;
@@ -588,11 +637,16 @@ function ClipCard(props: ClipCardProps): React.JSX.Element {
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" /><path d="M8.3 2.5h3.4l.5 2a6 6 0 0 1 1.3.8l2-.6 1.7 3-1.5 1.4a6 6 0 0 1 0 1.8l1.5 1.4-1.7 3-2-.6a6 6 0 0 1-1.3.8l-.5 2H8.3l-.5-2a6 6 0 0 1-1.3-.8l-2 .6-1.7-3 1.5-1.4a6 6 0 0 1 0-1.8L2.8 7.7l1.7-3 2 .6a6 6 0 0 1 1.3-.8Z" /></svg>
       </button>
       <button
-        className={`clip-bypass-button${clip.bypassEnabled ? " is-active" : ""}`}
+        className={`clip-bypass-button${
+          clip.bypassEnabled || props.bypassControlDisabled ? " is-active" : ""
+        }${props.bypassControlDisabled ? " is-inherited-bypass" : ""}`}
         type="button"
         aria-label={`${clip.bypassEnabled ? "Disable" : "Enable"} bypass for ${clip.name}`}
-        title={clip.bypassEnabled ? "Disable clip bypass" : "Bypass clip in sequences"}
+        title={props.bypassControlDisabled
+          ? "Clip bypass is controlled by a parent group"
+          : clip.bypassEnabled ? "Disable clip bypass" : "Bypass clip in sequences"}
         aria-pressed={clip.bypassEnabled}
+        disabled={props.bypassControlDisabled}
         onClick={(event) => { event.stopPropagation(); props.onToggleBypass(clip.id); }}
       >
         <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -650,32 +704,55 @@ function MoveHandle({
 }
 
 function GroupAction({
+  className,
   label,
   disabled = false,
   active = false,
+  pressed,
   toggle = false,
   onClick,
   children,
 }: {
+  readonly className?: string;
   readonly label: string;
   readonly disabled?: boolean;
   readonly active?: boolean;
+  readonly pressed?: boolean;
   readonly toggle?: boolean;
   readonly onClick: () => void;
   readonly children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <button
-      className={active ? "is-active" : undefined}
+      className={[className, active ? "is-active" : ""]
+        .filter(Boolean).join(" ") || undefined}
       type="button"
       aria-label={label}
       title={label}
-      aria-pressed={toggle ? active : undefined}
+      aria-pressed={toggle ? pressed ?? active : undefined}
       disabled={disabled}
       onClick={onClick}
     >
       {children}
     </button>
+  );
+}
+
+function DuplicateIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="7" y="7" width="9" height="9" rx="1.5" />
+      <path d="M4 13V5.5A1.5 1.5 0 0 1 5.5 4H13M11.5 9.5v4M9.5 11.5h4" />
+    </svg>
+  );
+}
+
+function BypassIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="10" cy="10" r="7" />
+      <path d="M5.05 5.05l9.9 9.9" />
+    </svg>
   );
 }
 

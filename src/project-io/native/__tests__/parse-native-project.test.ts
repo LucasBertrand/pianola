@@ -37,6 +37,31 @@ describe("native project parser", () => {
     });
   });
 
+  test("round-trips bypassed clip groups", () => {
+    const base = createTestProject();
+    const project = {
+      ...base,
+      clipHierarchy: [{
+        kind: "group" as const,
+        id: "group-bypassed",
+        name: "Bypassed group",
+        color: "#79a7ff",
+        bypassEnabled: true,
+        children: base.clipHierarchy,
+      }],
+    };
+    const editor = createDefaultNativeEditorState(project);
+    const metadata = createNativeProjectFileMetadata();
+
+    expect(parseNativeProjectFile(
+      serializeNativeProjectFile(project, metadata, editor),
+    )).toEqual({
+      metadata,
+      projectState: project,
+      editorState: editor,
+    });
+  });
+
   test("defaults clip bypass to disabled when loading a schema v5 project", () => {
     const project = createTestProject();
     const serialized = serializeNativeProjectFile(
@@ -58,6 +83,43 @@ describe("native project parser", () => {
 
     expect(loaded.projectState.clipsById[TEST_CLIP_ID]?.bypassEnabled)
       .toBe(false);
+    expect(serializeNativeProjectFile(
+      loaded.projectState,
+      loaded.metadata,
+      loaded.editorState,
+    )).toContain('"bypassEnabled": false');
+  });
+
+  test("defaults group bypass to disabled when loading a schema v6 project", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const stored = JSON.parse(serialized) as {
+      project: {
+        schemaVersion: number;
+        clipHierarchy: unknown[];
+      };
+    };
+
+    stored.project.schemaVersion = 6;
+    stored.project.clipHierarchy = [{
+      kind: "group",
+      id: "legacy-group",
+      name: "Legacy group",
+      color: "#79a7ff",
+      children: stored.project.clipHierarchy,
+    }];
+
+    const loaded = parseNativeProjectFile(JSON.stringify(stored));
+
+    expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
+      kind: "group",
+      id: "legacy-group",
+      bypassEnabled: false,
+    });
     expect(serializeNativeProjectFile(
       loaded.projectState,
       loaded.metadata,
@@ -162,7 +224,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(6);
+    expect(loaded.projectState.schemaVersion).toBe(7);
     expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
       kind: "group",
       id: "legacy-group",
@@ -282,7 +344,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(6);
+    expect(loaded.projectState.schemaVersion).toBe(7);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

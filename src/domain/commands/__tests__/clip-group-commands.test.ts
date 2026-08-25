@@ -4,6 +4,7 @@ import {
   test,
 } from "vitest";
 import {
+  findClipHierarchyGroup,
   getClipPlaybackOrder,
 } from "../../clips/clip-hierarchy";
 import {
@@ -15,6 +16,8 @@ import {
 import {
   createTestProject,
 } from "../../../../tests/support/test-builders";
+import { ProjectStore } from "../../project-store";
+import { duplicateClipValue } from "../../clips/duplicate-clip";
 
 describe("clip group commands", () => {
   test("creates, nests, moves and ungroups without changing leaf playback order", () => {
@@ -107,6 +110,171 @@ describe("clip group commands", () => {
       targetParentGroupId: "group-child",
       targetIndex: 0,
     }])).toThrow(CommandRejectedError);
+  });
+
+  test("toggles group bypass without changing descendant clip bypass", () => {
+    let project = createTestProject({
+      clips: [
+        { id: "clip-a", bypassEnabled: false },
+        { id: "clip-b", bypassEnabled: true },
+      ],
+    });
+
+    project = dispatch(project, [{
+      type: "CreateClipGroup",
+      groupId: "group-section",
+      name: "Section",
+      color: "#79a7ff",
+      parentGroupId: null,
+      index: 0,
+    }, {
+      type: "MoveClipHierarchyNode",
+      node: { kind: "clip", clipId: "clip-a" },
+      targetParentGroupId: "group-section",
+      targetIndex: 0,
+    }, {
+      type: "MoveClipHierarchyNode",
+      node: { kind: "clip", clipId: "clip-b" },
+      targetParentGroupId: "group-section",
+      targetIndex: 1,
+    }]);
+    const store = new ProjectStore(project);
+
+    store.dispatch({
+      transactionId: "bypass-group",
+      createdAt: 2,
+      commands: [{
+        type: "UpdateClipGroup",
+        groupId: "group-section",
+        changes: { bypassEnabled: true },
+      }],
+    });
+
+    expect(findClipHierarchyGroup(
+      store.getState().clipHierarchy,
+      "group-section",
+    )?.bypassEnabled).toBe(true);
+    expect(store.getState().clipsById["clip-a"]?.bypassEnabled).toBe(false);
+    expect(store.getState().clipsById["clip-b"]?.bypassEnabled).toBe(true);
+
+    store.undo();
+    expect(findClipHierarchyGroup(
+      store.getState().clipHierarchy,
+      "group-section",
+    )?.bypassEnabled).toBe(false);
+    store.redo();
+    expect(findClipHierarchyGroup(
+      store.getState().clipHierarchy,
+      "group-section",
+    )?.bypassEnabled).toBe(true);
+  });
+
+  test("duplicates a nested group as one undoable transaction", () => {
+    let project = createTestProject({
+      clips: [{ id: "clip-a" }, { id: "clip-b" }, { id: "clip-after" }],
+    });
+
+    project = dispatch(project, [{
+      type: "CreateClipGroup",
+      groupId: "group-source",
+      name: "Source",
+      color: "#79a7ff",
+      bypassEnabled: true,
+      parentGroupId: null,
+      index: 0,
+    }, {
+      type: "MoveClipHierarchyNode",
+      node: { kind: "clip", clipId: "clip-a" },
+      targetParentGroupId: "group-source",
+      targetIndex: 0,
+    }, {
+      type: "CreateClipGroup",
+      groupId: "group-child",
+      name: "Child",
+      color: "#a77bf3",
+      parentGroupId: "group-source",
+      index: 1,
+    }, {
+      type: "MoveClipHierarchyNode",
+      node: { kind: "clip", clipId: "clip-b" },
+      targetParentGroupId: "group-child",
+      targetIndex: 0,
+    }]);
+    const store = new ProjectStore(project);
+
+    store.dispatch({
+      transactionId: "duplicate-group",
+      createdAt: 2,
+      commands: [{
+        type: "AddClip",
+        clip: duplicateClipValue(
+          project.clipsById["clip-a"]!,
+          "clip-a-copy",
+          "clip-a",
+        ),
+      }, {
+        type: "AddClip",
+        clip: duplicateClipValue(
+          project.clipsById["clip-b"]!,
+          "clip-b-copy",
+          "clip-b",
+        ),
+      }, {
+        type: "CreateClipGroup",
+        groupId: "group-source-copy",
+        name: "Source Copy",
+        color: "#79a7ff",
+        bypassEnabled: true,
+        parentGroupId: null,
+        index: 1,
+      }, {
+        type: "MoveClipHierarchyNode",
+        node: { kind: "clip", clipId: "clip-a-copy" },
+        targetParentGroupId: "group-source-copy",
+        targetIndex: 0,
+      }, {
+        type: "CreateClipGroup",
+        groupId: "group-child-copy",
+        name: "Child",
+        color: "#a77bf3",
+        bypassEnabled: false,
+        parentGroupId: "group-source-copy",
+        index: 1,
+      }, {
+        type: "MoveClipHierarchyNode",
+        node: { kind: "clip", clipId: "clip-b-copy" },
+        targetParentGroupId: "group-child-copy",
+        targetIndex: 0,
+      }],
+    });
+
+    expect(getClipPlaybackOrder(store.getState().clipHierarchy)).toEqual([
+      "clip-a",
+      "clip-b",
+      "clip-a-copy",
+      "clip-b-copy",
+      "clip-after",
+    ]);
+    expect(findClipHierarchyGroup(
+      store.getState().clipHierarchy,
+      "group-source-copy",
+    )).toMatchObject({
+      name: "Source Copy",
+      bypassEnabled: true,
+      children: [
+        { kind: "clip", clipId: "clip-a-copy" },
+        { kind: "group", id: "group-child-copy", bypassEnabled: false },
+      ],
+    });
+
+    store.undo();
+    expect(store.getState().clipsById["clip-a-copy"]).toBeUndefined();
+    expect(findClipHierarchyGroup(
+      store.getState().clipHierarchy,
+      "group-source-copy",
+    )).toBeUndefined();
+    store.redo();
+    expect(store.getState().clipsById["clip-b-copy"]).toBeDefined();
   });
 
   test("deletes a group with all nested groups and descendant clips", () => {

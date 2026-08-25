@@ -4,11 +4,11 @@ Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 23 août 2026.
+Dernière mise à jour : 25 août 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |
-| document projet | horloge globale (PPQN), clips, bypass par clip, hiérarchie de groupes et ordre de lecture dérivé, timelines (marqueurs de tempo/métrique, durée), boucles locales, enchaînement global, pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `ProjectStore` | ouverture du projet | oui, dans `StoredProject` et la section `document` du nouveau `.pianola` | oui, par transaction métier | faible à moyenne |
+| document projet | horloge globale (PPQN), clips, bypass par clip et par groupe, hiérarchie de groupes et ordre de lecture dérivé, timelines (marqueurs de tempo/métrique, durée), boucles locales, enchaînement global, pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `ProjectStore` | ouverture du projet | oui, dans `StoredProject` et la section `document` du nouveau `.pianola` | oui, par transaction métier | faible à moyenne |
 | workspace projet | clip et instrument actifs, tick/pitch visibles, zoom, grille et snap tonal par clip | `ProjectWorkspaceState`, projeté dans `EditorRuntime` | durée de vie du projet | oui, atomiquement avec le document et dans une section portable distincte | non | moyenne |
 | préférences utilisateur | mode de sélection, couleur des notes, préécoute du pitch et raccourcis par action | `UserSettingsRepository` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
 | session d’édition | sélection de notes, presse-papier, draft de geste, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | snapshots d’identifiants avant/après pour la sélection ; les autres états restent hors historique | élevée |
