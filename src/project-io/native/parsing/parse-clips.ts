@@ -7,6 +7,7 @@ import {
   DEFAULT_CLIP_COLOR,
 } from "../../../domain/clips/clip";
 import {
+  DEFAULT_CLIP_GROUP_COLOR,
   MAXIMUM_CLIP_GROUP_DEPTH,
   MAXIMUM_CLIP_GROUP_NAME_LENGTH,
   type ClipHierarchyNode,
@@ -105,6 +106,7 @@ export function parseClipOrder(
 export function parseClipHierarchy(
   source: unknown,
   path: string,
+  schemaVersion: number,
 ): readonly ClipHierarchyNode[] {
   return readBoundedArray(
     source,
@@ -114,6 +116,7 @@ export function parseClipHierarchy(
     node,
     `${path}[${String(index)}]`,
     1,
+    schemaVersion,
   ));
 }
 
@@ -121,6 +124,7 @@ function parseClipHierarchyNode(
   source: unknown,
   path: string,
   depth: number,
+  schemaVersion: number,
 ): ClipHierarchyNode {
   const node = readRecord(source, path);
   const kind = readString(node["kind"], `${path}.kind`, 16);
@@ -145,7 +149,10 @@ function parseClipHierarchyNode(
     fail("INVALID_DATA", path, "Clip hierarchy exceeds the maximum group depth.");
   }
 
-  assertExactRecordKeys(node, ["kind", "id", "name", "children"], path);
+  const groupKeys = schemaVersion >= 5
+    ? ["kind", "id", "name", "color", "children"]
+    : ["kind", "id", "name", "children"];
+  assertExactRecordKeys(node, groupKeys, path);
   const children = readBoundedArray(
     node["children"],
     `${path}.children`,
@@ -154,6 +161,7 @@ function parseClipHierarchyNode(
     child,
     `${path}.children[${String(index)}]`,
     depth + 1,
+    schemaVersion,
   ));
 
   return {
@@ -164,8 +172,25 @@ function parseClipHierarchyNode(
       `${path}.name`,
       MAXIMUM_CLIP_GROUP_NAME_LENGTH,
     ),
+    color: schemaVersion >= 5
+      ? parseGroupColor(node["color"], `${path}.color`)
+      : DEFAULT_CLIP_GROUP_COLOR,
     children,
   };
+}
+
+function parseGroupColor(source: unknown, path: string): string {
+  const color = readString(source, path, 32);
+
+  if (!/^#[0-9a-f]{6}$/i.test(color)) {
+    fail(
+      "INVALID_DATA",
+      path,
+      "Clip group color must use the #RRGGBB format.",
+    );
+  }
+
+  return color;
 }
 
 export function parseClip(

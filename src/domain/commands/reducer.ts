@@ -11,9 +11,10 @@ import {
   applyCreateClipGroup,
   applyDeleteClip,
   applyDeleteClipGroup,
+  applyUngroupClipGroup,
   applyMoveClipHierarchyNode,
   applyRenameClip,
-  applyRenameClipGroup,
+  applyUpdateClipGroup,
   applyReorderClips,
   applyUpdateClip,
 } from "./clip-commands";
@@ -31,7 +32,8 @@ import type {
   RenameClipCommand,
   ReorderClipsCommand,
   MoveClipHierarchyNodeCommand,
-  RenameClipGroupCommand,
+  UpdateClipGroupCommand,
+  UngroupClipGroupCommand,
   UpdateClipCommand,
   ReorderProjectInstrumentsCommand,
   SaveInstrumentPresetCommand,
@@ -140,10 +142,12 @@ function applyCommand(
       return applyDeleteClip(state, command);
     case "CreateClipGroup":
       return applyCreateClipGroup(state, command);
-    case "RenameClipGroup":
-      return applyRenameClipGroup(state, command);
+    case "UpdateClipGroup":
+      return applyUpdateClipGroup(state, command);
     case "DeleteClipGroup":
       return applyDeleteClipGroup(state, command);
+    case "UngroupClipGroup":
+      return applyUngroupClipGroup(state, command);
     case "MoveClipHierarchyNode":
       return applyMoveClipHierarchyNode(state, command);
     case "ReorderClips":
@@ -185,10 +189,11 @@ type ActiveClipCommand = Exclude<
   | CreateClipGroupCommand
   | DeleteClipCommand
   | DeleteClipGroupCommand
+  | UngroupClipGroupCommand
   | MoveClipHierarchyNodeCommand
   | ReorderClipsCommand
   | RenameClipCommand
-  | RenameClipGroupCommand
+  | UpdateClipGroupCommand
   | UpdateClipCommand
   | AddProjectInstrumentCommand
   | UpdateProjectInstrumentCommand

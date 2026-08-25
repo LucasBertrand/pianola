@@ -4,6 +4,7 @@ import {
 } from "react";
 import type {
   UpdateClipChanges,
+  UpdateClipGroupChanges,
 } from "../../../domain/commands/command-types";
 import type {
   EditorCommandPort,
@@ -28,6 +29,7 @@ import {
   findClipHierarchyNodeLocation,
   getClipGroupChildren,
   getClipPlaybackOrder,
+  DEFAULT_CLIP_GROUP_COLOR,
   type ClipHierarchyNodeIdentity,
 } from "../../../domain/clips/clip-hierarchy";
 import {
@@ -54,12 +56,23 @@ export interface ClipWorkflowOptions {
 
 export interface ClipWorkflow {
   readonly select: (clipId: ClipId) => void;
-  readonly add: (parentGroupId?: ClipGroupId | null) => void;
+  readonly add: (
+    parentGroupId?: ClipGroupId | null,
+    name?: string,
+  ) => void;
   readonly duplicate: (clipId: ClipId) => void;
   readonly reorder: (clipId: ClipId, targetIndex: number) => void;
-  readonly createGroup: (parentGroupId: ClipGroupId | null) => ClipGroupId | null;
-  readonly renameGroup: (groupId: ClipGroupId, name: string) => void;
+  readonly createGroup: (
+    parentGroupId: ClipGroupId | null,
+    name?: string,
+    color?: string,
+  ) => ClipGroupId | null;
+  readonly updateGroup: (
+    groupId: ClipGroupId,
+    changes: UpdateClipGroupChanges,
+  ) => void;
   readonly ungroup: (groupId: ClipGroupId) => void;
+  readonly deleteGroup: (groupId: ClipGroupId) => void;
   readonly moveNode: (
     node: ClipHierarchyNodeIdentity,
     targetParentGroupId: ClipGroupId | null,
@@ -93,7 +106,10 @@ export function useClipWorkflow({
     commands.selectClip(clipId);
   }, [beginClipChange, commands]);
 
-  const add = useCallback((parentGroupId: ClipGroupId | null = null): void => {
+  const add = useCallback((
+    parentGroupId: ClipGroupId | null = null,
+    name?: string,
+  ): void => {
     const state = commands.getState();
 
     const clipOrder = getClipPlaybackOrder(state.clipHierarchy);
@@ -113,6 +129,7 @@ export function useClipWorkflow({
       clipOrder.length,
       clipSequenceRef.current,
       color,
+      name,
     );
 
     beginClipChange();
@@ -156,6 +173,8 @@ export function useClipWorkflow({
 
   const createGroup = useCallback((
     parentGroupId: ClipGroupId | null,
+    name = "New group",
+    color: string = DEFAULT_CLIP_GROUP_COLOR,
   ): ClipGroupId | null => {
     const state = commands.getState();
     const children = getClipGroupChildren(state.clipHierarchy, parentGroupId);
@@ -169,7 +188,8 @@ export function useClipWorkflow({
     const result = commands.dispatch([{
       type: "CreateClipGroup",
       groupId,
-      name: "New group",
+      name,
+      color,
       parentGroupId,
       index: children.length,
     }], "Create clip group");
@@ -177,23 +197,47 @@ export function useClipWorkflow({
     return result === null ? null : groupId;
   }, [commands]);
 
-  const renameGroup = useCallback((
+  const updateGroup = useCallback((
     groupId: ClipGroupId,
-    name: string,
+    changes: UpdateClipGroupChanges,
   ): void => {
     commands.dispatch([{
-      type: "RenameClipGroup",
+      type: "UpdateClipGroup",
       groupId,
-      name,
-    }], "Rename clip group");
+      changes,
+    }], "Update clip group");
   }, [commands]);
 
   const ungroup = useCallback((groupId: ClipGroupId): void => {
     commands.dispatch([{
-      type: "DeleteClipGroup",
+      type: "UngroupClipGroup",
       groupId,
     }], "Ungroup clips");
   }, [commands]);
+
+  const deleteGroup = useCallback((groupId: ClipGroupId): void => {
+    const state = commands.getState();
+    const children = getClipGroupChildren(state.clipHierarchy, groupId);
+
+    if (children === null) {
+      return;
+    }
+
+    const descendantClipIds = getClipPlaybackOrder(children);
+
+    if (descendantClipIds.length >= Object.keys(state.clipsById).length) {
+      return;
+    }
+
+    if (descendantClipIds.includes(state.workspace.activeClipId)) {
+      beginClipChange();
+    }
+
+    commands.dispatch([{
+      type: "DeleteClipGroup",
+      groupId,
+    }], "Delete clip group and clips");
+  }, [beginClipChange, commands]);
 
   const reorder = useCallback((
     clipId: ClipId,
@@ -346,8 +390,9 @@ export function useClipWorkflow({
     duplicate,
     reorder,
     createGroup,
-    renameGroup,
+    updateGroup,
     ungroup,
+    deleteGroup,
     moveNode,
     remove,
     update,
@@ -389,6 +434,7 @@ function createEmptyClip(
   clipIndex: number,
   sequence: number,
   color: string,
+  name?: string,
 ): Clip {
   const tracksByInstrumentId: Record<InstrumentId, Track> = {};
   const instrumentStatesById: Record<InstrumentId, ClipInstrumentState> = {};
@@ -403,7 +449,7 @@ function createEmptyClip(
 
   return {
     id: createClipId(sequence),
-    name: `Clip ${clipIndex + 1}`,
+    name: name?.trim() || `Clip ${clipIndex + 1}`,
     color,
     timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
     tracksByInstrumentId,

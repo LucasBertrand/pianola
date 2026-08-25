@@ -347,6 +347,20 @@
   margin-bottom: 16px;
 }
 
+.clip-hierarchy-dialog .application-dialog-heading {
+  margin-bottom: 16px;
+}
+
+.clip-hierarchy-dialog .instrument-preset-dialog-control:last-of-type {
+  margin-bottom: 20px;
+}
+
+.application-dialog p.clip-group-delete-warning {
+  margin-top: -10px;
+  color: var(--color-accent-danger);
+  font-size: 11px;
+}
+
 .clip-editor-identity {
   display: grid;
   margin-bottom: 6px;

@@ -9,6 +9,7 @@ import {
   createNativeProjectFileMetadata,
 } from "../../../use-cases/project-files/native-editor-state";
 import {
+  DEFAULT_CLIP_GROUP_COLOR,
   getClipPlaybackOrder,
 } from "../../../domain/clips/clip-hierarchy";
 import {
@@ -104,6 +105,39 @@ describe("native project parser", () => {
 
     expect(parseNativeProjectFile(JSON.stringify(stored))
       .projectState.clipsById[TEST_CLIP_ID]?.color).toBe(DEFAULT_CLIP_COLOR);
+  });
+
+  test("adds the default group color when loading a schema v4 project", () => {
+    const project = createTestProject();
+    const serialized = serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    );
+    const stored = JSON.parse(serialized) as {
+      project: {
+        schemaVersion: number;
+        clipHierarchy: unknown[];
+      };
+    };
+    const previousHierarchy = stored.project.clipHierarchy;
+
+    stored.project.schemaVersion = 4;
+    stored.project.clipHierarchy = [{
+      kind: "group",
+      id: "legacy-group",
+      name: "Legacy group",
+      children: previousHierarchy,
+    }];
+
+    const loaded = parseNativeProjectFile(JSON.stringify(stored));
+
+    expect(loaded.projectState.schemaVersion).toBe(5);
+    expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
+      kind: "group",
+      id: "legacy-group",
+      color: DEFAULT_CLIP_GROUP_COLOR,
+    });
   });
 
   test("adds neutral synth controls when loading projects saved before them", () => {
@@ -218,7 +252,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(4);
+    expect(loaded.projectState.schemaVersion).toBe(5);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

@@ -6,6 +6,7 @@ import {
   containsClipGroups,
   createFlatClipHierarchy,
   getClipPlaybackOrder,
+  type ClipHierarchyGroupNode,
   type ClipHierarchyNode,
 } from "../clips/clip-hierarchy";
 import {
@@ -41,9 +42,10 @@ import type {
   MoveClipHierarchyNodeCommand,
   PianoRollCommand,
   RenameClipCommand,
-  RenameClipGroupCommand,
   ReorderClipsCommand,
   UpdateClipCommand,
+  UpdateClipGroupCommand,
+  UngroupClipGroupCommand,
 } from "./command-types";
 import { assertValidClipInstrumentState } from "./instrument-commands";
 import { notesOverlapInInstrument } from "./active-clip-command-helpers";
@@ -147,11 +149,20 @@ export function applyCreateClipGroup(
   command: CreateClipGroupCommand,
 ): ProjectState {
   const name = command.name.trim();
+  const color = command.color;
 
   if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
     reject(
       "INVALID_COMMAND",
       `Clip group name must contain between 1 and ${MAXIMUM_CLIP_NAME_LENGTH} characters.`,
+      command.type,
+    );
+  }
+
+  if (!isHexColor(color)) {
+    reject(
+      "INVALID_COMMAND",
+      "Clip group color must use the #RRGGBB format.",
       command.type,
     );
   }
@@ -168,6 +179,7 @@ export function applyCreateClipGroup(
     kind: "group",
     id: command.groupId,
     name,
+    color,
     children: [],
   };
   const hierarchy = insertIntoParent(
@@ -185,11 +197,18 @@ export function applyCreateClipGroup(
   return { ...state, clipHierarchy: hierarchy };
 }
 
-export function applyRenameClipGroup(
+export function applyUpdateClipGroup(
   state: ProjectState,
-  command: RenameClipGroupCommand,
+  command: UpdateClipGroupCommand,
 ): ProjectState {
-  const name = command.name.trim();
+  const group = findGroup(state.clipHierarchy, command.groupId);
+
+  if (group === undefined) {
+    reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
+  }
+
+  const name = command.changes.name?.trim() ?? group.name;
+  const color = command.changes.color ?? group.color;
 
   if (name.length === 0 || name.length > MAXIMUM_CLIP_NAME_LENGTH) {
     reject(
@@ -199,7 +218,38 @@ export function applyRenameClipGroup(
     );
   }
 
-  const hierarchy = updateGroupName(state.clipHierarchy, command.groupId, name);
+
+  if (!isHexColor(color)) {
+    reject(
+      "INVALID_COMMAND",
+      "Clip group color must use the #RRGGBB format.",
+      command.type,
+    );
+  }
+
+  if (name === group.name && color === group.color) {
+    return state;
+  }
+
+  const hierarchy = updateGroup(
+    state.clipHierarchy,
+    command.groupId,
+    name,
+    color,
+  );
+
+  if (hierarchy === null) {
+    reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
+  }
+
+  return { ...state, clipHierarchy: hierarchy };
+}
+
+export function applyUngroupClipGroup(
+  state: ProjectState,
+  command: UngroupClipGroupCommand,
+): ProjectState {
+  const hierarchy = unwrapGroup(state.clipHierarchy, command.groupId);
 
   if (hierarchy === null) {
     reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
@@ -212,13 +262,35 @@ export function applyDeleteClipGroup(
   state: ProjectState,
   command: DeleteClipGroupCommand,
 ): ProjectState {
-  const hierarchy = unwrapGroup(state.clipHierarchy, command.groupId);
+  const group = findGroup(state.clipHierarchy, command.groupId);
+
+  if (group === undefined) {
+    reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
+  }
+
+  const descendantClipIds = getClipPlaybackOrder(group.children);
+
+  if (descendantClipIds.length >= Object.keys(state.clipsById).length) {
+    reject(
+      "INVALID_COMMAND",
+      "A project must contain at least one clip.",
+      command.type,
+    );
+  }
+
+  const hierarchy = removeGroup(state.clipHierarchy, command.groupId);
 
   if (hierarchy === null) {
     reject("INVALID_COMMAND", `Clip group "${command.groupId}" does not exist.`, command.type);
   }
 
-  return { ...state, clipHierarchy: hierarchy };
+  let clipsById = state.clipsById;
+
+  for (const clipId of descendantClipIds) {
+    clipsById = omitRecordKey(clipsById, clipId);
+  }
+
+  return { ...state, clipsById, clipHierarchy: hierarchy };
 }
 
 export function applyMoveClipHierarchyNode(
@@ -516,7 +588,7 @@ function isValidInsertionIndex(index: number): boolean {
 function findGroup(
   hierarchy: readonly ClipHierarchyNode[],
   groupId: ClipGroupId,
-): ClipHierarchyNode | undefined {
+): ClipHierarchyGroupNode | undefined {
   for (const node of hierarchy) {
     if (node.kind === "group") {
       if (node.id === groupId) {
@@ -580,10 +652,11 @@ function insertIntoParent(
   return found ? next : null;
 }
 
-function updateGroupName(
+function updateGroup(
   hierarchy: readonly ClipHierarchyNode[],
   groupId: ClipGroupId,
   name: string,
+  color: string,
 ): readonly ClipHierarchyNode[] | null {
   let found = false;
   const next = hierarchy.map((node) => {
@@ -593,10 +666,10 @@ function updateGroupName(
 
     if (node.id === groupId) {
       found = true;
-      return { ...node, name };
+      return { ...node, name, color };
     }
 
-    const children = updateGroupName(node.children, groupId, name);
+    const children = updateGroup(node.children, groupId, name, color);
 
     if (children === null) {
       return node;
@@ -607,6 +680,10 @@ function updateGroupName(
   });
 
   return found ? next : null;
+}
+
+function isHexColor(color: string): boolean {
+  return /^#[0-9a-f]{6}$/i.test(color);
 }
 
 function unwrapGroup(
@@ -634,6 +711,37 @@ function unwrapGroup(
     }
 
     next.push(node);
+  }
+
+  return found ? next : null;
+}
+
+function removeGroup(
+  hierarchy: readonly ClipHierarchyNode[],
+  groupId: ClipGroupId,
+): readonly ClipHierarchyNode[] | null {
+  let found = false;
+  const next: ClipHierarchyNode[] = [];
+
+  for (const node of hierarchy) {
+    if (node.kind === "group" && node.id === groupId) {
+      found = true;
+      continue;
+    }
+
+    if (node.kind !== "group") {
+      next.push(node);
+      continue;
+    }
+
+    const children = removeGroup(node.children, groupId);
+
+    if (children === null) {
+      next.push(node);
+    } else {
+      found = true;
+      next.push({ ...node, children });
+    }
   }
 
   return found ? next : null;

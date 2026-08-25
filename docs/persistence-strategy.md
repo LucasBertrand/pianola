@@ -290,15 +290,17 @@ workspaces. Les préférences propres aux périphériques d'entrée restent dans
 `UserSettings` : les raccourcis clavier sont actifs sur bureau et simplement
 ignorés, mais conservés, sur un appareil tactile.
 
-## Migrations `.pianola` v1 à v3
+## Migrations `.pianola`
 
-Le format courant utilise `schemaVersion: 3` sous l'identité
-`app.pianola.project`. Son lecteur accepte les versions 1 et 2, convertit le
-document vers la version courante et ignore les positions de playhead
-historiques. La v3 remonte `autoAdvanceEnabled` des transports de clips vers le
-document projet ; en cas d'anciennes valeurs divergentes, celle du premier clip
-visible devient la valeur globale. Les trois préférences auparavant mêlées à
-`editor` restent chargées uniquement depuis `UserSettings`.
+L’enveloppe portable utilise `schemaVersion: 3` sous l'identité
+`app.pianola.project`, tandis que le document musical embarqué utilise
+actuellement le schéma métier v5. Son lecteur convertit les anciens documents
+vers la version courante et ignore les positions de playhead historiques. La
+v3 remonte `autoAdvanceEnabled` des transports de clips vers le document projet,
+la v4 introduit la hiérarchie de groupes et la v5 ajoute leur couleur. Les
+groupes v4 reçoivent automatiquement la couleur par défaut. Les trois
+préférences auparavant mêlées à `editor` restent chargées uniquement depuis
+`UserSettings`.
 
 Le codec historique isolé sous `src/project-io/native/` applique la même
 tolérance v1/v2/v3 pour ses fixtures et exports, même s’il n’est relié ni à la

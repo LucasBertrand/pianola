@@ -46,13 +46,22 @@ export interface ProjectInspectorProps {
   readonly setToolbarHost: (element: HTMLDivElement | null) => void;
   readonly onClipSelect: (clipId: ClipId) => void;
   readonly onToggleClipPlayback: (clipId: ClipId) => void;
-  readonly onAddClip: (parentGroupId?: ClipGroupId | null) => void;
+  readonly onAddClip: (
+    parentGroupId?: ClipGroupId | null,
+    name?: string,
+  ) => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
   readonly onCreateClipGroup: (
     parentGroupId: ClipGroupId | null,
+    name?: string,
+    color?: string,
   ) => ClipGroupId | null;
-  readonly onRenameClipGroup: (groupId: ClipGroupId, name: string) => void;
+  readonly onUpdateClipGroup: (
+    groupId: ClipGroupId,
+    changes: { readonly name: string; readonly color: string },
+  ) => void;
   readonly onUngroupClips: (groupId: ClipGroupId) => void;
+  readonly onDeleteClipGroup: (groupId: ClipGroupId) => void;
   readonly onMoveClipNode: (
     node: ClipHierarchyNodeIdentity,
     targetParentGroupId: ClipGroupId | null,
@@ -99,8 +108,9 @@ export function ProjectInspector({
   onAddClip,
   onDuplicateClip,
   onCreateClipGroup,
-  onRenameClipGroup,
+  onUpdateClipGroup,
   onUngroupClips,
+  onDeleteClipGroup,
   onMoveClipNode,
   onSelectClipNotes,
   onEditClip,
@@ -369,8 +379,9 @@ export function ProjectInspector({
           onAdd={onAddClip}
           onDuplicate={onDuplicateClip}
           onCreateGroup={onCreateClipGroup}
-          onRenameGroup={onRenameClipGroup}
+          onUpdateGroup={onUpdateClipGroup}
           onUngroup={onUngroupClips}
+          onDeleteGroup={onDeleteClipGroup}
           onMoveNode={onMoveClipNode}
           onSelectNotes={onSelectClipNotes}
           onEdit={onEditClip}

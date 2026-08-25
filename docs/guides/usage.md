@@ -47,12 +47,20 @@ lecture. Le bouton Play d’une carte lance immédiatement ce clip ; cliquer dan
 la grille déplace l’unique playhead dans le clip affiché et repositionne aussi
 la lecture en cours.
 
-L’inspecteur permet de créer des groupes de clips imbriqués. Un groupe peut être
-replié, renommé, dégroupé ou recevoir directement un clip ou un sous-groupe.
-La poignée déplace les clips et groupes à la souris ou au toucher ; au clavier,
-Haut/Bas change la position, Droite entre dans le groupe précédent et Gauche
-sort du groupe courant. Les groupes organisent le document sans interrompre
-l’enchaînement : la lecture suit les clips dans l’ordre visible, en profondeur.
+L’inspecteur permet de créer des groupes de clips imbriqués. Les boutons
+Ajouter un clip et Ajouter un groupe ouvrent une fenêtre où choisir le nom et
+le groupe parent ; un groupe possède également sa propre couleur. Le bouton de
+réglages permet de modifier le nom et la couleur. Supprimer un groupe ouvre une
+confirmation permettant soit de conserver ses clips en les remontant dans le
+parent, soit de supprimer tous ses clips et sous-groupes. Le bouton Play d’un
+groupe lance son premier clip descendant et reste actif pendant l’enchaînement
+de tous ses descendants. La poignée déplace les clips
+et groupes à la souris ou au toucher : une ligne haute ou basse indique une
+insertion avant ou après, tandis que la carte surlignée indique une insertion
+dans le groupe. Au clavier, Haut/Bas change la position, Droite entre dans le
+groupe précédent et Gauche sort du groupe courant. Les groupes organisent le
+document sans interrompre l’enchaînement : la lecture suit les clips dans
+l’ordre visible, en profondeur.
 
 ## Transport, timeline et viewport
 

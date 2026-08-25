@@ -59,10 +59,12 @@ describe("clip playback sequence", () => {
         kind: "group" as const,
         id: "group-song",
         name: "Song",
+        color: "#79a7ff",
         children: [{
           kind: "group" as const,
           id: "group-section",
           name: "Section",
+          color: "#a77bf3",
           children: [
             { kind: "clip" as const, clipId: TEST_CLIP_ID },
             { kind: "clip" as const, clipId: NEXT_CLIP_ID },

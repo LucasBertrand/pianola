@@ -136,17 +136,29 @@ export interface CreateClipGroupCommand {
   readonly type: "CreateClipGroup";
   readonly groupId: ClipGroupId;
   readonly name: string;
+  readonly color: string;
   readonly parentGroupId: ClipGroupId | null;
   readonly index: number;
 }
 
-export interface RenameClipGroupCommand {
-  readonly type: "RenameClipGroup";
+export interface UpdateClipGroupChanges {
+  readonly name?: string;
+  readonly color?: string;
+}
+
+export interface UpdateClipGroupCommand {
+  readonly type: "UpdateClipGroup";
   readonly groupId: ClipGroupId;
-  readonly name: string;
+  readonly changes: UpdateClipGroupChanges;
 }
 
 /** Removes a group while preserving its children at the same location. */
+export interface UngroupClipGroupCommand {
+  readonly type: "UngroupClipGroup";
+  readonly groupId: ClipGroupId;
+}
+
+/** Deletes a group, all nested groups, and all descendant clips. */
 export interface DeleteClipGroupCommand {
   readonly type: "DeleteClipGroup";
   readonly groupId: ClipGroupId;
@@ -390,7 +402,8 @@ export type PianoRollCommand =
   | DeleteClipCommand
   | ReorderClipsCommand
   | CreateClipGroupCommand
-  | RenameClipGroupCommand
+  | UpdateClipGroupCommand
+  | UngroupClipGroupCommand
   | DeleteClipGroupCommand
   | MoveClipHierarchyNodeCommand
   | RenameClipCommand

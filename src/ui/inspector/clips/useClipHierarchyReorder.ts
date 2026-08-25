@@ -11,6 +11,11 @@ import type {
 } from "../../../domain/identifiers";
 
 const NODE_SELECTOR = "[data-clip-hierarchy-node]";
+const TARGET_CLASSES = [
+  "is-reorder-target-before",
+  "is-reorder-target-after",
+  "is-drop-inside",
+] as const;
 
 export interface ClipHierarchyMoveTarget {
   readonly parentGroupId: ClipGroupId | null;
@@ -67,9 +72,9 @@ export function useClipHierarchyReorder(
       const list = sourceNode.closest(".clip-list");
 
       list?.querySelectorAll(
-        ".is-reorder-target, .is-drop-inside",
+        TARGET_CLASSES.map((className) => `.${className}`).join(", "),
       ).forEach((element) => {
-        element.classList.remove("is-reorder-target", "is-drop-inside");
+        element.classList.remove(...TARGET_CLASSES);
       });
     };
 
@@ -107,28 +112,45 @@ export function useClipHierarchyReorder(
           > targetNode.getBoundingClientRect().left + 36;
 
       if (isInside) {
-        target = {
-          parentGroupId: targetNode.dataset["nodeId"] ?? null,
-          index: Number(targetNode.dataset["childCount"] ?? 0),
-        };
+        const targetParentGroupId = targetNode.dataset["nodeId"] ?? null;
+        const childCount = Number(targetNode.dataset["childCount"] ?? 0);
+        target = normalizeDropTarget(
+          sourceParentId,
+          sourceIndex,
+          targetParentGroupId,
+          childCount,
+        );
+
+        if (isNoopTarget(target, sourceParentId, sourceIndex)) {
+          target = null;
+          return;
+        }
+
         targetNode.classList.add("is-drop-inside");
         return;
       }
 
       const targetParentId = readParentId(targetNode);
-      const rect = targetNode.getBoundingClientRect();
-      let insertionIndex = targetIndex
-        + (pointerEvent.clientY >= rect.top + rect.height / 2 ? 1 : 0);
+      const edgeElement = isGroup && groupHeader !== null && groupHeader !== undefined
+        ? groupHeader
+        : targetNode;
+      const rect = edgeElement.getBoundingClientRect();
+      const placement = pointerEvent.clientY >= rect.top + rect.height / 2
+        ? "after"
+        : "before";
+      target = normalizeDropTarget(
+        sourceParentId,
+        sourceIndex,
+        targetParentId,
+        targetIndex + (placement === "after" ? 1 : 0),
+      );
 
-      if (targetParentId === sourceParentId && sourceIndex < insertionIndex) {
-        insertionIndex -= 1;
+      if (isNoopTarget(target, sourceParentId, sourceIndex)) {
+        target = null;
+        return;
       }
 
-      target = {
-        parentGroupId: targetParentId,
-        index: insertionIndex,
-      };
-      targetNode.classList.add("is-reorder-target");
+      targetNode.classList.add(`is-reorder-target-${placement}`);
     };
 
     const cleanup = (): void => {
@@ -176,4 +198,28 @@ function readIndex(element: HTMLElement): number | null {
 function readParentId(element: HTMLElement): ClipGroupId | null {
   const value = element.dataset["parentGroupId"];
   return value === undefined || value.length === 0 ? null : value;
+}
+
+/** Converts a DOM index into the insertion index after removing the source. */
+export function normalizeDropTarget(
+  sourceParentGroupId: ClipGroupId | null,
+  sourceIndex: number,
+  targetParentGroupId: ClipGroupId | null,
+  targetIndexBeforeRemoval: number,
+): ClipHierarchyMoveTarget {
+  const targetIndex = targetParentGroupId === sourceParentGroupId
+    && sourceIndex < targetIndexBeforeRemoval
+    ? targetIndexBeforeRemoval - 1
+    : targetIndexBeforeRemoval;
+
+  return { parentGroupId: targetParentGroupId, index: targetIndex };
+}
+
+function isNoopTarget(
+  target: ClipHierarchyMoveTarget,
+  sourceParentGroupId: ClipGroupId | null,
+  sourceIndex: number,
+): boolean {
+  return target.parentGroupId === sourceParentGroupId
+    && target.index === sourceIndex;
 }

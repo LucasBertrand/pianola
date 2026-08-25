@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { MAXIMUM_PROJECT_CLIP_COUNT, type Clip } from "../../../domain/clips/clip";
 import {
   countDescendantClips,
+  DEFAULT_CLIP_GROUP_COLOR,
   findClipHierarchyNodeLocation,
   getClipPlaybackOrder,
   MAXIMUM_CLIP_GROUP_COUNT,
-  MAXIMUM_CLIP_GROUP_NAME_LENGTH,
+  MAXIMUM_CLIP_GROUP_DEPTH,
   type ClipHierarchyGroupNode,
   type ClipHierarchyNode,
   type ClipHierarchyNodeIdentity,
@@ -14,7 +15,15 @@ import type { ClipGroupId, ClipId } from "../../../domain/identifiers";
 import type { ProjectState } from "../../../domain/project/project-document";
 import type { ReadonlyRenderSignal } from "../../../editor/model/render-signal";
 import type { PlayheadPosition } from "../../../editor/model/playhead-position";
+import { RENDERING_CONSTANTS } from "../../../config/rendering-config";
+import {
+  ClipGroupDeleteDialog,
+  ClipGroupEditorDialog,
+  ClipHierarchyCreateDialog,
+  type ClipParentOption,
+} from "../../dialogs/ClipHierarchyDialog";
 import { resolveClipPlayheadVisual } from "./clip-playhead-visual";
+import { resolveClipGroupPlaybackAction } from "./clip-group-playback";
 import { useClipHierarchyReorder } from "./useClipHierarchyReorder";
 
 export interface ClipInspectorProps {
@@ -24,11 +33,22 @@ export interface ClipInspectorProps {
   readonly suppressSelectionHighlight: boolean;
   readonly onSelect: (clipId: ClipId) => void;
   readonly onTogglePlayback: (clipId: ClipId) => void;
-  readonly onAdd: (parentGroupId?: ClipGroupId | null) => void;
+  readonly onAdd: (
+    parentGroupId?: ClipGroupId | null,
+    name?: string,
+  ) => void;
   readonly onDuplicate: (clipId: ClipId) => void;
-  readonly onCreateGroup: (parentGroupId: ClipGroupId | null) => ClipGroupId | null;
-  readonly onRenameGroup: (groupId: ClipGroupId, name: string) => void;
+  readonly onCreateGroup: (
+    parentGroupId: ClipGroupId | null,
+    name?: string,
+    color?: string,
+  ) => ClipGroupId | null;
+  readonly onUpdateGroup: (
+    groupId: ClipGroupId,
+    changes: { readonly name: string; readonly color: string },
+  ) => void;
   readonly onUngroup: (groupId: ClipGroupId) => void;
+  readonly onDeleteGroup: (groupId: ClipGroupId) => void;
   readonly onMoveNode: (
     node: ClipHierarchyNodeIdentity,
     targetParentGroupId: ClipGroupId | null,
@@ -38,33 +58,47 @@ export interface ClipInspectorProps {
   readonly onEdit: (clipId: ClipId) => void;
 }
 
-interface GroupNameDraft {
-  readonly groupId: ClipGroupId;
-  readonly name: string;
+type HierarchyDialogDraft =
+  | {
+      readonly mode: "create-clip" | "create-group";
+      readonly parentGroupId: ClipGroupId | null;
+      readonly name: string;
+      readonly color: string;
+    }
+  | {
+      readonly mode: "edit-group";
+      readonly groupId: ClipGroupId;
+      readonly name: string;
+      readonly color: string;
+      readonly descendantClipCount: number;
+    }
+  | {
+      readonly mode: "delete-group";
+      readonly groupId: ClipGroupId;
+      readonly name: string;
+      readonly color: string;
+      readonly descendantClipCount: number;
+      readonly canDeleteClips: boolean;
+    };
+
+interface GroupParentEntry {
+  readonly id: ClipGroupId;
+  readonly path: string;
+  readonly depth: number;
 }
 
 export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<ClipGroupId>>(
     () => new Set(),
   );
-  const [groupNameDraft, setGroupNameDraft] = useState<GroupNameDraft | null>(null);
+  const [dialogDraft, setDialogDraft] = useState<HierarchyDialogDraft | null>(null);
   const clipOrder = getClipPlaybackOrder(props.projectState.clipHierarchy);
   const groupCount = countGroups(props.projectState.clipHierarchy);
+  const nextGroupColor = RENDERING_CONSTANTS.userInstrumentColors[
+    groupCount % RENDERING_CONSTANTS.userInstrumentColors.length
+  ] ?? DEFAULT_CLIP_GROUP_COLOR;
   const reorder = useClipHierarchyReorder(props.onMoveNode);
-
-  const createGroup = (parentGroupId: ClipGroupId | null): void => {
-    const groupId = props.onCreateGroup(parentGroupId);
-
-    if (groupId === null) {
-      return;
-    }
-
-    if (parentGroupId !== null) {
-      setCollapsedGroupIds((current) => withoutId(current, parentGroupId));
-    }
-
-    setGroupNameDraft({ groupId, name: "New group" });
-  };
+  const parentEntries = collectGroupParentEntries(props.projectState.clipHierarchy);
 
   const moveByKeyboard = (
     identity: ClipHierarchyNodeIdentity,
@@ -114,34 +148,23 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
     parentGroupId: null,
     projectState: props.projectState,
     clipCount: clipOrder.length,
-    groupCount,
     playingClipId: props.playingClipId,
     playheadPosition: props.playheadPosition,
     suppressSelectionHighlight: props.suppressSelectionHighlight,
     collapsedGroupIds,
-    groupNameDraft,
     reorder,
     onToggleGroup(groupId): void {
       setCollapsedGroupIds((current) => toggleId(current, groupId));
     },
-    onBeginRename(group): void {
-      setGroupNameDraft({ groupId: group.id, name: group.name });
+    onEditGroup(group): void {
+      setDialogDraft({
+        mode: "edit-group",
+        groupId: group.id,
+        name: group.name,
+        color: group.color,
+        descendantClipCount: countDescendantClips(group),
+      });
     },
-    onDraftNameChange(name): void {
-      setGroupNameDraft((current) => current === null ? null : { ...current, name });
-    },
-    onCommitRename(): void {
-      if (groupNameDraft !== null && groupNameDraft.name.trim().length > 0) {
-        props.onRenameGroup(groupNameDraft.groupId, groupNameDraft.name.trim());
-      }
-      setGroupNameDraft(null);
-    },
-    onCancelRename(): void {
-      setGroupNameDraft(null);
-    },
-    onAdd: props.onAdd,
-    onCreateGroup: createGroup,
-    onUngroup: props.onUngroup,
     onMoveByKeyboard: moveByKeyboard,
     onSelect: props.onSelect,
     onTogglePlayback: props.onTogglePlayback,
@@ -158,15 +181,117 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
           <AddHierarchyButton
             label="Add clip"
             disabled={clipOrder.length >= MAXIMUM_PROJECT_CLIP_COUNT}
-            onClick={() => props.onAdd(null)}
+            onClick={() => setDialogDraft({
+              mode: "create-clip",
+              parentGroupId: null,
+              name: `Clip ${clipOrder.length + 1}`,
+              color: DEFAULT_CLIP_GROUP_COLOR,
+            })}
           />
           <AddHierarchyButton
             label="Add group"
             disabled={groupCount >= MAXIMUM_CLIP_GROUP_COUNT}
-            onClick={() => createGroup(null)}
+            onClick={() => setDialogDraft({
+              mode: "create-group",
+              parentGroupId: null,
+              name: "New group",
+              color: nextGroupColor,
+            })}
           />
         </div>
       </div>
+      {dialogDraft === null ? null : dialogDraft.mode === "delete-group" ? (
+        <ClipGroupDeleteDialog
+          groupName={dialogDraft.name}
+          descendantClipCount={dialogDraft.descendantClipCount}
+          canDeleteClips={dialogDraft.canDeleteClips}
+          onKeepClips={() => {
+            props.onUngroup(dialogDraft.groupId);
+            setDialogDraft(null);
+          }}
+          onDeleteClips={() => {
+            props.onDeleteGroup(dialogDraft.groupId);
+            setDialogDraft(null);
+          }}
+          onCancel={() => setDialogDraft(null)}
+        />
+      ) : dialogDraft.mode === "edit-group" ? (
+        <ClipGroupEditorDialog
+          name={dialogDraft.name}
+          color={dialogDraft.color}
+          onNameChange={(name) => setDialogDraft((current) => current?.mode === "edit-group"
+            ? { ...current, name }
+            : current)}
+          onColorChange={(color) => setDialogDraft((current) => current?.mode === "edit-group"
+            ? { ...current, color }
+            : current)}
+          onConfirm={() => {
+            if (dialogDraft.name.trim().length === 0) return;
+            props.onUpdateGroup(dialogDraft.groupId, {
+              name: dialogDraft.name.trim(),
+              color: dialogDraft.color,
+            });
+            setDialogDraft(null);
+          }}
+          onDelete={() => setDialogDraft({
+            mode: "delete-group",
+            groupId: dialogDraft.groupId,
+            name: dialogDraft.name,
+            color: dialogDraft.color,
+            descendantClipCount: dialogDraft.descendantClipCount,
+            canDeleteClips: dialogDraft.descendantClipCount < clipOrder.length,
+          })}
+          onCancel={() => setDialogDraft(null)}
+        />
+      ) : (
+        <ClipHierarchyCreateDialog
+          kind={dialogDraft.mode === "create-clip" ? "clip" : "group"}
+          name={dialogDraft.name}
+          color={dialogDraft.color}
+          parentGroupId={dialogDraft.parentGroupId}
+          parentOptions={createParentOptions(
+            parentEntries,
+            dialogDraft.mode === "create-group",
+          )}
+          onNameChange={(name) => setDialogDraft((current) =>
+            current !== null
+              && current.mode !== "edit-group"
+              && current.mode !== "delete-group"
+              ? { ...current, name }
+              : current)}
+          onColorChange={(color) => setDialogDraft((current) =>
+            current?.mode === "create-group"
+              ? { ...current, color }
+              : current)}
+          onParentChange={(parentGroupId) => setDialogDraft((current) =>
+            current !== null
+              && current.mode !== "edit-group"
+              && current.mode !== "delete-group"
+              ? { ...current, parentGroupId }
+              : current)}
+          onConfirm={() => {
+            const name = dialogDraft.name.trim();
+            if (name.length === 0) return;
+
+            if (dialogDraft.mode === "create-clip") {
+              props.onAdd(dialogDraft.parentGroupId, name);
+            } else if (props.onCreateGroup(
+              dialogDraft.parentGroupId,
+              name,
+              dialogDraft.color,
+            ) === null) {
+              return;
+            }
+
+            const parentGroupId = dialogDraft.parentGroupId;
+            if (parentGroupId !== null) {
+              setCollapsedGroupIds((current) => withoutId(current, parentGroupId));
+            }
+            setDialogDraft(null);
+          }}
+          onCancel={() => setDialogDraft(null)}
+        />
+      )}
     </section>
   );
 }
@@ -176,21 +301,13 @@ interface HierarchyListProps {
   readonly parentGroupId: ClipGroupId | null;
   readonly projectState: ProjectState;
   readonly clipCount: number;
-  readonly groupCount: number;
   readonly playingClipId: ClipId | null;
   readonly playheadPosition: ReadonlyRenderSignal<PlayheadPosition>;
   readonly suppressSelectionHighlight: boolean;
   readonly collapsedGroupIds: ReadonlySet<ClipGroupId>;
-  readonly groupNameDraft: GroupNameDraft | null;
   readonly reorder: ReturnType<typeof useClipHierarchyReorder>;
   readonly onToggleGroup: (groupId: ClipGroupId) => void;
-  readonly onBeginRename: (group: ClipHierarchyGroupNode) => void;
-  readonly onDraftNameChange: (name: string) => void;
-  readonly onCommitRename: () => void;
-  readonly onCancelRename: () => void;
-  readonly onAdd: (parentGroupId?: ClipGroupId | null) => void;
-  readonly onCreateGroup: (parentGroupId: ClipGroupId | null) => void;
-  readonly onUngroup: (groupId: ClipGroupId) => void;
+  readonly onEditGroup: (group: ClipHierarchyGroupNode) => void;
   readonly onMoveByKeyboard: (
     identity: ClipHierarchyNodeIdentity,
     parentGroupId: ClipGroupId | null,
@@ -239,7 +356,11 @@ function ClipGroupNode({
   readonly index: number;
 }): React.JSX.Element {
   const collapsed = props.collapsedGroupIds.has(group.id);
-  const editing = props.groupNameDraft?.groupId === group.id;
+  const descendantClipIds = getClipPlaybackOrder(group.children);
+  const playback = resolveClipGroupPlaybackAction(
+    descendantClipIds,
+    props.playingClipId,
+  );
   const identity = { kind: "group", groupId: group.id } as const;
 
   return (
@@ -247,6 +368,7 @@ function ClipGroupNode({
       className="clip-hierarchy-node clip-group"
       role="treeitem"
       aria-expanded={!collapsed}
+      style={{ "--group-color": group.color } as React.CSSProperties}
       data-clip-hierarchy-node=""
       data-node-kind="group"
       data-node-id={group.id}
@@ -276,48 +398,27 @@ function ClipGroupNode({
             <path d={collapsed ? "m7 4 6 6-6 6" : "m4 7 6 6 6-6"} />
           </svg>
         </button>
-        {editing ? (
-          <form
-            className="clip-group-name-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              props.onCommitRename();
+        <div className="clip-group-name">
+          <strong>{group.name}</strong>
+          <small>{countDescendantClips(group)} clips</small>
+        </div>
+        <div className="clip-group-actions">
+          <GroupAction label="Edit group" onClick={() => props.onEditGroup(group)}>
+            <SettingsIcon />
+          </GroupAction>
+          <GroupAction
+            label={playback.active ? `Stop ${group.name}` : `Play ${group.name}`}
+            disabled={playback.targetClipId === null}
+            active={playback.active}
+            toggle
+            onClick={() => {
+              if (playback.targetClipId !== null) {
+                props.onTogglePlayback(playback.targetClipId);
+              }
             }}
           >
-            <input
-              autoFocus
-              value={props.groupNameDraft?.name ?? ""}
-              maxLength={MAXIMUM_CLIP_GROUP_NAME_LENGTH}
-              aria-label="Group name"
-              onChange={(event) => props.onDraftNameChange(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  props.onCancelRename();
-                }
-              }}
-            />
-          </form>
-        ) : (
-          <button
-            className="clip-group-name"
-            type="button"
-            title="Double-click to rename"
-            onDoubleClick={() => props.onBeginRename(group)}
-          >
-            <strong>{group.name}</strong>
-            <small>{countDescendantClips(group)} clips</small>
-          </button>
-        )}
-        <div className="clip-group-actions">
-          <GroupAction label="Add clip" onClick={() => props.onAdd(group.id)}>+</GroupAction>
-          <GroupAction
-            label="Add nested group"
-            disabled={props.groupCount >= MAXIMUM_CLIP_GROUP_COUNT}
-            onClick={() => props.onCreateGroup(group.id)}
-          >G+</GroupAction>
-          <GroupAction label="Rename group" onClick={() => props.onBeginRename(group)}>✎</GroupAction>
-          <GroupAction label="Ungroup" onClick={() => props.onUngroup(group.id)}>⌁</GroupAction>
+            <PlayIcon playing={playback.active} />
+          </GroupAction>
         </div>
       </div>
       {collapsed ? null : (
@@ -510,15 +611,50 @@ function MoveHandle({
 function GroupAction({
   label,
   disabled = false,
+  active = false,
+  toggle = false,
   onClick,
   children,
 }: {
   readonly label: string;
   readonly disabled?: boolean;
+  readonly active?: boolean;
+  readonly toggle?: boolean;
   readonly onClick: () => void;
   readonly children: React.ReactNode;
 }): React.JSX.Element {
-  return <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick}>{children}</button>;
+  return (
+    <button
+      className={active ? "is-active" : undefined}
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={toggle ? active : undefined}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SettingsIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="10" cy="10" r="3" />
+      <path d="M8.3 2.5h3.4l.5 2a6 6 0 0 1 1.3.8l2-.6 1.7 3-1.5 1.4a6 6 0 0 1 0 1.8l1.5 1.4-1.7 3-2-.6a6 6 0 0 1-1.3.8l-.5 2H8.3l-.5-2a6 6 0 0 1-1.3-.8l-2 .6-1.7-3 1.5-1.4a6 6 0 0 1 0-1.8L2.8 7.7l1.7-3 2 .6a6 6 0 0 1 1.3-.8Z" />
+    </svg>
+  );
+}
+
+function PlayIcon({ playing }: { readonly playing: boolean }): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      {playing
+        ? <rect x="6" y="6" width="8" height="8" rx="1" />
+        : <path d="M7 5.5v9l7-4.5Z" />}
+    </svg>
+  );
 }
 
 function AddHierarchyButton({
@@ -543,6 +679,36 @@ function countGroups(nodes: readonly ClipHierarchyNode[]): number {
     (count, node) => count + (node.kind === "group" ? 1 + countGroups(node.children) : 0),
     0,
   );
+}
+
+function collectGroupParentEntries(
+  nodes: readonly ClipHierarchyNode[],
+  parentPath = "",
+  depth = 1,
+): readonly GroupParentEntry[] {
+  const entries: GroupParentEntry[] = [];
+
+  for (const node of nodes) {
+    if (node.kind !== "group") continue;
+
+    const path = parentPath.length === 0 ? node.name : `${parentPath} / ${node.name}`;
+    entries.push({ id: node.id, path, depth });
+    entries.push(...collectGroupParentEntries(node.children, path, depth + 1));
+  }
+
+  return entries;
+}
+
+function createParentOptions(
+  entries: readonly GroupParentEntry[],
+  creatingGroup: boolean,
+): readonly ClipParentOption[] {
+  return [
+    { id: null, label: "Project root" },
+    ...entries
+      .filter((entry) => !creatingGroup || entry.depth < MAXIMUM_CLIP_GROUP_DEPTH)
+      .map((entry) => ({ id: entry.id, label: entry.path })),
+  ];
 }
 
 function withoutId(

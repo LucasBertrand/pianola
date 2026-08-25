@@ -11,6 +11,8 @@ export const MAXIMUM_CLIP_GROUP_COUNT =
   PROJECT_CONSTANTS.maximumClipGroupCount;
 export const MAXIMUM_CLIP_GROUP_DEPTH =
   PROJECT_CONSTANTS.maximumClipGroupDepth;
+export const DEFAULT_CLIP_GROUP_COLOR =
+  PROJECT_CONSTANTS.defaultClipGroupColor;
 
 export interface ClipHierarchyClipNode {
   readonly kind: "clip";
@@ -21,6 +23,7 @@ export interface ClipHierarchyGroupNode {
   readonly kind: "group";
   readonly id: ClipGroupId;
   readonly name: string;
+  readonly color: string;
   readonly children: readonly ClipHierarchyNode[];
 }
 
@@ -171,6 +174,24 @@ export function countDescendantClips(node: ClipHierarchyNode): number {
       );
 }
 
+export function getFirstDescendantClipId(
+  node: ClipHierarchyNode,
+): ClipId | null {
+  if (node.kind === "clip") {
+    return node.clipId;
+  }
+
+  for (const child of node.children) {
+    const clipId = getFirstDescendantClipId(child);
+
+    if (clipId !== null) {
+      return clipId;
+    }
+  }
+
+  return null;
+}
+
 function collectClipIds(node: ClipHierarchyNode, clipIds: ClipId[]): void {
   if (node.kind === "clip") {
     clipIds.push(node.clipId);
@@ -207,6 +228,7 @@ function validateNode(
     || groupIds.has(node.id)
     || node.name.trim().length === 0
     || node.name.length > MAXIMUM_CLIP_GROUP_NAME_LENGTH
+    || !/^#[0-9a-f]{6}$/i.test(node.color)
     || !Array.isArray(node.children)
   ) {
     throw new Error("Clip hierarchy contains an invalid group.");

@@ -620,8 +620,9 @@ export function PianoRollWorkspace({
     add: handleAddClip,
     duplicate: handleDuplicateClip,
     createGroup: handleCreateClipGroup,
-    renameGroup: handleRenameClipGroup,
+    updateGroup: handleUpdateClipGroup,
     ungroup: handleUngroupClips,
+    deleteGroup: handleDeleteClipGroup,
     moveNode: handleMoveClipNode,
     remove: handleDeleteClip,
     update: handleUpdateClip,
@@ -1071,8 +1072,9 @@ export function PianoRollWorkspace({
           onAddClip={handleAddClip}
           onDuplicateClip={handleDuplicateClip}
           onCreateClipGroup={handleCreateClipGroup}
-          onRenameClipGroup={handleRenameClipGroup}
+          onUpdateClipGroup={handleUpdateClipGroup}
           onUngroupClips={handleUngroupClips}
+          onDeleteClipGroup={handleDeleteClipGroup}
           onMoveClipNode={handleMoveClipNode}
           onSelectClipNotes={handleSelectClipNotes}
           onEditClip={clipDialog.openEdit}

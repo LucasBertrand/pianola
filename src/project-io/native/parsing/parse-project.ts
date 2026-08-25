@@ -103,7 +103,11 @@ export function parseProjectSnapshot(
     `${path}.masterBus`,
   );
   const clipHierarchy: readonly ClipHierarchyNode[] = schemaVersion >= 4
-    ? parseClipHierarchy(project["clipHierarchy"], `${path}.clipHierarchy`)
+    ? parseClipHierarchy(
+        project["clipHierarchy"],
+        `${path}.clipHierarchy`,
+        schemaVersion,
+      )
     : createFlatClipHierarchy(parseClipOrder(
         project["clipOrder"],
         `${path}.clipOrder`,

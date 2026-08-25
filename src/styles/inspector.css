@@ -140,10 +140,15 @@
 }
 
 .clip-group {
+  --group-color: var(--color-accent-primary);
   padding: 5px;
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--group-color) 42%, var(--color-border));
   border-radius: 10px;
-  background: color-mix(in srgb, var(--color-surface-panel) 76%, transparent);
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--group-color) 12%, transparent),
+      transparent 46%),
+    color-mix(in srgb, var(--color-surface-panel) 76%, transparent);
 }
 
 .clip-group-header {
@@ -183,8 +188,6 @@
   display: grid;
   min-width: 0;
   padding: 3px 5px;
-  border: 0;
-  background: transparent;
   color: var(--color-text-primary);
   text-align: left;
 }
@@ -205,36 +208,34 @@
   font-size: 8px;
 }
 
-.clip-group-name-form,
-.clip-group-name-form input {
-  min-width: 0;
-  width: 100%;
-}
-
-.clip-group-name-form input {
-  height: 28px;
-  padding: 0 7px;
-  border: 1px solid var(--color-border-control);
-  border-radius: 6px;
-  background: var(--color-surface-control);
-  color: var(--color-text-primary);
-  font-size: 11px;
-}
-
 .clip-group-actions {
   display: flex;
-  gap: 2px;
+  gap: 6px;
 }
 
 .clip-group-actions button {
-  min-width: 25px;
-  height: 26px;
-  padding: 0 5px;
-  border: 1px solid transparent;
+  display: grid;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-border-control);
   border-radius: 6px;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 9px;
+  background: var(--color-surface-deep);
+  color: var(--color-text-quiet);
+  cursor: pointer;
+  place-items: center;
+}
+
+.clip-group-actions button svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
 }
 
 .clip-group-actions button:active:not(:disabled),
@@ -246,6 +247,17 @@
 
 .clip-group-actions button:disabled {
   opacity: 0.3;
+}
+
+.clip-group-actions button.is-active {
+  border-color: var(--group-color);
+  background: color-mix(in srgb, var(--group-color) 20%, transparent);
+  color: var(--group-color);
+}
+
+.clip-group-actions button:last-child svg {
+  fill: currentColor;
+  stroke: none;
 }
 
 .clip-group-children {
@@ -274,8 +286,12 @@
   opacity: 0.56;
 }
 
-.clip-hierarchy-node.is-reorder-target {
+.clip-hierarchy-node.is-reorder-target-before {
   box-shadow: 0 -2px 0 var(--color-accent-primary-bright);
+}
+
+.clip-hierarchy-node.is-reorder-target-after {
+  box-shadow: 0 2px 0 var(--color-accent-primary-bright);
 }
 
 .clip-group.is-drop-inside {
