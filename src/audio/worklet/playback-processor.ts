@@ -92,10 +92,20 @@ class PlaybackProcessor extends AudioWorkletProcessor {
           message.transport,
           message.sequence,
         );
+        this.port.postMessage({
+          type: "queued-timeline-state",
+          operation: message.operation,
+          sequence: message.sequence,
+        });
         break;
 
       case "clear-queued-timeline":
         this.engine.clearQueuedTimeline();
+        this.port.postMessage({
+          type: "queued-timeline-state",
+          operation: message.operation,
+          sequence: null,
+        });
         break;
 
       case "play":

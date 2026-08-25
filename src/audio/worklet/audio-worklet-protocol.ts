@@ -55,8 +55,12 @@ export type MainToAudioWorkletMessage =
       readonly timeline: AudioWorkletTimeline;
       readonly transport: TransportState;
       readonly sequence: number;
+      readonly operation: number;
     }
-  | { readonly type: "clear-queued-timeline" }
+  | {
+      readonly type: "clear-queued-timeline";
+      readonly operation: number;
+    }
   | {
       readonly type: "play";
       readonly tick: Tick;
@@ -100,4 +104,9 @@ export type AudioWorkletToMainMessage =
   | {
       readonly type: "processor-error";
       readonly message: string;
+    }
+  | {
+      readonly type: "queued-timeline-state";
+      readonly operation: number;
+      readonly sequence: number | null;
     };

@@ -62,8 +62,10 @@ export class AudioWorkletTransport implements AudioTransportController {
   private desiredStatus: PlaybackStatus = "stopped";
   private positionTick: Tick;
   private operationSequence = 0;
+  private queueOperationSequence = 0;
   private timelineSequence = 1;
   private nextTimelineSequence = 1;
+  private pendingPositionAcknowledgement: PlaybackStatus | null = null;
   private disposed = false;
 
   public constructor(
@@ -108,6 +110,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.queuedTransport = null;
     this.queuedSequence = null;
     this.pendingTimelines.clear();
+    this.queueOperationSequence += 1;
 
     if (positionTickOverride !== undefined) {
       this.positionTick = clampPlaybackTick(
@@ -138,14 +141,18 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.assertUsable();
     assertCompatiblePlaybackState(snapshot, transport);
     const sequence = ++this.nextTimelineSequence;
+    const operation = ++this.queueOperationSequence;
 
     this.queuedSnapshot = snapshot;
     this.queuedTransport = transport;
     this.queuedSequence = sequence;
+    if (this.node === null) {
+      this.pendingTimelines.clear();
+    }
     this.pendingTimelines.set(sequence, { snapshot, transport });
 
     if (this.node !== null) {
-      this.postQueuedTimeline(snapshot, transport, sequence);
+      this.postQueuedTimeline(snapshot, transport, sequence, operation);
     }
   }
 
@@ -154,7 +161,13 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.queuedSnapshot = null;
     this.queuedTransport = null;
     this.queuedSequence = null;
-    this.post({ type: "clear-queued-timeline" });
+    const operation = ++this.queueOperationSequence;
+
+    if (this.node === null) {
+      this.pendingTimelines.clear();
+    } else {
+      this.post({ type: "clear-queued-timeline", operation });
+    }
   }
 
   public replaceInstrumentPreview(
@@ -184,6 +197,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     }
 
     this.operationSequence += 1;
+    this.pendingPositionAcknowledgement = null;
     const operation = this.operationSequence;
     this.positionTick = resolvePlaybackStartTick(
       startTick,
@@ -221,6 +235,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.assertUsable();
     this.operationSequence += 1;
     this.desiredStatus = "paused";
+    this.pendingPositionAcknowledgement = "paused";
     this.post({ type: "pause" });
     this.setStatus("paused");
   }
@@ -229,6 +244,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.assertUsable();
     this.operationSequence += 1;
     this.desiredStatus = "stopped";
+    this.pendingPositionAcknowledgement = "stopped";
     this.post({ type: "stop" });
     this.setStatus("stopped");
   }
@@ -367,6 +383,7 @@ export class AudioWorkletTransport implements AudioTransportController {
         this.queuedSnapshot,
         this.queuedTransport,
         this.queuedSequence,
+        this.queueOperationSequence,
       );
     }
 
@@ -395,6 +412,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     snapshot: PlaybackSnapshot,
     transport: TransportState,
     sequence: number,
+    operation: number,
   ): void {
     const { timeline, transfers } =
       createTransferableAudioWorkletTimeline(snapshot);
@@ -404,6 +422,7 @@ export class AudioWorkletTransport implements AudioTransportController {
       timeline,
       transport: cloneTransport(transport),
       sequence,
+      operation,
     } satisfies MainToAudioWorkletMessage, transfers);
   }
 
@@ -418,6 +437,11 @@ export class AudioWorkletTransport implements AudioTransportController {
 
     if (message.type === "processor-error") {
       this.handleProcessorFailure(new Error(message.message));
+      return;
+    }
+
+    if (message.type === "queued-timeline-state") {
+      this.handleQueuedTimelineState(message.operation, message.sequence);
       return;
     }
 
@@ -455,6 +479,13 @@ export class AudioWorkletTransport implements AudioTransportController {
       message.tick,
       this.snapshot.durationTicks,
     );
+    const acknowledgesPosition =
+      this.pendingPositionAcknowledgement === message.status
+      && message.status === this.desiredStatus;
+
+    if (acknowledgesPosition) {
+      this.pendingPositionAcknowledgement = null;
+    }
 
     if (
       message.status === "stopped"
@@ -469,8 +500,26 @@ export class AudioWorkletTransport implements AudioTransportController {
       && message.status !== this.currentStatus
     ) {
       this.setStatus(message.status);
-    } else if (sourceChanged && message.status === this.currentStatus) {
+    } else if (
+      message.status === this.currentStatus
+      && (sourceChanged || acknowledgesPosition)
+    ) {
       this.emitStatus();
+    }
+  }
+
+  private handleQueuedTimelineState(
+    operation: number,
+    queuedSequence: number | null,
+  ): void {
+    if (operation !== this.queueOperationSequence) {
+      return;
+    }
+
+    for (const sequence of this.pendingTimelines.keys()) {
+      if (sequence !== queuedSequence) {
+        this.pendingTimelines.delete(sequence);
+      }
     }
   }
 
@@ -481,6 +530,8 @@ export class AudioWorkletTransport implements AudioTransportController {
 
     this.setStatus("stopped");
     this.desiredStatus = "stopped";
+    this.pendingPositionAcknowledgement = null;
+    this.pendingTimelines.clear();
     this.callbacks.onError?.(error);
   }
 
