@@ -138,6 +138,19 @@ import {
   usePrimaryActionTrigger,
 } from "./interactions/usePrimaryActionTrigger";
 import {
+  useStylusAction,
+} from "./interactions/useStylusAction";
+import {
+  FloatingRadialMenu,
+  type FloatingRadialMenuItem,
+} from "./context-menu/FloatingRadialMenu";
+import {
+  CommandIcon,
+} from "../shared/CommandIcon";
+import {
+  useFloatingRadialMenu,
+} from "./context-menu/useFloatingRadialMenu";
+import {
   useKeyboardShortcut,
 } from "./interactions/useKeyboardShortcut";
 import {
@@ -369,6 +382,9 @@ export function PianoRollWorkspace({
     togglePlayback,
     initialUserSettings.shortcuts["transport.toggle"],
   );
+  const radialMenu = useFloatingRadialMenu();
+
+  useStylusAction(radialMenu.toggleAt);
 
   const {
     appShellRef,
@@ -752,6 +768,75 @@ export function PianoRollWorkspace({
     handleSliceSelectionAtPlayhead,
     setApplicationDialog,
   ]);
+  const selectedNotesContainEnabledNote = selectedNotes.some(
+    (note) => note.enabled,
+  );
+  const radialMenuItems = useMemo<readonly FloatingRadialMenuItem[]>(() => [
+    {
+      id: "copy",
+      label: "Copier",
+      icon: <CommandIcon kind="copy" />,
+      disabled: !selectionAvailable,
+      onSelect: handleCopy,
+    },
+    {
+      id: "cut",
+      label: "Couper",
+      icon: <CommandIcon kind="cut" />,
+      disabled: !selectionAvailable,
+      tone: "danger",
+      onSelect: handleCut,
+    },
+    {
+      id: "paste",
+      label: "Coller",
+      icon: <CommandIcon kind="paste" />,
+      disabled: !clipboardAvailable,
+      onSelect: handlePaste,
+    },
+    {
+      id: "slice",
+      label: "Slice",
+      icon: <CommandIcon kind="slice" />,
+      disabled: selectedNotes.length === 0,
+      onSelect: handleOpenSliceSelection,
+    },
+    {
+      id: "toggle-enabled",
+      label: selectedNotesContainEnabledNote ? "Désactiver" : "Activer",
+      icon: (
+        <CommandIcon
+          kind={selectedNotesContainEnabledNote ? "disable" : "enable"}
+        />
+      ),
+      disabled: selectedNotes.length === 0,
+      tone: selectedNotesContainEnabledNote ? "danger" : "default",
+      onSelect: handleToggleSelectionEnabled,
+    },
+    {
+      id: "playback",
+      label: playbackStatus === "playing" ? "Pause" : "Play",
+      icon: (
+        <CommandIcon
+          kind={playbackStatus === "playing" ? "pause" : "play"}
+        />
+      ),
+      tone: "transport",
+      onSelect: togglePlayback,
+    },
+  ], [
+    clipboardAvailable,
+    handleCopy,
+    handleCut,
+    handleOpenSliceSelection,
+    handlePaste,
+    handleToggleSelectionEnabled,
+    playbackStatus,
+    selectedNotes.length,
+    selectedNotesContainEnabledNote,
+    selectionAvailable,
+    togglePlayback,
+  ]);
   const handleNoteColorModeToggle = useCallback((): void => {
     setNoteColorMode((currentMode) => {
       const nextMode: NoteColorMode =
@@ -947,6 +1032,7 @@ export function PianoRollWorkspace({
             )}
             selectionAvailable={selectionAvailable}
             noteSelectionAvailable={selectedNotes.length > 0}
+            selectedNotesContainEnabledNote={selectedNotesContainEnabledNote}
             clipboardSelectionAvailable={selectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
@@ -1034,6 +1120,7 @@ export function PianoRollWorkspace({
                   interactionStrategyRef={interactionStrategyRef}
                   onSelectionChange={handleSelectionChange}
                   onGridSeek={seekPlayback}
+                  onOpenContextMenu={radialMenu.openAt}
                   onNoteCollision={handleNoteCollision}
                   onMarkerCollision={handleMarkerCollision}
                   globalLassoRef={globalLassoRef}
@@ -1103,6 +1190,15 @@ export function PianoRollWorkspace({
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
         />
       </section>
+      {radialMenu.state === null ? null : (
+        <FloatingRadialMenu
+          position={radialMenu.state.position}
+          revision={radialMenu.state.revision}
+          closing={radialMenu.state.closing}
+          items={radialMenuItems}
+          onClose={radialMenu.close}
+        />
+      )}
       <ApplicationDialogOverlay
         dialog={applicationDialog}
         onConfirm={handleApplicationDialogConfirm}

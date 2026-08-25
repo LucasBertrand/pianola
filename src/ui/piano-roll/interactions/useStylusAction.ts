@@ -1,34 +1,36 @@
 import { useEffect, useRef } from "react";
+import type {
+  ViewportPoint,
+} from "../context-menu/floating-radial-menu-model";
+import {
+  isStylusButtonActivation,
+  isStylusHoverButtonActivation,
+} from "./stylus-action-policy";
 
-export function useStylusAction(onAction: () => void): void {
+/** Maps pen barrel, eraser, and supported hover-button input to one action. */
+export function useStylusAction(
+  onAction: (position: ViewportPoint) => void,
+): void {
   const hoverClickActiveRef = useRef(false);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent): void => {
-      // 5 = eraser, 2 = right click (some pens), 1 = middle click
-      if (
-        event.pointerType === "pen"
-        && (event.button === 5 || event.button === 2 || event.button === 1)
-      ) {
-        // Only intercept if we are relatively sure it's a side-button and not a primary tip click
-        // But since we rely on pointermove for hover-clicks, we just handle standard alternative buttons here.
-        if (event.button === 5 || event.button === 2) {
-          event.preventDefault();
-          event.stopPropagation();
-          onAction();
-        }
+      if (isStylusButtonActivation(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        onAction({ x: event.clientX, y: event.clientY });
       }
     };
 
     const handlePointerMove = (event: PointerEvent): void => {
       if (event.pointerType === "pen") {
-        // Detect "air click": buttons is 1 (left click), but pressure is 0
-        const isHoverClicking = event.buttons === 1 && event.pressure === 0;
+        // Some pen drivers report the barrel button as a pressureless hover click.
+        const isHoverClicking = isStylusHoverButtonActivation(event);
 
         if (isHoverClicking && !hoverClickActiveRef.current) {
           hoverClickActiveRef.current = true;
           event.preventDefault();
-          onAction();
+          onAction({ x: event.clientX, y: event.clientY });
         } else if (!isHoverClicking && hoverClickActiveRef.current) {
           hoverClickActiveRef.current = false;
         }

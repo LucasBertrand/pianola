@@ -18,6 +18,12 @@ le viewport ne consomme pas l’historique.
 - Slice : couper les notes sélectionnées au playhead ou aux deux ancres de la
   boucle, via la modale de choix.
 
+Un clic droit sur la grille ouvre un menu radial à la position du pointeur avec
+Copy, Cut, Paste, Slice, l'activation/désactivation des notes et Lecture/Pause.
+Un clic extérieur ou Échap le ferme ; un nouveau clic droit le replace
+immédiatement. Le bouton alternatif du stylet ouvre et ferme désormais ce menu
+au lieu de commander directement le transport.
+
 Une opération qui crée des chevauchements ouvre un choix : Merge crée des notes
 continues, Slice conserve les notes éditées et coupe les notes existantes aux
 ancres. Le déplacement et le redimensionnement obéissent au système de

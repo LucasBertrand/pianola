@@ -12,6 +12,9 @@ import type {
 import type {
   NoteColorMode,
 } from "../../editor/model/note-color-mode";
+import {
+  CommandIcon,
+} from "../shared/CommandIcon";
 
 export interface EditorToolbarProps {
   readonly inspectorOpen: boolean;
@@ -21,6 +24,7 @@ export interface EditorToolbarProps {
   readonly measureCount: number;
   readonly selectionAvailable: boolean;
   readonly noteSelectionAvailable: boolean;
+  readonly selectedNotesContainEnabledNote: boolean;
   readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
@@ -53,6 +57,7 @@ export function EditorToolbar({
   measureCount,
   selectionAvailable,
   noteSelectionAvailable,
+  selectedNotesContainEnabledNote,
   clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
@@ -212,17 +217,18 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title="Enable or disable selected notes"
-          aria-label="Enable or disable selected notes"
+          title={selectedNotesContainEnabledNote
+            ? "Disable selected notes"
+            : "Enable selected notes"}
+          aria-label={selectedNotesContainEnabledNote
+            ? "Disable selected notes"
+            : "Enable selected notes"}
           disabled={!noteSelectionAvailable}
           onClick={onToggleSelectionEnabled}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 5.5 15 4v11.5M15 7.5 8 9v8" />
-            <ellipse cx="5.5" cy="17" rx="2.5" ry="2" />
-            <ellipse cx="12.5" cy="15.5" rx="2.5" ry="2" />
-            <path d="M4 4l16 16" />
-          </svg>
+          <CommandIcon
+            kind={selectedNotesContainEnabledNote ? "disable" : "enable"}
+          />
         </button>
         <button
           type="button"
@@ -231,10 +237,7 @@ export function EditorToolbar({
           disabled={!clipboardSelectionAvailable}
           onClick={onCopy}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="8" y="8" width="11" height="11" rx="2" />
-            <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-          </svg>
+          <CommandIcon kind="copy" />
         </button>
         <button
           type="button"
@@ -243,12 +246,7 @@ export function EditorToolbar({
           disabled={!clipboardSelectionAvailable}
           onClick={onCut}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="6" cy="7" r="3" />
-            <circle cx="6" cy="17" r="3" />
-            <path d="m8.7 8.4 10.3 6.2" />
-            <path d="m8.7 15.6 10.3-6.2" />
-          </svg>
+          <CommandIcon kind="cut" />
         </button>
         <button
           type="button"
@@ -259,12 +257,7 @@ export function EditorToolbar({
           }
           onClick={onPaste}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 5h6" />
-            <path d="M10 3h4a2 2 0 0 1 2 2v2H8V5a2 2 0 0 1 2-2Z" />
-            <path d="M8 5H6a2 2 0 0 0-2 2v13h12" />
-            <rect x="10" y="9" width="10" height="11" rx="2" />
-          </svg>
+          <CommandIcon kind="paste" />
         </button>
 
         <button
@@ -352,17 +345,7 @@ export function EditorToolbar({
           disabled={!noteSelectionAvailable}
           onClick={onOpenSliceSelection}
         >
-          <svg
-            className="slice-tool-icon"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path d="M2.5 21.5 11 10l4 4-12.5 7.5Z" />
-            <path
-              className="slice-tool-handle"
-              d="m10.3 9.3 6.1-6.1a1.5 1.5 0 0 1 2.1 0l2.3 2.3a1.5 1.5 0 0 1 0 2.1l-6.1 6.1Z"
-            />
-          </svg>
+          <CommandIcon kind="slice" />
         </button>
         <button
           type="button"

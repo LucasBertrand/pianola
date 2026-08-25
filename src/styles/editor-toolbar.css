@@ -52,14 +52,6 @@
   stroke-width: 1.7;
 }
 
-.edit-tool-group .slice-tool-icon {
-  stroke-width: 1.55;
-}
-
-.edit-tool-group .slice-tool-handle {
-  fill: currentColor;
-}
-
 .edit-tool-group button:active:not(:disabled) {
   border-color: var(--color-border-active);
   background: var(--color-surface-raised-strong);

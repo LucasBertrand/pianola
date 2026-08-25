@@ -36,6 +36,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
 | modifier Copy/Cut/Paste | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
+| modifier le menu radial ou le bouton du stylet | `src/ui/piano-roll/context-menu/` | `InteractionOverlay.tsx`, puis `interactions/useStylusAction.ts` |
 | modifier les collisions | `src/ui/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts` | `src/domain/note-collision.ts` |
 | modifier l’inspecteur | `src/ui/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
@@ -156,6 +157,7 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 | transport | `src/styles/transport.css` |
 | fichiers | `src/styles/project-files.css` |
 | piano roll | `src/styles/piano-roll.css` |
+| menu radial flottant | `src/styles/radial-menu.css` |
 | inspecteur | `src/styles/inspector.css` |
 | dialogues | `src/styles/dialogs.css` |
 | coordination multi-surface | `src/styles/responsive.css` |

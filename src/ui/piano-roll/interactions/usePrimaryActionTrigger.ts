@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useStylusAction } from "./useStylusAction";
 import { useMediaSessionAction } from "./useMediaSessionAction";
 import { useKeyboardShortcut } from "./useKeyboardShortcut";
 import type {
@@ -20,7 +19,6 @@ export function usePrimaryActionTrigger(
     [configuredBinding],
   );
 
-  useStylusAction(onAction);
   useMediaSessionAction(onAction);
   useKeyboardShortcut(bindings, onAction);
 }

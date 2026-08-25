@@ -47,6 +47,9 @@ import type {
 import type {
   MutableRenderSignal,
 } from "../../editor/model/render-signal";
+import type {
+  ViewportPoint,
+} from "./context-menu/floating-radial-menu-model";
 
 export interface InteractionOverlayProps {
   readonly runtime: PianoRollRuntimePort;
@@ -69,6 +72,7 @@ export interface InteractionOverlayProps {
     soleInstrumentId: InstrumentId | null,
   ) => void;
   readonly onGridSeek: (tick: number) => void;
+  readonly onOpenContextMenu: (position: ViewportPoint) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -121,6 +125,7 @@ export function InteractionOverlay(
     interactionStrategyRef,
     onSelectionChange,
     onGridSeek,
+    onOpenContextMenu,
     onNoteCollision,
     onMarkerCollision,
     globalLassoRef,
@@ -221,6 +226,21 @@ export function InteractionOverlay(
       style={INTERACTION_LAYER_STYLE}
       role="application"
       aria-label="Interactive piano roll"
+      onContextMenu={(event) => {
+        event.preventDefault();
+
+        const pointerType = "pointerType" in event.nativeEvent
+          ? event.nativeEvent.pointerType
+          : "mouse";
+
+        // Pen alternative buttons are handled at pointerdown so they keep
+        // true toggle semantics instead of also producing a second open.
+        if (pointerType === "pen") {
+          return;
+        }
+
+        onOpenContextMenu({ x: event.clientX, y: event.clientY });
+      }}
     >
       <div
         ref={(element) => {

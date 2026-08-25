@@ -44,6 +44,9 @@ import type {
 import {
   InteractionOverlay,
 } from "./InteractionOverlay";
+import type {
+  ViewportPoint,
+} from "./context-menu/floating-radial-menu-model";
 
 export interface PianoRollLayersProps {
   readonly runtime: PianoRollRuntimePort;
@@ -65,6 +68,7 @@ export interface PianoRollLayersProps {
     soleInstrumentId: InstrumentId | null,
   ) => void;
   readonly onGridSeek: (tick: number) => void;
+  readonly onOpenContextMenu: (position: ViewportPoint) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -101,6 +105,7 @@ export function PianoRollLayers(
     interactionStrategyRef,
     onSelectionChange,
     onGridSeek,
+    onOpenContextMenu,
     onNoteCollision,
     onMarkerCollision,
     globalLassoRef,
@@ -163,6 +168,7 @@ export function PianoRollLayers(
         interactionStrategyRef={interactionStrategyRef}
         onSelectionChange={onSelectionChange}
         onGridSeek={onGridSeek}
+        onOpenContextMenu={onOpenContextMenu}
         onNoteCollision={onNoteCollision}
         onMarkerCollision={onMarkerCollision}
         globalLassoRef={globalLassoRef}
