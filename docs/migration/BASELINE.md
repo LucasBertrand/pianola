@@ -66,7 +66,9 @@ courant en dépend encore :
 - le workflow de fichier portable utilise des constantes et métadonnées
   préfixées `NATIVE_PROJECT_*`.
 
-Le legacy et le parsing courant doivent être séparés avant tout nettoyage.
+La logique de parsing encore nécessaire au nouveau format doit être extraite,
+puis les anciens codecs et le dossier `native` doivent être supprimés sans
+conserver de couche de compatibilité.
 
 ### Persistance
 

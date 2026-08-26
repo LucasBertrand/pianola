@@ -52,6 +52,7 @@ faire entrer le workspace dans l'historique. `UserSettings` est écrit par un
 repository distinct ; importer un projet ne peut donc pas remplacer les
 préférences du destinataire.
 
-Les lecteurs v2 acceptent les anciens `anchorTick` et `playheadTick` v1 afin de
-charger les projets existants, puis les ignorent. Aucun codec courant ne les
-réécrit : une nouvelle session commence avec le playhead au début du clip actif.
+Le versionnement est réinitialisé lors de la migration architecturale. Le codec
+courant n'accepte aucune ancienne variante contenant notamment `anchorTick` ou
+`playheadTick` : une version non supportée est rejetée et une nouvelle session
+commence avec le playhead au début du clip actif.

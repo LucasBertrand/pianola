@@ -25,8 +25,8 @@ Si aucun lot n'est marqué `EN COURS`, sélectionner uniquement le premier lot
 
 ## Règles de sécurité
 
-- ne jamais supprimer un codec ou une migration avant de prouver qu'aucun format
-  supporté n'en dépend ;
+- considérer uniquement la nouvelle baseline comme format supporté et supprimer
+  les anciens codecs et migrations au lot prévu ;
 - ne pas modifier le schéma persistant dans un lot de déplacement ;
 - ne pas modifier une règle métier pendant un découpage de fichier ;
 - ne pas restaurer, écraser ou incorporer les changements préexistants de

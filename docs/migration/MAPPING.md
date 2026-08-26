@@ -14,7 +14,7 @@ les imports réels et consigner les exceptions découvertes dans `STATUS.md`.
 | `src/audio/` | `src/infrastructure/audio/`, sauf concepts métier éventuels |
 | `src/project-io/midi/` | `src/infrastructure/project-files/midi/` |
 | `src/project-io/portable/` | `src/infrastructure/project-files/pianola/` |
-| `src/project-io/native/` | parsing courant vers `pianola/parsing`, compatibilité vers `pianola/migrations` |
+| `src/project-io/native/` | logique courante réutilisable vers `pianola/parsing`, puis suppression complète du dossier et de ses anciens codecs |
 | `src/pwa/persistence/` | `src/infrastructure/persistence/` |
 | `src/pwa/register-service-worker.ts` | `src/infrastructure/browser/service-worker/` |
 | `src/persistence/` | ports vers `application/ports`, codecs et modèles stockés vers `infrastructure/persistence` |
@@ -62,4 +62,4 @@ les imports réels et consigner les exceptions découvertes dans `STATUS.md`.
 | `ProjectWorkspaceState` | `PersistedEditorWorkspace` | migration des codecs puis UI |
 | `ProjectClipWorkspaceState` | `PersistedClipEditorState` | même lot que le précédent |
 | `Track` | `InstrumentTrack` | type alias, puis commandes et codecs |
-| préfixes `NATIVE_PROJECT_*` courants | `PIANOLA_PROJECT_*` | après extraction du legacy |
+| préfixes `NATIVE_PROJECT_*` courants | `PIANOLA_PROJECT_*` | avec la nouvelle baseline de version, sans alias de compatibilité final |

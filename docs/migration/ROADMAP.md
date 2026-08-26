@@ -26,17 +26,22 @@ Sortie : chaque variante de `workspace` possède un sens unique documenté.
 
 - créer le propriétaire `project-files/pianola` ;
 - extraire le parseur de document partagé depuis `native/parsing` ;
-- isoler les migrations réellement historiques ;
+- définir une nouvelle baseline de version pour le format `.pianola` ;
+- supprimer les lecteurs, migrations et tests des anciens formats ;
 - remplacer les noms `NATIVE_*` encore utilisés par le produit ;
-- préserver la lecture des anciens fichiers par des tests de compatibilité.
+- rejeter explicitement les fichiers d'une version non supportée.
 
-Sortie : aucun chemin produit courant n'importe un dossier `native` ou `legacy`.
+Sortie : aucun dossier, import, symbole ou test courant ne dépend de `native`,
+`legacy` ou d'une ancienne version du format. Le nouveau format effectue un
+aller-retour complet et les versions antérieures sont rejetées explicitement.
 
 ## Lot 3 — Ports et adaptateurs de persistance
 
 - extraire les ports de repository et codec vers `application/ports` ;
 - déplacer IndexedDB, Worker et politiques navigateur sous `infrastructure` ;
 - décider explicitement du statut des adaptateurs mémoire ;
+- implémenter et tester la réinitialisation des données locales dont la version
+  ne correspond pas à la nouvelle baseline ;
 - préserver les contrats de repository existants.
 
 Sortie : l'application dépend de ports, jamais d'IndexedDB ou d'un Worker.

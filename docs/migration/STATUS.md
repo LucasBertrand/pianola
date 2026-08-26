@@ -63,5 +63,3 @@ Aucun écart supplémentaire consigné.
 ### 2026-08-26 — Préparation
 
 - création du dossier d'exécution autonome ;
-- enregistrement de la décision de conserver `ScaleMarker` ;
-- correction des liens documentaires morts (`persistence-strategy.md`, `storage-strategies.md`) et exclusion de `.idea` dans la vérification.

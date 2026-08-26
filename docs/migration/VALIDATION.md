@@ -35,8 +35,9 @@ rg "ancien-nom|ancien-chemin" src tests docs idea/migration
 rg "utils|helpers|common|shared|types|data" src
 ```
 
-Une occurrence dans `MAPPING.md`, une migration historique ou un test de
-compatibilité peut être légitime ; elle doit être expliquée dans `STATUS.md`.
+Une occurrence décrivant un chemin source dans `MAPPING.md` peut être légitime.
+Toute occurrence produit d'une migration historique, d'un ancien codec ou d'un
+chemin `legacy` bloque en revanche la sortie de la migration.
 
 ## Critères architecturaux
 
@@ -51,8 +52,11 @@ compatibilité peut être légitime ; elle doit être expliquée dans `STATUS.md
 
 ## Critères de compatibilité
 
-- les projets locaux existants restent lisibles ;
-- les fichiers `.pianola` supportés restent importables ;
+- la nouvelle baseline de version est unique et documentée ;
+- les projets locaux incompatibles sont réinitialisés de manière explicite et
+  testée ;
+- les anciens fichiers `.pianola` sont rejetés avec une erreur claire, sans
+  tentative de migration ;
 - export puis réimport conserve document et workspace attendus ;
 - l'Undo/Redo n'intègre pas l'état de workspace persisté ;
 - le MIDI et l'AudioWorklet passent leurs régressions ;

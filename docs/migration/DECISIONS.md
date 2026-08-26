@@ -20,8 +20,8 @@ tests associés.
 ## D-003 — Le format utilisateur s'appelle `.pianola`
 
 Le format courant doit employer le vocabulaire `Pianola project file`. Le terme
-`native` est réservé, si nécessaire, à une compatibilité historique clairement
-isolée sous `migrations/legacy-*`.
+`native` ne doit subsister ni dans les chemins courants ni dans une zone de
+compatibilité historique.
 
 ## D-004 — Propriété des couches
 
@@ -80,3 +80,24 @@ La présentation applique les règles suivantes :
 Le choix d'un store UI externe ne pourra être réévalué qu'après identification
 d'un domaine d'état UI partagé, autonome, durable et sans propriétaire naturel
 dans les stores ou signaux existants.
+
+## D-009 — Réinitialisation du versionnement et absence de legacy
+
+La migration réinitialise le versionnement des projets persistés et du format
+`.pianola`. Le nouveau schéma constitue le seul format supporté après la
+migration.
+
+- les projets locaux et fichiers exportés avec les anciens schémas ne sont pas
+  migrés et ne sont pas garantis lisibles ;
+- aucun lecteur d'ancienne version, migration historique, dossier `legacy`,
+  alias de codec ou façade de compatibilité ne reste dans la cible finale ;
+- les numéros et constantes de version repartent d'une nouvelle baseline
+  explicitement définie par le nouveau codec ;
+- les tests de compatibilité ascendante sont supprimés ou remplacés par des
+  tests qui rejettent clairement les formats non supportés ;
+- les données locales incompatibles sont réinitialisées selon une politique
+  explicite et testée, sans tentative de conversion silencieuse.
+
+Les alias temporaires nécessaires aux renommages de code restent permis par
+D-005 pendant un lot, mais doivent disparaître avant sa sortie ou au plus tard
+au lot 8. Ils ne constituent pas une compatibilité de données.
