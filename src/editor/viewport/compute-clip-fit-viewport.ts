@@ -50,7 +50,7 @@ export function computeClipFitViewport(
   if (!hasNotes) {
     zoomY = VIEWPORT_CONSTANTS.initialVerticalZoom;
     const centerPitch = 60; // Middle C
-    const centerPitchRow = VIEWPORT_CONSTANTS.highestDisplayedMidiPitch - centerPitch;
+    const centerPitchRow = VIEWPORT_CONSTANTS.highestDisplayedMidiPitch - centerPitch + 0.5;
     const scrollYCenter = centerPitchRow * defaultPitchHeight * zoomY - safeHeight / 2;
     const maxScrollY = Math.max(0, VIEWPORT_CONSTANTS.displayedPitchCount * defaultPitchHeight * zoomY - safeHeight);
     scrollY = Math.max(0, Math.min(maxScrollY, scrollYCenter));
@@ -68,7 +68,7 @@ export function computeClipFitViewport(
     );
 
     const centerPitch = (paddedMinPitch + paddedMaxPitch) / 2;
-    const centerPitchRow = VIEWPORT_CONSTANTS.highestDisplayedMidiPitch - centerPitch;
+    const centerPitchRow = VIEWPORT_CONSTANTS.highestDisplayedMidiPitch - centerPitch + 0.5;
     const maxScrollY = Math.max(0, VIEWPORT_CONSTANTS.displayedPitchCount * defaultPitchHeight * zoomY - safeHeight);
 
     scrollY = Math.max(0, Math.min(maxScrollY, centerPitchRow * defaultPitchHeight * zoomY - safeHeight / 2));
