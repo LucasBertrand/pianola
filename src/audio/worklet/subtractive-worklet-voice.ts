@@ -5,6 +5,9 @@ import type {
   SubtractivePlaybackPresetSnapshot,
 } from "../playback-model";
 import {
+  PolyBlepOscillator,
+} from "./polyblep-oscillator";
+import {
   SampleEnvelope,
 } from "./sample-envelope";
 
@@ -30,8 +33,7 @@ export class SubtractiveWorkletVoice {
   private pitch = 69;
   private filterKeyTracking = 0;
   private targetFilterKeyTracking = 0;
-  private phase = 0;
-  private integratedTriangle = 0;
+  private readonly oscillator = new PolyBlepOscillator();
   private filterIntegratorOne = 0;
   private filterIntegratorTwo = 0;
   private frequencyHz = 440;
@@ -92,10 +94,7 @@ export class SubtractiveWorkletVoice {
     this.filterResonance = config.filterResonance;
     this.targetFilterResonance = this.filterResonance;
     if (!preserveContinuity) {
-      this.phase = config.oscillatorFreePhase ? Math.random() : 0;
-      // Seed the leaky integrator at the ideal triangle value for the chosen
-      // phase. Starting it at 0 adds a frequency-dependent fade-in.
-      this.integratedTriangle = 1 - 4 * Math.abs(this.phase - 0.5);
+      this.oscillator.reset(config.oscillatorFreePhase ? Math.random() : 0);
       this.filterIntegratorOne = 0;
       this.filterIntegratorTwo = 0;
     }
@@ -217,43 +216,11 @@ export class SubtractiveWorkletVoice {
   }
 
   private renderOscillator(phaseIncrement: number): number {
-    const phase = this.phase;
-    let sample: number;
-
-    switch (this.waveform) {
-      case "sine":
-        sample = Math.sin(2 * Math.PI * phase);
-        break;
-
-      case "triangle": {
-        const square = renderBandLimitedPulse(
-          phase,
-          phaseIncrement,
-          0.5,
-        );
-
-        this.integratedTriangle += 4 * phaseIncrement * square;
-        this.integratedTriangle *= 0.9995;
-        sample = Math.max(-1, Math.min(1, this.integratedTriangle));
-        break;
-      }
-
-      case "square":
-        sample = renderBandLimitedPulse(
-          phase,
-          phaseIncrement,
-          this.pulseWidth,
-        );
-        break;
-
-      case "sawtooth":
-        sample = 2 * phase - 1 - polyBlep(phase, phaseIncrement);
-        break;
-    }
-
-    this.phase = phase + phaseIncrement;
-    this.phase -= Math.floor(this.phase);
-    return sample;
+    return this.oscillator.render(
+      this.waveform,
+      phaseIncrement,
+      this.pulseWidth,
+    );
   }
 
   private renderLowpass(
@@ -293,35 +260,4 @@ export class SubtractiveWorkletVoice {
     this.filterIntegratorTwo = 2 * low - this.filterIntegratorTwo;
     return Number.isFinite(low) ? low : 0;
   }
-}
-
-function renderBandLimitedPulse(
-  phase: number,
-  phaseIncrement: number,
-  pulseWidth: number,
-): number {
-  let sample = phase < pulseWidth ? 1 : -1;
-
-  sample += polyBlep(phase, phaseIncrement);
-  const fallingPhase = positiveModulo(phase - pulseWidth, 1);
-  sample -= polyBlep(fallingPhase, phaseIncrement);
-  return sample - (2 * pulseWidth - 1);
-}
-
-function polyBlep(phase: number, phaseIncrement: number): number {
-  if (phase < phaseIncrement) {
-    const normalized = phase / phaseIncrement;
-    return normalized + normalized - normalized * normalized - 1;
-  }
-
-  if (phase > 1 - phaseIncrement) {
-    const normalized = (phase - 1) / phaseIncrement;
-    return normalized * normalized + normalized + normalized + 1;
-  }
-
-  return 0;
-}
-
-function positiveModulo(value: number, divisor: number): number {
-  return ((value % divisor) + divisor) % divisor;
 }

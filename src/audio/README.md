@@ -35,6 +35,14 @@ ne produit jamais deux voix simultanées. Un index
 d’intervalles transféré avec chaque piste permet de retrouver les notes tenues
 après un seek sans parcourir toute la timeline sur le thread audio.
 
+Les oscillateurs sont validés sur les 128 notes MIDI par des golden metrics
+(DC fenêtré, RMS, peak et énergie spectrale hors harmoniques), pas par des
+snapshots de buffers audio. Le triangle emploie une fuite d’intégrateur relative
+à sa période afin de conserver son niveau dans le grave. Pour les pulses, les
+fronts sont maintenus à au moins un échantillon l’un de l’autre lorsque la
+largeur demandée n’est plus représentable, ce qui stabilise les largeurs 5/95 %
+dans l’aigu sans ajouter d’allocation ni de suréchantillonnage.
+
 ## Étage master temps réel
 
 `worklet/worklet-master-stage.ts` traite la somme stéréo après le gain master.

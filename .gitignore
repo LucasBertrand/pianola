@@ -26,6 +26,4 @@ pnpm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
-meter-marker-feature.md
-audio-retro.md
-idea.txt
+audio_ideas.md
