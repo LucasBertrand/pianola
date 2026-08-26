@@ -1,7 +1,7 @@
 /** Persistent project defaults, hard limits, and instrument defaults. */
 export const PROJECT_CONSTANTS = Object.freeze({
   ppqn: 960,
-  schemaVersion: 10,
+  schemaVersion: 11,
   defaultMeasureCount: 4,
   defaultTempoBpm: 120,
   minimumTempoBpm: 30,
@@ -40,6 +40,7 @@ export const PROJECT_CONSTANTS = Object.freeze({
   maximumHistoryEntries: 200,
   defaultLoopEnabled: false,
   defaultAutoAdvanceEnabled: true,
+  defaultAutoScrollEnabled: false,
   defaultClipBypassEnabled: false,
   defaultClipGroupBypassEnabled: false,
   defaultInstrumentMuted: false,

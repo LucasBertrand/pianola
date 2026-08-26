@@ -210,6 +210,7 @@ export function createAudioTestProject({
     },
     clipHierarchy: createFlatClipHierarchy([clipId]),
     autoAdvanceEnabled,
+    autoScrollEnabled: PROJECT_CONSTANTS.defaultAutoScrollEnabled,
     workspace: { activeClipId: clipId },
     masterBus: {
       gain: masterGain,

@@ -30,6 +30,26 @@ describe("P2 command family contracts", () => {
       .toThrow(CommandRejectedError);
   });
 
+  test("playhead auto-scroll changes are undoable and redoable", () => {
+    const store = new ProjectStore(createTestProject());
+
+    dispatch(store, { type: "SetAutoScrollEnabled", enabled: true }, 1);
+    expect(store.getState().autoScrollEnabled).toBe(true);
+
+    dispatch(store, { type: "SetAutoScrollEnabled", enabled: false }, 2);
+    expect(store.getState().autoScrollEnabled).toBe(false);
+
+    store.undo();
+    expect(store.getState().autoScrollEnabled).toBe(true);
+    store.redo();
+    expect(store.getState().autoScrollEnabled).toBe(false);
+
+    expect(() => dispatch(store, {
+      type: "SetAutoScrollEnabled",
+      enabled: "yes" as unknown as boolean,
+    }, 3)).toThrow(CommandRejectedError);
+  });
+
   test("clip commands support success, rejection, undo and redo", () => {
     const store = new ProjectStore(createTestProject());
 

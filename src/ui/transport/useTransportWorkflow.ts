@@ -44,6 +44,7 @@ export interface TransportWorkflow {
   readonly commitProjectTitle: (input: HTMLInputElement) => void;
   readonly toggleLoop: () => void;
   readonly toggleAutoAdvance: () => void;
+  readonly toggleAutoScroll: () => void;
   readonly commitLoopRegion: (loop: LoopRegion) => void;
 }
 
@@ -277,6 +278,20 @@ export function useTransportWorkflow({
     );
   }, [runtime]);
 
+  const toggleAutoScroll = useCallback((): void => {
+    const state = runtime.projectStore.getState();
+
+    runtime.editorCommands.dispatch(
+      [{
+        type: "SetAutoScrollEnabled",
+        enabled: !state.autoScrollEnabled,
+      }],
+      state.autoScrollEnabled
+        ? "Disable playhead auto-scroll"
+        : "Enable playhead auto-scroll",
+    );
+  }, [runtime]);
+
   return {
     insertMeasuresAtPlayhead,
     removeMeasuresAtPlayhead,
@@ -286,6 +301,7 @@ export function useTransportWorkflow({
     commitProjectTitle,
     toggleLoop,
     toggleAutoAdvance,
+    toggleAutoScroll,
     commitLoopRegion,
   };
 }

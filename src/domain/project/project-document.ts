@@ -40,6 +40,7 @@ export interface ProjectDocument {
   readonly clipsById: Readonly<Record<ClipId, Clip>>;
   readonly clipHierarchy: readonly ClipHierarchyNode[];
   readonly autoAdvanceEnabled: boolean;
+  readonly autoScrollEnabled: boolean;
   readonly masterBus: MasterBusState;
 }
 

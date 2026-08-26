@@ -255,7 +255,6 @@ export function PianoRollWorkspace({
   } = usePianoRollProjectState(runtime, pianoRollControllerRef);
   const [projectInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
-  const [autoScrollEnabled, setAutoScrollEnabled] = useState(false);
   const [measureDialogOperation, setMeasureDialogOperation] =
     useState<"insert" | "remove" | null>(null);
   const [projectInspectorSection, setGeneralInspectorSection] =
@@ -282,6 +281,7 @@ export function PianoRollWorkspace({
     () => runtime.gridResolutionTicks.get(),
   );
   const activeClip = getActiveClip(projectState);
+  const autoScrollEnabled = projectState.autoScrollEnabled;
   const measureSpans = getMeasureSpans(
     projectState.clock.ppqn,
     activeClip.timeline.timeMap,
@@ -456,9 +456,6 @@ export function PianoRollWorkspace({
     returnToStart,
     runtime,
   ]);
-  const handleAutoScrollToggle = useCallback((): void => {
-    setAutoScrollEnabled((enabled) => !enabled);
-  }, []);
   const handleNoteCollision = useNoteCollisionDialogWorkflow({
     runtime,
     showDialog: setApplicationDialog,
@@ -732,6 +729,7 @@ export function PianoRollWorkspace({
     commitProjectTitle: handleProjectTitleCommit,
     toggleLoop: handleToggleLoop,
     toggleAutoAdvance: handleToggleAutoAdvance,
+    toggleAutoScroll: handleAutoScrollToggle,
     commitLoopRegion: handleLoopRegionCommit,
   } = useTransportWorkflow({
     runtime,

@@ -17,6 +17,7 @@ export function createProjectDocumentPayload(
     clipsById: document.clipsById,
     clipHierarchy: document.clipHierarchy,
     autoAdvanceEnabled: document.autoAdvanceEnabled,
+    autoScrollEnabled: document.autoScrollEnabled,
     masterBus: document.masterBus,
   };
 }

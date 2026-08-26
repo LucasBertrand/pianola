@@ -54,6 +54,7 @@ export function createBlankProjectState(): ProjectState {
     clipsById: { [clipId]: clip },
     clipHierarchy: createFlatClipHierarchy([clipId]),
     autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
+    autoScrollEnabled: PROJECT_CONSTANTS.defaultAutoScrollEnabled,
     workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),
   };

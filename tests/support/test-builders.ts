@@ -121,6 +121,7 @@ export function createTestProject({
     clipsById,
     clipHierarchy: createFlatClipHierarchy(clips.map((clip) => clip.id)),
     autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
+    autoScrollEnabled: PROJECT_CONSTANTS.defaultAutoScrollEnabled,
     workspace: { activeClipId },
     masterBus: createDefaultMasterBusState(),
   };

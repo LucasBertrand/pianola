@@ -40,6 +40,7 @@ import type {
   ReorderProjectInstrumentsCommand,
   SaveInstrumentPresetCommand,
   SetAutoAdvanceEnabledCommand,
+  SetAutoScrollEnabledCommand,
   SetMasterMutedCommand,
   UpdateMasterGainCommand,
   UpdateMasterTuningCommand,
@@ -70,6 +71,7 @@ import {
 } from "./note-state-commands";
 import {
   applySetAutoAdvanceEnabled,
+  applySetAutoScrollEnabled,
   applySetMasterMuted,
   applyUpdateMasterGain,
   applyUpdateMasterTuning,
@@ -182,6 +184,8 @@ function applyCommand(
       return applyUpdateMasterTuning(state, command);
     case "SetAutoAdvanceEnabled":
       return applySetAutoAdvanceEnabled(state, command);
+    case "SetAutoScrollEnabled":
+      return applySetAutoScrollEnabled(state, command);
     default:
       return applyActiveClipCommand(state, command);
   }
@@ -208,6 +212,7 @@ type ActiveClipCommand = Exclude<
   | DeleteInstrumentPresetCommand
   | UpdateProjectTitleCommand
   | SetAutoAdvanceEnabledCommand
+  | SetAutoScrollEnabledCommand
   | UpdateMasterGainCommand
   | SetMasterMutedCommand
   | UpdateMasterTuningCommand

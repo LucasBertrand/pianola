@@ -106,7 +106,8 @@ L’enchaînement suit l’ordre des cartes en sautant les clips bypassés et to
 clips ayant un groupe parent bypassé, sauf si la boucle ou le bouton global
 « Stop playback at the end of every clip » est actif. L’auto-scroll est désactivé
 pour toute la séquence : sa valeur ne change pas lors de la sélection d’un
-autre clip. L’auto-scroll est désactivé par défaut ; lorsqu’il est actif, il sélectionne le clip joué et suit le
+autre clip. L’auto-scroll est désactivé par défaut et son activation ou sa
+désactivation peut être annulée ou rétablie avec Undo/Redo ; lorsqu’il est actif, il sélectionne le clip joué et suit le
 playhead. Lorsqu’il est désactivé, ni la sélection du clip ni le viewport ne
 sont modifiés par la lecture : le playhead peut rester dans un autre clip ou
 sortir de la zone visible.

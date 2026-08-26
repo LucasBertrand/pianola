@@ -36,7 +36,10 @@ import {
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {
-    const document = createTestProject();
+    const document = {
+      ...createTestProject(),
+      autoScrollEnabled: true,
+    };
     const serialized = serializePortableProject({
       sourceDocumentId: "portable-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
@@ -46,7 +49,10 @@ describe("persistence codecs", () => {
 
     expect(parsePortableProject(serialized)).toMatchObject({
       sourceDocumentId: "portable-project",
-      document: { title: document.title },
+      document: {
+        title: document.title,
+        autoScrollEnabled: true,
+      },
       workspace: { activeClipId: document.workspace.activeClipId },
     });
     expect(serialized).not.toContain("selectionMode");
@@ -131,7 +137,7 @@ describe("persistence codecs", () => {
     const migrated = parsePortableProject(JSON.stringify(legacy));
     const clipId = getClipPlaybackOrder(document.clipHierarchy)[0]!;
 
-    expect(migrated.document.schemaVersion).toBe(10);
+    expect(migrated.document.schemaVersion).toBe(11);
     expect("anchorTick" in migrated.document.clipsById[clipId]!
       .transportSettings).toBe(false);
     expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)

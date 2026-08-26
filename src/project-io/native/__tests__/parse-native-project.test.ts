@@ -54,6 +54,29 @@ describe("native project parser", () => {
     expect(storedNote).not.toHaveProperty("status");
   });
 
+  test("defaults playhead auto-scroll when loading a schema v10 project", () => {
+    const project = {
+      ...createTestProject(),
+      autoScrollEnabled: true,
+    };
+    const stored = JSON.parse(serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    )) as {
+      project: {
+        schemaVersion: number;
+        autoScrollEnabled?: boolean;
+      };
+    };
+
+    stored.project.schemaVersion = 10;
+    delete stored.project.autoScrollEnabled;
+
+    expect(parseNativeProjectFile(JSON.stringify(stored))
+      .projectState.autoScrollEnabled).toBe(false);
+  });
+
   test("combines legacy note mute and instrument lock into note flags", () => {
     const project = createTestProject({
       clips: [{
@@ -138,7 +161,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(10);
+    expect(loaded.projectState.schemaVersion).toBe(11);
     expect(loaded.projectState.clipsById[TEST_CLIP_ID]!
       .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
       .notesById["v8-note"]!).toMatchObject({ muted: true, locked: true });
@@ -381,7 +404,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(10);
+    expect(loaded.projectState.schemaVersion).toBe(11);
     expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
       kind: "group",
       id: "legacy-group",
@@ -501,7 +524,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(10);
+    expect(loaded.projectState.schemaVersion).toBe(11);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

@@ -210,6 +210,7 @@ export function createProjectFromMidiImport(
     },
     clipHierarchy: createFlatClipHierarchy([clipId]),
     autoAdvanceEnabled: PROJECT_CONSTANTS.defaultAutoAdvanceEnabled,
+    autoScrollEnabled: PROJECT_CONSTANTS.defaultAutoScrollEnabled,
     workspace: { activeClipId: clipId },
     masterBus: createDefaultMasterBusState(),
   };

@@ -407,6 +407,11 @@ export interface SetAutoAdvanceEnabledCommand {
   readonly enabled: boolean;
 }
 
+export interface SetAutoScrollEnabledCommand {
+  readonly type: "SetAutoScrollEnabled";
+  readonly enabled: boolean;
+}
+
 export type PianoRollCommand =
   | AddClipCommand
   | DeleteClipCommand
@@ -457,4 +462,5 @@ export type PianoRollCommand =
   | DeleteScaleMarkerCommand
   | UpdateLoopCommand
   | SetLoopEnabledCommand
-  | SetAutoAdvanceEnabledCommand;
+  | SetAutoAdvanceEnabledCommand
+  | SetAutoScrollEnabledCommand;

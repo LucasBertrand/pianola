@@ -12,6 +12,7 @@ import {
 } from "../project/project-document";
 import type {
   SetAutoAdvanceEnabledCommand,
+  SetAutoScrollEnabledCommand,
   SetMasterMutedCommand,
   UpdateMasterGainCommand,
   UpdateMasterTuningCommand,
@@ -34,6 +35,23 @@ export function applySetAutoAdvanceEnabled(
   return command.enabled === state.autoAdvanceEnabled
     ? state
     : { ...state, autoAdvanceEnabled: command.enabled };
+}
+
+export function applySetAutoScrollEnabled(
+  state: ProjectState,
+  command: SetAutoScrollEnabledCommand,
+): ProjectState {
+  if (typeof command.enabled !== "boolean") {
+    reject(
+      "INVALID_COMMAND",
+      "Project playhead auto-scroll state must be a boolean.",
+      command.type,
+    );
+  }
+
+  return command.enabled === state.autoScrollEnabled
+    ? state
+    : { ...state, autoScrollEnabled: command.enabled };
 }
 
 export function applyUpdateProjectTitle(

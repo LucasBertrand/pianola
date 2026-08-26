@@ -124,6 +124,11 @@ export function parseProjectSnapshot(
     schemaVersion,
     path,
   );
+  const autoScrollEnabled = parseAutoScrollEnabled(
+    project,
+    schemaVersion,
+    path,
+  );
   assertExactRecordKeys(sourceClips, clipOrder, `${path}.clipsById`);
   const clipsById: Record<ClipId, Clip> = {};
 
@@ -160,9 +165,27 @@ export function parseProjectSnapshot(
     clipsById,
     clipHierarchy,
     autoAdvanceEnabled,
+    autoScrollEnabled,
     masterBus,
   };
   return projectState;
+}
+
+function parseAutoScrollEnabled(
+  project: Readonly<Record<string, unknown>>,
+  schemaVersion: number,
+  path: string,
+): boolean {
+  if ("autoScrollEnabled" in project) {
+    return readBoolean(
+      project["autoScrollEnabled"],
+      `${path}.autoScrollEnabled`,
+    );
+  }
+
+  return schemaVersion >= 11
+    ? readBoolean(undefined, `${path}.autoScrollEnabled`)
+    : PROJECT_CONSTANTS.defaultAutoScrollEnabled;
 }
 
 function parseAutoAdvanceEnabled(

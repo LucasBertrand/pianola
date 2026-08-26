@@ -58,6 +58,7 @@ export function serializeNativeProjectFile(
       clipsById,
       clipHierarchy: state.clipHierarchy,
       autoAdvanceEnabled: state.autoAdvanceEnabled,
+      autoScrollEnabled: state.autoScrollEnabled,
       masterBus: state.masterBus,
     }),
     editor: toNativeJsonObject({
