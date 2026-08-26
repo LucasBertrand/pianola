@@ -40,6 +40,7 @@ export function useViewportControls(
   inspectorOpen: boolean,
   followPlayback: boolean,
   seekPlayback: (tick: number) => void,
+  onDimensionsInitialized?: () => void,
 ): ViewportControls {
   const appShellRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +112,12 @@ export function useViewportControls(
     [controller, synchronizeInputs],
   );
 
+  const onDimensionsInitializedRef = useRef(onDimensionsInitialized);
+
+  useEffect(() => {
+    onDimensionsInitializedRef.current = onDimensionsInitialized;
+  }, [onDimensionsInitialized]);
+
   useEffect(() => {
     const stage = stageRef.current;
 
@@ -118,8 +125,13 @@ export function useViewportControls(
       return undefined;
     }
 
+    let initialized = false;
     const updateDimensions = (width: number, height: number): void => {
       synchronizeInputs(controller.updateDimensions(width, height));
+      if (!initialized) {
+        initialized = true;
+        onDimensionsInitializedRef.current?.();
+      }
     };
     const bounds = stage.getBoundingClientRect();
     const resizeObserver = new ResizeObserver((entries) => {

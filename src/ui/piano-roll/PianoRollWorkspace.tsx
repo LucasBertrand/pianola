@@ -320,19 +320,6 @@ export function PianoRollWorkspace({
     );
   }, [runtime, activeClip]);
 
-  const initialFitDoneRef = useRef(false);
-
-  useEffect(() => {
-    if (!initialFitDoneRef.current) {
-      const frameId = requestAnimationFrame(() => {
-        initialFitDoneRef.current = true;
-        handleAutoFit();
-      });
-
-      return () => cancelAnimationFrame(frameId);
-    }
-  }, [handleAutoFit]);
-
   const handlePitchSelect = useCallback((pitch: number): void => {
     pianoRollControllerRef.current
       ?.togglePitchSelection(pitch);
@@ -431,6 +418,7 @@ export function PianoRollWorkspace({
       && playbackStatus === "playing"
       && playingClipId === activeClip.id,
     seekPlayback,
+    handleAutoFit,
   );
   const handleReturnToStart = useCallback((): void => {
     returnToStart();
