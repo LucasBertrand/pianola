@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { MAXIMUM_PROJECT_CLIP_COUNT, type Clip } from "../../../domain/clips/clip";
+import {
+  DEFAULT_MEASURE_COUNT,
+  MAXIMUM_MEASURE_COUNT,
+  MAXIMUM_PROJECT_CLIP_COUNT,
+  MINIMUM_MEASURE_COUNT,
+  type Clip,
+  type ClipCreationSettings,
+} from "../../../domain/clips/clip";
 import {
   countDescendantClips,
   DEFAULT_CLIP_GROUP_COLOR,
@@ -17,6 +24,7 @@ import type { ProjectState } from "../../../domain/project/project-document";
 import type { ReadonlyRenderSignal } from "../../../editor/model/render-signal";
 import type { PlayheadPosition } from "../../../editor/model/playhead-position";
 import { RENDERING_CONSTANTS } from "../../../config/rendering-config";
+import { createDefaultTimeSignature } from "../../../domain/transport/time-map";
 import {
   ClipGroupDeleteDialog,
   ClipGroupEditorDialog,
@@ -38,6 +46,7 @@ export interface ClipInspectorProps {
   readonly onAdd: (
     parentGroupId?: ClipGroupId | null,
     name?: string,
+    settings?: ClipCreationSettings,
   ) => void;
   readonly onDuplicate: (clipId: ClipId) => void;
   readonly onDuplicateGroup: (groupId: ClipGroupId) => ClipGroupId | null;
@@ -72,6 +81,8 @@ type HierarchyDialogDraft =
       readonly parentGroupId: ClipGroupId | null;
       readonly name: string;
       readonly color: string;
+      readonly measureCount: number;
+      readonly timeSignature: ClipCreationSettings["timeSignature"];
     }
   | {
       readonly mode: "edit-group";
@@ -203,6 +214,8 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
               parentGroupId: null,
               name: `Clip ${clipOrder.length + 1}`,
               color: DEFAULT_CLIP_GROUP_COLOR,
+              measureCount: DEFAULT_MEASURE_COUNT,
+              timeSignature: createDefaultTimeSignature(),
             })}
           />
           <AddHierarchyButton
@@ -213,6 +226,8 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
               parentGroupId: null,
               name: "New group",
               color: nextGroupColor,
+              measureCount: DEFAULT_MEASURE_COUNT,
+              timeSignature: createDefaultTimeSignature(),
             })}
           />
         </div>
@@ -282,6 +297,8 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
             parentEntries,
             dialogDraft.mode === "create-group",
           )}
+          measureCount={dialogDraft.measureCount}
+          timeSignature={dialogDraft.timeSignature}
           onNameChange={(name) => setDialogDraft((current) =>
             current !== null
               && current.mode !== "edit-group"
@@ -298,12 +315,28 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
               && current.mode !== "delete-group"
               ? { ...current, parentGroupId }
               : current)}
+          onMeasureCountChange={(measureCount) => setDialogDraft((current) =>
+            current?.mode === "create-clip"
+              ? { ...current, measureCount }
+              : current)}
+          onTimeSignatureChange={(timeSignature) => setDialogDraft((current) =>
+            current?.mode === "create-clip"
+              ? { ...current, timeSignature }
+              : current)}
           onConfirm={() => {
             const name = dialogDraft.name.trim();
             if (name.length === 0) return;
 
             if (dialogDraft.mode === "create-clip") {
-              props.onAdd(dialogDraft.parentGroupId, name);
+              if (
+                dialogDraft.measureCount < MINIMUM_MEASURE_COUNT
+                || dialogDraft.measureCount > MAXIMUM_MEASURE_COUNT
+              ) return;
+
+              props.onAdd(dialogDraft.parentGroupId, name, {
+                measureCount: dialogDraft.measureCount,
+                timeSignature: dialogDraft.timeSignature,
+              });
             } else if (props.onCreateGroup(
               dialogDraft.parentGroupId,
               name,

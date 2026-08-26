@@ -17,6 +17,7 @@ import {
 import type {
   ClipHierarchyNodeIdentity,
 } from "../../domain/clips/clip-hierarchy";
+import type { ClipCreationSettings } from "../../domain/clips/clip";
 import {
   ClipInspector,
 } from "./clips/ClipInspector";
@@ -49,6 +50,7 @@ export interface ProjectInspectorProps {
   readonly onAddClip: (
     parentGroupId?: ClipGroupId | null,
     name?: string,
+    settings?: ClipCreationSettings,
   ) => void;
   readonly onDuplicateClip: (clipId: ClipId) => void;
   readonly onDuplicateClipGroup: (groupId: ClipGroupId) => ClipGroupId | null;

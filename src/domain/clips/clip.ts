@@ -20,6 +20,7 @@ import {
   createDefaultTimeSignature,
   getTicksPerMeasure,
   type TimeMap,
+  type TimeSignature,
 } from "../transport/time-map";
 
 export const DEFAULT_MEASURE_COUNT =
@@ -47,6 +48,11 @@ export interface ClipTimeline {
   readonly timeMap: TimeMap;
 }
 
+export interface ClipCreationSettings {
+  readonly measureCount: number;
+  readonly timeSignature: TimeSignature;
+}
+
 /** Self-contained musical material rendered by the piano-roll editor. */
 export interface Clip {
   readonly id: ClipId;
@@ -61,15 +67,14 @@ export interface Clip {
 export function createDefaultClipTimeline(
   clock: ProjectClock = createDefaultProjectClock(),
   measureCount: number = DEFAULT_MEASURE_COUNT,
+  timeSignature: TimeSignature = createDefaultTimeSignature(),
 ): ClipTimeline {
-  const timeSignature = createDefaultTimeSignature();
-
   return {
     durationTicks: measureCount * getTicksPerMeasure(
       clock.ppqn,
       timeSignature,
     ),
-    timeMap: createDefaultTimeMap(),
+    timeMap: createDefaultTimeMap(timeSignature),
   };
 }
 

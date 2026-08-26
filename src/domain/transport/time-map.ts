@@ -77,11 +77,13 @@ export function createDefaultTimeSignature(): TimeSignature {
   };
 }
 
-export function createDefaultTimeMap(): TimeMap {
+export function createDefaultTimeMap(
+  timeSignature: TimeSignature = createDefaultTimeSignature(),
+): TimeMap {
   return {
     meterMarkers: [{
       startTick: 0,
-      timeSignature: createDefaultTimeSignature(),
+      timeSignature,
     }],
     tempoMarkers: [{
       startTick: 0,

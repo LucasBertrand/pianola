@@ -359,6 +359,24 @@
   margin-bottom: 20px;
 }
 
+.clip-creation-timeline-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.clip-creation-meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.clip-creation-meter > span {
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .application-dialog p.clip-group-delete-warning {
   margin-top: -10px;
   color: var(--color-accent-danger);
