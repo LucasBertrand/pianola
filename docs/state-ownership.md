@@ -50,8 +50,7 @@ musicales indépendantes de l'écran.
 `StoredProject` associe document et workspace pour une écriture atomique, sans
 faire entrer le workspace dans l'historique. `UserSettings` est écrit par un
 repository distinct ; importer un projet ne peut donc pas remplacer les
-préférences du destinataire. Les règles de version et de récupération sont dans
-[`persistence-strategy.md`](persistence-strategy.md).
+préférences du destinataire.
 
 Les lecteurs v2 acceptent les anciens `anchorTick` et `playheadTick` v1 afin de
 charger les projets existants, puis les ignorent. Aucun codec courant ne les

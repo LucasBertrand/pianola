@@ -130,7 +130,7 @@ async function collectMarkdownFiles(directory) {
   const files = [];
 
   for (const entry of entries) {
-    if ([".git", "dist", "node_modules"].includes(entry.name)) {
+    if ([".git", "dist", "node_modules", ".idea"].includes(entry.name)) {
       continue;
     }
 

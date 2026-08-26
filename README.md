@@ -59,7 +59,6 @@ Les variantes de tests sont décrites dans le
 | trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
 | comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
 | savoir quel état persiste | [`docs/state-ownership.md`](docs/state-ownership.md) |
-| faire évoluer sauvegarde ou préférences | [`docs/persistence-strategy.md`](docs/persistence-strategy.md) |
 | installer et vérifier | [`docs/guides/development.md`](docs/guides/development.md) |
 | utiliser l’éditeur | [`docs/guides/usage.md`](docs/guides/usage.md) |
 | comprendre `.pianola` et MIDI | [`docs/guides/project-files.md`](docs/guides/project-files.md) |

@@ -1,0 +1,96 @@
+# Feuille de route
+
+Chaque lot possède une condition d'entrée, des actions, une condition de sortie
+et un point de rollback. Ne commencer qu'un lot à la fois.
+
+## Lot 0 — Baseline et garde-fous
+
+- enregistrer le résultat initial de `npm run verify` dans `STATUS.md` ;
+- corriger les contrôles documentaires liés aux fichiers de migration si
+  nécessaire ;
+- étendre les frontières à toutes les couches actuelles ;
+- ajouter une détection des cycles et séparer code produit et tests.
+
+Sortie : baseline connue et contrôles architecturaux verts.
+
+## Lot 1 — Vocabulaire d'état
+
+- introduire `EditorSessionState`, `ActiveClipSelection`,
+  `PersistedEditorWorkspace` et `PersistedClipEditorState` ;
+- migrer d'abord les types et codecs, puis application et présentation ;
+- supprimer les alias seulement après absence vérifiée de consommateurs.
+
+Sortie : chaque variante de `workspace` possède un sens unique documenté.
+
+## Lot 2 — Format `.pianola`
+
+- créer le propriétaire `project-files/pianola` ;
+- extraire le parseur de document partagé depuis `native/parsing` ;
+- isoler les migrations réellement historiques ;
+- remplacer les noms `NATIVE_*` encore utilisés par le produit ;
+- préserver la lecture des anciens fichiers par des tests de compatibilité.
+
+Sortie : aucun chemin produit courant n'importe un dossier `native` ou `legacy`.
+
+## Lot 3 — Ports et adaptateurs de persistance
+
+- extraire les ports de repository et codec vers `application/ports` ;
+- déplacer IndexedDB, Worker et politiques navigateur sous `infrastructure` ;
+- décider explicitement du statut des adaptateurs mémoire ;
+- préserver les contrats de repository existants.
+
+Sortie : l'application dépend de ports, jamais d'IndexedDB ou d'un Worker.
+
+## Lot 4 — Cœur d'édition et session applicative
+
+- séparer les ports/signaux purs de l'agrégat `EditorRuntime` ;
+- déplacer l'orchestration store/commandes vers `application` ;
+- supprimer la dépendance `editor → use-cases` ;
+- supprimer le cycle entre `spatial-index` et `spatial-index-search`.
+
+Sortie : `editor-core` ne dépend que du domaine et de lui-même.
+
+## Lot 5 — Décomposition de `PianoRollWorkspace`
+
+Extraire dans cet ordre :
+
+1. préférences et presets personnels ;
+2. cycle de vie/import/export du projet ;
+3. commandes de menu radial ;
+4. dialogues ;
+5. layout et portals ;
+6. coordination transport/viewport.
+
+Sortie indicative : moins de 400 lignes, moins de 25 imports, aucun protocole
+complet de persistance ou d'import dans le composant.
+
+## Lot 6 — Redistribution des horizontales
+
+- déplacer les configurations vers leurs propriétaires ;
+- supprimer `ui/shared` ;
+- découper `active-clip-command-helpers.ts` par invariant ;
+- découper les autres modules volumineux seulement sans changement métier.
+
+Sortie : aucune racine générique ne sert de destination par défaut.
+
+## Lot 7 — Renommage physique des couches
+
+Déplacer séparément :
+
+1. `use-cases` vers `application` ;
+2. `ui` vers `presentation` ;
+3. `editor` vers `editor-core` ;
+4. infrastructures audio, fichiers, persistance et navigateur ;
+5. `app` vers `bootstrap`.
+
+Sortie : arborescence de `TARGET.md` matérialisée et anciens chemins interdits.
+
+## Lot 8 — Nettoyage final
+
+- mettre à jour README, architecture, code map et guides locaux ;
+- déplacer les notes/audits/assets de la racine vers `docs/` ;
+- supprimer alias, façades et chemins de compatibilité temporaires ;
+- exécuter la validation complète ;
+- renseigner le bilan final dans `STATUS.md`.
+
+Sortie : aucune occurrence d'ancien chemin ou nom hors migrations documentées.
