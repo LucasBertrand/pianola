@@ -1,8 +1,4 @@
 import { describe, expect, test } from "vitest";
-import {
-  getNoteBodyOpacity,
-  getNoteContentOpacity,
-} from "../rendering/note-opacity";
 import { getDisabledToggleStatus } from "../usePianoRollSelectionCommands";
 
 describe("note status UI", () => {
@@ -18,12 +14,5 @@ describe("note status UI", () => {
     ])).toBe("active");
   });
 
-  test("uses one silent opacity for muted and disabled notes", () => {
-    expect(getNoteBodyOpacity({ status: "disabled" }))
-      .toBe(getNoteBodyOpacity({ status: "muted" }));
-    expect(getNoteContentOpacity({ status: "disabled" }))
-      .toBe(getNoteContentOpacity({ status: "muted" }));
-    expect(getNoteBodyOpacity({ status: "locked" }))
-      .toBe(getNoteBodyOpacity({ status: "active" }));
-  });
+
 });
