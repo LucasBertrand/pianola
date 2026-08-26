@@ -18,7 +18,7 @@ les imports réels et consigner les exceptions découvertes dans `STATUS.md`.
 | `src/pwa/persistence/` | `src/infrastructure/persistence/` |
 | `src/pwa/register-service-worker.ts` | `src/infrastructure/browser/service-worker/` |
 | `src/persistence/` | ports vers `application/ports`, codecs et modèles stockés vers `infrastructure/persistence` |
-| `src/music/` | `src/domain/music/` au lot 6, après séparation des responsabilités non métier |
+| `src/music/` | `src/domain/music-theory/` au lot 6, après séparation des responsabilités non métier |
 | `src/config/` | distribué chez les propriétaires |
 | `src/styles/` | `src/presentation/styles/` |
 

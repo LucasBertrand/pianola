@@ -15,7 +15,7 @@ src/
 │   ├── instruments/
 │   ├── timeline/
 │   ├── playback/
-│   ├── music/
+│   ├── music-theory/
 │   └── commands/
 ├── application/
 │   ├── ports/

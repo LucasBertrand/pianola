@@ -128,10 +128,11 @@ régression de rendu par rapport à la baseline du lot 0.
 ## Lot 6 — Redistribution des horizontales
 
 - déplacer les configurations vers leurs propriétaires ;
-- déplacer les concepts musicaux purs de `src/music/` vers `src/domain/music/`
-  après vérification de leurs imports ; séparer auparavant les responsabilités
-  applicatives, d'interaction ou de présentation éventuellement mêlées à ces
-  modules, sans changement de vocabulaire ou de comportement musical ;
+- déplacer les concepts de théorie musicale purs de `src/music/` vers
+  `src/domain/music-theory/` après vérification de leurs imports ; séparer
+  auparavant les responsabilités applicatives, d'interaction ou de présentation
+  éventuellement mêlées à ces modules, sans changement de vocabulaire ou de
+  comportement musical ;
 - supprimer `ui/shared` ;
 - découper `clip-commands.ts` par famille de commandes et
   `active-clip-command-helpers.ts` par invariant ;

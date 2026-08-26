@@ -64,6 +64,6 @@ Aucun écart supplémentaire consigné.
 
 - création du dossier d'exécution autonome ;
 - resserrement du plan après revue : création progressive des racines cibles,
-  affectation de `Track` au lot 1 et de `src/music` à `domain/music` au lot 6,
-  couverture préalable aux découpages, jalons et validation de rendu du lot 5,
-  rollback opérationnel.
+  affectation de `Track` au lot 1 et de `src/music` à `domain/music-theory` au
+  lot 6, couverture préalable aux découpages, jalons et validation de rendu du
+  lot 5, rollback opérationnel.
