@@ -67,7 +67,7 @@ bien tous les contrôles souhaités.
 Adapter les motifs au lot :
 
 ```powershell
-rg "ancien-nom|ancien-chemin" src tests docs idea/migration
+rg "ancien-nom|ancien-chemin" src tests docs
 rg "utils|helpers|common|shared|types|data" src
 ```
 

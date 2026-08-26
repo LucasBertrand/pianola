@@ -24,6 +24,19 @@ DECISIONS.md > TARGET.md > ROADMAP.md > MAPPING.md > BASELINE.md > STATUS.md
 
 `STATUS.md` décrit ce qui est fait ; il ne peut pas modifier une décision.
 
+## Relation avec la documentation produit
+
+Les documents hors de ce dossier décrivent le code réellement présent dans le
+worktree. Ils restent la référence pour une tâche produit sans rapport avec la
+migration. Pour une tâche de migration, ce dossier fait autorité sur la cible,
+la séquence et les renommages prévus.
+
+Pendant un état transitoire, ne jamais déduire qu'un chemin cible existe à partir
+de `TARGET.md` : le vérifier dans le worktree et dans `STATUS.md`. À la fin de
+chaque lot, mettre à jour les guides, cartes et README directement affectés afin
+qu'ils continuent de décrire le code courant. Le lot 8 effectue seulement le
+balayage documentaire final.
+
 ## But de la migration
 
 Rendre l'emplacement et la direction des dépendances prévisibles :

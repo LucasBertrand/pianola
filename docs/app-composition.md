@@ -1,5 +1,9 @@
 # Inventaire de la composition applicative
 
+> **État courant.** Ce document décrit la composition actuellement matérialisée.
+> La décomposition cible de `PianoRollWorkspace` et son avancement sont définis
+> dans [`migration/README.md`](migration/README.md) et `migration/STATUS.md`.
+
 `src/app/App.tsx` montre la création du runtime et la surface principale sans
 héberger les protocoles détaillés.
 

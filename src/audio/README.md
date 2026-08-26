@@ -1,5 +1,10 @@
 # Audio
 
+> **État courant.** Ce guide décrit la zone présente dans le worktree. Pour une
+> tâche de migration, commencer par
+> [`../../docs/migration/README.md`](../../docs/migration/README.md) et vérifier
+> `STATUS.md` avant d'utiliser un propriétaire cible.
+
 ## Que possède cette zone ?
 
 La compilation de la timeline transférable, le transport à l’échantillon, les

@@ -19,7 +19,9 @@ Si aucun lot n'est marqué `EN COURS`, sélectionner uniquement le premier lot
 1. Écrire dans `STATUS.md` : objectif, périmètre, baseline et fichiers prévus.
 2. Faire les renommages/déplacements avec des opérations conservant l'historique.
 3. Mettre à jour les imports sans ajouter de barrel global.
-4. Mettre à jour les tests et documents directement affectés.
+4. Mettre à jour les tests et documents directement affectés afin qu'ils
+   décrivent le code courant à la fin de la sous-étape ; ne pas différer cette
+   synchronisation au lot 8.
 5. Exécuter la validation proportionnée après chaque sous-étape.
 6. Rechercher les anciens noms et chemins avec `rg`.
 7. Exécuter la validation complète avant de déclarer le lot terminé.

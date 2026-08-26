@@ -1,5 +1,10 @@
 # Propriété et durée de vie des états
 
+> **État courant.** Ce document décrit les propriétaires actuellement
+> matérialisés. Les renommages et propriétaires cibles de la migration sont dans
+> [`migration/README.md`](migration/README.md) ; `migration/STATUS.md` indique
+> lesquels sont déjà effectifs.
+
 Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert de
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
@@ -52,7 +57,8 @@ faire entrer le workspace dans l'historique. `UserSettings` est écrit par un
 repository distinct ; importer un projet ne peut donc pas remplacer les
 préférences du destinataire.
 
-Le versionnement est réinitialisé lors de la migration architecturale. Le codec
-courant n'accepte aucune ancienne variante contenant notamment `anchorTick` ou
-`playheadTick` : une version non supportée est rejetée et une nouvelle session
-commence avec le playhead au début du clip actif.
+À l'état courant, les codecs acceptent encore certaines variantes historiques,
+notamment celles contenant `anchorTick` ou `playheadTick`, puis les normalisent
+vers le modèle actuel. La migration réinitialisera le versionnement selon D-009 :
+après le lot 2, seule la nouvelle baseline sera acceptée et une version non
+supportée sera rejetée sans conversion silencieuse.

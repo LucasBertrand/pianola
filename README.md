@@ -7,6 +7,12 @@ navigateur sans serveur applicatif, base distante ni compte utilisateur.
 Ce README est un portail. Les détails vivent dans les guides de `docs/` et dans
 les README placés près du code qu’ils décrivent.
 
+> **Migration architecturale en préparation.** Pour préparer, exécuter ou
+> reprendre un lot, commencer par
+> [`docs/migration/README.md`](docs/migration/README.md). Les chemins présentés
+> dans ce README décrivent le code courant tant que `STATUS.md` n'indique pas
+> leur migration.
+
 ## Démarrage rapide
 
 Prérequis :
@@ -56,6 +62,7 @@ Les variantes de tests sont décrites dans le
 | Besoin | Point d’entrée |
 | --- | --- |
 | découvrir la documentation | [`docs/README.md`](docs/README.md) |
+| travailler sur la migration architecturale | [`docs/migration/README.md`](docs/migration/README.md) |
 | trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
 | comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
 | savoir quel état persiste | [`docs/state-ownership.md`](docs/state-ownership.md) |

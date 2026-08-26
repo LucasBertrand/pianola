@@ -154,7 +154,8 @@ Sortie : arborescence de `TARGET.md` matérialisée et anciens chemins interdits
 
 ## Lot 8 — Nettoyage final
 
-- mettre à jour README, architecture, code map et guides locaux ;
+- réconcilier une dernière fois README, architecture, code map et guides locaux
+  déjà mis à jour au fil des lots ;
 - déplacer les notes/audits/assets de la racine vers `docs/` ;
 - supprimer alias, façades et chemins de compatibilité temporaires ;
 - exécuter la validation complète ;

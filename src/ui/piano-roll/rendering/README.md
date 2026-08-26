@@ -1,5 +1,10 @@
 # Rendering Pipeline
 
+> **État courant.** Ce guide décrit la zone présente dans le worktree. Pour une
+> tâche de migration, commencer par
+> [`../../../../docs/migration/README.md`](../../../../docs/migration/README.md)
+> et vérifier `STATUS.md` avant d'utiliser un propriétaire cible.
+
 React owns only the stable layer tree and lifecycle subscriptions. It never owns note rectangles, playhead positions, lasso geometry, or animation-frame state.
 
 ## Invalidation model

@@ -1,5 +1,10 @@
 # Cas d’usage
 
+> **État courant.** Ce guide décrit la zone présente dans le worktree. Pour une
+> tâche de migration, commencer par
+> [`../../docs/migration/README.md`](../../docs/migration/README.md) et vérifier
+> `STATUS.md` avant d'utiliser un propriétaire cible.
+
 ## Que possède cette zone ?
 
 Les intentions indépendantes de React : service de commandes, ports de dialogue,

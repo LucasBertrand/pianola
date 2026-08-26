@@ -1,5 +1,10 @@
 # Éditeur
 
+> **État courant.** Ce guide décrit la zone présente dans le worktree. Pour une
+> tâche de migration, commencer par
+> [`../../docs/migration/README.md`](../../docs/migration/README.md) et vérifier
+> `STATUS.md` avant d'utiliser un propriétaire cible.
+
 ## Que possède cette zone ?
 
 Le noyau indépendant du DOM du piano roll : géométrie, interactions, sélection,

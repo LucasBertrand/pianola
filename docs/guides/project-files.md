@@ -1,5 +1,10 @@
 # Fichiers projet
 
+> **État courant.** Ce guide décrit les codecs présents avant le lot 2. La cible
+> incompatible avec les anciens formats est définie par D-009 dans
+> [`../migration/DECISIONS.md`](../migration/DECISIONS.md), et son avancement par
+> [`../migration/STATUS.md`](../migration/STATUS.md).
+
 ## Format natif `.pianola`
 
 Le point d’entrée unique du format portable est
@@ -28,6 +33,9 @@ Le pipeline portable :
 Les enveloppes v1 locale, portable et native restent lisibles. Les champs
 `anchorTick` et `playheadTick` sont validés puis retirés pendant la construction
 du modèle v2 ; les exports et autosaves suivants ne les écrivent plus.
+
+Cette compatibilité décrit uniquement le code courant. Elle doit être supprimée
+au lot 2 : elle ne constitue pas une exigence de la cible.
 
 Tests ciblés :
 

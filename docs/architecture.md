@@ -1,5 +1,10 @@
 # Architecture de Pianola
 
+> **État courant.** Ce document décrit l'architecture présente dans le
+> worktree. La cible et la séquence de transformation sont définies dans
+> [`migration/README.md`](migration/README.md). Pendant la migration, consulter
+> aussi `migration/STATUS.md` avant d'utiliser un chemin.
+
 Ce document décrit les frontières et les principaux pipelines. Pour chercher un
 comportement précis, partir de la [carte du code](code-map.md). Pour décider si
 un état doit persister ou entrer dans Undo/Redo, consulter
