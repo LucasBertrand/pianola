@@ -44,7 +44,7 @@ export function computeClipFitViewport(
     Math.max(VIEWPORT_CONSTANTS.minimumStoredZoom, idealZoomX)
   );
 
-  let zoomY = VIEWPORT_CONSTANTS.initialVerticalZoom;
+  let zoomY: number = VIEWPORT_CONSTANTS.initialVerticalZoom;
   let scrollY = 0;
 
   if (!hasNotes) {
