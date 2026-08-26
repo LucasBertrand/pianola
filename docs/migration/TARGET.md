@@ -83,6 +83,24 @@ IndexedDB, Worker, MIDI ou Web Audio  → infrastructure
 Création et injection des objets      → bootstrap
 ```
 
+## Réactivité de la présentation
+
+La présentation ne possède pas de store UI global par défaut. Elle combine
+quatre mécanismes selon la durée de vie et la fréquence de l'état :
+
+| État | Mécanisme cible |
+| --- | --- |
+| local à une surface ou à un dialogue | `useState` ou reducer colocalisé |
+| partagé et visible dans du JSX | propriétaire canonique lu par un hook `useSyncExternalStore` avec sélecteur ciblé |
+| service, commandes ou capacité stable | contexte React étroit servant uniquement à l'injection |
+| viewport, playhead ou preview à haute fréquence | signal du runtime et invalidation directe DOM/Canvas |
+
+Un contexte ne transporte jamais un snapshot global du workspace. Un hook
+sélecteur doit retourner une référence stable lorsque sa projection n'a pas
+changé. Zustand ou un autre store UI externe ne fait pas partie de la cible de
+cette migration ; son adoption demanderait une nouvelle décision documentée et
+un domaine d'état sans propriétaire existant.
+
 ## Vocabulaire cible
 
 | Concept | Sens unique attendu |

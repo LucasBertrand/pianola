@@ -52,6 +52,11 @@ Sortie : `editor-core` ne dépend que du domaine et de lui-même.
 
 ## Lot 5 — Décomposition de `PianoRollWorkspace`
 
+Condition d'entrée : la séparation entre état document, workspace persistant,
+session d'interaction et temps réel est matérialisée par les lots 1 et 4. Les
+propriétaires canoniques et leurs contrats d'abonnement sont disponibles sans
+dépendre de `PianoRollWorkspace`.
+
 Extraire dans cet ordre :
 
 1. préférences et presets personnels ;
@@ -61,8 +66,22 @@ Extraire dans cet ordre :
 5. layout et portals ;
 6. coordination transport/viewport.
 
-Sortie indicative : moins de 400 lignes, moins de 25 imports, aucun protocole
-complet de persistance ou d'import dans le composant.
+Pendant ces extractions :
+
+- colocaliser l'état propre à chaque surface dans le composant ou le hook qui
+  la possède ;
+- injecter les services stables avec des contextes React étroits seulement
+  lorsque le passage de props devient transversal ;
+- exposer des hooks sélecteurs fondés sur `useSyncExternalStore` pour les états
+  partagés qui produisent du JSX, sans recopier l'intégralité de `ProjectStore`
+  ou du runtime dans un état React racine ;
+- conserver les signaux et invalidations directes pour le viewport, le
+  playhead, les survols et les previews de geste à haute fréquence ;
+- ne pas introduire de store UI externe pendant ce lot.
+
+Une modification d'état partagé ne rerend que les surfaces abonnées au snapshot concerné ; aucune valeur à fréquence frame ne force le rerendu de tout le workspace. 
+Les adaptateurs `useSyncExternalStore` et leurs sélecteurs sont couverts par des tests vérifiant la stabilité des snapshots et l'absence de notification pour une sélection
+inchangée.
 
 ## Lot 6 — Redistribution des horizontales
 
