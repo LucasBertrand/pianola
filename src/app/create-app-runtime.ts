@@ -38,6 +38,9 @@ import {
   SpatialIndex,
 } from "../editor/geometry/spatial-index";
 import {
+  computeClipFitViewport,
+} from "../editor/viewport/compute-clip-fit-viewport";
+import {
   calculateVisibleRegion,
 } from "../editor/geometry/visible-region";
 import {
@@ -105,6 +108,8 @@ export function createEditorRuntime(
     createInstrumentRenderStyles(initialProjectState),
   );
 
+  const viewportWidth = new MutableRenderSignal(VIEWPORT_CONSTANTS.initialWidthCssPixels);
+  const viewportHeight = new MutableRenderSignal(VIEWPORT_CONSTANTS.initialHeightCssPixels);
   const viewport = new MutableRenderSignal(viewportState);
   const playheadPosition = new MutableRenderSignal(
     { clipId: activeClip.id, tick: 0 },
@@ -127,14 +132,17 @@ export function createEditorRuntime(
 
     if (state.workspace.activeClipId !== previousState.workspace.activeClipId) {
       clipEditorStates.set(previousState.workspace.activeClipId, {
-        viewport: viewport.get(),
         pitchSnapSettings: pitchSnapSettings.get(),
         gridSettings: gridSettings.get(),
       });
       const restored = clipEditorStates.get(state.workspace.activeClipId)
         ?? createDefaultClipEditorRuntimeState();
 
-      viewport.set(restored.viewport);
+      viewport.set(computeClipFitViewport(
+        nextClip,
+        viewportWidth.get(),
+        viewportHeight.get()
+      ));
       pitchSnapSettings.set(restored.pitchSnapSettings);
       gridSettings.set(restored.gridSettings);
       playheadPosition.invalidate();
@@ -176,6 +184,8 @@ export function createEditorRuntime(
     selection,
     selectionRequests: new EditorSelectionRequests(),
     spatialIndex,
+    viewportWidth,
+    viewportHeight,
     viewport,
     visibleRegion: new MutableRenderSignal(
       calculateVisibleRegion(
@@ -202,7 +212,6 @@ export function createEditorRuntime(
       const state = projectStore.getState();
 
       clipEditorStates.set(state.workspace.activeClipId, {
-        viewport: viewport.get(),
         pitchSnapSettings: pitchSnapSettings.get(),
         gridSettings: gridSettings.get(),
       });
@@ -233,7 +242,6 @@ export function createEditorRuntime(
       const restored = clipEditorStates.get(currentState.workspace.activeClipId)
         ?? createDefaultClipEditorRuntimeState();
 
-      viewport.set(restored.viewport);
       pitchSnapSettings.set(restored.pitchSnapSettings);
       gridSettings.set(restored.gridSettings);
     },
@@ -250,7 +258,6 @@ export function createEditorRuntime(
 
       if (sourceClipId === state.workspace.activeClipId) {
         clipEditorStates.set(sourceClipId, {
-          viewport: viewport.get(),
           pitchSnapSettings: pitchSnapSettings.get(),
           gridSettings: gridSettings.get(),
         });
@@ -260,7 +267,6 @@ export function createEditorRuntime(
         ?? createDefaultClipEditorRuntimeState();
 
       clipEditorStates.set(targetClipId, {
-        viewport: { ...sourceState.viewport },
         pitchSnapSettings: { ...sourceState.pitchSnapSettings },
         gridSettings: { ...sourceState.gridSettings },
       });
@@ -292,7 +298,6 @@ export function createAppPersistenceRuntime(): AppPersistenceRuntime {
 
 function createDefaultClipEditorRuntimeState(): ClipEditorRuntimeState {
   return {
-    viewport: createInitialViewportState(),
     pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
     gridSettings: DEFAULT_GRID_SETTINGS,
   };

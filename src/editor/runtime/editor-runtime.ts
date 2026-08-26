@@ -50,6 +50,8 @@ export interface EditorRuntime {
   readonly selection: EditorSelection;
   readonly selectionRequests: EditorSelectionRequests;
   readonly spatialIndex: SpatialIndex;
+  readonly viewportWidth: MutableRenderSignal<number>;
+  readonly viewportHeight: MutableRenderSignal<number>;
   readonly viewport: MutableRenderSignal<ViewportState>;
   readonly visibleRegion: MutableRenderSignal<Rect>;
   readonly instrumentStyles: MutableRenderSignal<
@@ -75,7 +77,6 @@ export interface EditorRuntime {
 }
 
 export interface ClipEditorRuntimeState {
-  readonly viewport: ViewportState;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly gridSettings: GridSettings;
 }

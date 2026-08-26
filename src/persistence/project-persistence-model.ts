@@ -18,10 +18,6 @@ export const STORED_PROJECT_SCHEMA_VERSION = 2;
 
 /** Navigation state for one clip, expressed without CSS pixel offsets. */
 export interface ProjectClipWorkspaceState {
-  readonly firstVisibleTick: number;
-  readonly highestVisiblePitch: number;
-  readonly horizontalZoom: number;
-  readonly verticalZoom: number;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly gridSettings: GridSettings;
 }

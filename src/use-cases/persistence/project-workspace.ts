@@ -1,10 +1,4 @@
 import {
-  VIEWPORT_CONSTANTS,
-} from "../../config/editor-config";
-import {
-  getClipDurationTicks,
-} from "../../domain/clips/clip";
-import {
   getClipPlaybackOrder,
 } from "../../domain/clips/clip-hierarchy";
 import type {
@@ -15,9 +9,6 @@ import type {
   ProjectDocument,
   ProjectState,
 } from "../../domain/project/project-document";
-import type {
-  ViewportState,
-} from "../../editor/geometry/converter";
 import {
   DEFAULT_GRID_SETTINGS,
 } from "../../editor/model/grid-settings";
@@ -51,12 +42,6 @@ export function createDefaultProjectWorkspace(
 
     if (clip !== undefined) {
       clipStatesById[clipId] = {
-        firstVisibleTick: 0,
-        highestVisiblePitch:
-          VIEWPORT_CONSTANTS.initialMaximumVisiblePitch,
-        horizontalZoom:
-          VIEWPORT_CONSTANTS.initialHorizontalZoom,
-        verticalZoom: VIEWPORT_CONSTANTS.initialVerticalZoom,
         pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
         gridSettings: DEFAULT_GRID_SETTINGS,
       };
@@ -99,10 +84,10 @@ export function captureProjectWorkspace(
     const state = runtimeStates[clipId];
 
     if (clip !== undefined && state !== undefined) {
-      clipStatesById[clipId] = toPersistentClipState(
-        state,
-        getClipDurationTicks(clip),
-      );
+      clipStatesById[clipId] = {
+        pitchSnapSettings: state.pitchSnapSettings,
+        gridSettings: state.gridSettings,
+      };
     }
   }
 
@@ -121,7 +106,6 @@ export function restoreProjectWorkspace(
   runtime: EditorRuntime,
   workspace: ProjectWorkspaceState,
 ): void {
-  const viewportBase = runtime.viewport.get();
   const states: Record<ClipId, ClipEditorRuntimeState> = {};
 
   for (const [clipId, state] of Object.entries(
@@ -130,58 +114,9 @@ export function restoreProjectWorkspace(
     states[clipId] = {
       pitchSnapSettings: state.pitchSnapSettings,
       gridSettings: state.gridSettings,
-      viewport: toRuntimeViewport(state, viewportBase),
     };
   }
 
   runtime.restoreClipEditorStates(states);
 }
 
-function toPersistentClipState(
-  state: ClipEditorRuntimeState,
-  durationTicks: number,
-): ProjectClipWorkspaceState {
-  const viewport = state.viewport;
-  const firstVisibleTick = Math.min(
-    durationTicks,
-    Math.max(
-      0,
-      viewport.scrollX * viewport.ticksPerPixel / viewport.zoomX,
-    ),
-  );
-  const highestVisiblePitch = Math.min(
-    VIEWPORT_CONSTANTS.highestDisplayedMidiPitch,
-    Math.max(
-      VIEWPORT_CONSTANTS.lowestDisplayedMidiPitch,
-      VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
-        - viewport.scrollY / (viewport.pitchHeight * viewport.zoomY),
-    ),
-  );
-
-  return {
-    firstVisibleTick,
-    highestVisiblePitch,
-    horizontalZoom: viewport.zoomX,
-    verticalZoom: viewport.zoomY,
-    pitchSnapSettings: state.pitchSnapSettings,
-    gridSettings: state.gridSettings,
-  };
-}
-
-function toRuntimeViewport(
-  state: ProjectClipWorkspaceState,
-  base: ViewportState,
-): ViewportState {
-  return {
-    ...base,
-    zoomX: state.horizontalZoom,
-    zoomY: state.verticalZoom,
-    scrollX:
-      state.firstVisibleTick * state.horizontalZoom / base.ticksPerPixel,
-    scrollY:
-      (
-        VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
-        - state.highestVisiblePitch
-      ) * base.pitchHeight * state.verticalZoom,
-  };
-}

@@ -88,6 +88,8 @@ export class ViewportController {
       1,
       stageHeight - EDITOR_CONSTANTS.rulerHeightCssPixels,
     );
+    this.runtime.viewportWidth.set(this.viewportWidth);
+    this.runtime.viewportHeight.set(this.viewportHeight);
     return this.synchronize();
   }
 

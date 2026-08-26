@@ -115,31 +115,44 @@ export function parseProjectWorkspace(
       );
     }
 
-    clipStatesById[clipId] = {
-      firstVisibleTick: readPersistenceNumber(
+    if ("firstVisibleTick" in stored) {
+      // v1/v2 persisted viewport info. Discarded in favor of auto-fit.
+      readPersistenceNumber(
         stored["firstVisibleTick"],
         `${clipPath}.firstVisibleTick`,
         0,
         clip.timeline.durationTicks,
-      ),
-      highestVisiblePitch: readPersistenceNumber(
+      );
+    }
+    
+    if ("highestVisiblePitch" in stored) {
+      readPersistenceNumber(
         stored["highestVisiblePitch"],
         `${clipPath}.highestVisiblePitch`,
         0,
         VIEWPORT_CONSTANTS.maximumMidiPitch,
-      ),
-      horizontalZoom: readPersistenceNumber(
+      );
+    }
+
+    if ("horizontalZoom" in stored) {
+      readPersistenceNumber(
         stored["horizontalZoom"],
         `${clipPath}.horizontalZoom`,
         VIEWPORT_CONSTANTS.minimumStoredZoom,
         VIEWPORT_CONSTANTS.maximumHorizontalZoom,
-      ),
-      verticalZoom: readPersistenceNumber(
+      );
+    }
+
+    if ("verticalZoom" in stored) {
+      readPersistenceNumber(
         stored["verticalZoom"],
         `${clipPath}.verticalZoom`,
         VIEWPORT_CONSTANTS.minimumStoredZoom,
         VIEWPORT_CONSTANTS.maximumVerticalZoom,
-      ),
+      );
+    }
+
+    clipStatesById[clipId] = {
       pitchSnapSettings: parsePitchSnapSettings(
         stored["pitchSnapSettings"],
         `${clipPath}.pitchSnapSettings`,

@@ -52,6 +52,9 @@ import {
   PianoRollViewportControls,
 } from "../../ui/editor-toolbar/PianoRollViewportControls";
 import {
+  computeClipFitViewport,
+} from "../../editor/viewport/compute-clip-fit-viewport";
+import {
   PianoRollRuler,
   PianoRollPlayhead,
 } from "../../ui/piano-roll/PianoRollTimeline";
@@ -307,6 +310,15 @@ export function PianoRollWorkspace({
     },
     [runtime],
   );
+  const handleAutoFit = useCallback(() => {
+    runtime.viewport.set(
+      computeClipFitViewport(
+        activeClip,
+        runtime.viewportWidth.get(),
+        runtime.viewportHeight.get(),
+      )
+    );
+  }, [runtime, activeClip]);
   const handlePitchSelect = useCallback((pitch: number): void => {
     pianoRollControllerRef.current
       ?.togglePitchSelection(pitch);
@@ -1146,6 +1158,7 @@ export function PianoRollWorkspace({
             gridSettings={runtime.gridSettings}
             pitchSnapSettings={pitchSnapSettings}
             onPitchSnapSettingsChange={updatePitchSnapSettings}
+            onAutoFit={handleAutoFit}
           />
         </div>
         <ProjectInspectorResizeHandle inspectorOpen={projectInspectorOpen} />
