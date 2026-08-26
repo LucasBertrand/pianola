@@ -228,6 +228,74 @@ describe("tempo marker commands", () => {
   });
 });
 
+describe("section marker commands", () => {
+  test("adds, moves, updates and deletes a comment with undo/redo", () => {
+    const store = new ProjectStore(createTestProject());
+
+    dispatch(store, {
+      type: "AddSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS,
+      comment: "Verse",
+    });
+    dispatch(store, {
+      type: "MoveSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS,
+      targetTick: MEASURE_TICKS + 240,
+    });
+    dispatch(store, {
+      type: "UpdateSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS + 240,
+      comment: "First verse",
+    });
+
+    expect(activeTimeline(store).timeMap.sectionMarkers).toEqual([{
+      startTick: MEASURE_TICKS + 240,
+      comment: "First verse",
+    }]);
+
+    dispatch(store, {
+      type: "DeleteSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS + 240,
+    });
+    expect(activeTimeline(store).timeMap.sectionMarkers).toEqual([]);
+
+    store.undo();
+    expect(activeTimeline(store).timeMap.sectionMarkers[0]?.comment)
+      .toBe("First verse");
+    store.redo();
+    expect(activeTimeline(store).timeMap.sectionMarkers).toEqual([]);
+  });
+
+  test("rejects empty comments and duplicate ticks", () => {
+    const store = new ProjectStore(createTestProject());
+
+    expect(() => dispatch(store, {
+      type: "AddSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS,
+      comment: "   ",
+    })).toThrow(CommandRejectedError);
+
+    dispatch(store, {
+      type: "AddSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS,
+      comment: "Verse",
+    });
+
+    expect(() => dispatch(store, {
+      type: "AddSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS,
+      comment: "Duplicate",
+    })).toThrow(CommandRejectedError);
+  });
+});
+
 describe("measure operations across meter markers", () => {
   test("rejects non-positive or fractional insertion counts", () => {
     for (const count of [0, -1, 1.5, Number.NaN]) {

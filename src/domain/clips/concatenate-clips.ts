@@ -78,6 +78,7 @@ export function concatenateClips(
   const meterMarkers = [];
   const tempoMarkers = [];
   const scaleMarkers = [];
+  const sectionMarkers = [];
   const generatedNoteIds = new Set<NoteId>();
   let offsetTicks = 0;
 
@@ -113,6 +114,13 @@ export function concatenateClips(
 
     for (const marker of clip.timeline.timeMap.scaleMarkers) {
       scaleMarkers.push({
+        ...marker,
+        startTick: offsetTicks + marker.startTick,
+      });
+    }
+
+    for (const marker of clip.timeline.timeMap.sectionMarkers) {
+      sectionMarkers.push({
         ...marker,
         startTick: offsetTicks + marker.startTick,
       });
@@ -167,6 +175,7 @@ export function concatenateClips(
         meterMarkers,
         tempoMarkers,
         scaleMarkers,
+        sectionMarkers,
       },
     },
     tracksByInstrumentId,

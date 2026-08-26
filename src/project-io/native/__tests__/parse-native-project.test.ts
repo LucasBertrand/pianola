@@ -161,7 +161,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(11);
+    expect(loaded.projectState.schemaVersion).toBe(12);
     expect(loaded.projectState.clipsById[TEST_CLIP_ID]!
       .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
       .notesById["v8-note"]!).toMatchObject({ muted: true, locked: true });
@@ -404,7 +404,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(11);
+    expect(loaded.projectState.schemaVersion).toBe(12);
     expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
       kind: "group",
       id: "legacy-group",
@@ -524,7 +524,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(11);
+    expect(loaded.projectState.schemaVersion).toBe(12);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);
@@ -566,6 +566,7 @@ describe("native project parser", () => {
           { startTick: 3_840, bpm: 92.5 },
         ],
         scaleMarkers: clip.timeline.timeMap.scaleMarkers,
+        sectionMarkers: [],
       },
     };
     const customProject = {

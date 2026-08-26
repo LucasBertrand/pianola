@@ -108,6 +108,7 @@ function createFlag(
     rootNote: null,
     patternType: null,
     patternId: null,
+    sectionComment: null,
     isInitial: false,
     ...overrides,
   };

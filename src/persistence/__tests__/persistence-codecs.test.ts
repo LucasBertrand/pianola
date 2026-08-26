@@ -36,9 +36,25 @@ import {
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {
+    const baseDocument = createTestProject();
+    const activeClipId = baseDocument.workspace.activeClipId;
+    const activeClip = baseDocument.clipsById[activeClipId]!;
     const document = {
-      ...createTestProject(),
+      ...baseDocument,
       autoScrollEnabled: true,
+      clipsById: {
+        ...baseDocument.clipsById,
+        [activeClipId]: {
+          ...activeClip,
+          timeline: {
+            ...activeClip.timeline,
+            timeMap: {
+              ...activeClip.timeline.timeMap,
+              sectionMarkers: [{ startTick: 960, comment: "Verse" }],
+            },
+          },
+        },
+      },
     };
     const serialized = serializePortableProject({
       sourceDocumentId: "portable-project",
@@ -58,6 +74,9 @@ describe("persistence codecs", () => {
     expect(serialized).not.toContain("selectionMode");
     expect(serialized).not.toContain("pitchPreviewEnabled");
     expect(serialized).not.toContain("playheadTick");
+    expect(parsePortableProject(serialized).document
+      .clipsById[activeClipId]?.timeline.timeMap.sectionMarkers)
+      .toEqual([{ startTick: 960, comment: "Verse" }]);
   });
 
   test("keeps an embedded personal preset in portable project exports", () => {
@@ -137,7 +156,7 @@ describe("persistence codecs", () => {
     const migrated = parsePortableProject(JSON.stringify(legacy));
     const clipId = getClipPlaybackOrder(document.clipHierarchy)[0]!;
 
-    expect(migrated.document.schemaVersion).toBe(11);
+    expect(migrated.document.schemaVersion).toBe(12);
     expect("anchorTick" in migrated.document.clipsById[clipId]!
       .transportSettings).toBe(false);
     expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)

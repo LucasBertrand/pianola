@@ -44,6 +44,9 @@ export function duplicateClipValue(
         scaleMarkers: source.timeline.timeMap.scaleMarkers.map(
           (marker) => ({ ...marker }),
         ),
+        sectionMarkers: source.timeline.timeMap.sectionMarkers.map(
+          (marker) => ({ ...marker }),
+        ),
       },
     },
   };

@@ -24,6 +24,7 @@ import {
 } from "../../../domain/identifiers";
 import type {
   ScaleMarker,
+  SectionMarker,
   TimeMap,
 } from "../../../domain/transport/time-map";
 import type {
@@ -37,6 +38,7 @@ export interface PianoRollClipboardMarkerGroup {
   readonly startTick: Tick;
   readonly tempoBpm: number | null;
   readonly scaleMarker: Omit<ScaleMarker, "startTick"> | null;
+  readonly sectionMarker: Omit<SectionMarker, "startTick"> | null;
 }
 
 export interface PianoRollClipboard {
@@ -288,8 +290,17 @@ export function createPianoRollClipboard(
           (marker) => marker.startTick === selectedGroup.startTick,
         )
       : undefined;
+    const sectionMarker = selectedGroup.kinds.includes("section")
+      ? timeMap.sectionMarkers.find(
+          (marker) => marker.startTick === selectedGroup.startTick,
+        )
+      : undefined;
 
-    if (tempoMarker === undefined && scaleMarker === undefined) {
+    if (
+      tempoMarker === undefined
+      && scaleMarker === undefined
+      && sectionMarker === undefined
+    ) {
       continue;
     }
 
@@ -303,6 +314,9 @@ export function createPianoRollClipboard(
             patternType: scaleMarker.patternType,
             patternId: scaleMarker.patternId,
           },
+      sectionMarker: sectionMarker === undefined
+        ? null
+        : { comment: sectionMarker.comment },
     });
     originTick = Math.min(originTick, selectedGroup.startTick);
   }
@@ -331,6 +345,9 @@ export function createPastedMarkerGroups(
     scaleMarker: group.scaleMarker === null
       ? null
       : { ...group.scaleMarker },
+    sectionMarker: group.sectionMarker === null
+      ? null
+      : { ...group.sectionMarker },
   }));
 }
 
@@ -347,6 +364,7 @@ export function planPastedMarkerCommands(
   const resultingMarkerGroups: SelectedTimeMapMarkerGroup[] = [];
   const tempoTicks = new Set<Tick>();
   const scaleTicks = new Set<Tick>();
+  const sectionTicks = new Set<Tick>();
 
   for (const group of markerGroups) {
     if (!Number.isSafeInteger(group.startTick) || group.startTick < 0) {
@@ -355,7 +373,7 @@ export function planPastedMarkerCommands(
       );
     }
 
-    const kinds: Array<"tempo" | "scale"> = [];
+    const kinds: Array<"tempo" | "scale" | "section"> = [];
 
     if (group.tempoBpm !== null) {
       if (tempoTicks.has(group.startTick)) {
@@ -427,6 +445,40 @@ export function planPastedMarkerCommands(
       }
     }
 
+    if (group.sectionMarker !== null) {
+      if (sectionTicks.has(group.startTick)) {
+        throw new Error(
+          "The clipboard contains duplicate section markers.",
+        );
+      }
+
+      sectionTicks.add(group.startTick);
+      kinds.push("section");
+      const addSectionCommand = {
+        type: "AddSectionMarker",
+        clipId,
+        startTick: group.startTick,
+        comment: group.sectionMarker.comment,
+      } as const;
+      commands.push(addSectionCommand);
+
+      const hasSectionCollision = timeMap.sectionMarkers.some(
+        (marker) => marker.startTick === group.startTick,
+      );
+
+      if (hasSectionCollision) {
+        collisions.push({ kind: "section", targetTick: group.startTick });
+        overwriteCommands.push({
+          type: "UpdateSectionMarker",
+          clipId,
+          startTick: group.startTick,
+          comment: group.sectionMarker.comment,
+        });
+      } else {
+        overwriteCommands.push(addSectionCommand);
+      }
+    }
+
     // Tick-0 markers are editable but intentionally not movable/selectable.
     if (kinds.length > 0 && group.startTick > 0) {
       resultingMarkerGroups.push({
@@ -470,6 +522,15 @@ export function buildDeleteClipboardMarkerCommands(
         startTick: group.startTick,
       });
     }
+
+
+    if (group.sectionMarker !== null) {
+      commands.push({
+        type: "DeleteSectionMarker",
+        clipId,
+        startTick: group.startTick,
+      });
+    }
   }
 
   return commands;
@@ -498,6 +559,15 @@ export function buildDeleteSelectedMarkerCommands(
     if (group.kinds.includes("scale")) {
       commands.push({
         type: "DeleteScaleMarker",
+        clipId,
+        startTick: group.startTick,
+      });
+    }
+
+
+    if (group.kinds.includes("section")) {
+      commands.push({
+        type: "DeleteSectionMarker",
         clipId,
         startTick: group.startTick,
       });

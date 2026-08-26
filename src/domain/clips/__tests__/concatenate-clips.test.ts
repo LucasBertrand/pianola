@@ -88,6 +88,7 @@ describe("clip concatenation", () => {
               { ...secondScale, startTick: 0 },
               { ...secondScale, startTick: 1_680 },
             ],
+            sectionMarkers: [],
           },
         },
       },

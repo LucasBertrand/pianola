@@ -45,14 +45,22 @@ export interface ScaleMarker {
   readonly patternId: TonalPatternId;
 }
 
+/** Free-form section comment positioned anywhere inside a clip timeline. */
+export interface SectionMarker {
+  readonly startTick: Tick;
+  readonly comment: string;
+}
+
 /**
- * Sole source of truth for the temporal structure of a clip. Both marker
- * lists are sorted by tick, hold unique ticks and start at tick 0.
+ * Sole source of truth for the temporal structure of a clip. Every marker
+ * list is sorted by tick and holds unique ticks. Meter, tempo, and scale
+ * markers start at tick 0; section markers are optional point comments.
  */
 export interface TimeMap {
   readonly meterMarkers: readonly MeterMarker[];
   readonly tempoMarkers: readonly TempoMarker[];
   readonly scaleMarkers: readonly ScaleMarker[];
+  readonly sectionMarkers: readonly SectionMarker[];
 }
 
 /** One measure derived from a time map; the primary navigation primitive. */
@@ -95,6 +103,7 @@ export function createDefaultTimeMap(
       patternType: "scale",
       patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
     }],
+    sectionMarkers: [],
   };
 }
 
@@ -537,6 +546,7 @@ function rebuildMeterStructure(
   requestedMarkers: readonly MeterMarker[],
   tempoMarkers: readonly TempoMarker[],
   scaleMarkers: readonly ScaleMarker[],
+  sectionMarkers: readonly SectionMarker[],
   minimumDurationTicks: Tick,
 ): {
   readonly timeMap: TimeMap;
@@ -592,6 +602,7 @@ function rebuildMeterStructure(
       meterMarkers,
       tempoMarkers,
       scaleMarkers,
+      sectionMarkers,
     },
     durationTicks,
   };
@@ -616,6 +627,7 @@ export function replaceInitialMeter(
       index === 0 ? { ...marker, timeSignature } : marker),
     timeMap.tempoMarkers,
     timeMap.scaleMarkers,
+    timeMap.sectionMarkers,
     durationTicks,
   );
 }
@@ -666,6 +678,26 @@ export function normalizeScaleMarkers(
 ): ScaleMarker[] {
   const sorted = sortByTick(markers);
   const normalized: ScaleMarker[] = [];
+
+  for (const marker of sorted) {
+    const previous = normalized[normalized.length - 1];
+
+    if (previous !== undefined && previous.startTick === marker.startTick) {
+      continue;
+    }
+
+    normalized.push(marker);
+  }
+
+  return normalized;
+}
+
+/** Sorts by tick and keeps the first marker of a duplicate tick. */
+export function normalizeSectionMarkers(
+  markers: readonly SectionMarker[],
+): SectionMarker[] {
+  const sorted = sortByTick(markers);
+  const normalized: SectionMarker[] = [];
 
   for (const marker of sorted) {
     const previous = normalized[normalized.length - 1];
@@ -734,6 +766,7 @@ export function insertMeterMarker(
     ],
     timeMap.tempoMarkers,
     timeMap.scaleMarkers,
+    timeMap.sectionMarkers,
     durationTicks,
   );
 }
@@ -797,6 +830,7 @@ export function moveMeterMarker(
     normalizedMarkers,
     timeMap.tempoMarkers,
     timeMap.scaleMarkers,
+    timeMap.sectionMarkers,
     durationTicks,
   );
 
@@ -835,6 +869,7 @@ export function updateMeterMarker(
       index === markerIndex ? { ...marker, timeSignature } : marker),
     timeMap.tempoMarkers,
     timeMap.scaleMarkers,
+    timeMap.sectionMarkers,
     durationTicks,
   );
 }
@@ -868,6 +903,7 @@ export function removeMeterMarker(
     timeMap.meterMarkers.filter((_, index) => index !== markerIndex),
     timeMap.tempoMarkers,
     timeMap.scaleMarkers,
+    timeMap.sectionMarkers,
     durationTicks,
   );
 }
@@ -1047,6 +1083,84 @@ export function removeScaleMarker(
   };
 }
 
+export function insertSectionMarker(
+  timeMap: TimeMap,
+  durationTicks: Tick,
+  marker: SectionMarker,
+): TimeMap {
+  if (marker.startTick < 0 || marker.startTick >= durationTicks) {
+    throw new RangeError("A section marker must start inside the clip.");
+  }
+
+  assertSectionComment(marker.comment);
+
+  if (timeMap.sectionMarkers.some(
+    (candidate) => candidate.startTick === marker.startTick,
+  )) {
+    throw new RangeError("A section marker already exists at this position.");
+  }
+
+  return {
+    ...timeMap,
+    sectionMarkers: normalizeSectionMarkers([
+      ...timeMap.sectionMarkers,
+      marker,
+    ]),
+  };
+}
+
+export function moveSectionMarker(
+  timeMap: TimeMap,
+  startTick: Tick,
+  targetTick: Tick,
+): TimeMap {
+  const markerIndex = findMarkerIndex(
+    timeMap.sectionMarkers,
+    startTick,
+    "section",
+  );
+  const moved = timeMap.sectionMarkers.map((candidate, index) =>
+    index === markerIndex
+      ? { ...candidate, startTick: targetTick }
+      : candidate);
+
+  return {
+    ...timeMap,
+    sectionMarkers: normalizeSectionMarkers(moved),
+  };
+}
+
+export function updateSectionMarker(
+  timeMap: TimeMap,
+  startTick: Tick,
+  comment: string,
+): TimeMap {
+  findMarkerIndex(timeMap.sectionMarkers, startTick, "section");
+  assertSectionComment(comment);
+
+  return {
+    ...timeMap,
+    sectionMarkers: timeMap.sectionMarkers.map((marker) =>
+      marker.startTick === startTick ? { ...marker, comment } : marker),
+  };
+}
+
+export function removeSectionMarker(
+  timeMap: TimeMap,
+  startTick: Tick,
+): TimeMap {
+  findMarkerIndex(timeMap.sectionMarkers, startTick, "section");
+
+  return {
+    ...timeMap,
+    sectionMarkers: normalizeSectionMarkers(
+      timeMap.sectionMarkers.filter(
+        (marker) => marker.startTick !== startTick,
+      ),
+    ),
+  };
+}
+
 /**
  * Inserts time before a measure boundary. Point events at the boundary
  * belong to the material on the right and move with it. A meter marker at
@@ -1081,6 +1195,14 @@ export function insertTimeIntoTimeMap(
     ),
     scaleMarkers: normalizeScaleMarkers(
       timeMap.scaleMarkers.map(shiftPointMarker),
+    ),
+    sectionMarkers: normalizeSectionMarkers(
+      timeMap.sectionMarkers.map((marker) => ({
+        ...marker,
+        startTick: marker.startTick >= insertionTick
+          ? marker.startTick + insertedTicks
+          : marker.startTick,
+      })),
     ),
   };
 }
@@ -1185,11 +1307,26 @@ export function removeTimeFromTimeMap(
       removalStartTick === 0 || scaleChangesAtSeam
     ) ? [{ ...scaleAfterRemoval, startTick: removalStartTick }] : []),
   ]);
+  const sectionMarkers = normalizeSectionMarkers(
+    shiftMarkers(timeMap.sectionMarkers),
+  );
 
   return {
-    timeMap: { meterMarkers, tempoMarkers, scaleMarkers },
+    timeMap: { meterMarkers, tempoMarkers, scaleMarkers, sectionMarkers },
     durationTicks: durationAfterRemoval,
   };
+}
+
+function assertSectionComment(comment: string): void {
+  if (
+    typeof comment !== "string"
+    || comment.trim().length === 0
+    || comment.length > PROJECT_CONSTANTS.maximumSectionCommentLength
+  ) {
+    throw new RangeError(
+      "A section marker comment must be non-empty and at most 1000 characters.",
+    );
+  }
 }
 
 function getMarkerAtTick<T extends { readonly startTick: Tick }>(

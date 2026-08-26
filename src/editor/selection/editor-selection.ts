@@ -15,7 +15,7 @@ import {
 
 export type NoteSelectionPredicate = (note: Note) => boolean;
 
-export type MovableTimeMapMarkerKind = "tempo" | "scale";
+export type MovableTimeMapMarkerKind = "tempo" | "scale" | "section";
 
 export interface SelectedTimeMapMarkerGroup {
   readonly startTick: Tick;
@@ -31,7 +31,8 @@ export type EditorSelectionListener = () => void;
 
 /**
  * Owns the editor's transient selection. Notes are stored by persistent ID;
- * time-map marker groups contain only movable point markers (tempo/scale),
+ * time-map marker groups contain only movable point markers
+ * (tempo/scale/section),
  * never structural meter markers.
  */
 export class EditorSelection {
@@ -524,6 +525,7 @@ export function createSelectedMarkerGroup(
   startTick: Tick,
   hasTempo: boolean,
   hasScale: boolean,
+  hasSection = false,
 ): SelectedTimeMapMarkerGroup | null {
   const kinds: MovableTimeMapMarkerKind[] = [];
 
@@ -533,6 +535,10 @@ export function createSelectedMarkerGroup(
 
   if (hasScale) {
     kinds.push("scale");
+  }
+
+  if (hasSection) {
+    kinds.push("section");
   }
 
   return normalizeMarkerGroup({ startTick, kinds });
@@ -555,6 +561,10 @@ function normalizeMarkerGroup(
     kinds.push("scale");
   }
 
+  if (group.kinds.includes("section")) {
+    kinds.push("section");
+  }
+
   return kinds.length === 0
     ? null
     : { startTick: group.startTick, kinds };
@@ -572,6 +582,10 @@ function reconcileMarkerGroup(
       ),
     group.kinds.includes("scale")
       && timeMap.scaleMarkers.some(
+        (marker) => marker.startTick === group.startTick,
+      ),
+    group.kinds.includes("section")
+      && timeMap.sectionMarkers.some(
         (marker) => marker.startTick === group.startTick,
       ),
   );

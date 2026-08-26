@@ -137,7 +137,11 @@ export function useTimeMapMarkerGesture({
     const splitsMeterFlag =
       movesSelection
       && flag.timeSignature !== null
-      && (flag.bpm !== null || flag.patternId !== null);
+      && (
+        flag.bpm !== null
+        || flag.patternId !== null
+        || flag.sectionComment !== null
+      );
     const layerLeft = layer.getBoundingClientRect().left;
 
     const clip = getActiveClip(projectStore.getState());

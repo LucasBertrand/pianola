@@ -298,7 +298,8 @@
 }
 
 .instrument-preset-dialog-control select,
-.instrument-preset-dialog-control input {
+.instrument-preset-dialog-control input,
+.instrument-preset-dialog-control textarea {
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
@@ -313,8 +314,15 @@
 }
 
 .instrument-preset-dialog-control select:focus-visible,
-.instrument-preset-dialog-control input:focus-visible {
+.instrument-preset-dialog-control input:focus-visible,
+.instrument-preset-dialog-control textarea:focus-visible {
   border-color: var(--color-border-primary);
+}
+
+.instrument-preset-dialog-control textarea {
+  min-height: 72px;
+  padding-block: 10px;
+  resize: vertical;
 }
 
 .instrument-editor-dialog {

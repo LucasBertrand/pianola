@@ -90,6 +90,7 @@ export function completePianoRollLasso({
     const markerTicks = new Set([
       ...timeMap.tempoMarkers.map((marker) => marker.startTick),
       ...timeMap.scaleMarkers.map((marker) => marker.startTick),
+      ...timeMap.sectionMarkers.map((marker) => marker.startTick),
     ]);
 
     for (const startTick of markerTicks) {
@@ -112,6 +113,9 @@ export function completePianoRollLasso({
           (marker) => marker.startTick === startTick,
         ),
         timeMap.scaleMarkers.some(
+          (marker) => marker.startTick === startTick,
+        ),
+        timeMap.sectionMarkers.some(
           (marker) => marker.startTick === startTick,
         ),
       );

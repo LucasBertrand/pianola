@@ -390,6 +390,33 @@ export interface DeleteScaleMarkerCommand {
   readonly startTick: Tick;
 }
 
+export interface AddSectionMarkerCommand {
+  readonly type: "AddSectionMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly comment: string;
+}
+
+export interface MoveSectionMarkerCommand {
+  readonly type: "MoveSectionMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly targetTick: Tick;
+}
+
+export interface UpdateSectionMarkerCommand {
+  readonly type: "UpdateSectionMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+  readonly comment: string;
+}
+
+export interface DeleteSectionMarkerCommand {
+  readonly type: "DeleteSectionMarker";
+  readonly clipId: ClipId;
+  readonly startTick: Tick;
+}
+
 export interface UpdateLoopCommand {
   readonly type: "UpdateLoop";
   readonly clipId: ClipId;
@@ -460,6 +487,10 @@ export type PianoRollCommand =
   | MoveScaleMarkerCommand
   | UpdateScaleMarkerCommand
   | DeleteScaleMarkerCommand
+  | AddSectionMarkerCommand
+  | MoveSectionMarkerCommand
+  | UpdateSectionMarkerCommand
+  | DeleteSectionMarkerCommand
   | UpdateLoopCommand
   | SetLoopEnabledCommand
   | SetAutoAdvanceEnabledCommand

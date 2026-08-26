@@ -2,7 +2,7 @@ import type {
   Tick,
 } from "../../../domain/identifiers";
 
-export type TimeMapMarkerCollisionKind = "tempo" | "scale";
+export type TimeMapMarkerCollisionKind = "tempo" | "scale" | "section";
 
 export interface TimeMapMarkerCollision {
   readonly kind: TimeMapMarkerCollisionKind;

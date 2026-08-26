@@ -202,6 +202,7 @@ export function createAudioTestProject({
                 ?? PROJECT_CONSTANTS.defaultTempoBpm,
             }],
             scaleMarkers: createDefaultTimeMap().scaleMarkers,
+            sectionMarkers: [],
           },
         },
         tracksByInstrumentId,

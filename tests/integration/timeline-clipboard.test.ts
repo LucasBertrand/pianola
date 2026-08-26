@@ -71,7 +71,7 @@ describe("timeline clipboard", () => {
       [note],
       [
         { startTick: SOURCE_MARKER_TICK, kinds: ["tempo"] },
-        { startTick: SECOND_MARKER_TICK, kinds: ["scale"] },
+        { startTick: SECOND_MARKER_TICK, kinds: ["scale", "section"] },
       ],
       timeMap,
     );
@@ -83,6 +83,7 @@ describe("timeline clipboard", () => {
         startTick: SOURCE_MARKER_TICK,
         tempoBpm: 90,
         scaleMarker: null,
+        sectionMarker: null,
       },
       {
         startTick: SECOND_MARKER_TICK,
@@ -92,6 +93,7 @@ describe("timeline clipboard", () => {
           patternType: "scale",
           patternId: "dorian",
         },
+        sectionMarker: { comment: "Chorus" },
       },
     ]);
 
@@ -184,6 +186,7 @@ describe("timeline clipboard", () => {
         patternType: "scale" as const,
         patternId: "dorian",
       },
+      sectionMarker: null,
     }];
 
     expect(canPlacePastedTimelineContent(
@@ -455,6 +458,10 @@ function createClipboardProject(
           patternId: "dorian",
         },
       ],
+      sectionMarkers: [{
+        startTick: SECOND_MARKER_TICK,
+        comment: "Chorus",
+      }],
     }),
   );
 }

@@ -1274,20 +1274,24 @@ export function PianoRollWorkspace({
           tempoIncluded={timeMapMarkers.draft.tempoIncluded}
           meterIncluded={timeMapMarkers.draft.meterIncluded}
           scaleIncluded={timeMapMarkers.draft.scaleIncluded}
+          sectionIncluded={timeMapMarkers.draft.sectionIncluded}
           canChangeMarkerTypes={timeMapMarkers.draft.canChangeMarkerTypes}
           bpm={timeMapMarkers.draft.bpm}
           timeSignature={timeMapMarkers.draft.timeSignature}
           rootNote={timeMapMarkers.draft.rootNote}
           patternType={timeMapMarkers.draft.patternType}
           patternId={timeMapMarkers.draft.patternId}
+          sectionComment={timeMapMarkers.draft.sectionComment}
           onTempoIncludedChange={timeMapMarkers.setDraftTempoIncluded}
           onMeterIncludedChange={timeMapMarkers.setDraftMeterIncluded}
           onScaleIncludedChange={timeMapMarkers.setDraftScaleIncluded}
+          onSectionIncludedChange={timeMapMarkers.setDraftSectionIncluded}
           onBpmChange={timeMapMarkers.setDraftBpm}
           onTimeSignatureChange={timeMapMarkers.setDraftTimeSignature}
           onRootNoteChange={timeMapMarkers.setDraftRootNote}
           onPatternTypeChange={timeMapMarkers.setDraftPatternType}
           onPatternIdChange={timeMapMarkers.setDraftPatternId}
+          onSectionCommentChange={timeMapMarkers.setDraftSectionComment}
           onConfirm={timeMapMarkers.confirmDraft}
           onCancel={timeMapMarkers.cancelDraft}
         />

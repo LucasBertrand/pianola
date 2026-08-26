@@ -45,6 +45,7 @@ function createProjectWithMarkers(): ReturnType<typeof createTestProject> {
       patternType: "scale",
       patternId: "ionian",
     }],
+    sectionMarkers: [],
   };
 
   return {
@@ -98,6 +99,7 @@ describe("createTimeMapMarkerFlags", () => {
         patternType: "scale",
         patternId: "ionian",
       }],
+      sectionMarkers: [],
     });
 
     expect(flags.map((flag) => formatMarkerFlagLabel(flag))).toEqual([
@@ -120,12 +122,14 @@ describe("createMarkerDraft", () => {
       tempoIncluded: false,
       meterIncluded: false,
       scaleIncluded: false,
+      sectionIncluded: false,
       canChangeMarkerTypes: true,
       bpm: 120, // The tempo at 0 is 120, and next is at 2*MEASURE_TICKS
       timeSignature: null,
       rootNote: "C",
       patternType: "scale",
       patternId: "ionian",
+      sectionComment: "",
       canDelete: false,
     });
   });
@@ -165,6 +169,37 @@ describe("createMarkerDraft", () => {
 });
 
 describe("planMarkerDraftCommands", () => {
+  test("creates a section comment at an arbitrary tick", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(
+      state,
+      TEST_CLIP_ID,
+      MEASURE_TICKS + 120,
+    );
+
+    expect(planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      sectionIncluded: true,
+      sectionComment: "  Chorus  ",
+    })).toEqual([{
+      type: "AddSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: MEASURE_TICKS + 120,
+      comment: "Chorus",
+    }]);
+  });
+
+  test("requires a non-empty section comment", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(state, TEST_CLIP_ID, MEASURE_TICKS);
+
+    expect(() => planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      sectionIncluded: true,
+      sectionComment: "   ",
+    })).toThrowError("A section marker comment cannot be empty.");
+  });
+
   test("creates only the explicitly selected marker types", () => {
     const state = createProjectWithMarkers();
     const draft = createMarkerDraft(state, TEST_CLIP_ID, MEASURE_TICKS);

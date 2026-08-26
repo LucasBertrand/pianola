@@ -33,7 +33,7 @@ restent le garde-fou de parité des flux transversaux.
 | --- | --- | --- |
 | modifier le bouton Lecture | `src/ui/transport/TransportControls.tsx` | `useAudioPlayback.ts`, puis `audio-worklet-transport.ts` |
 | modifier le ruler ou la boucle | `src/ui/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx` et painter |
-| modifier les marqueurs tempo/métrique | `src/ui/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, puis `use-cases/piano-roll/timeline/time-map-marker-plans.ts` |
+| modifier les marqueurs tempo/métrique/gamme/section | `src/ui/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, puis `use-cases/piano-roll/timeline/time-map-marker-plans.ts` |
 | modifier le playhead | `src/editor/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier l’indicateur de lecture des clips | `src/ui/inspector/clips/clip-playhead-visual.ts` | `src/ui/inspector/clips/ClipInspector.tsx`, puis `src/styles/inspector.css` |
 | modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-commands.ts` |

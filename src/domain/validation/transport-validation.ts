@@ -8,6 +8,7 @@ import {
 import {
   getTicksPerMeasure,
   type ScaleMarker,
+  type SectionMarker,
   type TempoMarker,
   type TimeSignature,
 } from "../transport/time-map";
@@ -93,6 +94,7 @@ export function validateClipTimeline(
   validateMeterMarkers(timeline, clock, issues);
   validateTempoMarkers(timeline, issues);
   validateScaleMarkers(timeline, issues);
+  validateSectionMarkers(timeline, issues);
 
   return {
     valid: issues.length === 0,
@@ -347,6 +349,49 @@ function isValidScaleMarker(marker: ScaleMarker): boolean {
     : marker.patternType === "chord"
       && (TONAL_SNAP_CONSTANTS.supportedChords as readonly string[])
         .includes(marker.patternId);
+}
+
+function validateSectionMarkers(
+  timeline: ClipTimeline,
+  issues: ValidationIssue[],
+): void {
+  const markers = timeline.timeMap.sectionMarkers;
+  const path = "timeMap.sectionMarkers";
+
+  for (let index = 0; index < markers.length; index += 1) {
+    const marker = markers[index];
+
+    if (marker === undefined) {
+      continue;
+    }
+
+    if (
+      !isValidTick(marker.startTick)
+      || (index > 0
+        && marker.startTick <= (markers[index - 1]?.startTick ?? -1))
+      || marker.startTick >= timeline.durationTicks
+    ) {
+      issues.push({
+        code: "INVALID_SECTION",
+        path: `${path}[${String(index)}].startTick`,
+        message: "Section markers must be strictly ordered within the clip duration.",
+      });
+    }
+
+    if (!isValidSectionMarker(marker)) {
+      issues.push({
+        code: "INVALID_SECTION",
+        path: `${path}[${String(index)}].comment`,
+        message: "A section marker comment must be non-empty and at most 1000 characters.",
+      });
+    }
+  }
+}
+
+function isValidSectionMarker(marker: SectionMarker): boolean {
+  return typeof marker.comment === "string"
+    && marker.comment.trim().length > 0
+    && marker.comment.length <= PROJECT_CONSTANTS.maximumSectionCommentLength;
 }
 
 function isValidTimeSignature(timeSignature: TimeSignature): boolean {

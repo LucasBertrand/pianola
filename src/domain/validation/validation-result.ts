@@ -14,6 +14,7 @@ export type ValidationCode =
   | "INVALID_BPM"
   | "INVALID_TEMPO"
   | "INVALID_SCALE"
+  | "INVALID_SECTION"
   | "INVALID_PPQN"
   | "INVALID_TIME_SIGNATURE"
   | "INVALID_LOOP"

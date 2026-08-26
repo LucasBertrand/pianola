@@ -27,6 +27,7 @@ import {
 import {
   type MeterMarker,
   type ScaleMarker,
+  type SectionMarker,
   type TempoMarker,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
@@ -326,9 +327,11 @@ function parseClipTimeline(
   const stored = readRecord(source, path);
   assertExactRecordKeys(stored, ["durationTicks", "timeMap"], path);
   const timeMap = readRecord(stored["timeMap"], `${path}.timeMap`);
-  const timeMapKeys = "scaleMarkers" in timeMap
-    ? ["meterMarkers", "tempoMarkers", "scaleMarkers"]
-    : ["meterMarkers", "tempoMarkers"];
+  const timeMapKeys = "sectionMarkers" in timeMap
+    ? ["meterMarkers", "tempoMarkers", "scaleMarkers", "sectionMarkers"]
+    : "scaleMarkers" in timeMap
+      ? ["meterMarkers", "tempoMarkers", "scaleMarkers"]
+      : ["meterMarkers", "tempoMarkers"];
   assertExactRecordKeys(
     timeMap,
     timeMapKeys,
@@ -346,12 +349,16 @@ function parseClipTimeline(
     timeMap["scaleMarkers"],
     `${path}.timeMap.scaleMarkers`,
   );
+  const sectionMarkers = parseSectionMarkers(
+    timeMap["sectionMarkers"],
+    `${path}.timeMap.sectionMarkers`,
+  );
   const timeline: ClipTimeline = {
     durationTicks: readPositiveSafeInteger(
       stored["durationTicks"],
       `${path}.durationTicks`,
     ),
-    timeMap: { meterMarkers, tempoMarkers, scaleMarkers },
+    timeMap: { meterMarkers, tempoMarkers, scaleMarkers, sectionMarkers },
   };
   const validation = validateClipTimeline(timeline, clock);
 
@@ -714,6 +721,37 @@ function parseNotes(
   }
 
   return notesById;
+}
+
+function parseSectionMarkers(
+  source: unknown,
+  path: string,
+): SectionMarker[] {
+  if (source === undefined) {
+    return [];
+  }
+
+  return readBoundedArray(
+    source,
+    path,
+    PROJECT_CONSTANTS.maximumMeasureCount,
+  ).map((sourceMarker, index) => {
+    const markerPath = `${path}[${String(index)}]`;
+    const marker = readRecord(sourceMarker, markerPath);
+    assertExactRecordKeys(marker, ["startTick", "comment"], markerPath);
+
+    return {
+      startTick: readNonNegativeSafeInteger(
+        marker["startTick"],
+        `${markerPath}.startTick`,
+      ),
+      comment: readNonEmptyString(
+        marker["comment"],
+        `${markerPath}.comment`,
+        PROJECT_CONSTANTS.maximumSectionCommentLength,
+      ),
+    };
+  });
 }
 
 function parseLegacyLockedInstrumentIds(

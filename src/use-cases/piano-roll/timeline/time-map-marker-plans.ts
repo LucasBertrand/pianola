@@ -30,8 +30,8 @@ import type {
 
 
 /**
- * One ruler flag: the union of meter and tempo marker ticks. A flag may
- * carry both values, or only one of them.
+ * One ruler flag: the union of all marker ticks. A flag may carry any
+ * combination of meter, tempo, scale, and section values.
  */
 export interface TimeMapMarkerFlag {
   readonly startTick: Tick;
@@ -40,6 +40,7 @@ export interface TimeMapMarkerFlag {
   readonly rootNote: string | null;
   readonly patternType: TonalPatternType | null;
   readonly patternId: string | null;
+  readonly sectionComment: string | null;
   readonly isInitial: boolean;
 }
 
@@ -51,16 +52,18 @@ export interface TimeMapMarkerDraft {
   readonly tempoIncluded: boolean;
   readonly meterIncluded: boolean;
   readonly scaleIncluded: boolean;
+  readonly sectionIncluded: boolean;
   readonly canChangeMarkerTypes: boolean;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string;
   readonly patternType: TonalPatternType;
   readonly patternId: TonalPatternId;
+  readonly sectionComment: string;
   readonly canDelete: boolean;
 }
 
-/** Groups meter and tempo markers by tick, sorted by position. */
+/** Groups every marker kind by tick, sorted by position. */
 export function createTimeMapMarkerFlags(
   timeMap: TimeMap,
 ): TimeMapMarkerFlag[] {
@@ -68,6 +71,7 @@ export function createTimeMapMarkerFlags(
     ...timeMap.meterMarkers.map((marker) => marker.startTick),
     ...timeMap.tempoMarkers.map((marker) => marker.startTick),
     ...timeMap.scaleMarkers.map((marker) => marker.startTick),
+    ...timeMap.sectionMarkers.map((marker) => marker.startTick),
   ])].sort((left, right) => left - right);
 
   return ticks.map((startTick) => {
@@ -83,6 +87,9 @@ export function createTimeMapMarkerFlags(
       rootNote: scaleMarker?.rootNote ?? null,
       patternType: scaleMarker?.patternType ?? null,
       patternId: scaleMarker?.patternId ?? null,
+      sectionComment: timeMap.sectionMarkers.find(
+        (marker) => marker.startTick === startTick,
+      )?.comment ?? null,
       isInitial: startTick === 0,
     };
   });
@@ -123,7 +130,13 @@ export function createMarkerDraft(
     const scaleMarker = timeMap.scaleMarkers.find(
       (marker) => marker.startTick === span.startTick,
     );
-    const hasMarker = meterMarker !== undefined || tempoMarker !== undefined || scaleMarker !== undefined;
+    const sectionMarker = timeMap.sectionMarkers.find(
+      (marker) => marker.startTick === span.startTick,
+    );
+    const hasMarker = meterMarker !== undefined
+      || tempoMarker !== undefined
+      || scaleMarker !== undefined
+      || sectionMarker !== undefined;
 
     const activeScaleMarker = getScaleMarkerAtTick(timeMap, span.startTick);
 
@@ -134,6 +147,7 @@ export function createMarkerDraft(
       tempoIncluded: tempoMarker !== undefined,
       meterIncluded: meterMarker !== undefined,
       scaleIncluded: scaleMarker !== undefined,
+      sectionIncluded: sectionMarker !== undefined,
       canChangeMarkerTypes: span.startTick > 0,
       bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, span.startTick),
       timeSignature: meterMarker?.timeSignature
@@ -141,6 +155,7 @@ export function createMarkerDraft(
       rootNote: scaleMarker?.rootNote ?? activeScaleMarker.rootNote,
       patternType: scaleMarker?.patternType ?? activeScaleMarker.patternType,
       patternId: scaleMarker?.patternId ?? activeScaleMarker.patternId,
+      sectionComment: sectionMarker?.comment ?? "",
       canDelete: hasMarker && span.startTick > 0,
     };
   }
@@ -151,7 +166,12 @@ export function createMarkerDraft(
   const scaleMarker = timeMap.scaleMarkers.find(
     (marker) => marker.startTick === tick,
   );
-  const hasMarker = tempoMarker !== undefined || scaleMarker !== undefined;
+  const sectionMarker = timeMap.sectionMarkers.find(
+    (marker) => marker.startTick === tick,
+  );
+  const hasMarker = tempoMarker !== undefined
+    || scaleMarker !== undefined
+    || sectionMarker !== undefined;
   const activeScaleMarker = getScaleMarkerAtTick(timeMap, tick);
 
   return {
@@ -161,12 +181,14 @@ export function createMarkerDraft(
     tempoIncluded: tempoMarker !== undefined,
     meterIncluded: false,
     scaleIncluded: scaleMarker !== undefined,
+    sectionIncluded: sectionMarker !== undefined,
     canChangeMarkerTypes: tick > 0,
     bpm: tempoMarker?.bpm ?? getTempoAtTick(timeMap, tick),
     timeSignature: null,
     rootNote: scaleMarker?.rootNote ?? activeScaleMarker.rootNote,
     patternType: scaleMarker?.patternType ?? activeScaleMarker.patternType,
     patternId: scaleMarker?.patternId ?? activeScaleMarker.patternId,
+    sectionComment: sectionMarker?.comment ?? "",
     canDelete: hasMarker && tick > 0,
   };
 }
@@ -307,6 +329,39 @@ export function planMarkerDraftCommands(
     });
   }
 
+  const sectionMarker = timeMap.sectionMarkers.find(
+    (marker) => marker.startTick === draft.startTick,
+  );
+  const sectionComment = draft.sectionComment.trim();
+
+  if (draft.sectionIncluded && sectionComment.length === 0) {
+    throw new Error("A section marker comment cannot be empty.");
+  }
+
+  if (draft.sectionIncluded && sectionMarker !== undefined) {
+    if (sectionMarker.comment !== sectionComment) {
+      commands.push({
+        type: "UpdateSectionMarker",
+        clipId,
+        startTick: draft.startTick,
+        comment: sectionComment,
+      });
+    }
+  } else if (draft.sectionIncluded) {
+    commands.push({
+      type: "AddSectionMarker",
+      clipId,
+      startTick: draft.startTick,
+      comment: sectionComment,
+    });
+  } else if (sectionMarker !== undefined) {
+    commands.push({
+      type: "DeleteSectionMarker",
+      clipId,
+      startTick: draft.startTick,
+    });
+  }
+
   return commands;
 }
 
@@ -316,30 +371,32 @@ export function planMarkerDeletionCommands(
   clipId: ClipId,
   startTick: Tick,
 ): PianoRollCommand[] {
-  if (startTick <= 0) {
-    return [];
-  }
-
   const clip = getClip(state, clipId);
   const { timeMap } = clip.timeline;
   const commands: PianoRollCommand[] = [];
 
-  if (
+  if (startTick > 0 &&
     timeMap.meterMarkers.some((marker) => marker.startTick === startTick)
   ) {
     commands.push({ type: "DeleteMeterMarker", clipId, startTick });
   }
 
-  if (
+  if (startTick > 0 &&
     timeMap.tempoMarkers.some((marker) => marker.startTick === startTick)
   ) {
     commands.push({ type: "DeleteTempoMarker", clipId, startTick });
   }
 
-  if (
+  if (startTick > 0 &&
     timeMap.scaleMarkers.some((marker) => marker.startTick === startTick)
   ) {
     commands.push({ type: "DeleteScaleMarker", clipId, startTick });
+  }
+
+  if (
+    timeMap.sectionMarkers.some((marker) => marker.startTick === startTick)
+  ) {
+    commands.push({ type: "DeleteSectionMarker", clipId, startTick });
   }
 
   return commands;
@@ -435,6 +492,28 @@ export function planMarkerMove(
     }
   }
 
+  const isMovingSection = timeMap.sectionMarkers.some(
+    (marker) => marker.startTick === fromTick,
+  );
+  const targetHasSection = timeMap.sectionMarkers.some(
+    (marker) => marker.startTick === groupTargetTick,
+  );
+
+  if (isMovingSection) {
+    if (targetHasSection && fromTick !== groupTargetTick) {
+      collisions.push({ kind: "section", targetTick: groupTargetTick });
+    }
+
+    if (fromTick !== groupTargetTick) {
+      moveCommands.push({
+        type: "MoveSectionMarker",
+        clipId,
+        startTick: fromTick,
+        targetTick: groupTargetTick,
+      });
+    }
+  }
+
   if (collisions.length > 0 && !overwriteCollisions) {
     return { commands: [], collisions };
   }
@@ -442,7 +521,9 @@ export function planMarkerMove(
   const deleteCommands: PianoRollCommand[] = collisions.map((collision) => ({
     type: collision.kind === "tempo"
       ? "DeleteTempoMarker"
-      : "DeleteScaleMarker",
+      : collision.kind === "scale"
+        ? "DeleteScaleMarker"
+        : "DeleteSectionMarker",
     clipId,
     startTick: collision.targetTick,
   }));
@@ -565,6 +646,10 @@ export function formatMarkerFlagLabel(flag: TimeMapMarkerFlag): string {
 
       parts.push(scaleLabel);
     }
+  }
+
+  if (flag.sectionComment !== null) {
+    parts.push(flag.sectionComment);
   }
 
   return parts.join(" · ");

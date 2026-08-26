@@ -143,6 +143,7 @@ export function createProjectFromMidiImport(
       patternType: "scale" as const,
       patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
     }],
+    sectionMarkers: [],
   };
   const measureCount = Math.max(
     PROJECT_CONSTANTS.minimumMeasureCount,

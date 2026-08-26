@@ -113,10 +113,10 @@ sont modifiés par la lecture : le playhead peut rester dans un autre clip ou
 sortir de la zone visible.
 Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
 Undo/Redo.
-La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme).
+La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme, section). Un marqueur de section attache un commentaire à un tick du clip ; il se sélectionne, se déplace et se copie comme les marqueurs de tempo et de gamme.
 
-Changer une métrique ne déplace ni les notes ni les marqueurs de tempo ou de
-gamme. Si un marqueur métrique ultérieur ne tombe plus sur une barre de mesure,
+Changer une métrique ne déplace ni les notes ni les marqueurs de tempo, de
+gamme ou de section. Si un marqueur métrique ultérieur ne tombe plus sur une barre de mesure,
 il avance automatiquement jusqu'à la prochaine barre valide. L'ajout ou la
 suppression d'une mesure décale en revanche le contenu suivant, puisqu'il
 ajoute ou retire réellement du temps.

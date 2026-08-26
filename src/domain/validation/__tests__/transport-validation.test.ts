@@ -38,6 +38,7 @@ describe("validateClipTimeline", () => {
         }],
         tempoMarkers: [],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -59,6 +60,7 @@ describe("validateClipTimeline", () => {
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -78,6 +80,7 @@ describe("validateClipTimeline", () => {
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -97,6 +100,7 @@ describe("validateClipTimeline", () => {
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -113,6 +117,7 @@ describe("validateClipTimeline", () => {
         ],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -136,6 +141,7 @@ describe("validateClipTimeline", () => {
         }],
         tempoMarkers: [{ startTick: 0, bpm: 120 }],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -155,6 +161,7 @@ describe("validateClipTimeline", () => {
           }],
           tempoMarkers: [{ startTick: 0, bpm: 120 }],
           scaleMarkers: createDefaultTimeMap().scaleMarkers,
+          sectionMarkers: [],
         },
         4 * 3_360,
       ),
@@ -176,6 +183,7 @@ describe("validateClipTimeline", () => {
           { startTick: 3_840, bpm: 999 },
         ],
         scaleMarkers: createDefaultTimeMap().scaleMarkers,
+        sectionMarkers: [],
       }),
       CLOCK,
     );
@@ -199,6 +207,7 @@ describe("validateClipTimeline", () => {
           patternType: "scale",
           patternId: "unknown",
         }],
+        sectionMarkers: [],
       }),
       CLOCK,
     );

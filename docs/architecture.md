@@ -64,12 +64,14 @@ Le domaine est réparti par propriétaire :
 | `src/domain/instruments/instrument.ts` | sons, presets et instruments |
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
 | `src/domain/transport/transport.ts` | horloge (PPQN) et boucle locale au clip |
-| `src/domain/transport/time-map.ts` | marqueurs de tempo et de métrique par clip, navigation en mesures |
+| `src/domain/transport/time-map.ts` | marqueurs de tempo, métrique, gamme et section par clip, navigation en mesures |
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
 | `src/domain/project/project-document.ts` | document, enchaînement global, workspace et accès clip |
 
 La `TimeMap` d’un clip est l’unique source de vérité temporelle. Notes,
-marqueurs de tempo et marqueurs de gamme sont ancrés à leurs ticks absolus.
+marqueurs de tempo, de gamme et de section sont ancrés à leurs ticks absolus.
+Un marqueur de section associe un commentaire libre à son tick et constitue
+une future frontière de découpe du clip, sans déclencher encore de découpage.
 Les marqueurs de métrique sont structurels : chacun doit commencer une mesure
 complète. Une modification en amont conserve son tick s’il reste valide,
 sinon elle le projette vers la première frontière valide suivante, sans jamais

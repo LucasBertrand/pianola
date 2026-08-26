@@ -81,14 +81,17 @@ import {
   applyAddMeterMarker,
   applyAddScaleMarker,
   applyAddTempoMarker,
+  applyAddSectionMarker,
   applyAppendMeasures,
   applyDeleteMeterMarker,
   applyDeleteScaleMarker,
   applyDeleteTempoMarker,
+  applyDeleteSectionMarker,
   applyInsertMeasure,
   applyMoveMeterMarker,
   applyMoveScaleMarker,
   applyMoveTempoMarker,
+  applyMoveSectionMarker,
   applyRemoveMeasure,
   applySetLoopEnabled,
   applyUpdateLoop,
@@ -96,6 +99,7 @@ import {
   applyUpdateScaleMarker,
   applyUpdateTempo,
   applyUpdateTempoMarker,
+  applyUpdateSectionMarker,
   applyUpdateTimeSignature,
 } from "./transport-commands";
 import { assertValidTransaction } from "./transaction";
@@ -320,6 +324,18 @@ function applyActiveClipCommand(
       break;
     case "DeleteScaleMarker":
       nextContext = applyDeleteScaleMarker(context, command);
+      break;
+    case "AddSectionMarker":
+      nextContext = applyAddSectionMarker(context, command);
+      break;
+    case "MoveSectionMarker":
+      nextContext = applyMoveSectionMarker(context, command);
+      break;
+    case "UpdateSectionMarker":
+      nextContext = applyUpdateSectionMarker(context, command);
+      break;
+    case "DeleteSectionMarker":
+      nextContext = applyDeleteSectionMarker(context, command);
       break;
     case "UpdateLoop":
       nextContext = applyUpdateLoop(context, command);

@@ -58,6 +58,7 @@ function createMixedTimeMap(): TimeMap {
       { startTick: 0, bpm: 120 },
       { startTick: 7_680, bpm: 60 },
     ],
+    sectionMarkers: [],
     scaleMarkers: [{
       startTick: 0,
       rootNote: "C",
@@ -667,6 +668,7 @@ describe("measure-grid snap", () => {
     meterMarkers: [{ startTick: 0, timeSignature: ts44 }],
     tempoMarkers: [{ startTick: 0, bpm: 120 }],
 scaleMarkers: [],
+    sectionMarkers: [],
   };
   const duration = 3_840;
   const res = 1_440;

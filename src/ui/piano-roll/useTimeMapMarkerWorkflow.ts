@@ -32,11 +32,13 @@ export interface TimeMapMarkerWorkflow {
   readonly setDraftTempoIncluded: (included: boolean) => void;
   readonly setDraftMeterIncluded: (included: boolean) => void;
   readonly setDraftScaleIncluded: (included: boolean) => void;
+  readonly setDraftSectionIncluded: (included: boolean) => void;
   readonly setDraftBpm: (bpm: number) => void;
   readonly setDraftTimeSignature: (timeSignature: TimeSignature) => void;
   readonly setDraftRootNote: (rootNote: string) => void;
   readonly setDraftPatternId: (patternId: TonalPatternId) => void;
   readonly setDraftPatternType: (patternType: TonalPatternType) => void;
+  readonly setDraftSectionComment: (comment: string) => void;
   readonly confirmDraft: () => void;
   readonly deleteDraft: () => void;
   readonly cancelDraft: () => void;
@@ -118,6 +120,7 @@ export function useTimeMapMarkerWorkflow({
       tick,
       timeMap.tempoMarkers.some((marker) => marker.startTick === tick),
       timeMap.scaleMarkers.some((marker) => marker.startTick === tick),
+      timeMap.sectionMarkers.some((marker) => marker.startTick === tick),
     );
 
     if (
@@ -242,6 +245,12 @@ export function useTimeMapMarkerWorkflow({
         ? current
         : { ...current, scaleIncluded: included });
   }, []);
+  const setDraftSectionIncluded = useCallback((included: boolean): void => {
+    setDraft((current) =>
+      current === null
+        ? null
+        : { ...current, sectionIncluded: included });
+  }, []);
   const setDraftTimeSignature = useCallback(
     (timeSignature: TimeSignature): void => {
       setDraft((current) =>
@@ -257,6 +266,11 @@ export function useTimeMapMarkerWorkflow({
   }, []);
   const setDraftPatternType = useCallback((patternType: TonalPatternType): void => {
     setDraft((current) => current === null ? null : { ...current, patternType });
+  }, []);
+  const setDraftSectionComment = useCallback((comment: string): void => {
+    setDraft((current) => current === null
+      ? null
+      : { ...current, sectionComment: comment });
   }, []);
   const confirmDraft = useCallback((): void => {
     if (draft === null) {
@@ -329,11 +343,13 @@ export function useTimeMapMarkerWorkflow({
     setDraftTempoIncluded,
     setDraftMeterIncluded,
     setDraftScaleIncluded,
+    setDraftSectionIncluded,
     setDraftBpm,
     setDraftTimeSignature,
     setDraftRootNote,
     setDraftPatternId,
     setDraftPatternType,
+    setDraftSectionComment,
     confirmDraft,
     deleteDraft,
     cancelDraft,

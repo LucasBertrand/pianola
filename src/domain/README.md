@@ -16,7 +16,7 @@ Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
 `clips/clip-hierarchy.ts`,
 `instruments/instrument.ts` ou `notes/note.ts`. Une mutation commence dans
 `commands/command-types.ts` et aboutit au reducer. La structure temporelle
-d’un clip — marqueurs de tempo et de métrique, dérivation des mesures — vit
+d’un clip — marqueurs de tempo, métrique, gamme et section, dérivation des mesures — vit
 dans `transport/time-map.ts` ; ses invariants sont validés dans
 `validation/transport-validation.ts`.
 

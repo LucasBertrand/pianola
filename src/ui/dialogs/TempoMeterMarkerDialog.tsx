@@ -17,20 +17,24 @@ export interface TempoMeterMarkerDialogProps {
   readonly tempoIncluded: boolean;
   readonly meterIncluded: boolean;
   readonly scaleIncluded: boolean;
+  readonly sectionIncluded: boolean;
   readonly canChangeMarkerTypes: boolean;
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string;
   readonly patternType: TonalPatternType;
   readonly patternId: string;
+  readonly sectionComment: string;
   readonly onTempoIncludedChange: (included: boolean) => void;
   readonly onMeterIncludedChange: (included: boolean) => void;
   readonly onScaleIncludedChange: (included: boolean) => void;
+  readonly onSectionIncludedChange: (included: boolean) => void;
   readonly onBpmChange: (bpm: number) => void;
   readonly onTimeSignatureChange: (timeSignature: TimeSignature) => void;
   readonly onRootNoteChange: (rootNote: string) => void;
   readonly onPatternTypeChange: (patternType: TonalPatternType) => void;
   readonly onPatternIdChange: (patternId: string) => void;
+  readonly onSectionCommentChange: (comment: string) => void;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
@@ -41,24 +45,31 @@ export function TempoMeterMarkerDialog({
   tempoIncluded,
   meterIncluded,
   scaleIncluded,
+  sectionIncluded,
   canChangeMarkerTypes,
   bpm,
   timeSignature,
   rootNote,
   patternType,
   patternId,
+  sectionComment,
   onTempoIncludedChange,
   onMeterIncludedChange,
   onScaleIncludedChange,
+  onSectionIncludedChange,
   onBpmChange,
   onTimeSignatureChange,
   onRootNoteChange,
   onPatternTypeChange,
   onPatternIdChange,
+  onSectionCommentChange,
   onConfirm,
   onCancel,
 }: TempoMeterMarkerDialogProps): React.JSX.Element {
-  const hasIncludedType = tempoIncluded || meterIncluded || scaleIncluded;
+  const hasIncludedType = tempoIncluded
+    || meterIncluded
+    || scaleIncluded
+    || sectionIncluded;
 
   return (
     <div className="application-dialog-backdrop">
@@ -293,6 +304,38 @@ export function TempoMeterMarkerDialog({
                     </label>
                   </>
                 ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          <section
+            className={`tempo-meter-marker-component${sectionIncluded ? " is-included" : ""}`}
+          >
+            <label className="tempo-meter-marker-component-toggle">
+              <input
+                type="checkbox"
+                checked={sectionIncluded}
+                onChange={(event) => {
+                  onSectionIncludedChange(event.currentTarget.checked);
+                }}
+              />
+              <span>Section</span>
+            </label>
+            {sectionIncluded ? (
+              <div className="tempo-meter-marker-component-details">
+                <label className="instrument-preset-dialog-control">
+                  <span>Comment</span>
+                  <textarea
+                    value={sectionComment}
+                    maxLength={1_000}
+                    rows={3}
+                    required
+                    aria-label="Section marker comment"
+                    onChange={(event) => {
+                      onSectionCommentChange(event.currentTarget.value);
+                    }}
+                  />
+                </label>
               </div>
             ) : null}
           </section>

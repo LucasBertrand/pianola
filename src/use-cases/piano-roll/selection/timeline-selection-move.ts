@@ -39,7 +39,7 @@ export class TimelineSelectionMoveError extends Error {
 }
 
 /**
- * Plans simultaneous tempo/scale moves. Meter markers are deliberately not
+ * Plans simultaneous tempo/scale/section moves. Meter markers are deliberately not
  * represented by SelectedTimeMapMarkerGroup and therefore remain untouched.
  */
 export function planSelectedMarkerMove(
@@ -68,6 +68,7 @@ export function planSelectedMarkerMove(
   const selectedTicksByKind = {
     tempo: collectSelectedTicks(groups, "tempo"),
     scale: collectSelectedTicks(groups, "scale"),
+    section: collectSelectedTicks(groups, "section"),
   };
 
   const tempoCollisions = validateKindMove(
@@ -84,7 +85,18 @@ export function planSelectedMarkerMove(
     deltaTicks,
     durationTicks,
   );
-  const collisions = [...tempoCollisions, ...scaleCollisions];
+  const sectionCollisions = validateKindMove(
+    "section",
+    timeMap.sectionMarkers.map((marker) => marker.startTick),
+    selectedTicksByKind.section,
+    deltaTicks,
+    durationTicks,
+  );
+  const collisions = [
+    ...tempoCollisions,
+    ...scaleCollisions,
+    ...sectionCollisions,
+  ];
 
   if (collisions.length > 0 && !overwriteCollisions) {
     return {
@@ -103,7 +115,9 @@ export function planSelectedMarkerMove(
     commands.push({
       type: collision.kind === "tempo"
         ? "DeleteTempoMarker"
-        : "DeleteScaleMarker",
+        : collision.kind === "scale"
+          ? "DeleteScaleMarker"
+          : "DeleteSectionMarker",
       clipId,
       startTick: collision.targetTick,
     });
@@ -127,6 +141,18 @@ export function planSelectedMarkerMove(
   )) {
     commands.push({
       type: "MoveScaleMarker",
+      clipId,
+      startTick,
+      targetTick: startTick + deltaTicks,
+    });
+  }
+
+  for (const startTick of orderSourcesForMove(
+    selectedTicksByKind.section,
+    deltaTicks,
+  )) {
+    commands.push({
+      type: "MoveSectionMarker",
       clipId,
       startTick,
       targetTick: startTick + deltaTicks,

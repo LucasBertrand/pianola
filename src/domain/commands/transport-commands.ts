@@ -22,6 +22,10 @@ import {
   updateScaleMarker,
   insertScaleMarker,
   moveScaleMarker,
+  insertSectionMarker,
+  moveSectionMarker,
+  updateSectionMarker,
+  removeSectionMarker,
   type MeterMarkerEdit,
   type TimeMap,
 } from "../transport/time-map";
@@ -50,6 +54,10 @@ import type {
   MoveScaleMarkerCommand,
   UpdateScaleMarkerCommand,
   DeleteScaleMarkerCommand,
+  AddSectionMarkerCommand,
+  MoveSectionMarkerCommand,
+  UpdateSectionMarkerCommand,
+  DeleteSectionMarkerCommand,
 } from "./command-types";
 import {
   assertMeasureIndex,
@@ -604,6 +612,64 @@ export function applySetLoopEnabled(
       loopEnabled: command.enabled,
     },
   };
+}
+
+export function applyAddSectionMarker(
+  state: ActiveClipProjectState,
+  command: AddSectionMarkerCommand,
+): ActiveClipProjectState {
+  const timeMap = applyMarkerOperation(command, () =>
+    insertSectionMarker(
+      state.timeline.timeMap,
+      state.timeline.durationTicks,
+      { startTick: command.startTick, comment: command.comment },
+    ));
+
+  return withTimeMap(state, timeMap);
+}
+
+export function applyMoveSectionMarker(
+  state: ActiveClipProjectState,
+  command: MoveSectionMarkerCommand,
+): ActiveClipProjectState {
+  if (command.startTick === command.targetTick) {
+    return state;
+  }
+
+  return withTimeMap(state, applyMarkerOperation(command, () =>
+    moveSectionMarker(
+      state.timeline.timeMap,
+      command.startTick,
+      command.targetTick,
+    )));
+}
+
+export function applyUpdateSectionMarker(
+  state: ActiveClipProjectState,
+  command: UpdateSectionMarkerCommand,
+): ActiveClipProjectState {
+  const marker = state.timeline.timeMap.sectionMarkers.find(
+    (candidate) => candidate.startTick === command.startTick,
+  );
+
+  if (marker?.comment === command.comment) {
+    return state;
+  }
+
+  return withTimeMap(state, applyMarkerOperation(command, () =>
+    updateSectionMarker(
+      state.timeline.timeMap,
+      command.startTick,
+      command.comment,
+    )));
+}
+
+export function applyDeleteSectionMarker(
+  state: ActiveClipProjectState,
+  command: DeleteSectionMarkerCommand,
+): ActiveClipProjectState {
+  return withTimeMap(state, applyMarkerOperation(command, () =>
+    removeSectionMarker(state.timeline.timeMap, command.startTick)));
 }
 
 function applyMarkerOperation<T>(

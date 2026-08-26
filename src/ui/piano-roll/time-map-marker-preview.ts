@@ -135,6 +135,10 @@ function resolvePreviewMarkerGroups(
     kinds.push("scale");
   }
 
+  if (flag.sectionComment !== null) {
+    kinds.push("section");
+  }
+
   return [{
     startTick: flag.startTick,
     kinds,
@@ -153,11 +157,15 @@ function removePreviewedMarkerKinds(
     rootNote: group.kinds.includes("scale") ? null : flag.rootNote,
     patternType: group.kinds.includes("scale") ? null : flag.patternType,
     patternId: group.kinds.includes("scale") ? null : flag.patternId,
+    sectionComment: group.kinds.includes("section")
+      ? null
+      : flag.sectionComment,
   };
 
   return nextFlag.bpm === null
     && nextFlag.timeSignature === null
     && nextFlag.patternId === null
+    && nextFlag.sectionComment === null
       ? null
       : nextFlag;
 }
@@ -180,6 +188,9 @@ function addPreviewedMarkerKinds(
     patternId: group.kinds.includes("scale")
       ? source.patternId
       : target.patternId,
+    sectionComment: group.kinds.includes("section")
+      ? source.sectionComment
+      : target.sectionComment,
   };
 }
 
@@ -191,6 +202,7 @@ function createEmptyMarkerFlag(startTick: Tick): TimeMapMarkerFlag {
     rootNote: null,
     patternType: null,
     patternId: null,
+    sectionComment: null,
     isInitial: false,
   };
 }

@@ -55,7 +55,7 @@ import {
 const MIXED_MARKER_TICK = 3_840;
 
 describe("timeline marker selection", () => {
-  test("lasso extracts tempo and scale from a flag but excludes its meter", () => {
+  test("lasso extracts movable markers from a flag but excludes its meter", () => {
     const runtime = createEditorRuntime(createProjectWithMixedFlag());
     const session = new PianoRollInteractionSession(
       runtime.viewport.get(),
@@ -86,7 +86,7 @@ describe("timeline marker selection", () => {
 
     expect(runtime.selection.markerGroups).toEqual([{
       startTick: MIXED_MARKER_TICK,
-      kinds: ["tempo", "scale"],
+      kinds: ["tempo", "scale", "section"],
     }]);
   });
 
@@ -99,6 +99,7 @@ describe("timeline marker selection", () => {
     const runtime = createEditorRuntime(createProjectWithMixedFlag(note));
     const group = createSelectedMarkerGroup(
       MIXED_MARKER_TICK,
+      true,
       true,
       true,
     );
@@ -128,6 +129,9 @@ describe("timeline marker selection", () => {
       MIXED_MARKER_TICK + 240,
     );
     expect(activeMarkerTicks(runtime, "scale")).toContain(
+      MIXED_MARKER_TICK + 240,
+    );
+    expect(activeMarkerTicks(runtime, "section")).toContain(
       MIXED_MARKER_TICK + 240,
     );
     expect(runtime.selection.markerGroups[0]?.startTick).toBe(
@@ -394,6 +398,10 @@ function createProjectWithMixedFlag(
         patternId: "ionian",
       },
     ],
+    sectionMarkers: [{
+      startTick: MIXED_MARKER_TICK,
+      comment: "Verse",
+    }],
   });
 }
 
@@ -444,7 +452,7 @@ function createLassoCompletion(
 
 function activeMarkerTicks(
   runtime: ReturnType<typeof createEditorRuntime>,
-  kind: "meter" | "tempo" | "scale",
+  kind: "meter" | "tempo" | "scale" | "section",
 ): readonly number[] {
   const timeMap = getActiveClip(runtime.projectStore.getState()).timeline.timeMap;
 
@@ -452,5 +460,7 @@ function activeMarkerTicks(
     ? timeMap.meterMarkers.map((marker) => marker.startTick)
     : kind === "tempo"
       ? timeMap.tempoMarkers.map((marker) => marker.startTick)
-      : timeMap.scaleMarkers.map((marker) => marker.startTick);
+      : kind === "scale"
+        ? timeMap.scaleMarkers.map((marker) => marker.startTick)
+        : timeMap.sectionMarkers.map((marker) => marker.startTick);
 }
