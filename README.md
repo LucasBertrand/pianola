@@ -182,8 +182,8 @@ un schéma, un parseur ou un export.
 - Copier, couper, coller, supprimer, transformer et transférer produisent des
   transactions cohérentes.
 - Une collision demande explicitement de fusionner ou de découper aux ancres.
-- Les clips partagent les instruments globaux mais gardent leurs notes et leurs
-  statuts (`active`, `muted`, `locked`, `disabled`), leur timeline et leur boucle.
+- Les clips partagent les instruments globaux mais gardent leurs notes — avec
+  leurs propriétés `muted` et `locked` —, leur timeline et leur boucle.
 
 Tous les gestes et contrôles sont détaillés dans
 [`docs/guides/usage.md`](docs/guides/usage.md).

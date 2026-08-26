@@ -6,11 +6,10 @@ const MUTED_NOTE_OPACITY = 0.16;
 
 /** 
  * Returns the final opacity for a note. 
- * A note is considered muted if it is individually muted/disabled 
- * or if its parent instrument is muted.
+ * A note is dimmed if it is muted or if its parent instrument is muted.
  */
 export function getNoteOpacity(
-  note: Pick<Note, "status">,
+  note: Pick<Note, "muted">,
   instrumentStyle?: Pick<InstrumentRenderStyle, "opacity">
 ): number {
   const isInstrumentMuted = (instrumentStyle?.opacity ?? 1) < 1;

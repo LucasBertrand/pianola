@@ -225,7 +225,7 @@ export function populateSelectionLayer(
   return { left, width, pitch, startTick, durationTicks };
 }
 
-export function getSelectionNoteClassName(note: Pick<Note, "status">): string {
+export function getSelectionNoteClassName(note: Pick<Note, "locked">): string {
   return isNoteEditable(note)
     ? "interaction-note-selection"
     : "interaction-note-selection is-non-editable";

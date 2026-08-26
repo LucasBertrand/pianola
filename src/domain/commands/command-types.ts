@@ -26,7 +26,6 @@ import {
 import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
 import {
   type Note,
-  type NoteStatus,
 } from "../notes/note";
 import type {
   ClipHierarchyNodeIdentity,
@@ -273,12 +272,20 @@ export interface DeleteNotesCommand {
   readonly noteIds: readonly NoteId[];
 }
 
-export interface SetNotesStatusCommand {
-  readonly type: "SetNotesStatus";
+export interface SetNotesMutedCommand {
+  readonly type: "SetNotesMuted";
   readonly clipId: ClipId;
   readonly trackInstrumentId: InstrumentId;
   readonly noteIds: readonly NoteId[];
-  readonly status: NoteStatus;
+  readonly muted: boolean;
+}
+
+export interface SetNotesLockedCommand {
+  readonly type: "SetNotesLocked";
+  readonly clipId: ClipId;
+  readonly trackInstrumentId: InstrumentId;
+  readonly noteIds: readonly NoteId[];
+  readonly locked: boolean;
 }
 
 export interface UpdateTempoCommand {
@@ -431,7 +438,8 @@ export type PianoRollCommand =
   | TransformNotesCommand
   | SliceNotesCommand
   | DeleteNotesCommand
-  | SetNotesStatusCommand
+  | SetNotesMutedCommand
+  | SetNotesLockedCommand
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
   | AddMeterMarkerCommand

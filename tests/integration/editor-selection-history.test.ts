@@ -24,12 +24,14 @@ describe("editor selection history", () => {
     const activeNote = createTestNote({
       id: "active-note",
       startTick: 0,
-      status: "active",
+      muted: false,
+      locked: false,
     });
     const disabledNote = createTestNote({
       id: "disabled-note",
       startTick: 960,
-      status: "disabled",
+      muted: true,
+      locked: true,
     });
     const runtime = createEditorRuntime(createTestProject({
       clips: [{ id: TEST_CLIP_ID, notes: [activeNote, disabledNote] }],

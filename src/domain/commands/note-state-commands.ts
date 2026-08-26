@@ -1,14 +1,12 @@
-import {
-  isNoteStatus,
-  type Note,
-} from "../notes/note";
+import { type Note } from "../notes/note";
 import {
   type NoteId,
 } from "../identifiers";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {
   DeleteNotesCommand,
-  SetNotesStatusCommand,
+  SetNotesLockedCommand,
+  SetNotesMutedCommand,
 } from "./command-types";
 import {
   replaceTrack,
@@ -50,20 +48,30 @@ export function applyDeleteNotes(
   });
 }
 
-export function applySetNotesStatus(
+export function applySetNotesMuted(
   state: ActiveClipProjectState,
-  command: SetNotesStatusCommand,
+  command: SetNotesMutedCommand,
+): ActiveClipProjectState {
+  return applyNoteBooleanProperty(state, command, "muted", command.muted);
+}
+
+export function applySetNotesLocked(
+  state: ActiveClipProjectState,
+  command: SetNotesLockedCommand,
+): ActiveClipProjectState {
+  return applyNoteBooleanProperty(state, command, "locked", command.locked);
+}
+
+function applyNoteBooleanProperty(
+  state: ActiveClipProjectState,
+  command: SetNotesMutedCommand | SetNotesLockedCommand,
+  property: "muted" | "locked",
+  value: boolean,
 ): ActiveClipProjectState {
   const track = requireTrack(state, command.trackInstrumentId, command.type);
-
   assertUniqueNoteIds(command.noteIds, command.type);
-
-  if (!isNoteStatus(command.status)) {
-    reject(
-      "INVALID_COMMAND",
-      "Note status must be active, muted, locked, or disabled.",
-      command.type,
-    );
+  if (typeof value !== "boolean") {
+    reject("INVALID_COMMAND", `Note ${property} must be a boolean.`, command.type);
   }
 
   let notesById: Record<NoteId, Note> | null = null;
@@ -71,7 +79,7 @@ export function applySetNotesStatus(
   for (const noteId of command.noteIds) {
     const note = requireNote(track, noteId, command.type);
 
-    if (note.status === command.status) {
+    if (note[property] === value) {
       continue;
     }
 
@@ -83,7 +91,7 @@ export function applySetNotesStatus(
 
     notesById[noteId] = {
       ...note,
-      status: command.status,
+      [property]: value,
     };
   }
 

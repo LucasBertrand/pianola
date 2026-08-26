@@ -34,7 +34,7 @@ describe("clip concatenation", () => {
             id: "shared-note",
             startTick: 120,
             velocity: 84,
-            status: "muted",
+            muted: true,
           })],
         },
         {

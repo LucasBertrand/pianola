@@ -33,19 +33,17 @@ note est ajustée avec la gamme active à sa nouvelle position.
 ## Instruments
 
 L’inspecteur projet ajoute, édite, réordonne et supprime les instruments
-globaux. Gain, mute et solo restent globaux. Le bouton de verrouillage applique
-un statut verrouillé à toutes les notes de l’instrument dans le clip actif.
+globaux. Gain, mute et solo restent globaux.
 Les notes des instruments non réglés sur « solo » apparaissent grisées pour faciliter la lecture.
 Une note appartient toujours à un instrument ; une sélection peut être
 transférée vers tout instrument disponible.
 
-Chaque note possède un statut unique : `active` (audible et éditable), `muted`
-(silencieuse et éditable), `locked` (audible et non éditable) ou `disabled`
-(silencieuse et non éditable). Les commandes de sourdine et de verrouillage
-préservent l’autre dimension du statut.
-Le bouton de statut de la barre d’outils et du menu radial bascule la sélection
-entre `disabled` et `active` : une sélection mixte est entièrement désactivée,
-puis entièrement réactivée au prochain déclenchement. Toutes les notes restent
+Chaque note possède deux propriétés indépendantes : `muted` contrôle son
+audibilité et `locked` son éditabilité. Une note ayant les deux propriétés
+actives est silencieuse et non éditable.
+Le bouton de la barre d’outils et du menu radial bascule uniquement la sourdine
+de la sélection entre `muted: true` et `muted: false`, sans modifier son
+verrouillage. Toutes les notes restent
 sélectionnables, mais les notes verrouillées ou désactivées sont exclues des
 transformations, de la suppression et des opérations copier/couper.
 
@@ -57,7 +55,8 @@ Save changes crée une seule étape Undo/Redo avec le résultat final.
 
 ## Clips
 
-Chaque clip possède ses notes — avec leur statut —, sa timeline et sa boucle.
+Chaque clip possède ses notes — avec leurs propriétés de sourdine et de
+verrouillage —, sa timeline et sa boucle.
 Ajouter, dupliquer, renommer, réordonner ou supprimer un clip passe
 par l’inspecteur. Changer de clip vide la sélection de notes sans arrêter la
 lecture. Le bouton au cercle barré bypass le clip dans toute séquence démarrée

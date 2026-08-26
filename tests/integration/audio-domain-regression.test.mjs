@@ -14,7 +14,7 @@ import {
 import {
   buildDeleteNoteCommands,
   buildRepositionNoteCommands,
-  buildSetNotesStatusCommands,
+  buildSetNotesMutedCommands,
 } from "../../src/use-cases/piano-roll/notes/note-edit-commands";
 import {
   NoteGestureWorkflow,
@@ -1066,14 +1066,15 @@ function getActiveTestMeasureCount(state) {
     const commands = new EditorCommandService(store);
 
     commands.dispatch(
-      buildSetNotesStatusCommands("clip-test", [note], "muted"),
+      buildSetNotesMutedCommands("clip-test", [note], true),
       "Mute selected notes",
     );
 
     const disabledNote = getActiveTestClip(store.getState())
       .tracksByInstrumentId["voice-a"].notesById["toggle"];
 
-    assert.equal(disabledNote.status, "muted");
+    assert.equal(disabledNote.muted, true);
+    assert.equal(disabledNote.locked, false);
     assert.deepEqual(
       compileActiveClipPlaybackSnapshot(store.getState()).instruments[0].noteIds,
       [],
@@ -1094,8 +1095,8 @@ function getActiveTestMeasureCount(state) {
     );
     assert.equal(
       getActiveTestClip(store.getState()).tracksByInstrumentId["voice-a"]
-        .notesById["toggle"].status,
-      "muted",
+        .notesById["toggle"].muted,
+      true,
     );
   });
 
@@ -1270,7 +1271,7 @@ function getActiveTestMeasureCount(state) {
       notesByInstrumentId: {
         "voice-a": [{
           ...createNote("disabled", "voice-a", 60, 0, 240),
-          status: "muted",
+          muted: true,
         }],
       },
     });
@@ -1293,8 +1294,8 @@ function getActiveTestMeasureCount(state) {
     assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
     assert.equal(
       getActiveTestClip(loaded.projectState).tracksByInstrumentId["voice-a"]
-        .notesById["disabled"].status,
-      "muted",
+        .notesById["disabled"].muted,
+      true,
     );
     assert.deepEqual(loaded.editorState, editorState);
     assert.equal(
@@ -1336,7 +1337,7 @@ function getActiveTestMeasureCount(state) {
             notesById: {
               second: {
                 ...createNote("second", "voice-a", 65, 240),
-                status: "locked",
+                locked: true,
               },
             },
           },
@@ -1399,8 +1400,8 @@ function getActiveTestMeasureCount(state) {
     );
     assert.equal(
       loaded.projectState.clipsById["clip-native-second"]
-        .tracksByInstrumentId["voice-a"].notesById.second.status,
-      "locked",
+        .tracksByInstrumentId["voice-a"].notesById.second.locked,
+      true,
     );
     assert.deepEqual(loaded.editorState, editorState);
   });
@@ -2241,7 +2242,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("keeps instrument playback global and note status clip-local", () => {
+  test("keeps instrument playback global and note lock clip-local", () => {
     const initialState = createProject();
     const withSecondClip = dispatch(initialState, {
       type: "AddClip",
@@ -2278,11 +2279,11 @@ function getActiveTestMeasureCount(state) {
           },
         },
         {
-          type: "SetNotesStatus",
+          type: "SetNotesLocked",
           clipId: "clip-voice-state-second",
           trackInstrumentId: "voice-a",
           noteIds: ["local"],
-          status: "locked",
+          locked: true,
         },
       ],
     });
@@ -2294,8 +2295,8 @@ function getActiveTestMeasureCount(state) {
     );
     assert.deepEqual(
       store.getState().clipsById["clip-voice-state-second"]
-        .tracksByInstrumentId["voice-a"].notesById.local.status,
-      "locked",
+        .tracksByInstrumentId["voice-a"].notesById.local.locked,
+      true,
     );
     assert.deepEqual(
       {
@@ -2314,15 +2315,15 @@ function getActiveTestMeasureCount(state) {
     store.undo();
     assert.equal(
       store.getState().clipsById["clip-voice-state-second"]
-        .tracksByInstrumentId["voice-a"].notesById.local.status,
-      "active",
+        .tracksByInstrumentId["voice-a"].notesById.local.locked,
+      false,
     );
 
     store.redo();
     assert.equal(
       store.getState().clipsById["clip-voice-state-second"]
-        .tracksByInstrumentId["voice-a"].notesById.local.status,
-      "locked",
+        .tracksByInstrumentId["voice-a"].notesById.local.locked,
+      true,
     );
   });
 
@@ -2339,11 +2340,11 @@ function getActiveTestMeasureCount(state) {
 
     runtime.editorCommands.dispatch(
       [{
-        type: "SetNotesStatus",
+        type: "SetNotesLocked",
         clipId: "clip-test",
         trackInstrumentId: "voice-a",
         noteIds: ["rendered"],
-        status: "locked",
+        locked: true,
       }],
       "Update rendered instrument state",
     );

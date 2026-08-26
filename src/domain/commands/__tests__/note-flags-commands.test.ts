@@ -9,15 +9,15 @@ import { compilePlaybackPlan } from "../../../audio/playback-snapshot";
 import { ProjectStore } from "../../project-store";
 import { CommandRejectedError } from "../command-errors";
 
-describe("note status commands", () => {
-  test("combines playback and editability in one note-level state", () => {
-    const note = createTestNote({ id: "status-note" });
+describe("note mute and lock commands", () => {
+  test("updates playback and editability independently", () => {
+    const note = createTestNote({ id: "note-flags" });
     const store = new ProjectStore(createTestProject({
       clips: [{ id: TEST_CLIP_ID, notes: [note] }],
     }));
 
-    setStatus(store, "locked", 1);
-    expect(getNoteStatus(store)).toBe("locked");
+    setLocked(store, true, 1);
+    expect(getNoteFlags(store)).toEqual({ muted: false, locked: true });
     expect(getPlaybackNoteIds(store)).toEqual([note.id]);
     expect(() => moveNote(store, 2)).toThrowError(
       expect.objectContaining<Partial<CommandRejectedError>>({
@@ -25,7 +25,8 @@ describe("note status commands", () => {
       }),
     );
 
-    setStatus(store, "disabled", 3);
+    setMuted(store, true, 3);
+    expect(getNoteFlags(store)).toEqual({ muted: true, locked: true });
     expect(getPlaybackNoteIds(store)).toEqual([]);
     expect(() => moveNote(store, 4)).toThrowError(
       expect.objectContaining<Partial<CommandRejectedError>>({
@@ -33,30 +34,49 @@ describe("note status commands", () => {
       }),
     );
 
-    setStatus(store, "muted", 5);
+    setLocked(store, false, 5);
     expect(getPlaybackNoteIds(store)).toEqual([]);
     expect(() => moveNote(store, 6)).not.toThrow();
-    expect(getNoteStatus(store)).toBe("muted");
+    expect(getNoteFlags(store)).toEqual({ muted: true, locked: false });
 
-    setStatus(store, "active", 7);
+    setMuted(store, false, 7);
     expect(getPlaybackNoteIds(store)).toEqual([note.id]);
+    expect(getNoteFlags(store)).toEqual({ muted: false, locked: false });
   });
 });
 
-function setStatus(
+function setMuted(
   store: ProjectStore,
-  status: "active" | "muted" | "locked" | "disabled",
+  muted: boolean,
   createdAt: number,
 ): void {
   store.dispatch({
-    transactionId: `status-${status}-${String(createdAt)}`,
+    transactionId: `muted-${String(muted)}-${String(createdAt)}`,
     createdAt,
     commands: [{
-      type: "SetNotesStatus",
+      type: "SetNotesMuted",
       clipId: TEST_CLIP_ID,
       trackInstrumentId: TEST_INSTRUMENT_ID,
-      noteIds: ["status-note"],
-      status,
+      noteIds: ["note-flags"],
+      muted,
+    }],
+  });
+}
+
+function setLocked(
+  store: ProjectStore,
+  locked: boolean,
+  createdAt: number,
+): void {
+  store.dispatch({
+    transactionId: `locked-${String(locked)}-${String(createdAt)}`,
+    createdAt,
+    commands: [{
+      type: "SetNotesLocked",
+      clipId: TEST_CLIP_ID,
+      trackInstrumentId: TEST_INSTRUMENT_ID,
+      noteIds: ["note-flags"],
+      locked,
     }],
   });
 }
@@ -69,15 +89,17 @@ function moveNote(store: ProjectStore, createdAt: number): void {
       type: "RepositionNotes",
       clipId: TEST_CLIP_ID,
       trackInstrumentId: TEST_INSTRUMENT_ID,
-      changes: [{ noteId: "status-note", startTick: 240, pitch: 60 }],
+      changes: [{ noteId: "note-flags", startTick: 240, pitch: 60 }],
     }],
   });
 }
 
-function getNoteStatus(store: ProjectStore) {
-  return store.getState().clipsById[TEST_CLIP_ID]!
+function getNoteFlags(store: ProjectStore) {
+  const note = store.getState().clipsById[TEST_CLIP_ID]!
     .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
-    .notesById["status-note"]!.status;
+    .notesById["note-flags"]!;
+
+  return { muted: note.muted, locked: note.locked };
 }
 
 function getPlaybackNoteIds(store: ProjectStore): readonly string[] {

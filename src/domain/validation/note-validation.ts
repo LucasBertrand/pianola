@@ -6,7 +6,6 @@ import {
   type MidiPitch,
   type MidiVelocity,
   type Note,
-  isNoteStatus,
 } from "../notes/note";
 import {
   type Track,
@@ -101,11 +100,19 @@ export function validateNote(note: Note): ValidationResult {
     });
   }
 
-  if (!isNoteStatus(note.status)) {
+  if (typeof note.muted !== "boolean") {
     issues.push({
-      code: "INVALID_NOTE_STATUS",
-      path: "status",
-      message: "Note status must be active, muted, locked, or disabled.",
+      code: "INVALID_NOTE_MUTED",
+      path: "muted",
+      message: "Note muted must be a boolean.",
+    });
+  }
+
+  if (typeof note.locked !== "boolean") {
+    issues.push({
+      code: "INVALID_NOTE_LOCKED",
+      path: "locked",
+      message: "Note locked must be a boolean.",
     });
   }
 

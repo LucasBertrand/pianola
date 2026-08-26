@@ -281,7 +281,8 @@ function createNote(id: string, pitch: number, startTick: number): Note {
     startTick,
     durationTicks: 480,
     velocity: 100,
-    status: "active",
+    muted: false,
+    locked: false,
   };
 }
 

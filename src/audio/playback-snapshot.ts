@@ -4,7 +4,6 @@ import {
 } from "../domain/instruments/instrument";
 import {
   isNoteAudible,
-  isNoteStatus,
   type Note,
 } from "../domain/notes/note";
 import {
@@ -432,9 +431,15 @@ function assertCompilableNote(
     );
   }
 
-  if (!isNoteStatus(note.status)) {
+  if (typeof note.muted !== "boolean") {
     throw new PlaybackSnapshotCompilationError(
-      `Note "${note.id}" status must be active, muted, locked, or disabled.`,
+      `Note "${note.id}" muted must be a boolean.`,
+    );
+  }
+
+  if (typeof note.locked !== "boolean") {
+    throw new PlaybackSnapshotCompilationError(
+      `Note "${note.id}" locked must be a boolean.`,
     );
   }
 

@@ -54,7 +54,8 @@ function createNote(
     startTick,
     durationTicks: 120,
     velocity: 100,
-    status: "active",
+    muted: false,
+    locked: false,
   };
 }
 

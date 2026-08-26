@@ -8,7 +8,6 @@ import {
 } from "../../domain/project/project-document";
 import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-  type ProjectInstrument,
 } from "../../domain/instruments/instrument";
 import {
   type ClipGroupId,
@@ -33,7 +32,6 @@ import type {
 import type {
   PlayheadPosition,
 } from "../../editor/model/playhead-position";
-import { isNoteEditable } from "../../domain/notes/note";
 
 export interface ProjectInspectorProps {
   readonly open: boolean;
@@ -97,7 +95,6 @@ export interface ProjectInspectorProps {
   readonly onTransferSelectionToInstrument: (
     instrumentId: InstrumentId,
   ) => void;
-  readonly onToggleInstrumentLock: (instrument: ProjectInstrument) => void;
   readonly onDeleteProjectInstrument: (instrumentId: InstrumentId) => void;
 }
 
@@ -134,7 +131,6 @@ export function ProjectInspector({
   onInstrumentGainPreview,
   onSelectInstrumentNotes,
   onTransferSelectionToInstrument,
-  onToggleInstrumentLock,
 }: ProjectInspectorProps): React.JSX.Element {
   const activeClip = getActiveClip(projectState);
   const instrumentReorder = useCardReorder(
@@ -165,18 +161,13 @@ export function ProjectInspector({
                 if (instrument === undefined || track === undefined) {
                   return null;
                 }
-                const notes = Object.values(track.notesById);
-                const instrumentLocked = notes.length > 0
-                  && notes.every((note) => !isNoteEditable(note));
-
                 return (
                   <article
                     className={
                       `project-instrument-card${instrument.id === selectedInstrumentId
                         ? " is-selected"
                         : ""
-                      }${instrument.muted ? " is-muted" : ""}${instrumentLocked ? " is-locked" : ""
-                      }`
+                      }${instrument.muted ? " is-muted" : ""}`
                     }
                     key={instrument.id}
                     data-reorder-index={instrumentIndex}
@@ -259,31 +250,6 @@ export function ProjectInspector({
                           <svg viewBox="0 0 20 20" aria-hidden="true">
                             <path d="M3 6h7M3 10h7M3 14h7" />
                             <path d="M11.5 10H17M14.5 7.5 17 10l-2.5 2.5" />
-                          </svg>
-                        </button>
-                        <button
-                          className={
-                            instrumentLocked
-                              ? "instrument-lock-button is-active"
-                              : "instrument-lock-button"
-                          }
-                          type="button"
-                          aria-label={`${instrumentLocked ? "Unlock" : "Lock"} notes from ${instrument.name}`}
-                          aria-pressed={instrumentLocked}
-                          title={instrumentLocked ? "Unlock instrument notes" : "Lock instrument notes"}
-                          disabled={notes.length === 0}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onToggleInstrumentLock(instrument);
-                          }}
-                        >
-                          <svg
-                            className="instrument-lock-icon"
-                            viewBox="0 0 20 20"
-                            aria-hidden="true"
-                          >
-                            <path d="M6 8V6a4 4 0 0 1 8 0v2" />
-                            <rect x="4" y="8" width="12" height="9" rx="2" />
                           </svg>
                         </button>
                       </div>

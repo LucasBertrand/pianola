@@ -93,7 +93,7 @@ export interface PianoRollSelectionWorkflow {
   readonly copy: () => void;
   readonly cut: () => void;
   readonly remove: () => void;
-  readonly toggleDisabled: () => void;
+  readonly toggleMute: () => void;
   readonly transform: (
     kind: SelectionTransformationKind,
     label: string,
@@ -126,7 +126,7 @@ export function usePianoRollSelectionWorkflow({
     undo,
     redo,
     remove,
-    toggleDisabled,
+    toggleMute,
   } = usePianoRollSelectionCommands(
     commands,
     selection,
@@ -590,7 +590,7 @@ export function usePianoRollSelectionWorkflow({
     copy,
     cut,
     remove,
-    toggleDisabled,
+    toggleMute,
     transform,
     sliceAtPlayhead,
     sliceAtLoopAnchors,

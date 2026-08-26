@@ -462,7 +462,6 @@ export function PianoRollWorkspace({
     savePreset: saveProjectInstrumentPreset,
     removePreset: removeProjectInstrumentPreset,
     selectNotes: handleSelectInstrumentNotes,
-    toggleLock: handleToggleInstrumentLock,
   } = useProjectInstrumentWorkflow({
     commands: runtime.editorCommands,
     selectedInstrumentId,
@@ -746,7 +745,7 @@ export function PianoRollWorkspace({
     copy: handleCopy,
     cut: handleCut,
     remove: handleDeleteSelection,
-    toggleDisabled: handleToggleSelectionDisabled,
+    toggleMute: handleToggleSelectionMute,
     transform: handleTransformSelection,
     sliceAtPlayhead: handleSliceSelectionAtPlayhead,
     sliceAtLoopAnchors: handleSliceSelectionAtLoopAnchors,
@@ -785,8 +784,8 @@ export function PianoRollWorkspace({
   const editableNoteSelectionAvailable = selectedNotes.some(isNoteEditable);
   const editableTimelineSelectionAvailable =
     editableNoteSelectionAvailable || selectedMarkerCount > 0;
-  const selectedNotesContainNonDisabledNote = selectedNotes.some(
-    (note) => note.status !== "disabled",
+  const selectionWillBeMuted = selectedNotes.some(
+    (note) => !note.muted,
   );
   const radialMenuItems = useMemo<readonly FloatingRadialMenuItem[]>(() => [
     {
@@ -819,16 +818,16 @@ export function PianoRollWorkspace({
       onSelect: handleOpenSliceSelection,
     },
     {
-      id: "toggle-disabled",
-      label: selectedNotesContainNonDisabledNote ? "Disable" : "Enable",
+      id: "toggle-mute",
+      label: selectionWillBeMuted ? "Mute" : "Unmute",
       icon: (
         <CommandIcon
-          kind={selectedNotesContainNonDisabledNote ? "disable" : "enable"}
+          kind={selectionWillBeMuted ? "mute" : "unmute"}
         />
       ),
       disabled: selectedNotes.length === 0,
-      tone: selectedNotesContainNonDisabledNote ? "danger" : "default",
-      onSelect: handleToggleSelectionDisabled,
+      tone: selectionWillBeMuted ? "danger" : "default",
+      onSelect: handleToggleSelectionMute,
     },
     {
       id: "add-marker",
@@ -843,9 +842,9 @@ export function PianoRollWorkspace({
     handleCut,
     handleOpenSliceSelection,
     handlePaste,
-    handleToggleSelectionDisabled,
+    handleToggleSelectionMute,
     selectedNotes.length,
-    selectedNotesContainNonDisabledNote,
+    selectionWillBeMuted,
     editableNoteSelectionAvailable,
     editableTimelineSelectionAvailable,
     timeMapMarkers.openMarkerAtPlayhead,
@@ -1046,7 +1045,7 @@ export function PianoRollWorkspace({
             selectionAvailable={editableTimelineSelectionAvailable}
             noteSelectionAvailable={selectedNotes.length > 0}
             editableNoteSelectionAvailable={editableNoteSelectionAvailable}
-            selectedNotesContainNonDisabledNote={selectedNotesContainNonDisabledNote}
+            selectionWillBeMuted={selectionWillBeMuted}
             clipboardSelectionAvailable={editableTimelineSelectionAvailable}
             clipboardAvailable={clipboardAvailable}
             selectionMode={selectionMode}
@@ -1068,7 +1067,7 @@ export function PianoRollWorkspace({
             onManageMeasures={() => setManageMeasuresDialogOpen(true)}
             onRemoveMeasure={handleRemoveMeasureAtPlayhead}
             onDeleteSelection={handleDeleteSelection}
-            onToggleSelectionDisabled={handleToggleSelectionDisabled}
+            onToggleSelectionMute={handleToggleSelectionMute}
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={handlePaste}
@@ -1201,7 +1200,6 @@ export function PianoRollWorkspace({
           onInstrumentGainPreview={previewInstrumentGain}
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
           onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
-          onToggleInstrumentLock={handleToggleInstrumentLock}
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
         />
       </section>

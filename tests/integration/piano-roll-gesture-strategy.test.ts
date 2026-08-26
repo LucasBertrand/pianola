@@ -50,7 +50,8 @@ describe("PianoRollGestureStrategy pitch highlight during selection drag", () =>
       pitch: 64,
       startTick: 480,
       durationTicks: 480,
-      status: "disabled",
+      muted: true,
+      locked: true,
     });
     const runtime = createEditorRuntime(createTestProject({
       clips: [{ id: TEST_CLIP_ID, notes: [disabledNote] }],

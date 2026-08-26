@@ -32,7 +32,7 @@ import {
 import {
   type InstrumentId,
 } from "../../src/domain/identifiers";
-import { setNoteLocked, type Note } from "../../src/domain/notes/note";
+import { type Note } from "../../src/domain/notes/note";
 import {
   type ProjectInstrument,
 } from "../../src/domain/instruments/instrument";
@@ -68,9 +68,6 @@ interface AudioTestProjectOptions {
   readonly instrumentOrder?: readonly InstrumentId[];
   readonly projectInstrumentChangesById?: Readonly<
     Record<InstrumentId, Partial<ProjectInstrument>>
-  >;
-  readonly instrumentStateChangesById?: Readonly<
-    Record<InstrumentId, { readonly locked?: boolean }>
   >;
 }
 
@@ -129,7 +126,6 @@ export function createAudioTestProject({
   transport: transportChanges = {},
   instrumentOrder = ["voice-a"],
   projectInstrumentChangesById = {},
-  instrumentStateChangesById = {},
 }: AudioTestProjectOptions = {}): ProjectState {
   const defaultTransport = createDefaultTransportState();
   const defaultClock = createDefaultProjectClock();
@@ -171,13 +167,9 @@ export function createAudioTestProject({
       ...createAudioTestProjectInstrument(instrumentId, instrumentIndex),
       ...projectInstrumentChangesById[instrumentId],
     };
-    const locked = instrumentStateChangesById[instrumentId]?.locked ?? false;
     tracksByInstrumentId[instrumentId] = {
       instrumentId,
-      notesById: Object.fromEntries(notes.map((note) => [
-        note.id,
-        { ...note, status: setNoteLocked(note.status, locked) },
-      ])),
+      notesById: Object.fromEntries(notes.map((note) => [note.id, note])),
     };
   }
 
@@ -304,7 +296,8 @@ export const CRITICAL_BEHAVIOR_EXPECTATION = Object.freeze({
     startTick: 360,
     durationTicks: 120,
     velocity: 96,
-    status: "active",
+    muted: false,
+    locked: false,
   },
   mergedCollision: {
     id: "collision-proposal",
@@ -313,6 +306,7 @@ export const CRITICAL_BEHAVIOR_EXPECTATION = Object.freeze({
     startTick: 0,
     durationTicks: 180,
     velocity: 100,
-    status: "active",
+    muted: false,
+    locked: false,
   },
 });

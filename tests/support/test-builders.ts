@@ -26,7 +26,6 @@ import {
   type InstrumentId,
 } from "../../src/domain/identifiers";
 import {
-  type NoteStatus,
   type Note,
 } from "../../src/domain/notes/note";
 import { createDefaultProjectInstrument } from "../../src/domain/project-instrument-factory";
@@ -42,7 +41,8 @@ export interface TestNoteOptions {
   readonly startTick?: number;
   readonly durationTicks?: number;
   readonly velocity?: number;
-  readonly status?: NoteStatus;
+  readonly muted?: boolean;
+  readonly locked?: boolean;
 }
 
 export interface TestClipOptions {
@@ -68,7 +68,8 @@ export function createTestNote({
   startTick = 0,
   durationTicks = 120,
   velocity = 100,
-  status = "active",
+  muted = false,
+  locked = false,
 }: TestNoteOptions): Note {
   return {
     id,
@@ -77,7 +78,8 @@ export function createTestNote({
     startTick,
     durationTicks,
     velocity,
-    status,
+    muted,
+    locked,
   };
 }
 

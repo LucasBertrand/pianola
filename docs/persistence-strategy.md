@@ -294,7 +294,7 @@ ignorés, mais conservés, sur un appareil tactile.
 
 L’enveloppe portable utilise `schemaVersion: 3` sous l'identité
 `app.pianola.project`, tandis que le document musical embarqué utilise
-actuellement le schéma métier v9. Son lecteur convertit les anciens documents
+actuellement le schéma métier v10. Son lecteur convertit les anciens documents
 vers la version courante et ignore les positions de playhead historiques. La
 v3 remonte `autoAdvanceEnabled` des transports de clips vers le document projet,
 la v4 introduit la hiérarchie de groupes, la v5 ajoute leur couleur, la v6 le
@@ -302,7 +302,8 @@ bypass des clips, la v7 le bypass des groupes et la v8 remplace `Note.enabled`
 et le verrouillage par instrument par le statut unifié de chaque note. Lors de
 la migration, les deux anciens booléens sont combinés en `active`, `muted`,
 `locked` ou `disabled`. La v9 renomme ensuite l'ancien statut `frozen` en
-`disabled`. Les anciens groupes reçoivent automatiquement un bypass
+`disabled`. La v10 remplace ce statut combiné par les deux propriétés de note
+indépendantes `muted` et `locked`. Les anciens groupes reçoivent automatiquement un bypass
 désactivé. Les trois
 préférences auparavant mêlées à `editor` restent chargées uniquement depuis
 `UserSettings`.

@@ -25,7 +25,7 @@ export interface EditorToolbarProps {
   readonly selectionAvailable: boolean;
   readonly noteSelectionAvailable: boolean;
   readonly editableNoteSelectionAvailable: boolean;
-  readonly selectedNotesContainNonDisabledNote: boolean;
+  readonly selectionWillBeMuted: boolean;
   readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
@@ -36,7 +36,7 @@ export interface EditorToolbarProps {
   readonly onManageMeasures: () => void;
   readonly onRemoveMeasure: () => void;
   readonly onDeleteSelection: () => void;
-  readonly onToggleSelectionDisabled: () => void;
+  readonly onToggleSelectionMute: () => void;
   readonly onCopy: () => void;
   readonly onCut: () => void;
   readonly onPaste: () => void;
@@ -59,7 +59,7 @@ export function EditorToolbar({
   selectionAvailable,
   noteSelectionAvailable,
   editableNoteSelectionAvailable,
-  selectedNotesContainNonDisabledNote,
+  selectionWillBeMuted,
   clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
@@ -70,7 +70,7 @@ export function EditorToolbar({
   onManageMeasures,
   onRemoveMeasure,
   onDeleteSelection,
-  onToggleSelectionDisabled,
+  onToggleSelectionMute,
   onCopy,
   onCut,
   onPaste,
@@ -219,17 +219,17 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title={selectedNotesContainNonDisabledNote
-            ? "Disable selected notes"
-            : "Enable selected notes"}
-          aria-label={selectedNotesContainNonDisabledNote
-            ? "Disable selected notes"
-            : "Enable selected notes"}
+          title={selectionWillBeMuted
+            ? "Mute selected notes"
+            : "Unmute selected notes"}
+          aria-label={selectionWillBeMuted
+            ? "Mute selected notes"
+            : "Unmute selected notes"}
           disabled={!noteSelectionAvailable}
-          onClick={onToggleSelectionDisabled}
+          onClick={onToggleSelectionMute}
         >
           <CommandIcon
-            kind={selectedNotesContainNonDisabledNote ? "disable" : "enable"}
+            kind={selectionWillBeMuted ? "mute" : "unmute"}
           />
         </button>
         <button

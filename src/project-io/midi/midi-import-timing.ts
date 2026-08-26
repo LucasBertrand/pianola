@@ -71,7 +71,8 @@ export function convertSourceNotes(
       durationTicks: endTick - startTick,
       velocity: sourceNote.velocity,
       instrumentId,
-      status: "active",
+      muted: false,
+      locked: false,
     });
   }
 

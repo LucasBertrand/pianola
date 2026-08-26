@@ -26,7 +26,15 @@ import { NATIVE_PROJECT_FILE_FORMAT } from "../version";
 describe("native project parser", () => {
   test("builds domain and workspace state from the current document", () => {
     const project = createTestProject({
-      clips: [{ id: TEST_CLIP_ID, bypassEnabled: true }],
+      clips: [{
+        id: TEST_CLIP_ID,
+        bypassEnabled: true,
+        notes: [createTestNote({
+          id: "current-note",
+          muted: true,
+          locked: false,
+        })],
+      }],
     });
     const editor = createDefaultNativeEditorState(project);
     const metadata = createNativeProjectFileMetadata();
@@ -37,9 +45,16 @@ describe("native project parser", () => {
       projectState: project,
       editorState: editor,
     });
+    const storedNote = JSON.parse(storedFixture).project
+      .clipsById[TEST_CLIP_ID]
+      .tracksByInstrumentId[TEST_INSTRUMENT_ID]
+      .notesById["current-note"];
+
+    expect(storedNote).toMatchObject({ muted: true, locked: false });
+    expect(storedNote).not.toHaveProperty("status");
   });
 
-  test("combines legacy note mute and instrument lock into a disabled status", () => {
+  test("combines legacy note mute and instrument lock into note flags", () => {
     const project = createTestProject({
       clips: [{
         id: TEST_CLIP_ID,
@@ -57,7 +72,8 @@ describe("native project parser", () => {
         clipsById: Record<string, {
           tracksByInstrumentId: Record<string, {
             notesById: Record<string, {
-              status?: string;
+              muted?: boolean;
+              locked?: boolean;
               enabled?: boolean;
             }>;
           }>;
@@ -70,7 +86,8 @@ describe("native project parser", () => {
       .notesById["legacy-note"]!;
 
     legacy.project.schemaVersion = 7;
-    delete note.status;
+    delete note.muted;
+    delete note.locked;
     note.enabled = false;
     clip.instrumentStatesById = {
       [TEST_INSTRUMENT_ID]: { locked: true },
@@ -80,12 +97,12 @@ describe("native project parser", () => {
 
     expect(loaded.projectState.clipsById[TEST_CLIP_ID]!
       .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
-      .notesById["legacy-note"]!.status).toBe("disabled");
+      .notesById["legacy-note"]!).toMatchObject({ muted: true, locked: true });
     expect("instrumentStatesById" in loaded.projectState.clipsById[TEST_CLIP_ID]!)
       .toBe(false);
   });
 
-  test("migrates the v8 frozen status to disabled", () => {
+  test("migrates the v8 frozen status to muted and locked flags", () => {
     const project = createTestProject({
       clips: [{
         id: TEST_CLIP_ID,
@@ -101,23 +118,80 @@ describe("native project parser", () => {
         schemaVersion: number;
         clipsById: Record<string, {
           tracksByInstrumentId: Record<string, {
-            notesById: Record<string, { status: string }>;
+            notesById: Record<string, {
+              muted?: boolean;
+              locked?: boolean;
+              status?: string;
+            }>;
           }>;
         }>;
       };
     };
 
     stored.project.schemaVersion = 8;
-    stored.project.clipsById[TEST_CLIP_ID]!
+    const note = stored.project.clipsById[TEST_CLIP_ID]!
       .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
-      .notesById["v8-note"]!.status = "frozen";
+      .notesById["v8-note"]!;
+    delete note.muted;
+    delete note.locked;
+    note.status = "frozen";
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(9);
+    expect(loaded.projectState.schemaVersion).toBe(10);
     expect(loaded.projectState.clipsById[TEST_CLIP_ID]!
       .tracksByInstrumentId[TEST_INSTRUMENT_ID]!
-      .notesById["v8-note"]!.status).toBe("disabled");
+      .notesById["v8-note"]!).toMatchObject({ muted: true, locked: true });
+  });
+
+  test("migrates every v9 note status to independent flags", () => {
+    const project = createTestProject({
+      clips: [{
+        id: TEST_CLIP_ID,
+        notes: [
+          createTestNote({ id: "active", pitch: 60 }),
+          createTestNote({ id: "muted", pitch: 61 }),
+          createTestNote({ id: "locked", pitch: 62 }),
+          createTestNote({ id: "disabled", pitch: 63 }),
+        ],
+      }],
+    });
+    const stored = JSON.parse(serializeNativeProjectFile(
+      project,
+      createNativeProjectFileMetadata(),
+      createDefaultNativeEditorState(project),
+    )) as {
+      project: {
+        schemaVersion: number;
+        clipsById: Record<string, {
+          tracksByInstrumentId: Record<string, {
+            notesById: Record<string, {
+              muted?: boolean;
+              locked?: boolean;
+              status?: string;
+            }>;
+          }>;
+        }>;
+      };
+    };
+    const notes = stored.project.clipsById[TEST_CLIP_ID]!
+      .tracksByInstrumentId[TEST_INSTRUMENT_ID]!.notesById;
+
+    stored.project.schemaVersion = 9;
+    for (const status of ["active", "muted", "locked", "disabled"] as const) {
+      delete notes[status]!.muted;
+      delete notes[status]!.locked;
+      notes[status]!.status = status;
+    }
+
+    const migratedNotes = parseNativeProjectFile(JSON.stringify(stored))
+      .projectState.clipsById[TEST_CLIP_ID]!
+      .tracksByInstrumentId[TEST_INSTRUMENT_ID]!.notesById;
+
+    expect(migratedNotes["active"]).toMatchObject({ muted: false, locked: false });
+    expect(migratedNotes["muted"]).toMatchObject({ muted: true, locked: false });
+    expect(migratedNotes["locked"]).toMatchObject({ muted: false, locked: true });
+    expect(migratedNotes["disabled"]).toMatchObject({ muted: true, locked: true });
   });
 
   test("round-trips bypassed clip groups", () => {
@@ -307,7 +381,7 @@ describe("native project parser", () => {
 
     const loaded = parseNativeProjectFile(JSON.stringify(stored));
 
-    expect(loaded.projectState.schemaVersion).toBe(9);
+    expect(loaded.projectState.schemaVersion).toBe(10);
     expect(loaded.projectState.clipHierarchy[0]).toMatchObject({
       kind: "group",
       id: "legacy-group",
@@ -427,7 +501,7 @@ describe("native project parser", () => {
     const loadedClip = loaded.projectState.clipsById[TEST_CLIP_ID];
     const loadedEditor = loaded.editorState.clipStatesById[TEST_CLIP_ID];
 
-    expect(loaded.projectState.schemaVersion).toBe(9);
+    expect(loaded.projectState.schemaVersion).toBe(10);
     expect(loadedClip).toBeDefined();
     expect(loadedEditor).toBeDefined();
     expect("anchorTick" in (loadedClip?.transportSettings ?? {})).toBe(false);

@@ -30,11 +30,7 @@ import {
   type TempoMarker,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
-import {
-  isNoteStatus,
-  type NoteStatus,
-  type Note,
-} from "../../../domain/notes/note";
+import { type Note } from "../../../domain/notes/note";
 import {
   MAXIMUM_CLIP_NOTE_COUNT,
 } from "../../../domain/notes/note";
@@ -666,7 +662,7 @@ function parseNotes(
         noteRecord["velocity"],
         `${notePath}.velocity`,
       ),
-      status: parseNoteStatus(noteRecord, notePath, schemaVersion, legacyLocked),
+      ...parseNoteFlags(noteRecord, notePath, schemaVersion, legacyLocked),
       instrumentId: readNonEmptyString(
         noteRecord["instrumentId"],
         `${notePath}.instrumentId`,
@@ -746,41 +742,48 @@ function parseLegacyLockedInstrumentIds(
   return lockedIds;
 }
 
-function parseNoteStatus(
+function parseNoteFlags(
   note: Readonly<Record<string, unknown>>,
   path: string,
   schemaVersion: number,
   legacyLocked: boolean,
-): NoteStatus {
-  if ("status" in note) {
+): Pick<Note, "muted" | "locked"> {
+  if (schemaVersion >= 10) {
+    return {
+      muted: readBoolean(note["muted"], `${path}.muted`),
+      locked: readBoolean(note["locked"], `${path}.locked`),
+    };
+  }
+
+  if (schemaVersion >= 8) {
     const status = readString(note["status"], `${path}.status`, 16);
 
-    if (schemaVersion === 8 && status === "frozen") {
-      return "disabled";
+    switch (status) {
+      case "active":
+        return { muted: false, locked: false };
+      case "muted":
+        return { muted: true, locked: false };
+      case "locked":
+        return { muted: false, locked: true };
+      case "disabled":
+        return { muted: true, locked: true };
+      case "frozen":
+        if (schemaVersion === 8) {
+          return { muted: true, locked: true };
+        }
+        break;
     }
 
-    if (!isNoteStatus(status)) {
-      fail(
-        "INVALID_DATA",
-        `${path}.status`,
-        "Note status must be active, muted, locked, or disabled.",
-      );
-    }
-
-    return status;
+    fail(
+      "INVALID_DATA",
+      `${path}.status`,
+      "Legacy note status must be active, muted, locked, or disabled.",
+    );
   }
 
-  if (schemaVersion < 8) {
-    const enabled = readBoolean(note["enabled"], `${path}.enabled`);
+  const enabled = readBoolean(note["enabled"], `${path}.enabled`);
 
-    if (legacyLocked) {
-      return enabled ? "locked" : "disabled";
-    }
-
-    return enabled ? "active" : "muted";
-  }
-
-  fail("INVALID_DATA", `${path}.status`, "Note status is required.");
+  return { muted: !enabled, locked: legacyLocked };
 }
 
 function assertTransportWithinClip(

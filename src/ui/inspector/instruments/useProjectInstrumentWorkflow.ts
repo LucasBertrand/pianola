@@ -10,9 +10,6 @@ import type {
   PianoRollCommand,
 } from "../../../domain/commands/command-types";
 import {
-  getActiveClip,
-} from "../../../domain/project/project-document";
-import {
   type InstrumentId,
   type PresetId,
 } from "../../../domain/identifiers";
@@ -24,8 +21,6 @@ import {
 import {
   createDefaultProjectInstrument,
 } from "../../../domain/project-instrument-factory";
-import { isNoteEditable, setNoteLocked } from "../../../domain/notes/note";
-import { buildSetNotesStatusCommands } from "../../../use-cases/piano-roll/notes/note-edit-commands";
 import type {
   ShowApplicationConfirmation,
 } from "../../../use-cases/dialogs/application-dialog-port";
@@ -61,7 +56,6 @@ export interface ProjectInstrumentWorkflow {
   readonly savePreset: (preset: InstrumentPreset, label: string) => void;
   readonly removePreset: (presetId: PresetId, label: string) => void;
   readonly selectNotes: (instrumentId: InstrumentId) => void;
-  readonly toggleLock: (projectInstrument: ProjectInstrument) => void;
 }
 
 export function useProjectInstrumentWorkflow({
@@ -248,34 +242,6 @@ export function useProjectInstrumentWorkflow({
     [commands, selectInstrument, toggleInstrumentSelection],
   );
 
-  const toggleLock = useCallback(
-    (projectInstrument: ProjectInstrument): void => {
-      const clip = getActiveClip(commands.getState());
-      const notes = Object.values(
-        clip.tracksByInstrumentId[projectInstrument.id]?.notesById ?? {},
-      );
-
-      if (notes.length === 0) {
-        return;
-      }
-
-      const lockNotes = notes.some(isNoteEditable);
-      commands.dispatch(
-        buildSetNotesStatusCommands(
-          clip.id,
-          notes,
-          (note) => setNoteLocked(note.status, lockNotes),
-        ),
-        lockNotes ? "Lock instrument notes" : "Unlock instrument notes",
-      );
-
-      if (lockNotes) {
-        removeInstrumentFromSelection(projectInstrument.id);
-      }
-    },
-    [commands, removeInstrumentFromSelection],
-  );
-
   return {
     select,
     add,
@@ -285,7 +251,6 @@ export function useProjectInstrumentWorkflow({
     savePreset,
     removePreset,
     selectNotes,
-    toggleLock,
   };
 }
 

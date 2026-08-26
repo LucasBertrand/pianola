@@ -68,22 +68,22 @@ describe("drag note label layout", () => {
 
 describe("non-editable note interaction visuals", () => {
   test("hides resize anchors for locked and disabled selections", () => {
-    expect(getSelectionNoteClassName({ status: "active" }))
+    expect(getSelectionNoteClassName({ locked: false }))
       .toBe("interaction-note-selection");
-    expect(getSelectionNoteClassName({ status: "muted" }))
+    expect(getSelectionNoteClassName({ locked: false }))
       .toBe("interaction-note-selection");
-    expect(getSelectionNoteClassName({ status: "locked" }))
+    expect(getSelectionNoteClassName({ locked: true }))
       .toContain("is-non-editable");
-    expect(getSelectionNoteClassName({ status: "disabled" }))
+    expect(getSelectionNoteClassName({ locked: true }))
       .toContain("is-non-editable");
   });
 
   test("excludes locked and disabled notes from ghost layers", () => {
     const notes = [
-      createTestNote({ id: "active", status: "active" }),
-      createTestNote({ id: "muted", status: "muted" }),
-      createTestNote({ id: "locked", status: "locked" }),
-      createTestNote({ id: "disabled", status: "disabled" }),
+      createTestNote({ id: "active" }),
+      createTestNote({ id: "muted", muted: true }),
+      createTestNote({ id: "locked", locked: true }),
+      createTestNote({ id: "disabled", muted: true, locked: true }),
     ];
 
     expect(filterEditableInteractionNotes(notes).map((note) => note.id))

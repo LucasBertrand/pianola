@@ -484,16 +484,6 @@
   border-style: dashed;
 }
 
-.project-instrument-card.is-locked {
-  border-color: var(--color-border-strong);
-  background-image:
-    repeating-linear-gradient(-45deg,
-      transparent 0,
-      transparent 6px,
-      var(--color-warm-faint) 6px,
-      var(--color-warm-faint) 9px);
-}
-
 .instrument-color-control {
   position: absolute;
   z-index: 2;
@@ -697,18 +687,6 @@
 .project-instrument-card button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
-}
-
-.instrument-lock-icon {
-  display: block;
-  width: 16px;
-  height: 16px;
-  margin: auto;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
 }
 
 .project-instrument-card .instrument-mute-button.is-active {

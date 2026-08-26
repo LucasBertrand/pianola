@@ -3,7 +3,7 @@ import {
 } from "react";
 import {
   buildDeleteNoteCommands,
-  buildSetNotesStatusCommands,
+  buildSetNotesMutedCommands,
 } from "../../use-cases/piano-roll/notes/note-edit-commands";
 import {
   buildDeleteSelectedMarkerCommands,
@@ -27,14 +27,13 @@ import type {
 import {
   isNoteEditable,
   type Note,
-  type NoteStatus,
 } from "../../domain/notes/note";
 
 export interface PianoRollSelectionCommands {
   readonly undo: () => void;
   readonly redo: () => void;
   readonly remove: () => void;
-  readonly toggleDisabled: () => void;
+  readonly toggleMute: () => void;
 }
 
 /** Owns history and direct commands for the current note selection. */
@@ -97,7 +96,7 @@ export function usePianoRollSelectionCommands(
       );
     }
   }, [commands, getController, selection]);
-  const toggleDisabled = useCallback((): void => {
+  const toggleMute = useCallback((): void => {
     const controller = getController();
     const notes = controller?.getSelectedNotes() ?? [];
 
@@ -105,17 +104,11 @@ export function usePianoRollSelectionCommands(
       return;
     }
 
-    const targetStatus = getDisabledToggleStatus(notes);
+    const muted = getMuteToggleValue(notes);
     const clipId = getActiveClip(commands.getState()).id;
     const nextState = commands.dispatch(
-      buildSetNotesStatusCommands(
-        clipId,
-        notes,
-        targetStatus,
-      ),
-      targetStatus === "disabled"
-        ? "Disable selected notes"
-        : "Enable selected notes",
+      buildSetNotesMutedCommands(clipId, notes, muted),
+      muted ? "Mute selected notes" : "Unmute selected notes",
       { clipId, noteIds: notes.map((note) => note.id) },
     );
 
@@ -128,13 +121,11 @@ export function usePianoRollSelectionCommands(
     }
   }, [commands, getController]);
 
-  return { undo, redo, remove, toggleDisabled };
+  return { undo, redo, remove, toggleMute };
 }
 
-export function getDisabledToggleStatus(
-  notes: readonly Pick<Note, "status">[],
-): Extract<NoteStatus, "active" | "disabled"> {
-  return notes.every((note) => note.status === "disabled")
-    ? "active"
-    : "disabled";
+export function getMuteToggleValue(
+  notes: readonly Pick<Note, "muted">[],
+): boolean {
+  return !notes.every((note) => note.muted);
 }

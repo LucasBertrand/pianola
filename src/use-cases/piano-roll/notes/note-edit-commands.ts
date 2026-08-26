@@ -10,7 +10,6 @@ import {
 } from "../../../domain/identifiers";
 import {
   type Note,
-  type NoteStatus,
 } from "../../../domain/notes/note";
 
 export type NoteResizeEdge = "start" | "end";
@@ -67,43 +66,32 @@ export function buildDeleteNoteCommands(
   return commands;
 }
 
-/** Creates explicit status updates grouped by instrument and target status. */
-export function buildSetNotesStatusCommands(
+/** Creates explicit mute updates grouped by instrument. */
+export function buildSetNotesMutedCommands(
   clipId: ClipId,
   notes: readonly Note[],
-  target: NoteStatus | ((note: Note) => NoteStatus),
+  muted: boolean,
 ): readonly PianoRollCommand[] {
-  const noteIdsByTarget = new Map<string, {
-    instrumentId: InstrumentId;
-    status: NoteStatus;
-    noteIds: NoteId[];
-  }>();
-  const commands: PianoRollCommand[] = [];
+  const noteIdsByInstrument = new Map<InstrumentId, NoteId[]>();
 
   for (const note of notes) {
-    const status = typeof target === "function" ? target(note) : target;
-    const key = `${note.instrumentId}\u0000${status}`;
-    let group = noteIdsByTarget.get(key);
+    let noteIds = noteIdsByInstrument.get(note.instrumentId);
 
-    if (group === undefined) {
-      group = { instrumentId: note.instrumentId, status, noteIds: [] };
-      noteIdsByTarget.set(key, group);
+    if (noteIds === undefined) {
+      noteIds = [];
+      noteIdsByInstrument.set(note.instrumentId, noteIds);
     }
 
-    group.noteIds.push(note.id);
+    noteIds.push(note.id);
   }
 
-  for (const { instrumentId, status, noteIds } of noteIdsByTarget.values()) {
-    commands.push({
-      type: "SetNotesStatus",
-      clipId,
-      trackInstrumentId: instrumentId,
-      noteIds,
-      status,
-    });
-  }
-
-  return commands;
+  return [...noteIdsByInstrument].map(([instrumentId, noteIds]) => ({
+    type: "SetNotesMuted",
+    clipId,
+    trackInstrumentId: instrumentId,
+    noteIds,
+    muted,
+  }));
 }
 
 /** Creates atomic absolute-position updates grouped by instrument. */

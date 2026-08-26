@@ -65,7 +65,8 @@ import {
 } from "./note-shape-commands";
 import {
   applyDeleteNotes,
-  applySetNotesStatus,
+  applySetNotesLocked,
+  applySetNotesMuted,
 } from "./note-state-commands";
 import {
   applySetAutoAdvanceEnabled,
@@ -267,8 +268,11 @@ function applyActiveClipCommand(
     case "DeleteNotes":
       nextContext = applyDeleteNotes(context, command);
       break;
-    case "SetNotesStatus":
-      nextContext = applySetNotesStatus(context, command);
+    case "SetNotesMuted":
+      nextContext = applySetNotesMuted(context, command);
+      break;
+    case "SetNotesLocked":
+      nextContext = applySetNotesLocked(context, command);
       break;
     case "UpdateTimeSignature":
       nextContext = applyUpdateTimeSignature(context, command);
