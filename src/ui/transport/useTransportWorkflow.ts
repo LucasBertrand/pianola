@@ -7,7 +7,6 @@ import {
 import {
   getClipDurationTicks,
   MAXIMUM_MEASURE_COUNT,
-  MINIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
   getMeasureSpanAtTick,
@@ -22,6 +21,10 @@ import type {
 import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
+import {
+  resolveAdjacentMeasureRange,
+  type RelativeMeasurePosition,
+} from "./measure-management";
 
 export interface TransportWorkflowOptions {
   readonly runtime: EditorRuntime;
@@ -30,8 +33,11 @@ export interface TransportWorkflowOptions {
 }
 
 export interface TransportWorkflow {
-  readonly insertMeasuresAtPlayhead: (count: number, position: "before" | "after") => void;
-  readonly removeMeasureAtPlayhead: () => void;
+  readonly insertMeasuresAtPlayhead: (count: number, position: RelativeMeasurePosition) => void;
+  readonly removeMeasuresAtPlayhead: (
+    count: number,
+    position: RelativeMeasurePosition,
+  ) => void;
   readonly commitMasterGain: (gain: number) => void;
   readonly toggleMasterMute: () => void;
   readonly commitMasterTuning: (tuningFrequencyHz: number) => void;
@@ -53,7 +59,7 @@ export function useTransportWorkflow({
     controller?.clearSelection();
   }, [getController]);
 
-  const insertMeasuresAtPlayhead = useCallback((count: number, position: "before" | "after"): void => {
+  const insertMeasuresAtPlayhead = useCallback((count: number, position: RelativeMeasurePosition): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
     const spans = getMeasureSpans(
@@ -107,18 +113,17 @@ export function useTransportWorkflow({
     }
   }, [prepareStructuralEdit, runtime, seekPlayback]);
 
-  const removeMeasureAtPlayhead = useCallback((): void => {
+  const removeMeasuresAtPlayhead = useCallback((
+    count: number,
+    position: RelativeMeasurePosition,
+  ): void => {
     const state = runtime.projectStore.getState();
     const activeClip = getActiveClip(state);
-    const measureCount = getMeasureSpans(
+    const spans = getMeasureSpans(
       state.clock.ppqn,
       activeClip.timeline.timeMap,
       activeClip.timeline.durationTicks,
-    ).length;
-
-    if (measureCount <= MINIMUM_MEASURE_COUNT) {
-      return;
-    }
+    );
 
     const span = getMeasureSpanAtTick(
       state.clock.ppqn,
@@ -126,9 +131,27 @@ export function useTransportWorkflow({
       activeClip.timeline.durationTicks,
       runtime.playheadTick.get(),
     );
-    const measureIndex = span.index;
-    const removalStartTick = span.startTick;
-    const removalEndTick = span.endTick;
+    const range = resolveAdjacentMeasureRange(
+      spans.length,
+      span.index,
+      count,
+      position,
+    );
+
+    if (range === null) {
+      return;
+    }
+
+    const { measureIndex } = range;
+    const firstRemovedSpan = spans[measureIndex];
+    const lastRemovedSpan = spans[measureIndex + count - 1];
+
+    if (firstRemovedSpan === undefined || lastRemovedSpan === undefined) {
+      return;
+    }
+
+    const removalStartTick = firstRemovedSpan.startTick;
+    const removalEndTick = lastRemovedSpan.endTick;
     const currentPlayheadTick = runtime.playheadTick.get();
 
     prepareStructuralEdit();
@@ -137,8 +160,9 @@ export function useTransportWorkflow({
         type: "RemoveMeasure",
         clipId: activeClip.id,
         measureIndex,
+        count,
       }],
-      `Remove measure ${measureIndex + 1}`,
+      `Remove ${count} measure(s) ${position} measure ${span.index + 1}`,
     );
 
     if (nextState !== null) {
@@ -255,7 +279,7 @@ export function useTransportWorkflow({
 
   return {
     insertMeasuresAtPlayhead,
-    removeMeasureAtPlayhead,
+    removeMeasuresAtPlayhead,
     commitMasterGain,
     toggleMasterMute,
     commitMasterTuning,

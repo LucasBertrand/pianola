@@ -318,6 +318,7 @@ describe("measure operations across meter markers", () => {
       type: "RemoveMeasure",
       clipId: TEST_CLIP_ID,
       measureIndex: 2,
+      count: 1,
     });
 
     const timeline = activeTimeline(store);
@@ -335,6 +336,46 @@ describe("measure operations across meter markers", () => {
     expect(
       getMeasureCount(PPQN, timeline.timeMap, timeline.durationTicks),
     ).toBe(4);
+  });
+
+  test("removes several adjacent measures atomically", () => {
+    const store = new ProjectStore(createTestProject());
+
+    dispatch(store, {
+      type: "RemoveMeasure",
+      clipId: TEST_CLIP_ID,
+      measureIndex: 1,
+      count: 2,
+    });
+
+    expect(getMeasureCount(
+      PPQN,
+      activeTimeline(store).timeMap,
+      activeTimeline(store).durationTicks,
+    )).toBe(2);
+
+    store.undo();
+    expect(getMeasureCount(
+      PPQN,
+      activeTimeline(store).timeMap,
+      activeTimeline(store).durationTicks,
+    )).toBe(4);
+  });
+
+  test("rejects removal counts that cross the clip boundaries", () => {
+    for (const command of [
+      { measureIndex: 3, count: 2 },
+      { measureIndex: 0, count: 4 },
+      { measureIndex: 0, count: 0 },
+    ]) {
+      const store = new ProjectStore(createTestProject());
+
+      expect(() => dispatch(store, {
+        type: "RemoveMeasure",
+        clipId: TEST_CLIP_ID,
+        ...command,
+      })).toThrow(CommandRejectedError);
+    }
   });
 
   test("appending measures uses the last active meter", () => {

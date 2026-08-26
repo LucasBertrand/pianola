@@ -151,21 +151,50 @@ export function applyRemoveMeasure(
   state: ActiveClipProjectState,
   command: RemoveMeasureCommand,
 ): ActiveClipProjectState {
+  const initialSpans = getMeasureSpans(
+    state.clock.ppqn,
+    state.timeline.timeMap,
+    state.timeline.durationTicks,
+  );
+  assertMeasureIndex(command.measureIndex, initialSpans.length, command.type);
+
+  if (!Number.isSafeInteger(command.count) || command.count <= 0) {
+    reject(
+      "INVALID_COMMAND",
+      "The removed measure count must be a positive safe integer.",
+      command.type,
+    );
+  }
+
+  if (
+    command.measureIndex + command.count > initialSpans.length
+    || initialSpans.length - command.count < MINIMUM_MEASURE_COUNT
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `A project must retain at least ${MINIMUM_MEASURE_COUNT} measure.`,
+      command.type,
+    );
+  }
+
+  let nextState = state;
+
+  for (let index = 0; index < command.count; index += 1) {
+    nextState = applySingleMeasureRemoval(nextState, command);
+  }
+
+  return nextState;
+}
+
+function applySingleMeasureRemoval(
+  state: ActiveClipProjectState,
+  command: RemoveMeasureCommand,
+): ActiveClipProjectState {
   const spans = getMeasureSpans(
     state.clock.ppqn,
     state.timeline.timeMap,
     state.timeline.durationTicks,
   );
-  assertMeasureIndex(command.measureIndex, spans.length, command.type);
-
-  if (spans.length <= MINIMUM_MEASURE_COUNT) {
-    reject(
-      "INVALID_COMMAND",
-      `A project must contain at least ${MINIMUM_MEASURE_COUNT} measure.`,
-      command.type,
-    );
-  }
-
   const span = spans[command.measureIndex];
 
   if (span === undefined) {

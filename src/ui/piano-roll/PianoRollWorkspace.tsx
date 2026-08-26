@@ -16,9 +16,11 @@ import {
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
+  MAXIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
-  getMeasureCount,
+  getMeasureSpanAtTick,
+  getMeasureSpans,
 } from "../../domain/transport/time-map";
 import { isNoteEditable } from "../../domain/notes/note";
 import type {
@@ -85,6 +87,9 @@ import {
 import {
   useAudioPlayback,
 } from "../../ui/transport/useAudioPlayback";
+import {
+  getMaximumAdjacentMeasureCounts,
+} from "../../ui/transport/measure-management";
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
@@ -251,8 +256,8 @@ export function PianoRollWorkspace({
   const [projectInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(false);
-  const [manageMeasuresDialogOpen, setManageMeasuresDialogOpen] =
-    useState(false);
+  const [measureDialogOperation, setMeasureDialogOperation] =
+    useState<"insert" | "remove" | null>(null);
   const [projectInspectorSection, setGeneralInspectorSection] =
     useState<"instruments" | "clips">("instruments");
   const [
@@ -277,6 +282,12 @@ export function PianoRollWorkspace({
     () => runtime.gridResolutionTicks.get(),
   );
   const activeClip = getActiveClip(projectState);
+  const measureSpans = getMeasureSpans(
+    projectState.clock.ppqn,
+    activeClip.timeline.timeMap,
+    activeClip.timeline.durationTicks,
+  );
+  const measureCount = measureSpans.length;
   const mergedPresetLibrary = useMemo(() => mergeInstrumentPresetLibraries(
     projectState.instrumentPresetsById,
     projectState.instrumentPresetOrder,
@@ -714,7 +725,7 @@ export function PianoRollWorkspace({
   ]);
   const {
     insertMeasuresAtPlayhead: handleInsertMeasuresAtPlayhead,
-    removeMeasureAtPlayhead: handleRemoveMeasureAtPlayhead,
+    removeMeasuresAtPlayhead: handleRemoveMeasuresAtPlayhead,
     commitMasterGain: handleMasterGainCommit,
     toggleMasterMute: handleMasterMuteToggle,
     commitMasterTuning: handleMasterTuningCommit,
@@ -1037,11 +1048,7 @@ export function PianoRollWorkspace({
             inspectorSection={projectInspectorSection}
             canUndo={runtime.editorCommands.canUndo()}
             canRedo={runtime.editorCommands.canRedo()}
-            measureCount={getMeasureCount(
-              projectState.clock.ppqn,
-              activeClip.timeline.timeMap,
-              activeClip.timeline.durationTicks,
-            )}
+            measureCount={measureCount}
             selectionAvailable={editableTimelineSelectionAvailable}
             noteSelectionAvailable={selectedNotes.length > 0}
             editableNoteSelectionAvailable={editableNoteSelectionAvailable}
@@ -1064,8 +1071,8 @@ export function PianoRollWorkspace({
             }}
             onUndo={handleUndo}
             onRedo={handleRedo}
-            onManageMeasures={() => setManageMeasuresDialogOpen(true)}
-            onRemoveMeasure={handleRemoveMeasureAtPlayhead}
+            onAddMeasures={() => setMeasureDialogOperation("insert")}
+            onRemoveMeasures={() => setMeasureDialogOperation("remove")}
             onDeleteSelection={handleDeleteSelection}
             onToggleSelectionMute={handleToggleSelectionMute}
             onCopy={handleCopy}
@@ -1287,17 +1294,47 @@ export function PianoRollWorkspace({
           onCancel={timeMapMarkers.cancelDraft}
         />
       )}
-      {manageMeasuresDialogOpen ? (
+      {measureDialogOperation !== null ? (
         <ManageMeasuresDialog
+          operation={measureDialogOperation}
+          maximumCountByPosition={resolveMeasureDialogMaximumCounts(
+            measureDialogOperation,
+            measureCount,
+            getMeasureSpanAtTick(
+              projectState.clock.ppqn,
+              activeClip.timeline.timeMap,
+              activeClip.timeline.durationTicks,
+              runtime.playheadTick.get(),
+            ).index,
+          )}
           onConfirm={(count, position) => {
-            handleInsertMeasuresAtPlayhead(count, position);
-            setManageMeasuresDialogOpen(false);
+            if (measureDialogOperation === "insert") {
+              handleInsertMeasuresAtPlayhead(count, position);
+            } else {
+              handleRemoveMeasuresAtPlayhead(count, position);
+            }
+
+            setMeasureDialogOperation(null);
           }}
-          onCancel={() => setManageMeasuresDialogOpen(false)}
+          onCancel={() => setMeasureDialogOperation(null)}
         />
       ) : null}
     </main>
   );
+}
+
+function resolveMeasureDialogMaximumCounts(
+  operation: "insert" | "remove",
+  measureCount: number,
+  currentMeasureIndex: number,
+): Readonly<Record<"before" | "after", number>> {
+  if (operation === "insert") {
+    const maximumCount = MAXIMUM_MEASURE_COUNT - measureCount;
+
+    return { before: maximumCount, after: maximumCount };
+  }
+
+  return getMaximumAdjacentMeasureCounts(measureCount, currentMeasureIndex);
 }
 
 function validatePersonalPresetName(name: string): string {

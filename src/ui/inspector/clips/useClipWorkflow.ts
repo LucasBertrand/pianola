@@ -22,6 +22,7 @@ import {
   DEFAULT_MEASURE_COUNT,
   MAXIMUM_PROJECT_CLIP_COUNT,
   MAXIMUM_CLIP_NAME_LENGTH,
+  type ClipCreationSettings,
   type Clip,
   type Track,
 } from "../../../domain/clips/clip";
@@ -67,6 +68,7 @@ export interface ClipWorkflow {
   readonly add: (
     parentGroupId?: ClipGroupId | null,
     name?: string,
+    settings?: ClipCreationSettings,
   ) => void;
   readonly duplicate: (clipId: ClipId) => void;
   readonly duplicateGroup: (groupId: ClipGroupId) => ClipGroupId | null;
@@ -135,6 +137,7 @@ export function useClipWorkflow({
   const add = useCallback((
     parentGroupId: ClipGroupId | null = null,
     name?: string,
+    settings?: ClipCreationSettings,
   ): void => {
     const state = commands.getState();
 
@@ -156,6 +159,7 @@ export function useClipWorkflow({
       clipSequenceRef.current,
       color,
       name,
+      settings,
     );
 
     beginClipChange();
@@ -449,6 +453,7 @@ function createEmptyClip(
   sequence: number,
   color: string,
   name?: string,
+  settings?: ClipCreationSettings,
 ): Clip {
   const tracksByInstrumentId: Record<InstrumentId, Track> = {};
 
@@ -464,7 +469,11 @@ function createEmptyClip(
     name: name?.trim() || `Clip ${clipIndex + 1}`,
     color,
     bypassEnabled: DEFAULT_CLIP_BYPASS_ENABLED,
-    timeline: createDefaultClipTimeline(clock, DEFAULT_MEASURE_COUNT),
+    timeline: createDefaultClipTimeline(
+      clock,
+      settings?.measureCount ?? DEFAULT_MEASURE_COUNT,
+      settings?.timeSignature,
+    ),
     tracksByInstrumentId,
     transportSettings: createDefaultTransportState(),
   };

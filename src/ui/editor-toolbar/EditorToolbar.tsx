@@ -33,8 +33,8 @@ export interface EditorToolbarProps {
   readonly onToggleInspector: (section: "instruments" | "clips") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
-  readonly onManageMeasures: () => void;
-  readonly onRemoveMeasure: () => void;
+  readonly onAddMeasures: () => void;
+  readonly onRemoveMeasures: () => void;
   readonly onDeleteSelection: () => void;
   readonly onToggleSelectionMute: () => void;
   readonly onCopy: () => void;
@@ -67,8 +67,8 @@ export function EditorToolbar({
   onToggleInspector,
   onUndo,
   onRedo,
-  onManageMeasures,
-  onRemoveMeasure,
+  onAddMeasures,
+  onRemoveMeasures,
   onDeleteSelection,
   onToggleSelectionMute,
   onCopy,
@@ -180,7 +180,7 @@ export function EditorToolbar({
             measureCount
             >= MAXIMUM_MEASURE_COUNT
           }
-          onClick={onManageMeasures}
+          onClick={onAddMeasures}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7 4v16M11 4v16" />
@@ -189,13 +189,13 @@ export function EditorToolbar({
         </button>
         <button
           type="button"
-          title="Remove the measure at the playhead"
-          aria-label="Remove the measure at the playhead"
+          title="Remove measures..."
+          aria-label="Remove measures..."
           disabled={
             measureCount
             <= MINIMUM_MEASURE_COUNT
           }
-          onClick={onRemoveMeasure}
+          onClick={onRemoveMeasures}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7 4v16M11 4v16" />

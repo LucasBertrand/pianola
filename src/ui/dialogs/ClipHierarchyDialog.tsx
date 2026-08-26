@@ -1,6 +1,9 @@
 import React from "react";
+import { PROJECT_CONSTANTS } from "../../config/domain-limits";
 import {
   MAXIMUM_CLIP_NAME_LENGTH,
+  MAXIMUM_MEASURE_COUNT,
+  MINIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
   MAXIMUM_CLIP_GROUP_NAME_LENGTH,
@@ -8,6 +11,9 @@ import {
 import type {
   ClipGroupId,
 } from "../../domain/identifiers";
+import type { TimeSignature } from "../../domain/transport/time-map";
+
+const DENOMINATOR_OPTIONS = [1, 2, 4, 8, 16, 32] as const;
 
 export interface ClipParentOption {
   readonly id: ClipGroupId | null;
@@ -20,9 +26,13 @@ export interface ClipHierarchyCreateDialogProps {
   readonly color: string;
   readonly parentGroupId: ClipGroupId | null;
   readonly parentOptions: readonly ClipParentOption[];
+  readonly measureCount: number;
+  readonly timeSignature: TimeSignature;
   readonly onNameChange: (name: string) => void;
   readonly onColorChange: (color: string) => void;
   readonly onParentChange: (parentGroupId: ClipGroupId | null) => void;
+  readonly onMeasureCountChange: (measureCount: number) => void;
+  readonly onTimeSignatureChange: (timeSignature: TimeSignature) => void;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
@@ -33,9 +43,13 @@ export function ClipHierarchyCreateDialog({
   color,
   parentGroupId,
   parentOptions,
+  measureCount,
+  timeSignature,
   onNameChange,
   onColorChange,
   onParentChange,
+  onMeasureCountChange,
+  onTimeSignatureChange,
   onConfirm,
   onCancel,
 }: ClipHierarchyCreateDialogProps): React.JSX.Element {
@@ -87,6 +101,73 @@ export function ClipHierarchyCreateDialog({
           </label>
         </div>
 
+        {kind === "clip" ? (
+          <div className="clip-creation-timeline-controls">
+            <div className="instrument-preset-dialog-control">
+              <span>Time signature</span>
+              <div className="clip-creation-meter">
+                <select
+                  value={timeSignature.numerator}
+                  aria-label="Clip meter numerator"
+                  onChange={(event) => {
+                    const numerator = Number(event.currentTarget.value);
+
+                    if (Number.isSafeInteger(numerator)) {
+                      onTimeSignatureChange({ numerator, denominator: timeSignature.denominator });
+                    }
+                  }}
+                >
+                  {Array.from(
+                    { length: PROJECT_CONSTANTS.maximumTimeSignatureNumerator },
+                    (_, index) => index + 1,
+                  ).map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <span aria-hidden="true">/</span>
+                <select
+                  value={timeSignature.denominator}
+                  aria-label="Clip meter denominator"
+                  onChange={(event) => {
+                    const denominator = Number(event.currentTarget.value);
+
+                    if ((DENOMINATOR_OPTIONS as readonly number[]).includes(denominator)) {
+                      onTimeSignatureChange({
+                        numerator: timeSignature.numerator,
+                        denominator: denominator as TimeSignature["denominator"],
+                      });
+                    }
+                  }}
+                >
+                  {DENOMINATOR_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <label className="instrument-preset-dialog-control">
+              <span>Measures</span>
+              <input
+                type="number"
+                value={measureCount}
+                min={MINIMUM_MEASURE_COUNT}
+                max={MAXIMUM_MEASURE_COUNT}
+                step={1}
+                inputMode="numeric"
+                aria-label="Clip measure count"
+                onChange={(event) => {
+                  const nextMeasureCount = event.currentTarget.valueAsNumber;
+
+                  if (Number.isSafeInteger(nextMeasureCount)) {
+                    onMeasureCountChange(nextMeasureCount);
+                  }
+                }}
+              />
+            </label>
+          </div>
+        ) : null}
+
         <label className="instrument-preset-dialog-control">
           <span>Parent</span>
           <select
@@ -114,7 +195,13 @@ export function ClipHierarchyCreateDialog({
           <button
             className="application-dialog-button is-primary"
             type="submit"
-            disabled={name.trim().length === 0}
+            disabled={
+              name.trim().length === 0
+              || (kind === "clip" && (
+                measureCount < MINIMUM_MEASURE_COUNT
+                || measureCount > MAXIMUM_MEASURE_COUNT
+              ))
+            }
           >
             Create {itemName}
           </button>
