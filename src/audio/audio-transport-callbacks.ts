@@ -5,6 +5,9 @@ import type {
 import type {
   PlaybackStatus,
 } from "./playback-model";
+import type {
+  MasterLevelMeasurement,
+} from "./worklet/worklet-master-stage";
 
 export interface AudioTransportCallbacks {
   readonly onStatusChange?: (
@@ -13,4 +16,5 @@ export interface AudioTransportCallbacks {
     positionTick: Tick,
   ) => void;
   readonly onError?: (error: unknown) => void;
+  readonly onMasterLevels?: (levels: MasterLevelMeasurement) => void;
 }

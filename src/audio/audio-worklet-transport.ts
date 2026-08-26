@@ -445,6 +445,11 @@ export class AudioWorkletTransport implements AudioTransportController {
       return;
     }
 
+    if (message.type === "master-levels") {
+      this.callbacks.onMasterLevels?.(message.levels);
+      return;
+    }
+
     let sourceChanged = false;
 
     const pendingTimeline = this.pendingTimelines.get(message.sequence);

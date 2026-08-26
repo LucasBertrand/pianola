@@ -32,6 +32,7 @@
     "src/audio/worklet/sample-envelope.ts",
     "src/audio/worklet/subtractive-worklet-voice.ts",
     "src/audio/worklet/worklet-held-note-starter.ts",
+    "src/audio/worklet/worklet-master-stage.ts",
     "src/audio/worklet/worklet-runtime-instrument.ts",
     "src/audio/worklet/worklet-timeline-engine.ts",
     "src/audio/worklet/worklet-timeline-query.ts",

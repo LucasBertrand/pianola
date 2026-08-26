@@ -13,6 +13,9 @@ import type {
   PlaybackStatus,
   SubtractivePlaybackPresetSnapshot,
 } from "../playback-model";
+import type {
+  MasterLevelMeasurement,
+} from "./worklet-master-stage";
 
 export const PLAYBACK_PROCESSOR_NAME = "playback-processor";
 
@@ -100,6 +103,11 @@ export type AudioWorkletToMainMessage =
       readonly tick: Tick;
       readonly frame: number;
       readonly sequence: number;
+    }
+  | {
+      readonly type: "master-levels";
+      readonly frame: number;
+      readonly levels: MasterLevelMeasurement;
     }
   | {
       readonly type: "processor-error";

@@ -35,6 +35,32 @@ ne produit jamais deux voix simultanées. Un index
 d’intervalles transféré avec chaque piste permet de retrouver les notes tenues
 après un seek sans parcourir toute la timeline sur le thread audio.
 
+## Étage master temps réel
+
+`worklet/worklet-master-stage.ts` traite la somme stéréo après le gain master.
+Il réserve **-6 dB** de headroom (`0,501187` linéaire) avant la protection et
+fixe le plafond à **-1 dBFS** (`0,891251` linéaire). Le headroom absorbe les
+transitoires nominales et laisse de la marge aux conversions en aval ; il ne
+garantit pas seul une sortie bornée lorsque de nombreuses voix cohérentes
+s’additionnent. La protection assure cette dernière garantie.
+
+| Protection | Latence | Comportement | Choix conseillé |
+| --- | ---: | --- | --- |
+| `soft-clipper` | 0 | Knee à 75 % du plafond, saturation continue et strictement bornée ; ajoute des harmoniques sur une surcharge durable. | Préécoute sans latence et instruments percussifs quand la couleur de saturation est acceptable. |
+| `lookahead-limiter` | 2 ms (96 échantillons à 48 kHz) | Détection peak stéréo liée, attaque anticipée et release de 80 ms ; préserve mieux le timbre sous surcharge brève. | Master par défaut et lecture de la timeline. |
+
+Le limiteur emploie une ligne à retard et une deque monotone préallouées. Le
+clipper ne conserve que des scalaires. Aucun des deux chemins n’alloue dans
+`processFrame()` ; changer de protection se fait à la construction du moteur,
+hors du rendu temps réel.
+
+La mesure porte sur les peaks et RMS linéaires gauche/droite après protection,
+avec en plus le peak avant protection et la réduction de gain maximale en dB.
+Le worklet accumule ces valeurs avec des scalaires puis publie un message
+`master-levels` à **20 Hz**. La façade navigateur l’expose par
+`AudioTransportCallbacks.onMasterLevels`, ce qui évite un message et un objet
+par quantum audio.
+
 ## Quelles dépendances sont autorisées ?
 
 Audio peut dépendre du domaine, de la configuration et des primitives de temps.

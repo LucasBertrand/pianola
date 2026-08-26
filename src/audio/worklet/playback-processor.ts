@@ -29,11 +29,25 @@ declare function registerProcessor(
 ): void;
 
 const POSITION_REPORT_INTERVAL_FRAMES = 1_024;
+const LEVEL_REPORT_INTERVAL_FRAMES = Math.max(1, Math.round(sampleRate / 20));
 
 class PlaybackProcessor extends AudioWorkletProcessor {
   private readonly engine = new WorkletTimelineEngine(sampleRate);
+  private readonly levelReport = {
+    type: "master-levels" as const,
+    frame: 0,
+    levels: {
+      peakLeft: 0,
+      peakRight: 0,
+      rmsLeft: 0,
+      rmsRight: 0,
+      preProtectionPeak: 0,
+      gainReductionDb: 0,
+    },
+  };
   private lastReportedStateRevision = -1;
   private nextPositionReportFrame = 0;
+  private nextLevelReportFrame = 0;
   private failed = false;
 
   public constructor(options?: AudioWorkletNodeOptions) {
@@ -67,6 +81,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     try {
       this.engine.process(left, right);
       this.publishTransportStateIfNeeded();
+      this.publishMasterLevelsIfNeeded();
       return true;
     } catch (error: unknown) {
       left.fill(0);
@@ -174,6 +189,17 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       frame: currentFrame,
       sequence: this.engine.sequence,
     });
+  }
+
+  private publishMasterLevelsIfNeeded(): void {
+    if (currentFrame < this.nextLevelReportFrame) {
+      return;
+    }
+
+    this.nextLevelReportFrame = currentFrame + LEVEL_REPORT_INTERVAL_FRAMES;
+    this.levelReport.frame = currentFrame;
+    this.engine.writeAndResetMasterLevels(this.levelReport.levels);
+    this.port.postMessage(this.levelReport);
   }
 
   private reportError(error: unknown): void {

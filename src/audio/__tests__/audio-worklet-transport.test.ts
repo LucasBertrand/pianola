@@ -382,6 +382,48 @@ describe("AudioWorklet browser transport", () => {
 
     await transport.dispose();
   });
+
+  test("forwards reduced-rate master levels through the browser callback", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const fakePort = new FakeMessagePort();
+    const fakeNode = new FakeAudioWorkletNode(fakePort);
+    const fakeContext = new FakeAudioContext();
+    const reports: number[] = [];
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      {
+        onMasterLevels(levels) {
+          reports.push(levels.peakLeft);
+        },
+      },
+      0,
+      () => fakeContext as unknown as AudioContext,
+      () => fakeNode as unknown as AudioWorkletNode,
+    );
+
+    await transport.play();
+    fakePort.emit({
+      type: "master-levels",
+      frame: 2_400,
+      levels: {
+        peakLeft: 0.8,
+        peakRight: 0.7,
+        rmsLeft: 0.4,
+        rmsRight: 0.35,
+        preProtectionPeak: 1.2,
+        gainReductionDb: 2.5,
+      },
+    });
+
+    expect(reports).toEqual([0.8]);
+    await transport.dispose();
+  });
 });
 
 class FakeMessagePort {

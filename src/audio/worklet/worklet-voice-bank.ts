@@ -104,7 +104,6 @@ export class WorkletVoiceBank {
     left: Float32Array,
     right: Float32Array,
     frameIndex: number,
-    masterLevel: number,
   ): void {
     let leftSample = 0;
     let rightSample = 0;
@@ -120,8 +119,8 @@ export class WorkletVoiceBank {
       rightSample += monoSample * voice.rightMixLevel;
     }
 
-    left[frameIndex] = sanitizeSample(leftSample * masterLevel);
-    right[frameIndex] = sanitizeSample(rightSample * masterLevel);
+    left[frameIndex] = sanitizeSample(leftSample);
+    right[frameIndex] = sanitizeSample(rightSample);
   }
 
   public releaseDueTimelineVoices(currentTick: number): void {

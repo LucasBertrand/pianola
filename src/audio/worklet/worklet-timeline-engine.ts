@@ -28,6 +28,12 @@ import {
 import {
   WorkletHeldNoteStarter,
 } from "./worklet-held-note-starter";
+import {
+  WorkletMasterStage,
+  type MasterLevelMeasurement,
+  type MasterLevelWriter,
+  type MasterProtectionMode,
+} from "./worklet-master-stage";
 
 export interface TimelineEngineDiagnostic {
   readonly type: "note-start" | "loop" | "clip-transition" | "project-end";
@@ -39,6 +45,7 @@ export interface TimelineEngineDiagnostic {
 
 export interface WorkletTimelineEngineOptions {
   readonly onDiagnostic?: (event: TimelineEngineDiagnostic) => void;
+  readonly masterProtectionMode?: MasterProtectionMode;
 }
 
 /**
@@ -58,6 +65,7 @@ export class WorkletTimelineEngine {
   private readonly runtimeInstrumentsById =
     new Map<InstrumentId, WorkletRuntimeInstrument>();
   private readonly voiceBank: WorkletVoiceBank;
+  private readonly masterStage: WorkletMasterStage;
   private readonly heldNoteStarter = new WorkletHeldNoteStarter();
   private currentStatus: PlaybackStatus = "stopped";
   private currentTick = 0;
@@ -80,6 +88,10 @@ export class WorkletTimelineEngine {
   ) {
     this.onDiagnostic = options.onDiagnostic;
     this.voiceBank = new WorkletVoiceBank(sampleRate);
+    this.masterStage = new WorkletMasterStage(
+      sampleRate,
+      options.masterProtectionMode,
+    );
   }
 
   public get status(): PlaybackStatus {
@@ -104,6 +116,14 @@ export class WorkletTimelineEngine {
 
   public get transportStateRevision(): number {
     return this.stateRevision;
+  }
+
+  public readAndResetMasterLevels(): MasterLevelMeasurement {
+    return this.masterStage.readAndResetLevels();
+  }
+
+  public writeAndResetMasterLevels(levels: MasterLevelWriter): void {
+    this.masterStage.writeAndResetLevels(levels);
   }
 
   public loadTimeline(
@@ -310,7 +330,8 @@ export class WorkletTimelineEngine {
 
       const masterLevel = this.masterMuted ? 0 : this.masterGain;
 
-      this.voiceBank.renderFrame(left, right, frameIndex, masterLevel);
+      this.voiceBank.renderFrame(left, right, frameIndex);
+      this.masterStage.processFrame(left, right, frameIndex, masterLevel);
 
       if (this.currentStatus === "playing") {
         this.advanceTransportOneSample();
