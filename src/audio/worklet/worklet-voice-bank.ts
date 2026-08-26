@@ -44,6 +44,12 @@ export class WorkletVoiceBank {
 
   public setTuningFrequency(tuningFrequencyHz: number): void {
     this.tuningFrequencyHz = tuningFrequencyHz;
+
+    for (const voice of this.voices) {
+      if (!voice.ended) {
+        voice.retune(tuningFrequencyHz);
+      }
+    }
   }
 
   public synchronizeMix(

@@ -21,8 +21,11 @@ export class SampleEnvelope {
   private decaySamples = 0;
   private releaseSamples = 1;
   private sustainLevel = 0;
+  private targetSustainLevel = 0;
   private attackStartValue = 0;
   private curve = 0;
+  private targetCurve = 0;
+  private smoothingCoefficient = 1;
 
   public reset(
     config: PlaybackEnvelope,
@@ -35,7 +38,10 @@ export class SampleEnvelope {
     this.releaseStartValue = 0;
     this.attackStartValue = this.value;
     this.sustainLevel = config.sustainLevel;
+    this.targetSustainLevel = config.sustainLevel;
     this.curve = config.curve;
+    this.targetCurve = config.curve;
+    this.smoothingCoefficient = 1 - Math.exp(-1 / (0.01 * sampleRate));
     this.attackSamples = secondsToSamples(
       Math.max(MINIMUM_EDGE_SECONDS, config.attackSeconds),
       sampleRate,
@@ -56,11 +62,11 @@ export class SampleEnvelope {
   }
 
   public previewSustainLevel(sustainLevel: number): void {
-    this.sustainLevel = sustainLevel;
+    this.targetSustainLevel = sustainLevel;
   }
 
   public previewCurve(curve: number): void {
-    this.curve = curve;
+    this.targetCurve = curve;
   }
 
   public release(releaseSeconds?: number, sampleRate?: number): void {
@@ -84,6 +90,13 @@ export class SampleEnvelope {
   }
 
   public next(): number {
+    this.sustainLevel += (
+      this.targetSustainLevel - this.sustainLevel
+    ) * this.smoothingCoefficient;
+    this.curve += (
+      this.targetCurve - this.curve
+    ) * this.smoothingCoefficient;
+
     switch (this.stage) {
       case "attack":
         this.stageSample += 1;

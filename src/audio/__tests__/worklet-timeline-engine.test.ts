@@ -255,6 +255,55 @@ describe("AudioWorklet timeline engine", () => {
     expect(engine.status).toBe("playing");
   });
 
+  test("retunes active voices when the master tuning timeline changes", () => {
+    const snapshot = createSnapshotWithNotes([createTestNote({
+      id: "retuned-held-note",
+      startTick: 0,
+      durationTicks: 1_920,
+    })]);
+    const engine = createEngine(snapshot, []);
+    const retune = vi.spyOn(SubtractiveWorkletVoice.prototype, "retune");
+
+    engine.play(0);
+    renderFrames(engine, RENDER_QUANTUM);
+    engine.loadTimeline({
+      ...toTimeline(snapshot),
+      masterTuningFrequencyHz: 480,
+    }, getActiveClip(createTestProject()).transportSettings);
+
+    expect(retune).toHaveBeenCalledWith(480);
+    retune.mockRestore();
+  });
+
+  test("restores the published active parameters when preview is cancelled", () => {
+    const snapshot = createSnapshotWithNotes([createTestNote({
+      id: "cancelled-preview",
+      startTick: 0,
+      durationTicks: 1_920,
+    })]);
+    const instrument = snapshot.instruments[0];
+
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) {
+      return;
+    }
+
+    const engine = createEngine(snapshot, []);
+    const preview = vi.spyOn(SubtractiveWorkletVoice.prototype, "preview");
+    engine.play(0);
+    renderFrames(engine, RENDER_QUANTUM);
+
+    engine.previewInstrument(instrument.instrumentId, {
+      ...instrument.instrument,
+      pulseWidth: 0.05,
+      filterEnvelopeAmountOctaves: 7,
+    });
+    engine.previewInstrument(instrument.instrumentId, null);
+
+    expect(preview).toHaveBeenLastCalledWith(instrument.instrument);
+    preview.mockRestore();
+  });
+
   test("uses a free oscillator phase only when it is enabled", () => {
     const instrument = createSnapshotWithNotes([]).instruments[0];
 
@@ -507,7 +556,10 @@ describe("AudioWorklet timeline engine", () => {
       },
     });
 
-    expect(Math.abs(voice.render())).toBe(0);
+    voice.render();
+    expect(voice.level).toBeGreaterThan(0.9);
+    renderVoiceFrames(voice, 4_800);
+    expect(voice.level).toBeLessThan(0.001);
     expect(voice.ended).toBe(false);
   });
 
@@ -748,5 +800,14 @@ function renderFrames(
       new Float32Array(quantumFrames),
     );
     renderedFrames += quantumFrames;
+  }
+}
+
+function renderVoiceFrames(
+  voice: SubtractiveWorkletVoice,
+  frameCount: number,
+): void {
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    voice.render();
   }
 }

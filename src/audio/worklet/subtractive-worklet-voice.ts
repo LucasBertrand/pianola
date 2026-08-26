@@ -29,7 +29,10 @@ export class SubtractiveWorkletVoice {
   private waveform: SubtractivePlaybackPresetSnapshot["oscillatorWaveform"] =
     "sine";
   private pulseWidth = 0.5;
+  private targetPulseWidth = 0.5;
   private filterEnvelopeAmountOctaves = 0;
+  private targetFilterEnvelopeAmountOctaves = 0;
+  private oscillatorDetuneCents = 0;
   private pitch = 69;
   private filterKeyTracking = 0;
   private targetFilterKeyTracking = 0;
@@ -82,8 +85,12 @@ export class SubtractiveWorkletVoice {
     this.pitch = pitch;
     this.waveform = config.oscillatorWaveform;
     this.pulseWidth = config.pulseWidth;
+    this.targetPulseWidth = config.pulseWidth;
     this.filterEnvelopeAmountOctaves =
       config.filterEnvelopeAmountOctaves;
+    this.targetFilterEnvelopeAmountOctaves =
+      config.filterEnvelopeAmountOctaves;
+    this.oscillatorDetuneCents = config.oscillatorDetuneCents;
     this.filterKeyTracking = config.filterKeyTracking;
     this.targetFilterKeyTracking = config.filterKeyTracking;
     this.frequencyHz = this.baseFrequencyHz
@@ -129,9 +136,12 @@ export class SubtractiveWorkletVoice {
   }
 
   public preview(config: SubtractivePlaybackPresetSnapshot): void {
+    this.oscillatorDetuneCents = config.oscillatorDetuneCents;
     this.targetFrequencyHz = this.baseFrequencyHz
       * 2 ** (config.oscillatorDetuneCents / 1_200);
-    this.pulseWidth = config.pulseWidth;
+    this.targetPulseWidth = config.pulseWidth;
+    this.targetFilterEnvelopeAmountOctaves =
+      config.filterEnvelopeAmountOctaves;
     this.amplitudeEnvelope.previewSustainLevel(
       config.envelope.sustainLevel,
     );
@@ -143,6 +153,13 @@ export class SubtractiveWorkletVoice {
     );
     this.amplitudeEnvelope.previewCurve(config.envelope.curve);
     this.filterEnvelope.previewCurve(config.filterEnvelope.curve);
+  }
+
+  public retune(tuningFrequencyHz: number): void {
+    this.baseFrequencyHz = tuningFrequencyHz
+      * 2 ** ((this.pitch - 69) / 12);
+    this.targetFrequencyHz = this.baseFrequencyHz
+      * 2 ** (this.oscillatorDetuneCents / 1_200);
   }
 
   public configureMix(gain: number, pan: number, audible: boolean): void {
@@ -188,6 +205,13 @@ export class SubtractiveWorkletVoice {
 
     this.frequencyHz += (
       this.targetFrequencyHz - this.frequencyHz
+    ) * this.smoothingCoefficient;
+    this.pulseWidth += (
+      this.targetPulseWidth - this.pulseWidth
+    ) * this.smoothingCoefficient;
+    this.filterEnvelopeAmountOctaves += (
+      this.targetFilterEnvelopeAmountOctaves
+      - this.filterEnvelopeAmountOctaves
     ) * this.smoothingCoefficient;
     this.filterCutoffHz += (
       this.targetFilterCutoffHz - this.filterCutoffHz

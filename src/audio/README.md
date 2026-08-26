@@ -43,6 +43,18 @@ fronts sont maintenus à au moins un échantillon l’un de l’autre lorsque la
 largeur demandée n’est plus représentable, ce qui stabilise les largeurs 5/95 %
 dans l’aigu sans ajouter d’allocation ni de suréchantillonnage.
 
+## Politique de prévisualisation des paramètres
+
+La matrice canonique se trouve dans `instrument-preview-policy.ts`. Une
+annulation renvoie la configuration publiée au worklet ; les paramètres actifs
+reviennent alors à leur valeur d’origine avec la même rampe de 10 ms.
+
+| Comportement | Paramètres |
+| --- | --- |
+| Actif avec lissage | Tuning master, detune, pulse width, sustain et courbe des deux enveloppes, cutoff, résonance, key tracking, quantité d’enveloppe de filtre |
+| Prochaine note seulement | Waveform, polyphonie, phase libre, attack/decay/release des deux enveloppes |
+| Redémarrage du processeur requis | Type d’instrument (`kind`) ; ce changement n’est actuellement pas exposé par l’éditeur |
+
 ## Étage master temps réel
 
 `worklet/worklet-master-stage.ts` traite la somme stéréo après le gain master.

@@ -25,6 +25,7 @@
     "src/config/**/*.ts",
     "src/use-cases/**/*.ts",
     "src/audio/playback-model.ts",
+    "src/audio/instrument-preview-policy.ts",
     "src/audio/playback-snapshot.ts",
     "src/audio/playback-source.ts",
     "src/audio/time-math.ts",
