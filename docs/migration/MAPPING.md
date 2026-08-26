@@ -18,7 +18,7 @@ les imports réels et consigner les exceptions découvertes dans `STATUS.md`.
 | `src/pwa/persistence/` | `src/infrastructure/persistence/` |
 | `src/pwa/register-service-worker.ts` | `src/infrastructure/browser/service-worker/` |
 | `src/persistence/` | ports vers `application/ports`, codecs et modèles stockés vers `infrastructure/persistence` |
-| `src/music/` | `src/domain/harmony/` |
+| `src/music/` | `src/domain/harmony/` au lot 6 |
 | `src/config/` | distribué chez les propriétaires |
 | `src/styles/` | `src/presentation/styles/` |
 
@@ -61,5 +61,5 @@ les imports réels et consigner les exceptions découvertes dans `STATUS.md`.
 | `WorkspaceState` | `ActiveClipSelection` | alias temporaire |
 | `ProjectWorkspaceState` | `PersistedEditorWorkspace` | migration des codecs puis UI |
 | `ProjectClipWorkspaceState` | `PersistedClipEditorState` | même lot que le précédent |
-| `Track` | `InstrumentTrack` | type alias, puis commandes et codecs |
+| `Track` | `InstrumentTrack` | lot 1 : type alias, puis commandes et codecs |
 | préfixes `NATIVE_PROJECT_*` courants | `PIANOLA_PROJECT_*` | avec la nouvelle baseline de version, sans alias de compatibilité final |

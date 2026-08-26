@@ -44,6 +44,29 @@ Points de concentration observés :
 
 Ces valeurs doivent être recalculées avant de servir de critère à un lot.
 
+## Couverture des points de concentration
+
+La couverture par fichier n'est pas connue au moment de cette préparation.
+Vitest exécute les tests, mais aucun fournisseur ni rapport de couverture n'est
+configuré. La présence d'un test au nom proche ne prouve donc pas quelles
+branches du module sont exercées.
+
+Inventaire initial à confirmer au lot 0 :
+
+| Module | Signal de test actuellement visible | Risque à lever |
+| --- | --- | --- |
+| `domain/transport/time-map.ts` | test unitaire colocalisé et usages dans plusieurs intégrations | couverture des branches à mesurer |
+| `domain/commands/clip-commands.ts` | tests de familles de commandes, sans test homonyme | chemins réellement exercés à cartographier |
+| `domain/commands/active-clip-command-helpers.ts` | test unitaire colocalisé | couverture des invariants à mesurer |
+| `ui/piano-roll/PianoRollWorkspace.tsx` | aucun test homonyme | caractérisation des flux et rerendus requise avant le lot 5 |
+| `ui/inspector/clips/ClipInspector.tsx` | tests de capacités voisines | comportement du composant à caractériser avant découpage |
+| `ui/dialogs/InstrumentPresetDialog.tsx` | tests métier des presets, sans test homonyme | comportement du dialogue à caractériser avant découpage |
+
+Le lot 0 doit produire un rapport de couverture ciblé compatible avec Vitest ou,
+si l'instrumentation est temporairement impossible, une matrice explicite des
+comportements couverts et manquants. Les lacunes qui touchent un futur découpage
+doivent recevoir des tests de caractérisation avant ce découpage.
+
 ## Ambiguïtés confirmées
 
 ### Projet et workspace

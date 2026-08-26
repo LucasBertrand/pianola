@@ -60,26 +60,16 @@ global supplémentaire. En particulier, Zustand n'est pas ajouté pendant cette
 migration : `ProjectStore` et les signaux du runtime couvrent déjà les états
 partagés et l'ajout d'un troisième modèle créerait des propriétaires concurrents.
 
-La présentation applique les règles suivantes :
-
-- un état utilisé par une seule surface reste colocalisé dans son composant ou
-  son hook de capacité avec `useState` ou un reducer local ;
-- les contextes React sont étroits et ne distribuent que des références stables
-  vers des services, commandes ou capacités ; ils ne contiennent pas un grand
-  snapshot mutable du workspace ;
-- un composant React qui affiche un état partagé lit son propriétaire canonique
-  avec un hook fondé sur `useSyncExternalStore` et un sélecteur ciblé ; le
-  snapshot retourné conserve son identité tant que la valeur sélectionnée ne
-  change pas ;
-- les valeurs à haute fréquence (`viewport`, playhead, survol et previews de
-  geste) restent dans les signaux du runtime et invalident directement leurs
-  consommateurs DOM ou Canvas lorsqu'elles n'ont pas à produire du JSX ;
-- une copie React d'un signal ou d'un store n'est admise que comme snapshot
-  dérivé nécessaire au rendu, jamais comme seconde source de vérité.
+Chaque état conserve un propriétaire canonique unique. L'état local reste chez
+la surface qui le possède, les services partagés sont injectés sans dupliquer
+leur état, et les valeurs à haute fréquence ne doivent pas provoquer un rendu
+global du workspace.
 
 Le choix d'un store UI externe ne pourra être réévalué qu'après identification
 d'un domaine d'état UI partagé, autonome, durable et sans propriétaire naturel
-dans les stores ou signaux existants.
+dans les stores ou signaux existants. Les recettes d'abonnement, de sélection et
+d'invalidation qui mettent en œuvre cette décision sont documentées comme
+lignes directrices révisables dans `TARGET.md` et `ROADMAP.md`.
 
 ## D-009 — Réinitialisation du versionnement et absence de legacy
 

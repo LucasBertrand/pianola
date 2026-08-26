@@ -47,9 +47,16 @@ src/
     └── browser/
 ```
 
-Cette arborescence est une destination logique. Les noms précis de fichiers
-peuvent évoluer si leur responsabilité est mieux exprimée, sans modifier la
-direction des dépendances.
+Cette arborescence est une destination logique. Les racines cibles sont créées
+progressivement dès le lot qui en a besoin, pendant que les anciennes racines
+rétrécissent. Un lot ne doit donc pas placer provisoirement un nouveau module
+dans une ancienne racine lorsqu'un propriétaire cible est déjà identifié. Le
+lot 7 est le balayage mécanique des reliquats et la suppression des anciens
+chemins, pas la première création de `application`, `presentation`,
+`editor-core` ou `infrastructure`.
+
+Les noms précis de fichiers peuvent évoluer si leur responsabilité est mieux
+exprimée, sans modifier la direction des dépendances.
 
 ## Matrice de dépendances
 
@@ -100,6 +107,12 @@ sélecteur doit retourner une référence stable lorsque sa projection n'a pas
 changé. Zustand ou un autre store UI externe ne fait pas partie de la cible de
 cette migration ; son adoption demanderait une nouvelle décision documentée et
 un domaine d'état sans propriétaire existant.
+
+Les mécanismes de cette section sont des lignes directrices révisables pendant
+le lot 5 si le code révèle une contrainte non anticipée. Toute adaptation doit
+préserver les invariants de D-008, être consignée dans `STATUS.md` et démontrer
+l'absence de source de vérité concurrente et de rerendu global à fréquence
+frame.
 
 ## Vocabulaire cible
 

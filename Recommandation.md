@@ -23,15 +23,11 @@ Toute l'architecture de réactivité cible (D-008/TARGET) existe justement pour 
 
 `BASELINE.md` liste les points de concentration (`PianoRollWorkspace.tsx`, `time-map.ts`, `ClipInspector.tsx`, `clip-commands.ts`...) mais ne dit rien de leur couverture de tests actuelle. Avant un découpage aussi profond (Lot 5 en particulier), connaître le niveau de couverture de ces fichiers précis est une information de risque de premier ordre, distincte des « tests d'intégration flux audio/domaine/MIDI/interaction » mentionnés en général.
 
-## 6. Lot 8 (« supprimer les alias temporaires ») risque de mordre sur la compatibilité legacy permanente
-
-D-003 réserve `native`/`migrations/legacy-*` à une compatibilité *historique* qui, elle, doit rester — ce n'est pas un alias temporaire de migration. `RUNBOOK.md` et `ROADMAP.md` (Lot 8) parlent de « supprimer alias, façades et chemins de compatibilité temporaires » sans distinguer explicitement ce cas. Un agent zélé en fin de migration pourrait confondre les deux catégories. Ça vaut une ligne explicite : « ne pas confondre avec `migrations/legacy-*`, qui reste en place ».
-
-## 7. Rollback non opérationnalisé
+## 6. Rollback non opérationnalisé
 
 Chaque lot est censé avoir « un point de rollback » (intro de `ROADMAP.md`), mais ni `RUNBOOK.md` ni `VALIDATION.md` ne précisent le mécanisme concret (tag/branche git avant chaque lot, commit atomique par sous-étape...). C'est le genre de détail qui, une fois manquant, se découvre au pire moment.
 
-## 8. Le Lot 5 n'a qu'un critère de sortie global pour six sous-étapes
+## 7. Le Lot 5 n'a qu'un critère de sortie global pour six sous-étapes
 
 C'est le lot le plus lourd et le plus risqué du plan (le seul avec une « condition d'entrée » documentée d'ailleurs, signe qu'il est déjà perçu comme spécial). Pourtant les six extractions listées (préférences/presets, cycle de vie projet, menu radial, dialogues, layout/portals, transport/viewport) n'ont pas de critère de sortie individuel — seulement un critère pour l'ensemble du lot. Vu la taille du fichier de départ, un jalon de validation après chacune des six étapes réduirait le risque de devoir tout défaire d'un coup en cas de problème découvert à l'étape 5 ou 6.
 

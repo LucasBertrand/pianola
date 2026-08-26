@@ -11,6 +11,42 @@ npm run check:boundaries
 
 Ajouter le test unitaire ciblé du propriétaire modifié.
 
+## Couverture préalable aux découpages
+
+Avant de découper un point de concentration listé dans `BASELINE.md` :
+
+1. produire sa couverture de lignes et branches avec un fournisseur compatible
+   avec la version de Vitest du projet ;
+2. relier les tests existants aux comportements publics du module ;
+3. ajouter des tests de caractérisation pour tout comportement critique non
+   couvert ;
+4. consigner le rapport ou la matrice, ainsi que les lacunes acceptées, dans
+   `STATUS.md`.
+
+L'absence d'un rapport global n'empêche pas un lot sans découpage, mais une
+couverture inconnue bloque le découpage de `PianoRollWorkspace.tsx`,
+`time-map.ts`, `ClipInspector.tsx`, `InstrumentPresetDialog.tsx`,
+`clip-commands.ts` ou `active-clip-command-helpers.ts`.
+
+## Non-régression de rendu du lot 5
+
+Le lot 0 définit un scénario reproductible sur un projet fixture : lecture du
+transport, déplacement/zoom du viewport, survol et preview d'un geste. Mesurer
+sur la même build de développement, avec le même navigateur et la même machine,
+au moyen du React Profiler ou de compteurs de rendu temporaires :
+
+- le nombre de commits de `PianoRollWorkspace` et des surfaces non concernées ;
+- les notifications reçues par les sélecteurs dont la valeur ne change pas ;
+- les longues frames ou saccades visibles pendant le scénario.
+
+Au jalon 6 du lot 5, une mise à jour à fréquence frame ne doit produire aucune
+notification d'un sélecteur inchangé ni rerendu des surfaces non consommatrices.
+Comparer trois exécutions au relevé du lot 0 ; toute hausse reproductible de plus
+de 10 % du nombre de commits ou des longues frames bloque la sortie jusqu'à
+correction ou justification documentée. Les compteurs temporaires peuvent être
+retirés après consignation des résultats ; les tests automatisés de stabilité
+des snapshots et de non-notification restent dans le dépôt.
+
 ## Validation d'un lot
 
 ```powershell
@@ -69,5 +105,7 @@ Pour chaque lot, reporter dans `STATUS.md` :
 - commandes réellement exécutées ;
 - statut succès/échec ;
 - tests ciblés ajoutés ou modifiés ;
+- couverture ou matrice de comportements avant tout découpage ;
+- pour le lot 5, protocole, mesures de rendu et comparaison à la baseline ;
 - anciens chemins encore présents et justification ;
 - alias temporaires et lot prévu pour leur suppression.

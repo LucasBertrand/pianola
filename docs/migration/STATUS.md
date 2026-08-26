@@ -63,3 +63,6 @@ Aucun écart supplémentaire consigné.
 ### 2026-08-26 — Préparation
 
 - création du dossier d'exécution autonome ;
+- resserrement du plan après revue : création progressive des racines cibles,
+  affectation de `Track` au lot 1 et de `music` au lot 6, couverture préalable
+  aux découpages, jalons et validation de rendu du lot 5, rollback opérationnel.
