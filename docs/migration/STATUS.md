@@ -15,9 +15,6 @@ workspace réel, pas seulement l'intention.
 
 - arborescence source actuelle : `app`, `audio`, `config`, `domain`, `editor`,
   `music`, `persistence`, `project-io`, `pwa`, `styles`, `ui`, `use-cases` ;
-- `check:boundaries` passe sur 316 fichiers source lors de l'audit initial ;
-- `check:structure` échoue actuellement à cause de liens documentaires absolus
-  présents dans `audit.md` ;
 - un cycle d'import typé a été détecté entre `spatial-index.ts` et
   `spatial-index-search.ts` ;
 - `PianoRollWorkspace.tsx` est le principal point de concentration ;
@@ -67,4 +64,4 @@ Aucun écart supplémentaire consigné.
 
 - création du dossier d'exécution autonome ;
 - enregistrement de la décision de conserver `ScaleMarker` ;
-- aucune modification du code produit.
+- correction des liens documentaires morts (`persistence-strategy.md`, `storage-strategies.md`) et exclusion de `.idea` dans la vérification.
