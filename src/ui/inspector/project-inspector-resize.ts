@@ -5,6 +5,21 @@ export interface ProjectInspectorSizeBounds {
   readonly maximum: number;
 }
 
+export function calculateLandscapeInspectorBounds(
+  availableWidth: number,
+  minimumInspectorWidth: number,
+  minimumEditorWidth: number,
+  resizeHandleSize: number,
+): ProjectInspectorSizeBounds {
+  return {
+    minimum: minimumInspectorWidth,
+    maximum: Math.max(
+      minimumInspectorWidth,
+      availableWidth - minimumEditorWidth - resizeHandleSize,
+    ),
+  };
+}
+
 export function clampProjectInspectorSize(
   size: number,
   bounds: ProjectInspectorSizeBounds,

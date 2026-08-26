@@ -4,6 +4,7 @@ import React, {
   useState,
 } from "react";
 import {
+  calculateLandscapeInspectorBounds,
   clampProjectInspectorSize,
   resizeProjectInspectorFromKey,
   resizeProjectInspectorFromPointer,
@@ -20,7 +21,6 @@ const MINIMUM_PORTRAIT_EDITOR_HEIGHT = 0;
 // This is the outer width used by Master Tuning (including its own padding).
 // The inspector's padding stays within this drag limit.
 const PREFERRED_MINIMUM_INSPECTOR_WIDTH = 400;
-const PREFERRED_MAXIMUM_INSPECTOR_WIDTH = 520;
 const PREFERRED_MINIMUM_INSPECTOR_HEIGHT = 140;
 const KEYBOARD_RESIZE_STEP = 16;
 const KEYBOARD_LARGE_RESIZE_STEP = 40;
@@ -228,18 +228,12 @@ function readSizeBounds(
   const minimumEditorWidth = compact
     ? MINIMUM_COMPACT_EDITOR_WIDTH
     : MINIMUM_LANDSCAPE_EDITOR_WIDTH;
-  const maximum = Math.max(
+  return calculateLandscapeInspectorBounds(
+    bounds.width,
     PREFERRED_MINIMUM_INSPECTOR_WIDTH,
-    Math.min(
-      PREFERRED_MAXIMUM_INSPECTOR_WIDTH,
-      bounds.width - minimumEditorWidth - RESIZE_HANDLE_SIZE,
-    ),
+    minimumEditorWidth,
+    RESIZE_HANDLE_SIZE,
   );
-
-  return {
-    minimum: PREFERRED_MINIMUM_INSPECTOR_WIDTH,
-    maximum,
-  };
 }
 
 function readInspectorSize(

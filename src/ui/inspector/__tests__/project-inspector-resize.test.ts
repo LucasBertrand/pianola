@@ -4,6 +4,7 @@ import {
   test,
 } from "vitest";
 import {
+  calculateLandscapeInspectorBounds,
   resizeProjectInspectorFromKey,
   resizeProjectInspectorFromPointer,
 } from "../project-inspector-resize";
@@ -11,6 +12,13 @@ import {
 const BOUNDS = { minimum: 200, maximum: 500 } as const;
 
 describe("project inspector resizing", () => {
+  test("uses all landscape space beyond the editor minimum", () => {
+    expect(calculateLandscapeInspectorBounds(1_200, 400, 360, 10))
+      .toEqual({ minimum: 400, maximum: 830 });
+    expect(calculateLandscapeInspectorBounds(700, 400, 360, 10))
+      .toEqual({ minimum: 400, maximum: 400 });
+  });
+
   test("resizes a landscape inspector opposite to horizontal pointer movement", () => {
     expect(resizeProjectInspectorFromPointer("landscape", 300, -40, BOUNDS))
       .toBe(340);
