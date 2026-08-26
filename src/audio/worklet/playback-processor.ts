@@ -2,6 +2,7 @@ import type {
   MainToAudioWorkletMessage,
 } from "./audio-worklet-protocol";
 import {
+  AUDIO_WORKLET_PROTOCOL_VERSION,
   PLAYBACK_PROCESSOR_NAME,
 } from "./audio-worklet-protocol";
 import {
@@ -92,12 +93,17 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   }
 
   private handleMessage(message: MainToAudioWorkletMessage): void {
+    if (message.protocolVersion !== AUDIO_WORKLET_PROTOCOL_VERSION) {
+      throw new Error("Unsupported audio worklet protocol version.");
+    }
+
     switch (message.type) {
       case "load-timeline":
         this.engine.loadTimeline(
           message.timeline,
           message.transport,
           message.sequence,
+          message.stateVersion,
         );
         break;
 
@@ -106,8 +112,10 @@ class PlaybackProcessor extends AudioWorkletProcessor {
           message.timeline,
           message.transport,
           message.sequence,
+          message.stateVersion,
         );
         this.port.postMessage({
+          protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
           type: "queued-timeline-state",
           operation: message.operation,
           sequence: message.sequence,
@@ -117,10 +125,21 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       case "clear-queued-timeline":
         this.engine.clearQueuedTimeline();
         this.port.postMessage({
+          protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
           type: "queued-timeline-state",
           operation: message.operation,
           sequence: null,
         });
+        break;
+
+      case "replace-instrument-events":
+        this.engine.replaceInstrumentEvents(message.instrumentId, message,
+          message.sequence, message.stateVersion);
+        break;
+
+      case "transport-config":
+        this.engine.updateTransport(message.transport, message,
+          message.sequence, message.stateVersion);
         break;
 
       case "play":
@@ -150,11 +169,44 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         this.engine.previewInstrumentGain(
           message.instrumentId,
           message.gain,
+          message.sequence,
+          message.stateVersion,
         );
         break;
 
+      case "instrument-pan":
+        this.engine.updateInstrumentPan(message.instrumentId, message.pan,
+          message.sequence, message.stateVersion);
+        break;
+
+      case "instrument-mute":
+        this.engine.updateInstrumentMute(message.instrumentId, message.muted,
+          message.sequence, message.stateVersion);
+        break;
+
+      case "instrument-solo":
+        this.engine.updateInstrumentSolo(message.instrumentId, message.solo,
+          message.sequence, message.stateVersion);
+        break;
+
+      case "instrument-config":
+        this.engine.updateInstrumentConfig(message.instrumentId,
+          message.instrument, message.sequence, message.stateVersion);
+        break;
+
       case "master-gain":
-        this.engine.previewMasterGain(message.gain);
+        this.engine.previewMasterGain(message.gain, message.sequence,
+          message.stateVersion);
+        break;
+
+      case "master-mute":
+        this.engine.updateMasterMute(message.muted, message.sequence,
+          message.stateVersion);
+        break;
+
+      case "master-tuning":
+        this.engine.updateMasterTuning(message.tuningFrequencyHz,
+          message.sequence, message.stateVersion);
         break;
 
       case "audition":
@@ -182,6 +234,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     this.nextPositionReportFrame = currentFrame
       + POSITION_REPORT_INTERVAL_FRAMES;
     this.port.postMessage({
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
       type: "transport-state",
       status: this.engine.status,
       sourceId: this.engine.sourceId,
@@ -205,6 +258,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   private reportError(error: unknown): void {
     this.failed = true;
     this.port.postMessage({
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
       type: "processor-error",
       message: error instanceof Error ? error.message : String(error),
     });

@@ -31,11 +31,16 @@ import type {
   MainToAudioWorkletMessage,
 } from "./worklet/audio-worklet-protocol";
 import {
+  AUDIO_WORKLET_PROTOCOL_VERSION,
   PLAYBACK_PROCESSOR_NAME,
 } from "./worklet/audio-worklet-protocol";
 import {
+  createTransferableInstrumentEvents,
   createTransferableAudioWorkletTimeline,
 } from "./worklet/create-audio-worklet-timeline";
+
+type UnversionedMessage<T> = T extends MainToAudioWorkletMessage
+  ? Omit<T, "protocolVersion"> : never;
 
 type AudioContextFactory = () => AudioContext;
 type AudioWorkletNodeFactory = (context: AudioContext) => AudioWorkletNode;
@@ -65,6 +70,7 @@ export class AudioWorkletTransport implements AudioTransportController {
   private queueOperationSequence = 0;
   private timelineSequence = 1;
   private nextTimelineSequence = 1;
+  private stateVersion = 1;
   private pendingPositionAcknowledgement: PlaybackStatus | null = null;
   private disposed = false;
 
@@ -103,13 +109,25 @@ export class AudioWorkletTransport implements AudioTransportController {
   ): void {
     this.assertUsable();
     assertCompatiblePlaybackState(snapshot, transport);
+    const previousSnapshot = this.snapshot;
+    const previousTransport = this.transport;
+    const requiresTimelineReplacement = hasStructuralTopologyChange(
+      previousSnapshot,
+      snapshot,
+    );
+    const hadQueuedTimeline = this.queuedSequence !== null;
     this.snapshot = snapshot;
     this.transport = transport;
-    this.timelineSequence = ++this.nextTimelineSequence;
+    this.stateVersion += 1;
+    if (requiresTimelineReplacement) {
+      this.timelineSequence = ++this.nextTimelineSequence;
+    }
     this.queuedSnapshot = null;
     this.queuedTransport = null;
     this.queuedSequence = null;
-    this.pendingTimelines.clear();
+    if (requiresTimelineReplacement || this.node === null) {
+      this.pendingTimelines.clear();
+    }
     this.queueOperationSequence += 1;
 
     if (positionTickOverride !== undefined) {
@@ -125,7 +143,18 @@ export class AudioWorkletTransport implements AudioTransportController {
     }
 
     if (this.node !== null) {
-      this.postTimeline();
+      if (hadQueuedTimeline && !requiresTimelineReplacement) {
+        this.post({
+          type: "clear-queued-timeline",
+          operation: this.queueOperationSequence,
+        });
+      }
+      if (requiresTimelineReplacement) {
+        this.postTimeline();
+      } else {
+        this.postIncrementalChanges(previousSnapshot, snapshot,
+          previousTransport, transport);
+      }
 
       if (positionTickOverride !== undefined) {
         this.post({ type: "seek", tick: this.positionTick });
@@ -141,6 +170,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.assertUsable();
     assertCompatiblePlaybackState(snapshot, transport);
     const sequence = ++this.nextTimelineSequence;
+    const stateVersion = ++this.stateVersion;
     const operation = ++this.queueOperationSequence;
 
     this.queuedSnapshot = snapshot;
@@ -152,7 +182,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.pendingTimelines.set(sequence, { snapshot, transport });
 
     if (this.node !== null) {
-      this.postQueuedTimeline(snapshot, transport, sequence, operation);
+      this.postQueuedTimeline(snapshot, transport, sequence, stateVersion, operation);
     }
   }
 
@@ -383,6 +413,7 @@ export class AudioWorkletTransport implements AudioTransportController {
         this.queuedSnapshot,
         this.queuedTransport,
         this.queuedSequence,
+        this.stateVersion,
         this.queueOperationSequence,
       );
     }
@@ -405,6 +436,8 @@ export class AudioWorkletTransport implements AudioTransportController {
       timeline,
       transport: cloneTransport(this.transport),
       sequence: this.timelineSequence,
+      stateVersion: this.stateVersion,
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
     } satisfies MainToAudioWorkletMessage, transfers);
   }
 
@@ -412,6 +445,7 @@ export class AudioWorkletTransport implements AudioTransportController {
     snapshot: PlaybackSnapshot,
     transport: TransportState,
     sequence: number,
+    stateVersion: number,
     operation: number,
   ): void {
     const { timeline, transfers } =
@@ -422,16 +456,109 @@ export class AudioWorkletTransport implements AudioTransportController {
       timeline,
       transport: cloneTransport(transport),
       sequence,
+      stateVersion,
       operation,
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
     } satisfies MainToAudioWorkletMessage, transfers);
   }
 
-  private post(message: MainToAudioWorkletMessage): void {
-    this.node?.port.postMessage(message);
+  private postIncrementalChanges(
+    previous: PlaybackSnapshot,
+    next: PlaybackSnapshot,
+    previousTransport: TransportState,
+    nextTransport: TransportState,
+  ): void {
+    const target = {
+      sequence: this.timelineSequence,
+      stateVersion: this.stateVersion,
+    };
+
+    if (hasTransportConfigChange(previous, next,
+      previousTransport, nextTransport)) {
+      const tempoStartTicks = new Float64Array(next.tempoMap.startTicks);
+      const tempoBpms = new Float64Array(next.tempoMap.bpms);
+      this.node?.port.postMessage({
+        protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+        type: "transport-config",
+        transport: cloneTransport(nextTransport),
+        ppqn: next.ppqn,
+        durationTicks: next.durationTicks,
+        tempoStartTicks,
+        tempoBpms,
+        ...target,
+      } satisfies MainToAudioWorkletMessage, [
+        tempoStartTicks.buffer,
+        tempoBpms.buffer,
+      ]);
+    }
+
+    for (let index = 0; index < next.instruments.length; index += 1) {
+      const instrument = next.instruments[index];
+      const previousInstrument = previous.instruments[index];
+      if (instrument === undefined || previousInstrument === undefined) continue;
+
+      if (!haveEqualEvents(previousInstrument, instrument)) {
+        const { events, transfers } =
+          createTransferableInstrumentEvents(instrument);
+        this.node?.port.postMessage({
+          protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+          type: "replace-instrument-events",
+          instrumentId: instrument.instrumentId,
+          ...events,
+          ...target,
+        } satisfies MainToAudioWorkletMessage, transfers);
+      }
+      if (previousInstrument.gain !== instrument.gain) this.post({
+        type: "instrument-gain", instrumentId: instrument.instrumentId,
+        gain: instrument.gain, ...target,
+      });
+      if (previousInstrument.pan !== instrument.pan) this.post({
+        type: "instrument-pan", instrumentId: instrument.instrumentId,
+        pan: instrument.pan, ...target,
+      });
+      if (previousInstrument.muted !== instrument.muted) this.post({
+        type: "instrument-mute", instrumentId: instrument.instrumentId,
+        muted: instrument.muted, ...target,
+      });
+      if (previousInstrument.solo !== instrument.solo) this.post({
+        type: "instrument-solo", instrumentId: instrument.instrumentId,
+        solo: instrument.solo, ...target,
+      });
+      if (!haveEqualInstrumentConfigs(previousInstrument.instrument,
+        instrument.instrument)) this.post({
+        type: "instrument-config", instrumentId: instrument.instrumentId,
+        instrument: instrument.instrument, ...target,
+      });
+    }
+
+    if (previous.masterGain !== next.masterGain) this.post({
+      type: "master-gain", gain: next.masterGain, ...target,
+    });
+    if (previous.masterMuted !== next.masterMuted) this.post({
+      type: "master-mute", muted: next.masterMuted, ...target,
+    });
+    if (previous.masterTuningFrequencyHz !== next.masterTuningFrequencyHz) {
+      this.post({ type: "master-tuning",
+        tuningFrequencyHz: next.masterTuningFrequencyHz, ...target });
+    }
+  }
+
+  private post(message: UnversionedMessage<MainToAudioWorkletMessage>): void {
+    this.node?.port.postMessage({
+      ...message,
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+    } as MainToAudioWorkletMessage);
   }
 
   private handleProcessorMessage(message: AudioWorkletToMainMessage): void {
     if (this.disposed) {
+      return;
+    }
+
+    if (message.protocolVersion !== AUDIO_WORKLET_PROTOCOL_VERSION) {
+      this.handleProcessorFailure(new Error(
+        "Unsupported audio worklet protocol version.",
+      ));
       return;
     }
 
@@ -617,4 +744,51 @@ function cloneTransport(transport: TransportState): TransportState {
     ...transport,
     loop: { ...transport.loop },
   };
+}
+
+function hasStructuralTopologyChange(
+  previous: PlaybackSnapshot,
+  next: PlaybackSnapshot,
+): boolean {
+  return previous.sourceId !== next.sourceId
+    || previous.instruments.length !== next.instruments.length
+    || previous.instruments.some((instrument, index) =>
+      instrument.instrumentId !== next.instruments[index]?.instrumentId);
+}
+
+function hasTransportConfigChange(previous: PlaybackSnapshot,
+  next: PlaybackSnapshot, previousTransport: TransportState,
+  nextTransport: TransportState): boolean {
+  return previous.ppqn !== next.ppqn
+    || previous.durationTicks !== next.durationTicks
+    || !haveEqualNumbers(previous.tempoMap.startTicks, next.tempoMap.startTicks)
+    || !haveEqualNumbers(previous.tempoMap.bpms, next.tempoMap.bpms)
+    || previousTransport.loopEnabled !== nextTransport.loopEnabled
+    || previousTransport.loop.startTick !== nextTransport.loop.startTick
+    || previousTransport.loop.endTick !== nextTransport.loop.endTick;
+}
+
+function haveEqualEvents(
+  previous: PlaybackSnapshot["instruments"][number],
+  next: PlaybackSnapshot["instruments"][number],
+): boolean {
+  return haveEqualNumbers(previous.pitches, next.pitches)
+    && haveEqualNumbers(previous.startTicks, next.startTicks)
+    && haveEqualNumbers(previous.durationTicks, next.durationTicks);
+}
+
+function haveEqualNumbers(previous: ArrayLike<number>,
+  next: ArrayLike<number>): boolean {
+  if (previous.length !== next.length) return false;
+  for (let index = 0; index < previous.length; index += 1) {
+    if (previous[index] !== next[index]) return false;
+  }
+  return true;
+}
+
+function haveEqualInstrumentConfigs(
+  previous: PlaybackSnapshot["instruments"][number]["instrument"],
+  next: PlaybackSnapshot["instruments"][number]["instrument"],
+): boolean {
+  return JSON.stringify(previous) === JSON.stringify(next);
 }

@@ -18,6 +18,11 @@ import type {
 } from "./worklet-master-stage";
 
 export const PLAYBACK_PROCESSOR_NAME = "playback-processor";
+export const AUDIO_WORKLET_PROTOCOL_VERSION = 1 as const;
+
+interface VersionedMessage {
+  readonly protocolVersion: typeof AUDIO_WORKLET_PROTOCOL_VERSION;
+}
 
 export interface AudioWorkletTimelineInstrument {
   readonly instrumentId: InstrumentId;
@@ -46,23 +51,46 @@ export interface AudioWorkletTimeline {
   readonly instruments: readonly AudioWorkletTimelineInstrument[];
 }
 
-export type MainToAudioWorkletMessage =
+export type MainToAudioWorkletMessage = VersionedMessage & (
   | {
       readonly type: "load-timeline";
       readonly timeline: AudioWorkletTimeline;
       readonly transport: TransportState;
       readonly sequence: number;
+      readonly stateVersion: number;
     }
   | {
       readonly type: "queue-timeline";
       readonly timeline: AudioWorkletTimeline;
       readonly transport: TransportState;
       readonly sequence: number;
+      readonly stateVersion: number;
       readonly operation: number;
     }
   | {
       readonly type: "clear-queued-timeline";
       readonly operation: number;
+    }
+  | {
+      readonly type: "replace-instrument-events";
+      readonly instrumentId: InstrumentId;
+      readonly pitches: Uint8Array;
+      readonly startTicks: Float64Array;
+      readonly durationTicks: Float64Array;
+      readonly maximumEndTickTree: Float64Array;
+      readonly endTickTreeLeafCount: number;
+      readonly sequence: number;
+      readonly stateVersion: number;
+    }
+  | {
+      readonly type: "transport-config";
+      readonly transport: TransportState;
+      readonly ppqn: number;
+      readonly durationTicks: Tick;
+      readonly tempoStartTicks: Float64Array;
+      readonly tempoBpms: Float64Array;
+      readonly sequence: number;
+      readonly stateVersion: number;
     }
   | {
       readonly type: "play";
@@ -80,22 +108,66 @@ export type MainToAudioWorkletMessage =
       readonly instrument: InstrumentConfig | null;
     }
   | {
+      readonly type: "instrument-config";
+      readonly instrumentId: InstrumentId;
+      readonly instrument: SubtractivePlaybackPresetSnapshot;
+      readonly sequence: number;
+      readonly stateVersion: number;
+    }
+  | {
       readonly type: "instrument-gain";
       readonly instrumentId: InstrumentId;
       readonly gain: number;
+      readonly sequence?: number;
+      readonly stateVersion?: number;
+    }
+  | {
+      readonly type: "instrument-pan";
+      readonly instrumentId: InstrumentId;
+      readonly pan: number;
+      readonly sequence: number;
+      readonly stateVersion: number;
+    }
+  | {
+      readonly type: "instrument-mute";
+      readonly instrumentId: InstrumentId;
+      readonly muted: boolean;
+      readonly sequence: number;
+      readonly stateVersion: number;
+    }
+  | {
+      readonly type: "instrument-solo";
+      readonly instrumentId: InstrumentId;
+      readonly solo: boolean;
+      readonly sequence: number;
+      readonly stateVersion: number;
     }
   | {
       readonly type: "master-gain";
       readonly gain: number;
+      readonly sequence?: number;
+      readonly stateVersion?: number;
+    }
+  | {
+      readonly type: "master-mute";
+      readonly muted: boolean;
+      readonly sequence: number;
+      readonly stateVersion: number;
+    }
+  | {
+      readonly type: "master-tuning";
+      readonly tuningFrequencyHz: number;
+      readonly sequence: number;
+      readonly stateVersion: number;
     }
   | {
       readonly type: "audition";
       readonly instrumentId: InstrumentId;
       readonly pitch: number;
       readonly durationSeconds: number;
-    };
+    });
 
-export type AudioWorkletToMainMessage =
+export type AudioWorkletToMainMessage = VersionedMessage & (
   | {
       readonly type: "transport-state";
       readonly status: PlaybackStatus;
@@ -117,4 +189,4 @@ export type AudioWorkletToMainMessage =
       readonly type: "queued-timeline-state";
       readonly operation: number;
       readonly sequence: number | null;
-    };
+    });

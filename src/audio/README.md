@@ -21,11 +21,16 @@ PlaybackSource
                                            → sortie audio
 ```
 
-La timeline entière est transférée lorsqu’une donnée musicale change. Ensuite,
-le worklet avance le tick depuis le nombre d’échantillons rendus : aucun timer,
-frame React ou callback du thread principal ne déclenche une note. Une
-prévisualisation d’instrument est un message de paramètres léger ; elle ne
-recompile et ne retransfère jamais les notes.
+Le chargement initial et les changements de source transfèrent une timeline
+complète. Ensuite, pan, gain, mute, solo, tuning, transport et configuration
+d’instrument passent par des commandes légères. Seul un changement d’événements
+transfère à nouveau les tableaux de notes, instrument par instrument. Chaque
+message porte une version de protocole ; les mutations portent aussi la séquence
+de timeline et une version d’état monotone, afin qu’une commande tardive ne
+modifie pas un remplacement ou un clip préchargé déjà activé.
+
+Le worklet avance le tick depuis le nombre d’échantillons rendus : aucun timer,
+frame React ou callback du thread principal ne déclenche une note.
 
 Le cœur évite les allocations temporaires dans `process()`, borne la polyphonie
 globale pour les processeurs mobiles et utilise des oscillateurs PolyBLEP pour
@@ -90,5 +95,6 @@ Il ne dépend ni de React, ni de composants UI, ni de `app`.
 
 `__tests__/worklet-timeline-engine.test.ts` couvre l’horloge à l’échantillon,
 les boucles autonomes, les seeks, les paramètres actifs et la stabilité DSP.
-`__tests__/audio-worklet-transport.test.ts` vérifie que le thread principal
-transfère une timeline unique et n’envoie aucun événement par note.
+`__tests__/audio-worklet-transport.test.ts` vérifie les transferts différentiels,
+le versionnage et les courses entre commandes, remplacements et clips
+préchargés.

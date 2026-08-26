@@ -20,6 +20,9 @@ import type {
   MainToAudioWorkletMessage,
 } from "../worklet/audio-worklet-protocol";
 import {
+  AUDIO_WORKLET_PROTOCOL_VERSION,
+} from "../worklet/audio-worklet-protocol";
+import {
   createTestNote,
   createTestProject,
   TEST_CLIP_ID,
@@ -91,6 +94,92 @@ describe("AudioWorklet browser transport", () => {
     expect(fakeContext.state).toBe("closed");
   });
 
+  test("sends versioned lightweight commands without retransferring notes", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const originalInstrument = snapshot.instruments[0];
+    expect(originalInstrument).toBeDefined();
+    if (originalInstrument === undefined) return;
+    const fakePort = new FakeMessagePort();
+    const transport = new AudioWorkletTransport(
+      snapshot, clip.transportSettings, {}, 0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+
+    await transport.play(0);
+    const messageCount = fakePort.messages.length;
+    transport.replacePlaybackState({
+      ...snapshot,
+      masterGain: 0.7,
+      masterMuted: true,
+      masterTuningFrequencyHz: 442,
+      instruments: [{
+        ...originalInstrument,
+        gain: 0.6,
+        pan: 0.25,
+        muted: true,
+        solo: true,
+        instrument: { ...originalInstrument.instrument, filterCutoffHz: 2_345 },
+      }],
+    }, {
+      ...clip.transportSettings,
+      loopEnabled: !clip.transportSettings.loopEnabled,
+    });
+
+    const updates = fakePort.messages.slice(messageCount);
+    expect(updates.map((message) => message.type)).toEqual([
+      "transport-config", "instrument-gain", "instrument-pan",
+      "instrument-mute", "instrument-solo", "instrument-config",
+      "master-gain", "master-mute", "master-tuning",
+    ]);
+    expect(updates.every((message) =>
+      message.protocolVersion === AUDIO_WORKLET_PROTOCOL_VERSION)).toBe(true);
+    expect(updates.some((message) => message.type === "load-timeline"
+      || message.type === "replace-instrument-events")).toBe(false);
+    expect(updates.some((message) => "pitches" in message)).toBe(false);
+    await transport.dispose();
+  });
+
+  test("retransfers only the instrument events that changed", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const instrument = snapshot.instruments[0];
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+    const fakePort = new FakeMessagePort();
+    const transport = new AudioWorkletTransport(
+      snapshot, clip.transportSettings, {}, 0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+    await transport.play(0);
+    const messageCount = fakePort.messages.length;
+
+    transport.replacePlaybackState({
+      ...snapshot,
+      instruments: [{
+        ...instrument,
+        pitches: new Uint8Array([64]),
+        startTicks: new Float64Array([120]),
+        durationTicks: new Float64Array([240]),
+      }],
+    }, clip.transportSettings);
+
+    const updates = fakePort.messages.slice(messageCount);
+    expect(updates.map((message) => message.type))
+      .toEqual(["replace-instrument-events"]);
+    expect(updates[0]).toMatchObject({
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+      instrumentId: instrument.instrumentId,
+    });
+    expect(fakePort.messages.filter((message) => message.type === "load-timeline"))
+      .toHaveLength(1);
+    await transport.dispose();
+  });
+
   test("replaces a playing clip immediately without a stop command", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
@@ -112,7 +201,7 @@ describe("AudioWorklet browser transport", () => {
 
     await transport.play(480);
     transport.replacePlaybackState(
-      snapshot,
+      { ...snapshot, sourceId: "replacement-clip" },
       clip.transportSettings,
       0,
     );
@@ -201,6 +290,62 @@ describe("AudioWorklet browser transport", () => {
       tick: 24,
     });
 
+    await transport.dispose();
+  });
+
+  test("promotes a preloaded clip racing an incremental update and queue clear", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const instrument = snapshot.instruments[0];
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+    const nextSnapshot = { ...snapshot, sourceId: "racing-preloaded-clip" };
+    const fakePort = new FakeMessagePort();
+    const reports: string[] = [];
+    const transport = new AudioWorkletTransport(
+      snapshot, clip.transportSettings, {
+        onStatusChange(_status, sourceId) { reports.push(sourceId); },
+      }, 0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+    await transport.play(0);
+    transport.queuePlaybackState(nextSnapshot, clip.transportSettings);
+    const queueMessage = fakePort.messages.filter((message) =>
+      message.type === "queue-timeline").at(-1);
+    expect(queueMessage?.type).toBe("queue-timeline");
+    if (queueMessage?.type !== "queue-timeline") return;
+
+    transport.replacePlaybackState({
+      ...snapshot,
+      instruments: [{ ...instrument, pan: 0.5 }],
+    }, clip.transportSettings);
+    const clearMessage = fakePort.messages.filter((message) =>
+      message.type === "clear-queued-timeline").at(-1);
+    expect(fakePort.messages.at(-1)).toMatchObject({
+      type: "instrument-pan",
+      sequence: 1,
+    });
+    expect(clearMessage?.type).toBe("clear-queued-timeline");
+    if (clearMessage?.type !== "clear-queued-timeline") return;
+
+    fakePort.emit({
+      type: "transport-state",
+      status: "playing",
+      sourceId: nextSnapshot.sourceId,
+      tick: 8,
+      frame: 1_024,
+      sequence: queueMessage.sequence,
+    });
+    fakePort.emit({
+      type: "queued-timeline-state",
+      operation: clearMessage.operation,
+      sequence: null,
+    });
+
+    expect(reports.at(-1)).toBe(nextSnapshot.sourceId);
+    expect(transport.getPositionTick()).toBe(8);
     await transport.dispose();
   });
 
@@ -426,6 +571,9 @@ describe("AudioWorklet browser transport", () => {
   });
 });
 
+type UnversionedWorkletMessage<T> = T extends AudioWorkletToMainMessage
+  ? Omit<T, "protocolVersion"> : never;
+
 class FakeMessagePort {
   public onmessage: ((event: MessageEvent) => void) | null = null;
   public readonly messages: MainToAudioWorkletMessage[] = [];
@@ -434,8 +582,11 @@ class FakeMessagePort {
     this.messages.push(message);
   }
 
-  public emit(message: AudioWorkletToMainMessage): void {
-    this.onmessage?.({ data: message } as MessageEvent);
+  public emit(message: UnversionedWorkletMessage<AudioWorkletToMainMessage>): void {
+    this.onmessage?.({ data: {
+      ...message,
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+    } } as MessageEvent);
   }
 
   public close(): void {}

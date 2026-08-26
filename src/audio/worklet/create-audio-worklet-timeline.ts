@@ -14,6 +14,34 @@ export interface TransferableAudioWorkletTimeline {
   readonly transfers: Transferable[];
 }
 
+export interface TransferableInstrumentEvents {
+  readonly events: Pick<AudioWorkletTimelineInstrument,
+    "pitches" | "startTicks" | "durationTicks"
+    | "maximumEndTickTree" | "endTickTreeLeafCount">;
+  readonly transfers: Transferable[];
+}
+
+export function createTransferableInstrumentEvents(
+  instrument: PlaybackSnapshot["instruments"][number],
+): TransferableInstrumentEvents {
+  const pitches = new Uint8Array(instrument.pitches);
+  const startTicks = new Float64Array(instrument.startTicks);
+  const durationTicks = new Float64Array(instrument.durationTicks);
+  const heldNoteIndex = createMaximumEndTickTree(startTicks, durationTicks);
+
+  return {
+    events: {
+      pitches,
+      startTicks,
+      durationTicks,
+      maximumEndTickTree: heldNoteIndex.maximumEndTickTree,
+      endTickTreeLeafCount: heldNoteIndex.leafCount,
+    },
+    transfers: [pitches.buffer, startTicks.buffer, durationTicks.buffer,
+      heldNoteIndex.maximumEndTickTree.buffer],
+  };
+}
+
 /** Strips editor-only metadata and clones arrays for zero-copy port transfer. */
 export function createTransferableAudioWorkletTimeline(
   snapshot: PlaybackSnapshot,

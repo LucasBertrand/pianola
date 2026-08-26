@@ -77,8 +77,12 @@ const instrument = {
 
 processor.port.onmessage({
   data: {
+    protocolVersion: 1,
     type: "load-timeline",
+    sequence: 1,
+    stateVersion: 1,
     timeline: {
+      sourceId: "smoke-clip",
       ppqn: 960,
       durationTicks: 3_840,
       masterGain: 0.72,
@@ -111,7 +115,7 @@ processor.port.onmessage({
   },
 });
 processor.port.onmessage({
-  data: { type: "play", tick: 0 },
+  data: { protocolVersion: 1, type: "play", tick: 0 },
 });
 
 const left = new Float32Array(128);

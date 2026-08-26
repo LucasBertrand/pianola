@@ -205,7 +205,7 @@ export class WorkletVoiceBank {
   ): void {
     voice.configureMix(
       runtime.gain,
-      runtime.timeline.pan,
+      runtime.pan,
       runtime.audible,
     );
   }

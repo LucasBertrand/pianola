@@ -27,6 +27,7 @@ import {
   reserveWorkletVoice,
 } from "../worklet/worklet-voice-allocation";
 import {
+  createTransferableInstrumentEvents,
   createTransferableAudioWorkletTimeline,
 } from "../worklet/create-audio-worklet-timeline";
 import {
@@ -744,6 +745,48 @@ describe("AudioWorklet timeline engine", () => {
 
     expect(loopFrames).toHaveLength(1_000);
     expect(loopFrames.at(-1)).toBe(4_800_000);
+  });
+
+  test("rejects a stale incremental update after a preloaded clip wins the race", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const active = createSnapshotWithNotes([createTestNote({
+      id: "active-note", pitch: 60, startTick: 0, durationTicks: 120,
+    })]);
+    const preloaded = {
+      ...createSnapshotWithNotes([createTestNote({
+        id: "preloaded-note", pitch: 72, startTick: 0, durationTicks: 120,
+      })]),
+      sourceId: "preloaded-clip",
+    };
+    const project = createTestProject();
+    const transport = getActiveClip(project).transportSettings;
+    const engine = new WorkletTimelineEngine(SAMPLE_RATE, {
+      onDiagnostic: (event) => diagnostics.push(event),
+    });
+    engine.loadTimeline(toTimeline(active), transport, 10, 10);
+    engine.queueTimeline(toTimeline(preloaded), transport, 11, 11);
+    engine.play(active.durationTicks - 0.01);
+    renderFrames(engine, 2);
+    expect(engine.sourceId).toBe("preloaded-clip");
+
+    engine.loadTimeline(toTimeline(active), transport, 10, 12);
+    expect(engine.sourceId).toBe("preloaded-clip");
+
+    const activeInstrument = active.instruments[0];
+    expect(activeInstrument).toBeDefined();
+    if (activeInstrument === undefined) return;
+    const staleEvents = createTransferableInstrumentEvents(activeInstrument).events;
+    engine.replaceInstrumentEvents(activeInstrument.instrumentId, staleEvents,
+      10, 12);
+
+    const diagnosticCount = diagnostics.length;
+    engine.seek(0);
+    engine.play(0);
+    renderFrames(engine, 1);
+    expect(diagnostics.slice(diagnosticCount).find((event) =>
+      event.type === "note-start")).toEqual(expect.objectContaining({
+        pitch: 72,
+      }));
   });
 });
 

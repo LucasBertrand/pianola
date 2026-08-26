@@ -11,6 +11,9 @@ export interface WorkletRuntimeInstrument {
   config: SubtractivePlaybackPresetSnapshot;
   previewConfig: SubtractivePlaybackPresetSnapshot | null;
   gain: number;
+  pan: number;
+  muted: boolean;
+  solo: boolean;
   audible: boolean;
   cursor: number;
 }
