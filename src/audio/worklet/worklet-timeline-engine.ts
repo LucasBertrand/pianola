@@ -452,7 +452,11 @@ export class WorkletTimelineEngine {
   }
 
   private startDueNotes(): void {
-    for (const runtime of this.runtimeInstruments) {
+    for (let runtimeIndex = 0;
+      runtimeIndex < this.runtimeInstruments.length;
+      runtimeIndex += 1) {
+      const runtime = this.runtimeInstruments[runtimeIndex];
+      if (runtime === undefined) continue;
       const { timeline } = runtime;
 
       while (runtime.cursor < timeline.startTicks.length) {
@@ -615,8 +619,13 @@ export class WorkletTimelineEngine {
   }
 
   private refreshCursors(tick: number): void {
-    for (const runtime of this.runtimeInstruments) {
-      runtime.cursor = lowerBound(runtime.timeline.startTicks, tick);
+    for (let runtimeIndex = 0;
+      runtimeIndex < this.runtimeInstruments.length;
+      runtimeIndex += 1) {
+      const runtime = this.runtimeInstruments[runtimeIndex];
+      if (runtime !== undefined) {
+        runtime.cursor = lowerBound(runtime.timeline.startTicks, tick);
+      }
     }
   }
 

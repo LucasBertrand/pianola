@@ -35,7 +35,9 @@ export class WorkletHeldNoteStarter {
     onDiagnostic:
       ((event: HeldNoteStartDiagnostic) => void) | undefined,
   ): void {
-    for (const runtime of runtimes) {
+    for (let runtimeIndex = 0; runtimeIndex < runtimes.length; runtimeIndex += 1) {
+      const runtime = runtimes[runtimeIndex];
+      if (runtime === undefined) continue;
       if (!runtime.audible || runtime.timeline.endTickTreeLeafCount === 0) {
         continue;
       }

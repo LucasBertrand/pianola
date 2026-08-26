@@ -48,6 +48,13 @@ fronts sont maintenus à au moins un échantillon l’un de l’autre lorsque la
 largeur demandée n’est plus représentable, ce qui stabilise les largeurs 5/95 %
 dans l’aigu sans ajouter d’allocation ni de suréchantillonnage.
 
+`__tests__/dsp-determinism-performance.test.ts` complète ces goldens sur la voix
+soustractive et sur le moteur entier à 44,1, 48 et 96 kHz. Il mesure aussi la
+discontinuité maximale, vérifie le rendu bit-déterministe et impose, à 48 kHz,
+des budgets médians par quantum de 0,25 ms, 0,9 ms et 2,4 ms pour respectivement
+1, 8 et 24 voix. Les buffers sont préalloués et un garde interdit les
+allocations par constructeurs usuels pendant `process()`.
+
 ## Politique de prévisualisation des paramètres
 
 La matrice canonique se trouve dans `instrument-preview-policy.ts`. Une

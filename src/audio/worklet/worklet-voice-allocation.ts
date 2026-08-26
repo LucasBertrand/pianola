@@ -20,7 +20,9 @@ export function reserveWorkletVoice(
   let oldestInstrumentVoice: SubtractiveWorkletVoice | undefined;
   let quietestGlobalVoice: SubtractiveWorkletVoice | undefined;
 
-  for (const voice of voices) {
+  for (let voiceIndex = 0; voiceIndex < voices.length; voiceIndex += 1) {
+    const voice = voices[voiceIndex];
+    if (voice === undefined) continue;
     if (voice.ended) {
       continue;
     }

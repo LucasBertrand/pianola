@@ -114,7 +114,11 @@ export class WorkletVoiceBank {
     let leftSample = 0;
     let rightSample = 0;
 
-    for (const voice of this.voices) {
+    for (let voiceIndex = 0;
+      voiceIndex < this.voices.length;
+      voiceIndex += 1) {
+      const voice = this.voices[voiceIndex];
+      if (voice === undefined) continue;
       if (voice.ended) {
         continue;
       }
@@ -130,7 +134,11 @@ export class WorkletVoiceBank {
   }
 
   public releaseDueTimelineVoices(currentTick: number): void {
-    for (const voice of this.voices) {
+    for (let voiceIndex = 0;
+      voiceIndex < this.voices.length;
+      voiceIndex += 1) {
+      const voice = this.voices[voiceIndex];
+      if (voice === undefined) continue;
       if (
         !voice.ended
         && !voice.releasing
@@ -143,7 +151,11 @@ export class WorkletVoiceBank {
   }
 
   public releaseTimelineVoices(): void {
-    for (const voice of this.voices) {
+    for (let voiceIndex = 0;
+      voiceIndex < this.voices.length;
+      voiceIndex += 1) {
+      const voice = this.voices[voiceIndex];
+      if (voice === undefined) continue;
       if (voice.endTick !== null && !voice.ended) {
         voice.release(VOICE_STEAL_RELEASE_SECONDS);
       }
@@ -153,7 +165,11 @@ export class WorkletVoiceBank {
   public pruneEndedVoices(): void {
     let writeIndex = 0;
 
-    for (const voice of this.voices) {
+    for (let voiceIndex = 0;
+      voiceIndex < this.voices.length;
+      voiceIndex += 1) {
+      const voice = this.voices[voiceIndex];
+      if (voice === undefined) continue;
       if (voice.ended) {
         this.availableVoices.push(voice);
       } else {
