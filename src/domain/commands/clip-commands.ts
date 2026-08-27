@@ -45,6 +45,7 @@ import type {
   PianoRollCommand,
   RenameClipCommand,
   ReorderClipsCommand,
+  SplitClipIntoGroupCommand,
   UpdateClipCommand,
   UpdateClipGroupCommand,
   UngroupClipGroupCommand,
@@ -368,6 +369,105 @@ export function applyConcatenateClipGroup(
       `Clip group "${command.groupId}" does not exist.`,
       command.type,
     );
+  }
+
+  const nextState = { ...state, clipsById, clipHierarchy };
+
+  assertHierarchy(clipHierarchy, nextState, command.type);
+  return nextState;
+}
+
+export function applySplitClipIntoGroup(
+  state: ProjectState,
+  command: SplitClipIntoGroupCommand,
+): ProjectState {
+  const sourceClip = state.clipsById[command.sourceClipId];
+
+  if (sourceClip === undefined) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.sourceClipId}" does not exist.`,
+      command.type,
+    );
+  }
+
+  if (command.clips.length < 2) {
+    reject(
+      "INVALID_COMMAND",
+      "Splitting a clip into a group requires at least two generated clips.",
+      command.type,
+    );
+  }
+
+  if (
+    Object.keys(state.clipsById).length - 1 + command.clips.length
+    > MAXIMUM_PROJECT_CLIP_COUNT
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `A project cannot contain more than ${MAXIMUM_PROJECT_CLIP_COUNT} clips.`,
+      command.type,
+    );
+  }
+
+  if (
+    findClipHierarchyGroup(state.clipHierarchy, command.groupId) !== undefined
+  ) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip group "${command.groupId}" already exists.`,
+      command.type,
+    );
+  }
+
+  const generatedClipIds = new Set<ClipId>();
+
+  for (const clip of command.clips) {
+    if (
+      clip.id === command.sourceClipId
+      || generatedClipIds.has(clip.id)
+      || hasOwn(state.clipsById, clip.id)
+    ) {
+      reject(
+        "INVALID_COMMAND",
+        `Clip "${clip.id}" already exists or is not unique.`,
+        command.type,
+      );
+    }
+
+    assertValidClip(state, clip, command.type);
+    generatedClipIds.add(clip.id);
+  }
+
+  const group: ClipHierarchyNode = {
+    kind: "group",
+    id: command.groupId,
+    name: sourceClip.name,
+    color: sourceClip.color,
+    bypassEnabled: sourceClip.bypassEnabled,
+    children: command.clips.map((clip) => ({
+      kind: "clip" as const,
+      clipId: clip.id,
+    })),
+  };
+  const clipHierarchy = replaceClipWithGroup(
+    state.clipHierarchy,
+    command.sourceClipId,
+    group,
+  );
+
+  if (clipHierarchy === null) {
+    reject(
+      "INVALID_COMMAND",
+      `Clip "${command.sourceClipId}" does not exist in the hierarchy.`,
+      command.type,
+    );
+  }
+
+  let clipsById = omitRecordKey(state.clipsById, command.sourceClipId);
+
+  for (const clip of command.clips) {
+    clipsById = { ...clipsById, [clip.id]: clip };
   }
 
   const nextState = { ...state, clipsById, clipHierarchy };
@@ -821,6 +921,35 @@ function replaceGroupWithClip(
     }
 
     const children = replaceGroupWithClip(node.children, groupId, clipId);
+
+    if (children === null) {
+      return node;
+    }
+
+    found = true;
+    return { ...node, children };
+  });
+
+  return found ? next : null;
+}
+
+function replaceClipWithGroup(
+  hierarchy: readonly ClipHierarchyNode[],
+  clipId: ClipId,
+  group: ClipHierarchyNode,
+): readonly ClipHierarchyNode[] | null {
+  let found = false;
+  const next = hierarchy.map((node): ClipHierarchyNode => {
+    if (node.kind === "clip") {
+      if (node.clipId === clipId) {
+        found = true;
+        return group;
+      }
+
+      return node;
+    }
+
+    const children = replaceClipWithGroup(node.children, clipId, group);
 
     if (children === null) {
       return node;

@@ -90,6 +90,12 @@ l’ordre visible, en profondeur. Lorsqu’un clip est lancé directement dans u
 groupe bypassé, la suite reprend après ce groupe, au premier clip jouable de la
 même racine hiérarchique.
 
+L'action « Split clip » des réglages d'un clip remplace ce clip par un groupe.
+Elle peut créer un sous-clip par mesure ou découper aux marqueurs de section
+sélectionnés qui tombent exactement sur une frontière de mesure. La fenêtre
+affiche le nombre de clips qui seront générés avant confirmation. Une note qui
+traverse une coupe est scindée entre les deux sous-clips.
+
 La séparation entre l’éditeur et l’inspecteur peut être déplacée à la souris ou
 au toucher. Elle redimensionne la largeur de l’inspecteur en paysage et sa
 hauteur en portrait. Les flèches du clavier la déplacent lorsqu’elle est

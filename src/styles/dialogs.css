@@ -363,6 +363,143 @@
   margin-bottom: 16px;
 }
 
+.clip-split-dialog {
+  width: min(100%, 450px);
+}
+
+.clip-split-dialog .application-dialog-heading {
+  margin-bottom: 13px;
+}
+
+.clip-split-dialog .application-dialog-button {
+  min-height: 38px;
+  padding-inline: 12px;
+}
+
+.clip-split-strategies,
+.clip-split-section-markers {
+  display: grid;
+  margin: 0 0 13px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-deep);
+  gap: 8px;
+}
+
+.clip-split-strategies legend,
+.clip-split-section-markers legend {
+  padding: 0 5px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.clip-split-strategy,
+.clip-split-section-markers label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  color: var(--color-text-control);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.clip-split-strategy strong,
+.clip-split-section-markers strong {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.clip-split-strategies {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.clip-split-strategy input,
+.clip-split-section-markers input {
+  margin-top: 3px;
+  accent-color: var(--color-accent-primary);
+}
+
+.clip-split-strategy span,
+.clip-split-section-markers label span {
+  display: grid;
+  gap: 2px;
+}
+
+.clip-split-strategy small,
+.clip-split-section-markers small {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.clip-split-section-markers {
+  max-height: min(260px, 35dvh);
+  overflow: auto;
+}
+
+.clip-split-section-marker-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.clip-split-section-markers label {
+  display: inline-flex;
+  width: auto;
+  min-height: 28px;
+  padding: 3px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  align-items: center;
+  background: var(--color-surface-raised);
+  gap: 6px;
+}
+
+.clip-split-section-markers label:has(input:checked) {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-primary);
+}
+
+.clip-split-section-markers input {
+  margin: 0;
+}
+
+.clip-split-section-markers label span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.clip-split-section-markers strong {
+  font-size: 10px;
+}
+
+.clip-split-count {
+  display: block;
+  margin: 0 0 13px;
+  color: var(--color-accent-primary-bright);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.application-dialog p.clip-split-warning {
+  margin: -6px 0 13px;
+  color: var(--color-accent-danger);
+  font-size: 11px;
+}
+
+@media (max-width: 430px) {
+  .clip-split-strategies {
+    grid-template-columns: 1fr;
+  }
+}
+
 .clip-hierarchy-dialog .instrument-preset-dialog-control:last-of-type {
   margin-bottom: 20px;
 }

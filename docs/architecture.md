@@ -70,8 +70,9 @@ Le domaine est réparti par propriétaire :
 
 La `TimeMap` d’un clip est l’unique source de vérité temporelle. Notes,
 marqueurs de tempo, de gamme et de section sont ancrés à leurs ticks absolus.
-Un marqueur de section associe un commentaire libre à son tick et constitue
-une future frontière de découpe du clip, sans déclencher encore de découpage.
+Un marqueur de section associe un commentaire libre à son tick. Lors d'une
+découpe de clip, les marqueurs placés exactement sur une frontière de mesure
+peuvent être sélectionnés comme points de coupe.
 Les marqueurs de métrique sont structurels : chacun doit commencer une mesure
 complète. Une modification en amont conserve son tick s’il reste valide,
 sinon elle le projette vers la première frontière valide suivante, sans jamais
@@ -92,6 +93,11 @@ atomique remplace le nœud du groupe à la même position et retire ses descenda
 La duplication de groupe construit une transaction unique contenant les copies
 de clips et du sous-arbre, ce qui conserve une seule étape Undo/Redo. Le bypass
 est porté par le nœud de groupe et ne réécrit jamais le bypass des feuilles.
+La découpe suit le chemin inverse de la concaténation : `splitClip` construit
+les sous-clips par mesure ou aux marqueurs de section sélectionnés, tranche les
+notes chevauchantes et réinjecte le contexte métrique, tempo et tonal au tick 0.
+`SplitClipIntoGroupCommand` remplace ensuite atomiquement la feuille source par
+un groupe à la même position dans la hiérarchie.
 
 ## Noyau du piano roll
 

@@ -37,6 +37,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le playhead | `src/editor/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier l’indicateur de lecture des clips | `src/ui/inspector/clips/clip-playhead-visual.ts` | `src/ui/inspector/clips/ClipInspector.tsx`, puis `src/styles/inspector.css` |
 | modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-commands.ts` |
+| modifier la découpe d’un clip | `src/ui/dialogs/ClipSplitDialog.tsx` | `src/ui/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
 | modifier la duplication d’un groupe | `src/ui/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |

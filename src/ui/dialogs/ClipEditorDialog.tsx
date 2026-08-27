@@ -10,6 +10,7 @@ export interface ClipEditorDialogProps {
   readonly onClipNameChange: (name: string) => void;
   readonly onClipColorChange: (color: string) => void;
   readonly onConfirm: () => void;
+  readonly onSplit: () => void;
   readonly onDelete: () => void;
   readonly onCancel: () => void;
 }
@@ -22,6 +23,7 @@ export function ClipEditorDialog({
   onClipNameChange,
   onClipColorChange,
   onConfirm,
+  onSplit,
   onDelete,
   onCancel,
 }: ClipEditorDialogProps): React.JSX.Element {
@@ -73,7 +75,7 @@ export function ClipEditorDialog({
           </label>
         </div>
 
-        <div className="application-dialog-actions has-alternate">
+        <div className="application-dialog-actions has-two-alternates">
           <button
             className="application-dialog-button is-danger"
             type="button"
@@ -81,6 +83,13 @@ export function ClipEditorDialog({
             onClick={onDelete}
           >
             Delete clip
+          </button>
+          <button
+            className="application-dialog-button is-neutral"
+            type="button"
+            onClick={onSplit}
+          >
+            Split clip
           </button>
           <button
             className="application-dialog-button is-neutral"

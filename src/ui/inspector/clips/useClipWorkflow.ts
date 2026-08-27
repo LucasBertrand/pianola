@@ -50,6 +50,12 @@ import {
 import {
   useClipGroupDuplication,
 } from "./useClipGroupDuplication";
+import {
+  useClipSplitting,
+} from "./useClipSplitting";
+import type {
+  ClipSplitStrategy,
+} from "../../../domain/clips/split-clip";
 
 export interface ClipWorkflowOptions {
   readonly commands: EditorCommandPort;
@@ -72,6 +78,10 @@ export interface ClipWorkflow {
   ) => void;
   readonly duplicate: (clipId: ClipId) => void;
   readonly duplicateGroup: (groupId: ClipGroupId) => ClipGroupId | null;
+  readonly split: (
+    clipId: ClipId,
+    strategy: ClipSplitStrategy,
+  ) => ClipGroupId | null;
   readonly reorder: (clipId: ClipId, targetIndex: number) => void;
   readonly createGroup: (
     parentGroupId: ClipGroupId | null,
@@ -118,6 +128,12 @@ export function useClipWorkflow({
     commands,
     beginClipChange,
     duplicateEditorState,
+  });
+  const split = useClipSplitting({
+    commands,
+    beginClipChange,
+    duplicateEditorState,
+    alert,
   });
 
   const select = useCallback((clipId: ClipId): void => {
@@ -419,6 +435,7 @@ export function useClipWorkflow({
     add,
     duplicate,
     duplicateGroup,
+    split,
     reorder,
     createGroup,
     concatenateGroup,

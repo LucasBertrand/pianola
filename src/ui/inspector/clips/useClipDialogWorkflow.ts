@@ -24,6 +24,7 @@ export interface ClipDialogWorkflowOptions {
 
 export interface ClipDialogWorkflow {
   readonly open: boolean;
+  readonly clipId: ClipId | null;
   readonly name: string;
   readonly color: string;
   readonly canDelete: boolean;
@@ -88,6 +89,7 @@ export function useClipDialogWorkflow({
 
   return {
     open: editedClipId !== null,
+    clipId: editedClipId,
     name,
     color,
     canDelete: getClipPlaybackOrder(

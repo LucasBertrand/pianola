@@ -15,6 +15,7 @@ import {
   applyUngroupClipGroup,
   applyMoveClipHierarchyNode,
   applyRenameClip,
+  applySplitClipIntoGroup,
   applyUpdateClipGroup,
   applyReorderClips,
   applyUpdateClip,
@@ -33,6 +34,7 @@ import type {
   PianoRollCommand,
   RenameClipCommand,
   ReorderClipsCommand,
+  SplitClipIntoGroupCommand,
   MoveClipHierarchyNodeCommand,
   UpdateClipGroupCommand,
   UngroupClipGroupCommand,
@@ -155,6 +157,8 @@ function applyCommand(
       return applyDeleteClipGroup(state, command);
     case "ConcatenateClipGroup":
       return applyConcatenateClipGroup(state, command);
+    case "SplitClipIntoGroup":
+      return applySplitClipIntoGroup(state, command);
     case "UngroupClipGroup":
       return applyUngroupClipGroup(state, command);
     case "MoveClipHierarchyNode":
@@ -201,6 +205,7 @@ type ActiveClipCommand = Exclude<
   | DeleteClipCommand
   | DeleteClipGroupCommand
   | ConcatenateClipGroupCommand
+  | SplitClipIntoGroupCommand
   | UngroupClipGroupCommand
   | MoveClipHierarchyNodeCommand
   | ReorderClipsCommand

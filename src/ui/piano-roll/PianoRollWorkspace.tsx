@@ -19,6 +19,10 @@ import {
   MAXIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
+  countClipGroups,
+  MAXIMUM_CLIP_GROUP_COUNT,
+} from "../../domain/clips/clip-hierarchy";
+import {
   getMeasureSpanAtTick,
   getMeasureSpans,
 } from "../../domain/transport/time-map";
@@ -81,6 +85,9 @@ import {
 import {
   ClipEditorDialog,
 } from "../../ui/dialogs/ClipEditorDialog";
+import {
+  ClipSplitDialog,
+} from "../../ui/dialogs/ClipSplitDialog";
 import {
   EditorHeader,
 } from "../../ui/editor-toolbar/EditorHeader";
@@ -200,6 +207,7 @@ import {
   type SubtractiveSynthConfig,
 } from "../../domain/instruments/instrument";
 import type {
+  ClipId,
   PresetId,
 } from "../../domain/identifiers";
 
@@ -257,6 +265,7 @@ export function PianoRollWorkspace({
     useState(false);
   const [measureDialogOperation, setMeasureDialogOperation] =
     useState<"insert" | "remove" | null>(null);
+  const [splitClipId, setSplitClipId] = useState<ClipId | null>(null);
   const [projectInspectorSection, setGeneralInspectorSection] =
     useState<"instruments" | "clips">("instruments");
   const [
@@ -661,6 +670,7 @@ export function PianoRollWorkspace({
     add: handleAddClip,
     duplicate: handleDuplicateClip,
     duplicateGroup: handleDuplicateClipGroup,
+    split: handleSplitClip,
     createGroup: handleCreateClipGroup,
     updateGroup: handleUpdateClipGroup,
     toggleGroupBypass: handleToggleClipGroupBypass,
@@ -1240,10 +1250,34 @@ export function PianoRollWorkspace({
           onClipNameChange={clipDialog.setName}
           onClipColorChange={clipDialog.setColor}
           onConfirm={clipDialog.confirm}
+          onSplit={() => {
+            if (clipDialog.clipId !== null) {
+              setSplitClipId(clipDialog.clipId);
+              clipDialog.cancel();
+            }
+          }}
           onDelete={clipDialog.remove}
           onCancel={clipDialog.cancel}
         />
       )}
+      {splitClipId === null
+        || projectState.clipsById[splitClipId] === undefined ? null : (
+          <ClipSplitDialog
+            clip={projectState.clipsById[splitClipId]}
+            clock={projectState.clock}
+            projectClipCount={Object.keys(projectState.clipsById).length}
+            canCreateGroup={
+              countClipGroups(projectState.clipHierarchy)
+              < MAXIMUM_CLIP_GROUP_COUNT
+            }
+            onConfirm={(strategy) => {
+              if (handleSplitClip(splitClipId, strategy) !== null) {
+                setSplitClipId(null);
+              }
+            }}
+            onCancel={() => setSplitClipId(null)}
+          />
+        )}
       {!instrumentDialog.open || instrumentDialog.config === null ? null : (
         <InstrumentPresetDialog
           mode={instrumentDialog.mode}

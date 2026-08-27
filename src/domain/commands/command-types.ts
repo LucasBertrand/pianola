@@ -165,6 +165,14 @@ export interface ConcatenateClipGroupCommand {
   readonly clip: Clip;
 }
 
+/** Atomically replaces one clip with a group of consecutive split clips. */
+export interface SplitClipIntoGroupCommand {
+  readonly type: "SplitClipIntoGroup";
+  readonly sourceClipId: ClipId;
+  readonly groupId: ClipGroupId;
+  readonly clips: readonly Clip[];
+}
+
 export interface MoveClipHierarchyNodeCommand {
   readonly type: "MoveClipHierarchyNode";
   readonly node: ClipHierarchyNodeIdentity;
@@ -441,6 +449,7 @@ export type PianoRollCommand =
   | UngroupClipGroupCommand
   | DeleteClipGroupCommand
   | ConcatenateClipGroupCommand
+  | SplitClipIntoGroupCommand
   | MoveClipHierarchyNodeCommand
   | RenameClipCommand
   | UpdateClipCommand
