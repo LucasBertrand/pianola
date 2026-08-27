@@ -173,10 +173,9 @@ export function EditorHeader({
           />
           <div
             className={
-              `editor-context-item is-loop${
-                activeClip.transportSettings.loopEnabled
-                  ? ""
-                  : " is-inactive"
+              `editor-context-item is-loop${activeClip.transportSettings.loopEnabled
+                ? ""
+                : " is-inactive"
               }`
             }
             title="Loop duration"
@@ -188,10 +187,9 @@ export function EditorHeader({
           </div>
           <div
             className={
-              `editor-context-item is-selection${
-                selectedNotes.length === 0 && selectedMarkerCount === 0
-                  ? " is-inactive"
-                  : ""
+              `editor-context-item is-selection${selectedNotes.length === 0 && selectedMarkerCount === 0
+                ? " is-inactive"
+                : ""
               }`
             }
             title="Selection content"
@@ -201,14 +199,13 @@ export function EditorHeader({
           </div>
           <div
             className={
-              `editor-context-item is-detection${
-                chordName === null ? " is-inactive" : ""
+              `editor-context-item is-detection${chordName === null ? " is-inactive" : ""
               }`
             }
-            title="Chords detected from selected notes"
+            title="Chords and intervals detected from selected notes"
           >
             <output>{chordName ?? "—"}</output>
-            <small>Chords detection</small>
+            <small>Harmony</small>
           </div>
         </div>
       </section>
