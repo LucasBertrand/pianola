@@ -139,4 +139,10 @@ if (!processor.port.messages.some((message) => (
   throw new Error("The production worklet did not publish its transport state.");
 }
 
+if (processor.port.messages.some((message) => (
+  message.protocolVersion !== 1
+))) {
+  throw new Error("The production worklet published an unversioned message.");
+}
+
 console.log("Production AudioWorklet smoke test passed (128 stereo frames).\n");

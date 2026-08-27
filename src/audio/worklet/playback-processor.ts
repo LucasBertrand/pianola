@@ -1,4 +1,5 @@
 import type {
+  AudioWorkletToMainMessage,
   MainToAudioWorkletMessage,
 } from "./audio-worklet-protocol";
 import {
@@ -35,6 +36,7 @@ const LEVEL_REPORT_INTERVAL_FRAMES = Math.max(1, Math.round(sampleRate / 20));
 class PlaybackProcessor extends AudioWorkletProcessor {
   private readonly engine = new WorkletTimelineEngine(sampleRate);
   private readonly levelReport = {
+    protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
     type: "master-levels" as const,
     frame: 0,
     levels: {
