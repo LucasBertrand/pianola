@@ -9,7 +9,7 @@ workspace réel, pas seulement l'intention.
 - Lot actif : aucun
 - Dernier lot terminé : aucun
 - Prochaine action : établir la baseline du lot 0
-- Dernière mise à jour : 2026-08-26
+- Dernière mise à jour : 2026-08-27
 
 ## Baseline connue
 
@@ -18,6 +18,7 @@ workspace réel, pas seulement l'intention.
 - un cycle d'import typé a été détecté entre `spatial-index.ts` et
   `spatial-index-search.ts` ;
 - `PianoRollWorkspace.tsx` est le principal point de concentration ;
+- `time-map.ts` et `clip-commands.ts` dépassent désormais 1 000 lignes ;
 - le codec portable dépend encore d'un parseur sous `project-io/native`.
 
 Cette baseline doit être revérifiée au début du lot 0 : elle peut devenir
@@ -33,8 +34,6 @@ D  docs/persistence-strategy.md
 D  docs/storage-strategies.md
 ```
 
-Ils ne font pas partie de la migration préparée ici. Ne pas les restaurer ou les
-modifier sans instruction explicite de l'utilisateur.
 
 ## Suivi des lots
 
@@ -56,7 +55,6 @@ Aucune pour le moment.
 
 ## Écarts et découvertes
 
-Aucun écart supplémentaire consigné.
 
 ## Journal
 

@@ -92,9 +92,9 @@ même racine hiérarchique.
 
 L'action « Split clip » des réglages d'un clip remplace ce clip par un groupe.
 Elle peut créer un sous-clip par mesure ou découper aux marqueurs de section
-sélectionnés qui tombent exactement sur une frontière de mesure. La fenêtre
-affiche le nombre de clips qui seront générés avant confirmation. Une note qui
-traverse une coupe est scindée entre les deux sous-clips.
+sélectionnés qui tombent exactement sur une frontière de mesure interne. La
+fenêtre affiche le nombre de clips qui seront générés avant confirmation. Une
+note qui traverse une coupe est scindée entre les deux sous-clips.
 
 La séparation entre l’éditeur et l’inspecteur peut être déplacée à la souris ou
 au toucher. Elle redimensionne la largeur de l’inspecteur en paysage et sa
@@ -110,8 +110,8 @@ les voix actives avec une transition courte.
 Le bouton de retour replace le playhead et le scroll horizontal au début.
 L’enchaînement suit l’ordre des cartes en sautant les clips bypassés et tous les
 clips ayant un groupe parent bypassé, sauf si la boucle ou le bouton global
-« Stop playback at the end of every clip » est actif. L’auto-scroll est désactivé
-pour toute la séquence : sa valeur ne change pas lors de la sélection d’un
+« Stop playback at the end of every clip » est actif. L’auto-scroll est un
+réglage global du projet : sa valeur ne change pas lors de la sélection d’un
 autre clip. L’auto-scroll est désactivé par défaut et son activation ou sa
 désactivation peut être annulée ou rétablie avec Undo/Redo ; lorsqu’il est actif, il sélectionne le clip joué et suit le
 playhead. Lorsqu’il est désactivé, ni la sélection du clip ni le viewport ne

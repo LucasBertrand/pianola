@@ -21,6 +21,7 @@ héberger les protocoles détaillés.
 | diagnostics navigateur | erreurs console, JavaScript, promesses et rendu React | `BrowserErrorReporter`, `BrowserErrorBoundary` et `BrowserErrorDialog` | file globale dédupliquée qui reste visible si le piano roll ne peut plus être rendu |
 | instrument | nom, couleur, preset et synthé en brouillon | `useInstrumentDialogWorkflow` | validation complète avant transaction |
 | collisions | choix merge/slice et séquence | `useNoteCollisionDialogWorkflow` | transforme une décision utilisateur en transaction |
+| clips et groupes | dialogues et orchestration des opérations de hiérarchie | `useClipDialogWorkflow`, `useClipWorkflow` et hooks de capacité associés | prépare une intention puis publie une transaction atomique |
 | marqueurs tempo/métrique/gamme/section | brouillon de la modale et gestes du ruler | `useTimeMapMarkerWorkflow` | une intention validée produit au plus une transaction |
 | fichiers | inputs, sauvegarde, chargement | `useProjectFileWorkflow` | propriétaire UI de la capacité native |
 | MIDI | input et analyse en attente | `useMidiFileWorkflow` | préparation/confirmation avant remplacement |

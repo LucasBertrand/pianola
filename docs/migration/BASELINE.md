@@ -1,13 +1,13 @@
 # Baseline architecturale
 
-Ce diagnostic décrit le point de départ observé le 2026-08-26. Il constitue une
+Ce diagnostic décrit le point de départ observé le 2026-08-27. Il constitue une
 hypothèse à vérifier avant chaque lot, pas une vérité immuable.
 
 ## Synthèse
 
 Pianola possède déjà une séparation macroscopique explicite et documentée :
 `domain`, `use-cases`, `editor`, `ui`, `audio` et `project-io`. Le contrôle des
-frontières passait sur 316 fichiers source lors de l'audit.
+frontières passe sur 321 fichiers source lors de l'audit.
 
 Le problème principal est la coexistence de plusieurs taxonomies :
 
@@ -23,8 +23,8 @@ la persistance et les fichiers projet.
 
 | Zone | Fichiers TypeScript/TSX |
 | --- | ---: |
-| `ui` | 116 |
-| `domain` | 50 |
+| `ui` | 119 |
+| `domain` | 52 |
 | `audio` | 32 |
 | `project-io` | 31 |
 | `editor` | 30 |
@@ -35,10 +35,10 @@ la persistance et les fichiers projet.
 
 Points de concentration observés :
 
-- `PianoRollWorkspace.tsx` : plus de 1 300 lignes et 61 imports internes ;
-- `time-map.ts` : plus de 1 000 lignes ;
+- `PianoRollWorkspace.tsx` : plus de 1 400 lignes et 65 imports ;
+- `time-map.ts` : plus de 1 300 lignes ;
 - `ClipInspector.tsx`, `InstrumentPresetDialog.tsx` et `clip-commands.ts` :
-  plus de 700 lignes chacun ;
+  plus de 880 lignes chacun, et plus de 1 000 pour `clip-commands.ts` ;
 - 23 fichiers directement sous `ui/piano-roll/interactions` ;
 - 20 fichiers directement sous `ui/piano-roll`.
 
@@ -123,9 +123,8 @@ doit être extrait proprement.
 - documentation locale par grande zone ;
 - tests d'intégration couvrant les flux audio, domaine, MIDI et interaction.
 
-## Dette documentaire initiale
+## État documentaire initial
 
-Au moment de la préparation, `check:docs` ne passe pas en raison de documents
-préexistants : liens absolus d'un ancien audit et références à deux guides
-supprimés du worktree. Les documents canoniques de ce dossier n'ajoutent pas de
-nouvelle violation connue.
+`check:docs` passe sur les 29 fichiers Markdown présents. `npm run verify`
+inclut ce contrôle par l'intermédiaire de `check:structure` avant les validations
+techniques.

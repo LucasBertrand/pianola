@@ -9,7 +9,7 @@ Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 25 août 2026.
+Dernière mise à jour : 27 août 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -10,7 +10,7 @@ comportement précis, partir de la [carte du code](code-map.md). Pour décider s
 un état doit persister ou entrer dans Undo/Redo, consulter
 [`state-ownership.md`](state-ownership.md).
 
-Dernière revue complète : 16 août 2026.
+Dernière revue complète : 27 août 2026.
 
 ## Vue d’ensemble
 
@@ -72,7 +72,7 @@ La `TimeMap` d’un clip est l’unique source de vérité temporelle. Notes,
 marqueurs de tempo, de gamme et de section sont ancrés à leurs ticks absolus.
 Un marqueur de section associe un commentaire libre à son tick. Lors d'une
 découpe de clip, les marqueurs placés exactement sur une frontière de mesure
-peuvent être sélectionnés comme points de coupe.
+interne peuvent être sélectionnés comme points de coupe.
 Les marqueurs de métrique sont structurels : chacun doit commencer une mesure
 complète. Une modification en amont conserve son tick s’il reste valide,
 sinon elle le projette vers la première frontière valide suivante, sans jamais

@@ -17,6 +17,8 @@ chemins.
 - ajouter une détection des cycles et séparer code produit et tests.
 - mesurer la couverture ciblée des points de concentration de `BASELINE.md` ou
   produire une matrice de comportements couverts et manquants ;
+- inventorier les réglages persistants et les capacités ajoutées depuis la
+  préparation afin de confirmer leur propriétaire et leurs régressions clés ;
 - définir et enregistrer le scénario reproductible qui servira de baseline de
   rendu pour `PianoRollWorkspace` au lot 5.
 
@@ -27,6 +29,8 @@ et contrôles architecturaux verts.
 
 - introduire `EditorSessionState`, `ActiveClipSelection`,
   `PersistedEditorWorkspace` et `PersistedClipEditorState` ;
+- classer les réglages de comportement persistants sans modifier leur
+  persistance ni leur sémantique Undo/Redo ;
 - renommer `Track` en `InstrumentTrack` par alias temporaire, puis migrer les
   commandes et codecs consommateurs ;
 - migrer d'abord les types et codecs, puis application et présentation ;
@@ -42,7 +46,9 @@ aucun consommateur produit n'utilise encore le nom générique `Track`.
 - définir une nouvelle baseline de version pour le format `.pianola` ;
 - supprimer les lecteurs, migrations et tests des anciens formats ;
 - remplacer les noms `NATIVE_*` encore utilisés par le produit ;
-- rejeter explicitement les fichiers d'une version non supportée.
+- rejeter explicitement les fichiers d'une version non supportée ;
+- préserver dans le nouveau format toutes les données durables du code courant,
+  notamment les timelines et réglages de projet.
 
 Sortie : aucun dossier, import, symbole ou test courant ne dépend de `native`,
 `legacy` ou d'une ancienne version du format. Le nouveau format effectue un
@@ -63,6 +69,7 @@ Sortie : l'application dépend de ports, jamais d'IndexedDB ou d'un Worker.
 
 - séparer les ports/signaux purs de l'agrégat `EditorRuntime` ;
 - déplacer l'orchestration store/commandes vers `application` ;
+- séparer de leurs adaptateurs React les orchestrations des capacités métier ;
 - supprimer la dépendance `editor → use-cases` ;
 - supprimer le cycle entre `spatial-index` et `spatial-index-search`.
 
@@ -80,7 +87,7 @@ Extraire dans cet ordre :
 1. préférences et presets personnels ;
 2. cycle de vie/import/export du projet ;
 3. commandes de menu radial ;
-4. dialogues ;
+4. dialogues et workflows de capacité ;
 5. layout et portals ;
 6. coordination transport/viewport.
 
@@ -136,6 +143,7 @@ régression de rendu par rapport à la baseline du lot 0.
 - supprimer `ui/shared` ;
 - découper `clip-commands.ts` par famille de commandes et
   `active-clip-command-helpers.ts` par invariant ;
+- découper `time-map.ts` par responsabilités cohérentes ;
 - découper les autres modules volumineux seulement sans changement métier.
 
 Sortie : aucune racine générique ne sert de destination par défaut.
