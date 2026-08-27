@@ -1012,6 +1012,7 @@ export function PianoRollWorkspace({
         selectedNotes={selectedNotes}
         selectedMarkerCount={selectedMarkerCount}
         gridResolutionTicks={gridResolutionTicks}
+        pitchSnapSettings={pitchSnapSettings}
         playbackStatus={playbackStatus}
         autoScrollEnabled={autoScrollEnabled}
         midiInputRef={importMidiInputRef}

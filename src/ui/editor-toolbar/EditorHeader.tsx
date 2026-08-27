@@ -33,6 +33,15 @@ import type {
 import {
   detectChordsFromNotes,
 } from "../../music/chord-recognition";
+import type {
+  PitchSnapSettings,
+} from "../../music/pitch-snap";
+import {
+  spellPitchClass,
+} from "../../music/tonal-spelling";
+import {
+  resolvePitchSnapSettings,
+} from "../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import {
   formatLoopDuration,
 } from "./editor-context-format";
@@ -43,6 +52,7 @@ export interface EditorHeaderProps {
   readonly selectedNotes: readonly Note[];
   readonly selectedMarkerCount: number;
   readonly gridResolutionTicks: number;
+  readonly pitchSnapSettings: PitchSnapSettings;
   readonly playbackStatus: PlaybackStatus;
   readonly autoScrollEnabled: boolean;
   readonly midiInputRef: RefObject<HTMLInputElement | null>;
@@ -72,6 +82,7 @@ export function EditorHeader({
   selectedNotes,
   selectedMarkerCount,
   gridResolutionTicks,
+  pitchSnapSettings,
   playbackStatus,
   autoScrollEnabled,
   midiInputRef: importMidiInputRef,
@@ -98,8 +109,18 @@ export function EditorHeader({
   const activeClip = getActiveClip(projectState);
   const saveStatusLabel = formatSaveStatus(saveStatus);
   const chordName = React.useMemo(
-    () => detectChordsFromNotes(selectedNotes),
-    [selectedNotes],
+    () => detectChordsFromNotes(
+      selectedNotes,
+      (note) => spellPitchClass(
+        note.pitch,
+        resolvePitchSnapSettings(
+          activeClip.timeline.timeMap,
+          pitchSnapSettings,
+          note.startTick,
+        ),
+      ),
+    ),
+    [activeClip.timeline.timeMap, pitchSnapSettings, selectedNotes],
   );
   const loopDuration = React.useMemo(
     () => formatLoopDuration(
