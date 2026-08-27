@@ -1,5 +1,4 @@
 import type {
-  AudioWorkletToMainMessage,
   MainToAudioWorkletMessage,
 } from "./audio-worklet-protocol";
 import {
