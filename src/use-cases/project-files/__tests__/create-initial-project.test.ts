@@ -10,12 +10,12 @@ import {
   getActiveClip,
 } from "../../../domain/project/project-document";
 import {
-  createBlankProjectState,
+  createBlankEditorSessionState,
 } from "../create-initial-project";
 
-describe("createBlankProjectState", () => {
+describe("createBlankEditorSessionState", () => {
   it("creates one empty clip without instruments or notes", () => {
-    const state = createBlankProjectState();
+    const state = createBlankEditorSessionState();
     const clip = getActiveClip(state);
 
     expect(clip.timeline.timeMap.tempoMarkers[0]?.bpm).toBe(

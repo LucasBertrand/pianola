@@ -56,6 +56,13 @@ const forbiddenGenericFileNames = new Set([
   "types.ts",
   "utils.ts",
 ]);
+const retiredStateTypeNames = new Set([
+  "ProjectClipWorkspaceState",
+  "ProjectState",
+  "ProjectWorkspaceState",
+  "Track",
+  "WorkspaceState",
+]);
 const internalCapabilities = [
   {
     targets: [
@@ -105,6 +112,14 @@ for (const sourceFile of sourceFiles) {
     true,
     sourceFile.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
+
+  for (const identifier of collectIdentifiers(parsed)) {
+    if (retiredStateTypeNames.has(identifier)) {
+      violations.push(
+        `${relativeSource} uses retired state type identifier ${identifier}.`,
+      );
+    }
+  }
 
   for (const specifier of collectRelativeImports(parsed)) {
     const target = resolveSourceImport(sourceFile, specifier);
@@ -185,6 +200,21 @@ function collectRelativeImports(sourceFile) {
   }
 
   return imports;
+}
+
+function collectIdentifiers(sourceFile) {
+  const identifiers = [];
+
+  function visit(node) {
+    if (ts.isIdentifier(node)) {
+      identifiers.push(node.text);
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return identifiers;
 }
 
 function resolveSourceImport(importer, specifier) {

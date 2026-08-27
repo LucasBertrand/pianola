@@ -1,6 +1,6 @@
 import {
   type Clip,
-  type Track,
+  type InstrumentTrack,
 } from "../clips/clip";
 import {
   type LoopRegion,
@@ -16,7 +16,7 @@ import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type { PianoRollCommand } from "./command-types";
 import { reject } from "./command-context";
 
-export function transformTracksForInsertedTime(
+export function transformInstrumentTracksForInsertedTime(
   state: ActiveClipProjectState,
   insertionTick: number,
   insertedTicks: number,
@@ -98,7 +98,7 @@ export function transformTracksForInsertedTime(
   return tracksByInstrumentId;
 }
 
-export function transformTracksForRemovedTime(
+export function transformInstrumentTracksForRemovedTime(
   state: ActiveClipProjectState,
   removalStartTick: number,
   removalEndTick: number,
@@ -330,9 +330,9 @@ export function assertMeasureIndex(
   }
 }
 
-export function replaceTrack(
+export function replaceInstrumentTrack(
   state: ActiveClipProjectState,
-  track: Track,
+  track: InstrumentTrack,
 ): ActiveClipProjectState {
   return {
     ...state,

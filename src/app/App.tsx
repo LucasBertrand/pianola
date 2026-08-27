@@ -10,7 +10,7 @@ import {
   type AppPersistenceRuntime,
 } from "./create-app-runtime";
 import {
-  createBlankProjectState,
+  createBlankEditorSessionState,
 } from "../use-cases/project-files/create-initial-project";
 import type {
   EditorRuntime,
@@ -34,9 +34,9 @@ import {
   ApplicationHome,
 } from "../ui/home/ApplicationHome";
 import {
-  createDefaultProjectWorkspace,
-  createStoredProjectState,
-  restoreProjectWorkspace,
+  createDefaultPersistedEditorWorkspace,
+  createStoredEditorSessionState,
+  restorePersistedEditorWorkspace,
 } from "../use-cases/persistence/project-workspace";
 import {
   createDocumentId,
@@ -137,14 +137,14 @@ function EditorApplication(): React.JSX.Element {
   }, []);
 
   const handleCreate = useCallback(() => runLibraryAction(async () => {
-    const document = createBlankProjectState();
+    const document = createBlankEditorSessionState();
     const now = new Date().toISOString();
     const candidate: StoredProject = {
       documentId: createDocumentId(),
       revision: 0,
       updatedAt: now,
       document,
-      workspace: createDefaultProjectWorkspace(document),
+      workspace: createDefaultPersistedEditorWorkspace(document),
     };
     const revision = await persistence.projects.save(candidate, null);
     void requestPersistentBrowserStorage();
@@ -262,10 +262,10 @@ function ActiveProjectEditor({
 
   if (runtimeRef.current === null) {
     runtimeRef.current = createEditorRuntime(
-      createStoredProjectState(storedProject),
+      createStoredEditorSessionState(storedProject),
     );
     runtimeRef.current.noteColorMode.set(settings.noteColorMode);
-    restoreProjectWorkspace(runtimeRef.current, storedProject.workspace);
+    restorePersistedEditorWorkspace(runtimeRef.current, storedProject.workspace);
   }
 
   return (

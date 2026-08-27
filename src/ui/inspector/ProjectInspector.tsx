@@ -4,7 +4,7 @@ import type {
 } from "../../domain/commands/command-types";
 import {
   getActiveClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
@@ -37,7 +37,7 @@ import type {
 export interface ProjectInspectorProps {
   readonly open: boolean;
   readonly portraitSection: "instruments" | "clips";
-  readonly projectState: ProjectState;
+  readonly projectState: EditorSessionState;
   readonly playingClipId: ClipId | null;
   readonly playheadPosition: ReadonlyRenderSignal<PlayheadPosition>;
   readonly suppressClipSelectionHighlight: boolean;

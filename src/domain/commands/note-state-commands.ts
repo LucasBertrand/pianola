@@ -9,21 +9,21 @@ import type {
   SetNotesMutedCommand,
 } from "./command-types";
 import {
-  replaceTrack,
+  replaceInstrumentTrack,
 } from "./active-clip-command-helpers";
 import {
   assertNoteEditable,
   assertUniqueNoteIds,
   reject,
   requireNote,
-  requireTrack,
+  requireInstrumentTrack,
 } from "./command-context";
 
 export function applyDeleteNotes(
   state: ActiveClipProjectState,
   command: DeleteNotesCommand,
 ): ActiveClipProjectState {
-  const track = requireTrack(state, command.trackInstrumentId, command.type);
+  const track = requireInstrumentTrack(state, command.trackInstrumentId, command.type);
   assertUniqueNoteIds(command.noteIds, command.type);
 
   for (const noteId of command.noteIds) {
@@ -42,7 +42,7 @@ export function applyDeleteNotes(
     delete notesById[noteId];
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });
@@ -68,7 +68,7 @@ function applyNoteBooleanProperty(
   property: "muted" | "locked",
   value: boolean,
 ): ActiveClipProjectState {
-  const track = requireTrack(state, command.trackInstrumentId, command.type);
+  const track = requireInstrumentTrack(state, command.trackInstrumentId, command.type);
   assertUniqueNoteIds(command.noteIds, command.type);
   if (typeof value !== "boolean") {
     reject("INVALID_COMMAND", `Note ${property} must be a boolean.`, command.type);
@@ -99,7 +99,7 @@ function applyNoteBooleanProperty(
     return state;
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });

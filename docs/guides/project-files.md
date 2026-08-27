@@ -10,7 +10,7 @@
 Le point d’entrée unique du format portable est
 `src/project-io/portable/portable-project-codec.ts`. Le fichier porte
 `format: "app.pianola.project"`, sa propre `schemaVersion`, le document musical
-et un `ProjectWorkspaceState` séparé. Il ne contient aucune préférence
+et un `PersistedEditorWorkspace` séparé. Il ne contient aucune préférence
 utilisateur.
 
 Le lecteur traite toujours le JSON comme inconnu, reconnaît format et version,

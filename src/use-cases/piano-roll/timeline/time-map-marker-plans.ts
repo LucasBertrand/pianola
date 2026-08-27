@@ -10,7 +10,7 @@ import type {
 } from "../../../domain/identifiers";
 import {
   getClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../../domain/project/project-document";
 import {
   getMeasureSpanAtTick,
@@ -110,7 +110,7 @@ export function createTimeMapMarkerFlags(
  * values default to the active tempo and meter.
  */
 export function createMarkerDraft(
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   tick: Tick,
 ): TimeMapMarkerDraft {
@@ -208,7 +208,7 @@ export function createMarkerDraft(
  * components are created, and retained components are updated as needed.
  */
 export function planMarkerDraftCommands(
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   draft: TimeMapMarkerDraft,
 ): PianoRollCommand[] {
@@ -376,7 +376,7 @@ export function planMarkerDraftCommands(
 
 /** Deletes every marker at a tick; the tick-0 markers cannot be deleted. */
 export function planMarkerDeletionCommands(
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   startTick: Tick,
 ): PianoRollCommand[] {
@@ -418,7 +418,7 @@ export interface MarkerMovePlan {
 
 /** Plans a point-marker move and optionally removes occupied point markers. */
 export function planMarkerMove(
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   fromTick: Tick,
   toTick: Tick,
@@ -516,7 +516,7 @@ export function planMarkerMove(
 
 /** Compatibility planner for callers that require a collision-free move. */
 export function planMarkerMoveCommands(
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   fromTick: Tick,
   toTick: Tick,

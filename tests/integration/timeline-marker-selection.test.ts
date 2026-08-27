@@ -8,7 +8,7 @@ import {
 } from "../../src/app/create-app-runtime";
 import {
   getActiveClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../src/domain/project/project-document";
 import type {
   TimeMap,
@@ -353,7 +353,7 @@ describe("timeline marker selection", () => {
 
 function createProjectWithTempoCollision(
   notes = [createTestNote({ id: "unused", startTick: 8_000 })],
-): ProjectState {
+): EditorSessionState {
   const state = createTestProject({
     clips: [{ id: TEST_CLIP_ID, notes }],
   });
@@ -371,7 +371,7 @@ function createProjectWithTempoCollision(
 
 function createProjectWithMixedFlag(
   note = createTestNote({ id: "unused-note", startTick: 8_000 }),
-): ProjectState {
+): EditorSessionState {
   const state = createTestProject({
     clips: [{ id: TEST_CLIP_ID, notes: [note] }],
   });
@@ -405,7 +405,7 @@ function createProjectWithMixedFlag(
   });
 }
 
-function withTimeMap(state: ProjectState, timeMap: TimeMap): ProjectState {
+function withTimeMap(state: EditorSessionState, timeMap: TimeMap): EditorSessionState {
   const clip = getActiveClip(state);
 
   return {

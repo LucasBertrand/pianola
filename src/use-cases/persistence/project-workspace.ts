@@ -7,7 +7,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   ProjectDocument,
-  ProjectState,
+  EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   DEFAULT_GRID_SETTINGS,
@@ -20,14 +20,14 @@ import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../music/pitch-snap";
 import type {
-  ProjectClipWorkspaceState,
-  ProjectWorkspaceState,
+  PersistedClipEditorState,
+  PersistedEditorWorkspace,
   StoredProject,
 } from "../../persistence/project-persistence-model";
 
-export function createDefaultProjectWorkspace(
+export function createDefaultPersistedEditorWorkspace(
   document: ProjectDocument,
-): ProjectWorkspaceState {
+): PersistedEditorWorkspace {
   const clipOrder = getClipPlaybackOrder(document.clipHierarchy);
   const activeClipId = clipOrder[0];
 
@@ -35,7 +35,7 @@ export function createDefaultProjectWorkspace(
     throw new Error("A project must contain at least one clip.");
   }
 
-  const clipStatesById: Record<ClipId, ProjectClipWorkspaceState> = {};
+  const clipStatesById: Record<ClipId, PersistedClipEditorState> = {};
 
   for (const clipId of clipOrder) {
     const clip = document.clipsById[clipId];
@@ -55,29 +55,29 @@ export function createDefaultProjectWorkspace(
   };
 }
 
-export function createProjectState(
+export function createEditorSessionState(
   document: ProjectDocument,
-  workspace: ProjectWorkspaceState,
-): ProjectState {
+  workspace: PersistedEditorWorkspace,
+): EditorSessionState {
   return {
     ...document,
     workspace: { activeClipId: workspace.activeClipId },
   };
 }
 
-export function createStoredProjectState(
+export function createStoredEditorSessionState(
   stored: StoredProject,
-): ProjectState {
-  return createProjectState(stored.document, stored.workspace);
+): EditorSessionState {
+  return createEditorSessionState(stored.document, stored.workspace);
 }
 
-export function captureProjectWorkspace(
+export function capturePersistedEditorWorkspace(
   runtime: EditorRuntime,
   selectedInstrumentId: InstrumentId | null,
-): ProjectWorkspaceState {
+): PersistedEditorWorkspace {
   const document = runtime.projectStore.getState();
   const runtimeStates = runtime.captureClipEditorStates();
-  const clipStatesById: Record<ClipId, ProjectClipWorkspaceState> = {};
+  const clipStatesById: Record<ClipId, PersistedClipEditorState> = {};
 
   for (const clipId of getClipPlaybackOrder(document.clipHierarchy)) {
     const clip = document.clipsById[clipId];
@@ -102,9 +102,9 @@ export function captureProjectWorkspace(
   };
 }
 
-export function restoreProjectWorkspace(
+export function restorePersistedEditorWorkspace(
   runtime: EditorRuntime,
-  workspace: ProjectWorkspaceState,
+  workspace: PersistedEditorWorkspace,
 ): void {
   const states: Record<ClipId, ClipEditorRuntimeState> = {};
 

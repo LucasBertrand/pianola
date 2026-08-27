@@ -10,7 +10,7 @@ import type {
 } from "../../../domain/notes/note";
 import {
   getClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../../domain/project/project-document";
 import type {
   MovableTimeMapMarkerKind,
@@ -43,7 +43,7 @@ export class TimelineSelectionMoveError extends Error {
  * represented by SelectedTimeMapMarkerGroup and therefore remain untouched.
  */
 export function planSelectedMarkerMove(
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   groups: readonly SelectedTimeMapMarkerGroup[],
   deltaTicks: Tick,

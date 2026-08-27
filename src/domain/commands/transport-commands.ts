@@ -61,8 +61,8 @@ import {
   assertMeasureIndex,
   insertTimeIntoTransport,
   removeTimeFromTransport,
-  transformTracksForInsertedTime,
-  transformTracksForRemovedTime,
+  transformInstrumentTracksForInsertedTime,
+  transformInstrumentTracksForRemovedTime,
 } from "./active-clip-command-helpers";
 import {
   assertTransportWithinProjectDuration,
@@ -122,7 +122,7 @@ export function applyInsertMeasure(
 
   const insertionTick = isAppend ? referenceSpan.endTick : referenceSpan.startTick;
   const insertedTicks = (referenceSpan.endTick - referenceSpan.startTick) * command.count;
-  const tracksByInstrumentId = transformTracksForInsertedTime(
+  const tracksByInstrumentId = transformInstrumentTracksForInsertedTime(
     state,
     insertionTick,
     insertedTicks,
@@ -213,7 +213,7 @@ function applySingleMeasureRemoval(
 
   const removalStartTick = span.startTick;
   const removalEndTick = span.endTick;
-  const tracksByInstrumentId = transformTracksForRemovedTime(
+  const tracksByInstrumentId = transformInstrumentTracksForRemovedTime(
     state,
     removalStartTick,
     removalEndTick,

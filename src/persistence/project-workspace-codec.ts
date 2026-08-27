@@ -23,8 +23,8 @@ import {
   isTonalPatternId,
 } from "../music/pitch-snap";
 import type {
-  ProjectClipWorkspaceState,
-  ProjectWorkspaceState,
+  PersistedClipEditorState,
+  PersistedEditorWorkspace,
 } from "./project-persistence-model";
 import {
   ProjectPersistenceError,
@@ -37,11 +37,11 @@ import {
   readPersistenceString,
 } from "./persistence-codec-readers";
 
-export function parseProjectWorkspace(
+export function parsePersistedEditorWorkspace(
   source: unknown,
   document: ProjectDocument,
   path: string,
-): ProjectWorkspaceState {
+): PersistedEditorWorkspace {
   const workspace = readPersistenceRecord(source, path);
   const activeClipId = readPersistenceString(
     workspace["activeClipId"],
@@ -90,7 +90,7 @@ export function parseProjectWorkspace(
     );
   }
 
-  const clipStatesById: Record<ClipId, ProjectClipWorkspaceState> = {};
+  const clipStatesById: Record<ClipId, PersistedClipEditorState> = {};
 
   for (const clipId of clipOrder) {
     const clip = document.clipsById[clipId];

@@ -6,7 +6,7 @@ import {
   type ClipId,
   type NoteId,
 } from "../../domain/identifiers";
-import { type ProjectState } from "../../domain/project/project-document";
+import { type EditorSessionState } from "../../domain/project/project-document";
 import type {
   ProjectStorePort,
 } from "../../domain/project-store";
@@ -31,7 +31,7 @@ interface EditorSelectionHistoryEntry {
 
 /** Read-only project access exposed across the application boundary. */
 export interface ProjectStateReader {
-  getState(): ProjectState;
+  getState(): EditorSessionState;
 }
 
 /**
@@ -39,17 +39,17 @@ export interface ProjectStateReader {
  * to React components or pointer-input adapters.
  */
 export interface EditorCommandPort extends ProjectStateReader {
-  selectClip(clipId: ClipId): ProjectState;
-  replaceState(state: ProjectState, label?: string): ProjectState;
+  selectClip(clipId: ClipId): EditorSessionState;
+  replaceState(state: EditorSessionState, label?: string): EditorSessionState;
   canUndo(): boolean;
   canRedo(): boolean;
-  undo(): ProjectState;
-  redo(): ProjectState;
+  undo(): EditorSessionState;
+  redo(): EditorSessionState;
   dispatch(
     commands: readonly PianoRollCommand[],
     label: string,
     selectionAfter?: EditorSelectionHistoryTarget,
-  ): ProjectState | null;
+  ): EditorSessionState | null;
 }
 
 /**
@@ -67,18 +67,18 @@ export class EditorCommandService implements EditorCommandPort {
     private readonly selection: EditorSelection = new EditorSelection(),
   ) {}
 
-  public getState(): ProjectState {
+  public getState(): EditorSessionState {
     return this.projectStore.getState();
   }
 
-  public selectClip(clipId: ClipId): ProjectState {
+  public selectClip(clipId: ClipId): EditorSessionState {
     return this.projectStore.selectClip(clipId);
   }
 
   public replaceState(
-    state: ProjectState,
+    state: EditorSessionState,
     label?: string,
-  ): ProjectState {
+  ): EditorSessionState {
     this.pastSelectionEntries.length = 0;
     this.futureSelectionEntries.length = 0;
     this.selection.clear();
@@ -96,7 +96,7 @@ export class EditorCommandService implements EditorCommandPort {
     return this.projectStore.canRedo();
   }
 
-  public undo(): ProjectState {
+  public undo(): EditorSessionState {
     if (!this.projectStore.canUndo()) {
       return this.projectStore.getState();
     }
@@ -115,7 +115,7 @@ export class EditorCommandService implements EditorCommandPort {
     return state;
   }
 
-  public redo(): ProjectState {
+  public redo(): EditorSessionState {
     if (!this.projectStore.canRedo()) {
       return this.projectStore.getState();
     }
@@ -139,7 +139,7 @@ export class EditorCommandService implements EditorCommandPort {
     commands: readonly PianoRollCommand[],
     label: string,
     selectionAfter?: EditorSelectionHistoryTarget,
-  ): ProjectState | null {
+  ): EditorSessionState | null {
     if (commands.length === 0) {
       return null;
     }
@@ -178,7 +178,7 @@ export class EditorCommandService implements EditorCommandPort {
   }
 
   private captureSelection(
-    state: ProjectState,
+    state: EditorSessionState,
   ): EditorSelectionHistoryTarget {
     return {
       clipId: state.workspace.activeClipId,
@@ -188,7 +188,7 @@ export class EditorCommandService implements EditorCommandPort {
   }
 
   private restoreSelection(
-    state: ProjectState,
+    state: EditorSessionState,
     target: EditorSelectionHistoryTarget,
   ): void {
     if (target.clipId !== state.workspace.activeClipId) {

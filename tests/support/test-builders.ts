@@ -19,7 +19,7 @@ import {
 } from "../../src/domain/transport/transport";
 import {
   PROJECT_SCHEMA_VERSION,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../src/domain/project/project-document";
 import {
   type ClipId,
@@ -89,7 +89,7 @@ export function createTestProject({
   instrumentIds = [TEST_INSTRUMENT_ID],
   clips = [{ id: TEST_CLIP_ID }],
   activeClipId = clips[0]?.id ?? TEST_CLIP_ID,
-}: TestProjectOptions = {}): ProjectState {
+}: TestProjectOptions = {}): EditorSessionState {
   const projectInstrumentsById = Object.fromEntries(
     instrumentIds.map((instrumentId, instrumentIndex) => [
       instrumentId,

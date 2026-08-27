@@ -29,7 +29,7 @@ import {
 } from "../../domain/commands/command-errors";
 import {
   getActiveClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   getMeasureCount,
@@ -461,7 +461,7 @@ export function usePianoRollSelectionWorkflow({
     const markerGroupsAfterPaste = markerPlan.resultingMarkerGroups;
     const noteCommands = buildAddNoteCommands(activeClip.id, pastedNotes);
     const applyPastedSelection = (
-      nextState: ProjectState,
+      nextState: EditorSessionState,
       selectedNoteIds: readonly NoteId[],
     ): void => {
       selection.replaceFromIdentifiers(

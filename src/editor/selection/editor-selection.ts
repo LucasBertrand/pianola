@@ -7,7 +7,7 @@ import {
   type Tick,
 } from "../../domain/identifiers";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   getActiveClip,
@@ -243,7 +243,7 @@ export class EditorSelection {
 
   /** Rebuilds the selection from persistent identifiers after a transaction. */
   public replaceFromNoteIds(
-    state: ProjectState,
+    state: EditorSessionState,
     noteIds: readonly NoteId[],
     predicate?: NoteSelectionPredicate,
   ): void {
@@ -270,7 +270,7 @@ export class EditorSelection {
 
   /** Restores notes and movable time-map markers from history identifiers. */
   public replaceFromIdentifiers(
-    state: ProjectState,
+    state: EditorSessionState,
     noteIds: readonly NoteId[],
     markerGroups: readonly SelectedTimeMapMarkerGroup[],
     predicate?: NoteSelectionPredicate,
@@ -328,7 +328,7 @@ export class EditorSelection {
 
   /** Replaces stored note snapshots with their latest project revisions. */
   public reconcile(
-    state: ProjectState,
+    state: EditorSessionState,
     predicate?: NoteSelectionPredicate,
   ): void {
     let changed = false;
@@ -376,7 +376,7 @@ export class EditorSelection {
 
   /** Toggles every selectable note from one instrument as a single intention. */
   public toggleInstrument(
-    state: ProjectState,
+    state: EditorSessionState,
     instrumentId: InstrumentId,
     predicate?: NoteSelectionPredicate,
   ): boolean {
@@ -431,7 +431,7 @@ export class EditorSelection {
 
   /** Toggles a pitch lane across all selectable instruments. */
   public togglePitch(
-    state: ProjectState,
+    state: EditorSessionState,
     pitch: number,
     predicate?: NoteSelectionPredicate,
   ): boolean {

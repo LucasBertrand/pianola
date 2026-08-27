@@ -4,7 +4,7 @@ import {
 import {
   type NoteId,
 } from "../identifiers";
-import { assertValidNoteForTrack } from "../validation/note-validation";
+import { assertValidNoteForInstrumentTrack } from "../validation/note-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {
   RepositionNotesCommand,
@@ -13,20 +13,20 @@ import type {
 import {
   assertNoteWithinProject,
   notesOverlapInInstrument,
-  replaceTrack,
+  replaceInstrumentTrack,
 } from "./active-clip-command-helpers";
 import {
   assertNoteEditable,
   reject,
   requireNote,
-  requireTrack,
+  requireInstrumentTrack,
 } from "./command-context";
 
 export function applyRepositionNotes(
   state: ActiveClipProjectState,
   command: RepositionNotesCommand,
 ): ActiveClipProjectState {
-  const track = requireTrack(
+  const track = requireInstrumentTrack(
     state,
     command.trackInstrumentId,
     command.type,
@@ -68,7 +68,7 @@ export function applyRepositionNotes(
       pitch: change.pitch,
     };
 
-    assertValidNoteForTrack(updatedNote, track.instrumentId);
+    assertValidNoteForInstrumentTrack(updatedNote, track.instrumentId);
     assertNoteWithinProject(state, updatedNote, command.type);
     changedNoteIds.add(change.noteId);
     updatedNotes.push(updatedNote);
@@ -140,7 +140,7 @@ export function applyRepositionNotes(
     notesById[note.id] = note;
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });
@@ -150,7 +150,7 @@ export function applyResizeNotes(
   state: ActiveClipProjectState,
   command: ResizeNotesCommand,
 ): ActiveClipProjectState {
-  const track = requireTrack(state, command.trackInstrumentId, command.type);
+  const track = requireInstrumentTrack(state, command.trackInstrumentId, command.type);
   const changedNoteIds = new Set<NoteId>();
   const updatedNotes: Note[] = [];
 
@@ -171,7 +171,7 @@ export function applyResizeNotes(
       durationTicks: change.durationTicks,
     };
 
-    assertValidNoteForTrack(updatedNote, track.instrumentId);
+    assertValidNoteForInstrumentTrack(updatedNote, track.instrumentId);
     assertNoteWithinProject(state, updatedNote, command.type);
     changedNoteIds.add(change.noteId);
     updatedNotes.push(updatedNote);
@@ -236,7 +236,7 @@ export function applyResizeNotes(
     notesById[note.id] = note;
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });

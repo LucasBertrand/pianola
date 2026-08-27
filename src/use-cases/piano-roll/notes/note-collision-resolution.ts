@@ -6,7 +6,7 @@ import {
   type NoteId,
 } from "../../../domain/identifiers";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../../domain/project/project-document";
 import type {
   NoteEditIntent,
@@ -32,7 +32,7 @@ export interface NoteCollisionResolutionRequest
     resolution: PreparedNoteCollisionResolution,
   ) => void;
   readonly onResolved: (
-    state: ProjectState,
+    state: EditorSessionState,
     selectedNoteIds: readonly NoteId[],
   ) => void;
 }

@@ -11,7 +11,7 @@ import {
   type ProjectInstrument,
 } from "../../src/domain/instruments/instrument";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../src/domain/project/project-document";
 import {
   getActiveClip,
@@ -80,7 +80,7 @@ export function createMidiImportAnalysisFixture(
 }
 
 export function getProjectNotes(
-  state: ProjectState,
+  state: EditorSessionState,
   instrumentId: InstrumentId,
 ): Note[] {
   const track = getActiveClip(state).tracksByInstrumentId[instrumentId];
@@ -95,11 +95,11 @@ export function getProjectNotes(
     || left.id.localeCompare(right.id));
 }
 
-export function getActiveTestClip(state: ProjectState): Clip {
+export function getActiveTestClip(state: EditorSessionState): Clip {
   return getActiveClip(state);
 }
 
-export function normalizeProjectInstruments(state: ProjectState) {
+export function normalizeProjectInstruments(state: EditorSessionState) {
   return state.instrumentOrder.map((instrumentId) => {
     const projectInstrument = state.projectInstrumentsById[instrumentId];
 

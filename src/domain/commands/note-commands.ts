@@ -7,13 +7,13 @@ import {
 import {
   MAXIMUM_CLIP_NOTE_COUNT,
 } from "../notes/note";
-import { assertValidNoteForTrack } from "../validation/note-validation";
+import { assertValidNoteForInstrumentTrack } from "../validation/note-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type { AddNotesCommand, MoveNotesCommand } from "./command-types";
 import {
   assertNoteWithinProject,
   notesOverlapInInstrument,
-  replaceTrack,
+  replaceInstrumentTrack,
 } from "./active-clip-command-helpers";
 import {
   assertNoteEditable,
@@ -23,14 +23,14 @@ import {
   hasOwn,
   reject,
   requireNote,
-  requireTrack,
+  requireInstrumentTrack,
 } from "./command-context";
 
 export function applyAddNotes(
   state: ActiveClipProjectState,
   command: AddNotesCommand,
 ): ActiveClipProjectState {
-  const track = requireTrack(state, command.trackInstrumentId, command.type);
+  const track = requireInstrumentTrack(state, command.trackInstrumentId, command.type);
   const commandNoteIds = new Set<NoteId>();
   const acceptedNotes: Note[] = [];
 
@@ -46,7 +46,7 @@ export function applyAddNotes(
   }
 
   for (const note of command.notes) {
-    assertValidNoteForTrack(note, command.trackInstrumentId);
+    assertValidNoteForInstrumentTrack(note, command.trackInstrumentId);
     assertNoteWithinProject(state, note, command.type);
 
     if (commandNoteIds.has(note.id)) {
@@ -117,7 +117,7 @@ export function applyAddNotes(
     notesById[note.id] = note;
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });
@@ -138,12 +138,12 @@ export function applyMoveNotes(
     );
   }
 
-  const sourceTrack = requireTrack(
+  const sourceTrack = requireInstrumentTrack(
     state,
     command.sourceInstrumentId,
     command.type,
   );
-  const targetTrack = requireTrack(
+  const targetTrack = requireInstrumentTrack(
     state,
     command.targetInstrumentId,
     command.type,
@@ -162,7 +162,7 @@ export function applyMoveNotes(
       instrumentId: command.targetInstrumentId,
     };
 
-    assertValidNoteForTrack(movedNote, command.targetInstrumentId);
+    assertValidNoteForInstrumentTrack(movedNote, command.targetInstrumentId);
     assertNoteWithinProject(state, movedNote, command.type);
 
     if (
@@ -253,7 +253,7 @@ export function applyMoveNotes(
       notesById[note.id] = note;
     }
 
-    return replaceTrack(state, {
+    return replaceInstrumentTrack(state, {
       ...sourceTrack,
       notesById,
     });

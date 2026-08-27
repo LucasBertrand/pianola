@@ -8,7 +8,7 @@ import type {
   InstrumentId,
 } from "../../domain/identifiers";
 import type {
-  ProjectState,
+  EditorSessionState,
 } from "../../domain/project/project-document";
 import type {
   EditorRuntime,
@@ -21,7 +21,7 @@ import type {
 } from "../../editor/interactions/piano-roll-controller-port";
 
 export interface PianoRollProjectState {
-  readonly project: ProjectState;
+  readonly project: EditorSessionState;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly selectionAvailable: boolean;
   readonly selectedNotes: readonly Note[];

@@ -6,7 +6,7 @@ import {
 } from "react";
 import {
   getClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   type ClipId,
@@ -569,7 +569,7 @@ export function useAudioPlayback(
 }
 
 function normalizePlayheadPosition(
-  state: ProjectState,
+  state: EditorSessionState,
   position: PlayheadPosition,
 ): PlayheadPosition {
   const clip = state.clipsById[position.clipId]
@@ -586,8 +586,8 @@ function clampTick(tick: Tick, durationTicks: Tick): Tick {
 }
 
 function didPlaybackStateChange(
-  state: ProjectState,
-  previousState: ProjectState,
+  state: EditorSessionState,
+  previousState: EditorSessionState,
   clipId: ClipId,
 ): boolean {
   const clip = state.clipsById[clipId];
@@ -644,7 +644,7 @@ function didPlaybackStateChange(
 
 function replaceTransportClip(
   transport: AudioWorkletTransport,
-  state: ProjectState,
+  state: EditorSessionState,
   clipId: ClipId,
   positionTickOverride?: Tick,
 ): void {
@@ -662,7 +662,7 @@ function replaceTransportClip(
 
 function synchronizeAutoAdvanceQueue(
   transport: AudioWorkletTransport,
-  state: ProjectState,
+  state: EditorSessionState,
   currentClipId: ClipId,
   queuedClipIdRef: { current: ClipId | null },
 ): void {

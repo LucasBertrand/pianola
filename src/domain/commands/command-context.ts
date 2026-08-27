@@ -1,4 +1,4 @@
-import { type Track } from "../clips/clip";
+import { type InstrumentTrack } from "../clips/clip";
 import {
   type InstrumentId,
   type NoteId,
@@ -11,7 +11,7 @@ import {
   type ProjectInstrument,
 } from "../instruments/instrument";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../project/project-document";
 import {
   type TransportState,
@@ -23,7 +23,7 @@ import type { CommandErrorCode } from "./command-errors";
 import type { PianoRollCommand } from "./command-types";
 
 export function requireProjectInstrument(
-  state: Pick<ProjectState, "projectInstrumentsById">,
+  state: Pick<EditorSessionState, "projectInstrumentsById">,
   instrumentId: InstrumentId,
   commandType: PianoRollCommand["type"],
 ): ProjectInstrument {
@@ -40,17 +40,17 @@ export function requireProjectInstrument(
   return instrument;
 }
 
-export function requireTrack(
+export function requireInstrumentTrack(
   state: ActiveClipProjectState,
   instrumentId: InstrumentId,
   commandType: PianoRollCommand["type"],
-): Track {
+): InstrumentTrack {
   const track = state.tracksByInstrumentId[instrumentId];
 
   if (track === undefined) {
     reject(
       "TRACK_NOT_FOUND",
-      `Track "${instrumentId}" does not exist.`,
+      `Instrument track "${instrumentId}" does not exist.`,
       commandType,
     );
   }
@@ -72,7 +72,7 @@ export function assertNoteEditable(
 }
 
 export function requireNote(
-  track: Track,
+  track: InstrumentTrack,
   noteId: NoteId,
   commandType: PianoRollCommand["type"],
 ): Note {

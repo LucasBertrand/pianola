@@ -16,7 +16,7 @@ import {
   DIRECT_STORED_PROJECT_CODEC,
 } from "../../../project-io/local/direct-stored-project-codec";
 import {
-  createDefaultProjectWorkspace,
+  createDefaultPersistedEditorWorkspace,
 } from "../project-workspace";
 import {
   ProjectAutosave,
@@ -34,7 +34,7 @@ describe("project autosave", () => {
       revision: 0,
       updatedAt: "2026-08-22T09:00:00.000Z",
       document: initial,
-      workspace: createDefaultProjectWorkspace(initial),
+      workspace: createDefaultPersistedEditorWorkspace(initial),
     }, null);
     const store = new ProjectStore(initial);
     let time = 0;
@@ -45,7 +45,7 @@ describe("project autosave", () => {
       scheduler: NOOP_SCHEDULER,
       capture: () => ({
         document: store.getState(),
-        workspace: createDefaultProjectWorkspace(store.getState()),
+        workspace: createDefaultPersistedEditorWorkspace(store.getState()),
       }),
       now: () => `2026-08-22T09:00:0${++time}.000Z`,
     });
@@ -83,7 +83,7 @@ describe("project autosave", () => {
       revision: 0,
       updatedAt: "2026-08-22T09:00:00.000Z",
       document: initial,
-      workspace: createDefaultProjectWorkspace(initial),
+      workspace: createDefaultPersistedEditorWorkspace(initial),
     }, null);
     let title = "First";
     const autosave = new ProjectAutosave({
@@ -93,7 +93,7 @@ describe("project autosave", () => {
       scheduler: NOOP_SCHEDULER,
       capture: () => ({
         document: { ...initial, title },
-        workspace: createDefaultProjectWorkspace(initial),
+        workspace: createDefaultPersistedEditorWorkspace(initial),
       }),
       now: () => new Date().toISOString(),
     });

@@ -9,7 +9,7 @@ import {
   getClipPlaybackOrder,
 } from "../../domain/clips/clip-hierarchy";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
@@ -42,7 +42,7 @@ NativeProjectFileMetadata {
 }
 
 export function createDefaultNativeEditorState(
-  projectState: ProjectState,
+  projectState: EditorSessionState,
 ): NativeEditorState {
   const clipStatesById: Record<ClipId, NativeClipEditorState> = {};
   const defaultViewport = {

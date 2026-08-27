@@ -15,7 +15,7 @@ import {
   readPersistenceString,
 } from "../../persistence/persistence-codec-readers";
 import {
-  parseProjectWorkspace,
+  parsePersistedEditorWorkspace,
 } from "../../persistence/project-workspace-codec";
 import {
   parseProjectSnapshot,
@@ -89,7 +89,7 @@ export function parsePortableProject(serialized: string): PortableProject {
       "$.exportedAt",
     ),
     document,
-    workspace: parseProjectWorkspace(
+    workspace: parsePersistedEditorWorkspace(
       source["workspace"],
       document,
       "$.workspace",

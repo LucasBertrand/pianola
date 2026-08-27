@@ -13,43 +13,43 @@ import {
 } from "./clips/clip-hierarchy";
 import {
   type ProjectDocument,
-  type ProjectState,
+  type EditorSessionState,
 } from "./project/project-document";
 
 export type ProjectStoreListener = (
-  state: ProjectState,
-  previousState: ProjectState,
+  state: EditorSessionState,
+  previousState: EditorSessionState,
   transaction: Transaction,
 ) => void;
 
 export interface ProjectStorePort {
-  getState(): ProjectState;
-  dispatch(transaction: Transaction): ProjectState;
-  selectClip(clipId: ClipId): ProjectState;
-  replaceState(state: ProjectState, label?: string): ProjectState;
+  getState(): EditorSessionState;
+  dispatch(transaction: Transaction): EditorSessionState;
+  selectClip(clipId: ClipId): EditorSessionState;
+  replaceState(state: EditorSessionState, label?: string): EditorSessionState;
   canUndo(): boolean;
   canRedo(): boolean;
-  undo(): ProjectState;
-  redo(): ProjectState;
+  undo(): EditorSessionState;
+  redo(): EditorSessionState;
   subscribe(listener: ProjectStoreListener): () => void;
 }
 
 export class ProjectStore implements ProjectStorePort {
-  private currentState: ProjectState;
+  private currentState: EditorSessionState;
   private readonly pastDocuments: ProjectDocument[] = [];
   private readonly futureDocuments: ProjectDocument[] = [];
   private readonly listeners = new Set<ProjectStoreListener>();
   private historySequence = 0;
 
-  public constructor(initialState: ProjectState) {
+  public constructor(initialState: EditorSessionState) {
     this.currentState = initialState;
   }
 
-  public getState(): ProjectState {
+  public getState(): EditorSessionState {
     return this.currentState;
   }
 
-  public dispatch(transaction: Transaction): ProjectState {
+  public dispatch(transaction: Transaction): EditorSessionState {
     const previousState = this.currentState;
     const nextState = projectReducer(previousState, transaction);
 
@@ -73,7 +73,7 @@ export class ProjectStore implements ProjectStorePort {
     return this.currentState;
   }
 
-  public selectClip(clipId: ClipId): ProjectState {
+  public selectClip(clipId: ClipId): EditorSessionState {
     if (
       this.currentState.clipsById[clipId] === undefined
       || this.currentState.workspace.activeClipId === clipId
@@ -95,9 +95,9 @@ export class ProjectStore implements ProjectStorePort {
   }
 
   public replaceState(
-    state: ProjectState,
+    state: EditorSessionState,
     label = "Replace project",
-  ): ProjectState {
+  ): EditorSessionState {
     const previousState = this.currentState;
 
     this.pastDocuments.length = 0;
@@ -123,7 +123,7 @@ export class ProjectStore implements ProjectStorePort {
     return this.futureDocuments.length > 0;
   }
 
-  public undo(): ProjectState {
+  public undo(): EditorSessionState {
     const previousSnapshot = this.pastDocuments.pop();
 
     if (previousSnapshot === undefined) {
@@ -146,7 +146,7 @@ export class ProjectStore implements ProjectStorePort {
     return this.currentState;
   }
 
-  public redo(): ProjectState {
+  public redo(): EditorSessionState {
     const nextSnapshot = this.futureDocuments.pop();
 
     if (nextSnapshot === undefined) {
@@ -199,8 +199,8 @@ export class ProjectStore implements ProjectStorePort {
   }
 
   private notify(
-    state: ProjectState,
-    previousState: ProjectState,
+    state: EditorSessionState,
+    previousState: EditorSessionState,
     transaction: Transaction,
   ): void {
     for (const listener of this.listeners) {
@@ -209,15 +209,15 @@ export class ProjectStore implements ProjectStorePort {
   }
 }
 
-function toProjectDocument(state: ProjectState): ProjectDocument {
+function toProjectDocument(state: EditorSessionState): ProjectDocument {
   const { workspace: _workspace, ...projectDocument } = state;
   return projectDocument;
 }
 
 function preserveWorkspace(
-  snapshot: ProjectState,
-  currentState: ProjectState,
-): ProjectState {
+  snapshot: EditorSessionState,
+  currentState: EditorSessionState,
+): EditorSessionState {
   return {
     ...snapshot,
     workspace: resolveWorkspace(snapshot, currentState),
@@ -226,8 +226,8 @@ function preserveWorkspace(
 
 function resolveWorkspace(
   projectDocument: ProjectDocument,
-  currentState: ProjectState,
-): ProjectState["workspace"] {
+  currentState: EditorSessionState,
+): EditorSessionState["workspace"] {
   if (
     projectDocument.clipsById[currentState.workspace.activeClipId]
       !== undefined

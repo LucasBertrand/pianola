@@ -17,17 +17,17 @@ export const STORED_PROJECT_FORMAT =
 export const STORED_PROJECT_SCHEMA_VERSION = 2;
 
 /** Navigation state for one clip, expressed without CSS pixel offsets. */
-export interface ProjectClipWorkspaceState {
+export interface PersistedClipEditorState {
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly gridSettings: GridSettings;
 }
 
 /** Project-scoped editing context. It is persisted but never enters history. */
-export interface ProjectWorkspaceState {
+export interface PersistedEditorWorkspace {
   readonly activeClipId: ClipId;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly clipStatesById: Readonly<
-    Record<ClipId, ProjectClipWorkspaceState>
+    Record<ClipId, PersistedClipEditorState>
   >;
 }
 
@@ -37,7 +37,7 @@ export interface StoredProject {
   readonly revision: number;
   readonly updatedAt: string;
   readonly document: ProjectDocument;
-  readonly workspace: ProjectWorkspaceState;
+  readonly workspace: PersistedEditorWorkspace;
 }
 
 export interface ProjectSummary {

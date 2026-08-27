@@ -2,11 +2,11 @@ import {
   type Clip,
 } from "../clips/clip";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../project/project-document";
 
 export type ActiveClipProjectState = Pick<
-  ProjectState,
+  EditorSessionState,
   "projectInstrumentsById" | "instrumentOrder" | "clock"
 > & Pick<
   Clip,

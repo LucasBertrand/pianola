@@ -20,7 +20,7 @@ import {
 } from "../../domain/master-bus";
 import {
   PROJECT_SCHEMA_VERSION,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   createDefaultProjectClock,
@@ -28,7 +28,7 @@ import {
 } from "../../domain/transport/transport";
 
 /** Creates an empty project with one clip and no instruments or notes. */
-export function createBlankProjectState(): ProjectState {
+export function createBlankEditorSessionState(): EditorSessionState {
   const clipId = "clip-main";
   const clock = createDefaultProjectClock();
   const clip: Clip = {

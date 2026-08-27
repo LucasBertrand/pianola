@@ -20,7 +20,7 @@ import {
   type ClipHierarchyNodeIdentity,
 } from "../../../domain/clips/clip-hierarchy";
 import type { ClipGroupId, ClipId } from "../../../domain/identifiers";
-import type { ProjectState } from "../../../domain/project/project-document";
+import type { EditorSessionState } from "../../../domain/project/project-document";
 import type { ReadonlyRenderSignal } from "../../../editor/model/render-signal";
 import type { PlayheadPosition } from "../../../editor/model/playhead-position";
 import { RENDERING_CONSTANTS } from "../../../config/rendering-config";
@@ -36,7 +36,7 @@ import { resolveClipGroupPlaybackAction } from "./clip-group-playback";
 import { useClipHierarchyReorder } from "./useClipHierarchyReorder";
 
 export interface ClipInspectorProps {
-  readonly projectState: ProjectState;
+  readonly projectState: EditorSessionState;
   readonly playingClipId: ClipId | null;
   readonly playheadPosition: ReadonlyRenderSignal<PlayheadPosition>;
   readonly suppressSelectionHighlight: boolean;
@@ -361,7 +361,7 @@ export function ClipInspector(props: ClipInspectorProps): React.JSX.Element {
 interface HierarchyListProps {
   readonly nodes: readonly ClipHierarchyNode[];
   readonly parentGroupId: ClipGroupId | null;
-  readonly projectState: ProjectState;
+  readonly projectState: EditorSessionState;
   readonly clipCount: number;
   readonly groupCount: number;
   readonly bypassControlsDisabled: boolean;

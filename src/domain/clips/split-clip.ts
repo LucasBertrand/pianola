@@ -22,7 +22,7 @@ import { assertValidClipTimeline } from "../validation/transport-validation";
 import {
   MAXIMUM_CLIP_NAME_LENGTH,
   type Clip,
-  type Track,
+  type InstrumentTrack,
 } from "./clip";
 
 export type ClipSplitStrategy =
@@ -181,7 +181,7 @@ function createSegmentClip(
   const durationTicks = segment.endTick - segment.startTick;
   const tracksByInstrumentId: Record<
     InstrumentId,
-    Track & { notesById: Record<NoteId, Note> }
+    InstrumentTrack & { notesById: Record<NoteId, Note> }
   > = {};
 
   for (const [instrumentId, sourceTrack] of Object.entries(

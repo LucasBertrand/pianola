@@ -3,7 +3,7 @@ import { PROJECT_CONSTANTS } from "../../config/domain-limits";
 import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
 import {
   type Clip,
-  type Track,
+  type InstrumentTrack,
   DEFAULT_CLIP_COLOR,
 } from "../../domain/clips/clip";
 import {
@@ -20,7 +20,7 @@ import {
   type ProjectInstrument,
 } from "../../domain/instruments/instrument";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   createDefaultMasterBusState,
@@ -42,7 +42,7 @@ import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
 } from "../../domain/instrument-presets";
-import { assertValidTrack } from "../../domain/validation/note-validation";
+import { assertValidInstrumentTrack } from "../../domain/validation/note-validation";
 import { assertValidProjectInstrument } from "../../domain/validation/instrument-validation";
 import {
   assertValidClipTimeline,
@@ -63,7 +63,7 @@ import type {
 export function createProjectFromMidiImport(
   analysis: MidiImportAnalysis,
   strategy: MidiImportCollisionStrategy,
-): ProjectState {
+): EditorSessionState {
   if (strategy !== "merge" && strategy !== "slice") {
     throw new MidiImportError(
       "The MIDI collision strategy is invalid.",
@@ -75,7 +75,7 @@ export function createProjectFromMidiImport(
       ? analysis.instrumentCandidates
       : [createEmptyInstrumentCandidate()];
   const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
-  const tracksByInstrumentId: Record<InstrumentId, Track> = {};
+  const tracksByInstrumentId: Record<InstrumentId, InstrumentTrack> = {};
   const mutableTracks: Record<
     InstrumentId,
     {
@@ -197,7 +197,7 @@ export function createProjectFromMidiImport(
     },
   };
   const presetLibrary = createDefaultInstrumentPresetLibrary();
-  const projectState: ProjectState = {
+  const projectState: EditorSessionState = {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
     title: analysis.title,
@@ -236,7 +236,7 @@ function createEmptyInstrumentCandidate(): MidiImportInstrumentCandidate {
   };
 }
 
-function assertImportedProjectState(state: ProjectState): void {
+function assertImportedProjectState(state: EditorSessionState): void {
   const clipId = getClipPlaybackOrder(state.clipHierarchy)[0];
 
   if (clipId === undefined) {
@@ -286,7 +286,7 @@ function assertImportedProjectState(state: ProjectState): void {
     }
 
     assertValidProjectInstrument(instrument);
-    assertValidTrack(track);
+    assertValidInstrumentTrack(track);
 
     const notesByPitch = new Map<number, Note[]>();
 

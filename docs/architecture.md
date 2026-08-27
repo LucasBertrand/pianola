@@ -174,7 +174,7 @@ audio et n’envoie aucun événement par note. Une charge React ou Canvas peut
 retarder l’affichage du playhead, jamais la lecture.
 
 `EditorRuntime.playheadPosition` est l’unique position de lecture et contient le
-clip ainsi que son tick. `WorkspaceState.activeClipId` reste une sélection
+clip ainsi que son tick. `ActiveClipSelection.activeClipId` reste une sélection
 d’édition indépendante. Une fin naturelle déplace ce playhead selon l’ordre
 visible et charge le prochain clip non bypassé qui n’a aucun groupe parent
 bypassé ; la boucle du clip courant reste prioritaire et le dernier clip

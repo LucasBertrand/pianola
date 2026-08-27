@@ -7,7 +7,7 @@ import {
   createTestProject,
 } from "../../../../tests/support/test-builders";
 import {
-  createDefaultProjectWorkspace,
+  createDefaultPersistedEditorWorkspace,
 } from "../project-workspace";
 import {
   createStoredProjectClone,
@@ -21,7 +21,7 @@ describe("stored project cloning", () => {
       revision: 8,
       updatedAt: "2026-08-22T12:00:00.000Z",
       document,
-      workspace: createDefaultProjectWorkspace(document),
+      workspace: createDefaultPersistedEditorWorkspace(document),
     };
 
     const clone = createStoredProjectClone(

@@ -11,7 +11,7 @@ import {
   serializePortableProject,
 } from "../../project-io/portable/portable-project-codec";
 import {
-  createDefaultProjectWorkspace,
+  createDefaultPersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";
 import {
   InMemoryProjectRepository,
@@ -60,7 +60,7 @@ describe("persistence codecs", () => {
       sourceDocumentId: "portable-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
-      workspace: createDefaultProjectWorkspace(document),
+      workspace: createDefaultPersistedEditorWorkspace(document),
     });
 
     expect(parsePortableProject(serialized)).toMatchObject({
@@ -98,7 +98,7 @@ describe("persistence codecs", () => {
       sourceDocumentId: "portable-personal-preset",
       exportedAt: "2026-08-24T12:00:00.000Z",
       document: withPreset,
-      workspace: createDefaultProjectWorkspace(withPreset),
+      workspace: createDefaultPersistedEditorWorkspace(withPreset),
     });
 
     expect(parsePortableProject(serialized)
@@ -111,7 +111,7 @@ describe("persistence codecs", () => {
       sourceDocumentId: "portable-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
-      workspace: createDefaultProjectWorkspace(document),
+      workspace: createDefaultPersistedEditorWorkspace(document),
     });
     const source = JSON.parse(serialized) as Record<string, unknown>;
     source["schemaVersion"] = 999;
@@ -126,7 +126,7 @@ describe("persistence codecs", () => {
       sourceDocumentId: "portable-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
-      workspace: createDefaultProjectWorkspace(document),
+      workspace: createDefaultPersistedEditorWorkspace(document),
     });
     const legacy = JSON.parse(serialized) as {
       schemaVersion: number;

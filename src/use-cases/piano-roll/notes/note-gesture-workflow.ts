@@ -10,7 +10,7 @@ import {
   type ClipId,
 } from "../../../domain/identifiers";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../../domain/project/project-document";
 import {
   getActiveClip,
@@ -212,7 +212,7 @@ export class NoteGestureWorkflow {
       return "unchanged";
     }
 
-    let nextState: ProjectState | null;
+    let nextState: EditorSessionState | null;
 
     try {
       const clipId = getActiveClip(this.commands.getState()).id;
@@ -321,7 +321,7 @@ export class NoteGestureWorkflow {
       return "collision";
     }
 
-    let nextState: ProjectState | null;
+    let nextState: EditorSessionState | null;
 
     try {
       nextState = this.commands.dispatch(
@@ -387,7 +387,7 @@ export class NoteGestureWorkflow {
               ? options.proposedNotes
               : this.selection.notes,
           );
-        let nextState: ProjectState | null;
+        let nextState: EditorSessionState | null;
 
         try {
           nextState = this.commands.dispatch(

@@ -16,7 +16,7 @@ import type {
 } from "../../editor/model/render-signal";
 import {
   getActiveClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   MasterGainControl,
@@ -47,7 +47,7 @@ import {
 } from "./editor-context-format";
 
 export interface EditorHeaderProps {
-  readonly projectState: ProjectState;
+  readonly projectState: EditorSessionState;
   readonly loopDragPreview: ReadonlyRenderSignal<LoopRegion | null>;
   readonly selectedNotes: readonly Note[];
   readonly selectedMarkerCount: number;

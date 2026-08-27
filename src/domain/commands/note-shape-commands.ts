@@ -7,7 +7,7 @@ import {
 import {
   MAXIMUM_CLIP_NOTE_COUNT,
 } from "../notes/note";
-import { assertValidNoteForTrack } from "../validation/note-validation";
+import { assertValidNoteForInstrumentTrack } from "../validation/note-validation";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import type {
   SliceNotesCommand,
@@ -16,7 +16,7 @@ import type {
 import {
   assertNoteWithinProject,
   notesOverlapInInstrument,
-  replaceTrack,
+  replaceInstrumentTrack,
 } from "./active-clip-command-helpers";
 import {
   assertNoteEditable,
@@ -24,14 +24,14 @@ import {
   findNoteInstrumentId,
   reject,
   requireNote,
-  requireTrack,
+  requireInstrumentTrack,
 } from "./command-context";
 
 export function applyTransformNotes(
   state: ActiveClipProjectState,
   command: TransformNotesCommand,
 ): ActiveClipProjectState {
-  const track = requireTrack(state, command.trackInstrumentId, command.type);
+  const track = requireInstrumentTrack(state, command.trackInstrumentId, command.type);
   const changedNoteIds = new Set<NoteId>();
   const updatedNotes: Note[] = [];
   let hasChanges = false;
@@ -66,7 +66,7 @@ export function applyTransformNotes(
       pitch: change.pitch,
     };
 
-    assertValidNoteForTrack(updatedNote, track.instrumentId);
+    assertValidNoteForInstrumentTrack(updatedNote, track.instrumentId);
     assertNoteWithinProject(state, updatedNote, command.type);
     changedNoteIds.add(change.noteId);
     updatedNotes.push(updatedNote);
@@ -139,7 +139,7 @@ export function applyTransformNotes(
     notesById[note.id] = note;
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });
@@ -149,7 +149,7 @@ export function applySliceNotes(
   state: ActiveClipProjectState,
   command: SliceNotesCommand,
 ): ActiveClipProjectState {
-  const track = requireTrack(state, command.trackInstrumentId, command.type);
+  const track = requireInstrumentTrack(state, command.trackInstrumentId, command.type);
 
   if (!Number.isSafeInteger(command.sliceTick)) {
     reject(
@@ -222,8 +222,8 @@ export function applySliceNotes(
       durationTicks: noteEndTick - command.sliceTick,
     };
 
-    assertValidNoteForTrack(leftNote, track.instrumentId);
-    assertValidNoteForTrack(rightNote, track.instrumentId);
+    assertValidNoteForInstrumentTrack(leftNote, track.instrumentId);
+    assertValidNoteForInstrumentTrack(rightNote, track.instrumentId);
     sourceNoteIds.add(slice.noteId);
     rightNoteIds.add(slice.rightNoteId);
     leftNotes.push(leftNote);
@@ -252,7 +252,7 @@ export function applySliceNotes(
     }
   }
 
-  return replaceTrack(state, {
+  return replaceInstrumentTrack(state, {
     ...track,
     notesById,
   });

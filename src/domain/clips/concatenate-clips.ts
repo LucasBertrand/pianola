@@ -17,7 +17,7 @@ import {
 } from "../validation/transport-validation";
 import type {
   Clip,
-  Track,
+  InstrumentTrack,
 } from "./clip";
 
 export interface ConcatenatedNoteSource {
@@ -74,7 +74,7 @@ export function concatenateClips(
     }
   }
 
-  const tracksByInstrumentId = createEmptyTracks(instrumentIds);
+  const tracksByInstrumentId = createEmptyInstrumentTracks(instrumentIds);
   const meterMarkers = [];
   const tempoMarkers = [];
   const scaleMarkers = [];
@@ -208,12 +208,12 @@ function assertCompatibleInstrumentIds(
   }
 }
 
-function createEmptyTracks(
+function createEmptyInstrumentTracks(
   instrumentIds: readonly InstrumentId[],
-): Record<InstrumentId, Track & { notesById: Record<NoteId, Note> }> {
+): Record<InstrumentId, InstrumentTrack & { notesById: Record<NoteId, Note> }> {
   const tracks: Record<
     InstrumentId,
-    Track & { notesById: Record<NoteId, Note> }
+    InstrumentTrack & { notesById: Record<NoteId, Note> }
   > = {};
 
   for (const instrumentId of instrumentIds) {

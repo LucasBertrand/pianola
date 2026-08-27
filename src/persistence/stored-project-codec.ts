@@ -22,7 +22,7 @@ import {
   readPersistenceString,
 } from "./persistence-codec-readers";
 import {
-  parseProjectWorkspace,
+  parsePersistedEditorWorkspace,
 } from "./project-workspace-codec";
 
 export type ParseProjectDocument = (
@@ -115,7 +115,7 @@ export function parseStoredProject(
       "$.updatedAt",
     ),
     document,
-    workspace: parseProjectWorkspace(
+    workspace: parsePersistedEditorWorkspace(
       source["workspace"],
       document,
       "$.workspace",

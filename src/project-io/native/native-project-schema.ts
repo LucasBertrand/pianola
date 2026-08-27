@@ -3,7 +3,7 @@ import {
   type InstrumentId,
 } from "../../domain/identifiers";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import type { ViewportState } from "../../editor/geometry/converter";
 import type { GridSettings } from "../../editor/model/grid-settings";
@@ -66,6 +66,6 @@ export interface NativeEditorState {
 
 export interface LoadedNativeProject {
   readonly metadata: NativeProjectFileMetadata;
-  readonly projectState: ProjectState;
+  readonly projectState: EditorSessionState;
   readonly editorState: NativeEditorState;
 }

@@ -4,7 +4,7 @@ import {
   DEFAULT_CLIP_BYPASS_ENABLED,
   type Clip,
   type ClipTimeline,
-  type Track,
+  type InstrumentTrack,
   DEFAULT_CLIP_COLOR,
 } from "../../../domain/clips/clip";
 import {
@@ -38,7 +38,7 @@ import {
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
 } from "../../../domain/identifiers";
-import { validateNoteForTrack } from "../../../domain/validation/note-validation";
+import { validateNoteForInstrumentTrack } from "../../../domain/validation/note-validation";
 import {
   validateClipTimeline,
   validateTransportState,
@@ -564,12 +564,12 @@ function parseTracks(
   schemaVersion: number,
   legacyLockedInstrumentIds: ReadonlySet<InstrumentId>,
   path: string,
-): Readonly<Record<InstrumentId, Track>> {
+): Readonly<Record<InstrumentId, InstrumentTrack>> {
   const sourceTracks = readRecord(source, path);
 
   assertExactRecordKeys(sourceTracks, instrumentOrder, path);
   const tracksByInstrumentId =
-    Object.create(null) as Record<InstrumentId, Track>;
+    Object.create(null) as Record<InstrumentId, InstrumentTrack>;
   const globalNoteIds = new Set<NoteId>();
   let totalNoteCount = 0;
 
@@ -596,7 +596,7 @@ function parseTracks(
       fail(
         "INVALID_DATA",
         `${trackPath}.instrumentId`,
-        `Track instrument ID "${trackInstrumentId}" must match "${instrumentId}".`,
+        `Instrument track ID "${trackInstrumentId}" must match "${instrumentId}".`,
       );
     }
 
@@ -693,7 +693,7 @@ function parseNotes(
       );
     }
 
-    const validation = validateNoteForTrack(note, instrumentId);
+    const validation = validateNoteForInstrumentTrack(note, instrumentId);
 
     if (!validation.valid) {
       fail(

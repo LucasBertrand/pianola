@@ -20,7 +20,7 @@ import {
   type ProjectSaveStatus,
 } from "../../use-cases/persistence/project-autosave";
 import {
-  captureProjectWorkspace,
+  capturePersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";
 
 export interface ProjectAutosaveSession {
@@ -48,7 +48,7 @@ export function useProjectAutosave(
       scheduler: BROWSER_AUTOSAVE_SCHEDULER,
       capture: () => ({
         document: runtime.projectStore.getState(),
-        workspace: captureProjectWorkspace(
+        workspace: capturePersistedEditorWorkspace(
           runtime,
           selectedInstrumentRef.current,
         ),

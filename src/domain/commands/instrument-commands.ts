@@ -1,6 +1,6 @@
 import {
   type Clip,
-  type Track,
+  type InstrumentTrack,
 } from "../clips/clip";
 import {
   getClipPlaybackOrder,
@@ -14,7 +14,7 @@ import {
   type ProjectInstrument,
 } from "../instruments/instrument";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../project/project-document";
 import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
@@ -40,9 +40,9 @@ import {
 } from "./command-context";
 
 export function applyAddProjectInstrument(
-  state: ProjectState,
+  state: EditorSessionState,
   command: AddProjectInstrumentCommand,
-): ProjectState {
+): EditorSessionState {
   assertValidProjectInstrument(command.instrument);
   if (state.instrumentOrder.length >= MAXIMUM_PROJECT_INSTRUMENT_COUNT) {
     reject(
@@ -60,7 +60,7 @@ export function applyAddProjectInstrument(
     );
   }
 
-  const track: Track = {
+  const track: InstrumentTrack = {
     instrumentId: command.instrument.id,
     notesById: {},
   };
@@ -76,7 +76,7 @@ export function applyAddProjectInstrument(
     if (hasOwn(clip.tracksByInstrumentId, command.instrument.id)) {
       reject(
         "TRACK_ALREADY_EXISTS",
-        `Track "${command.instrument.id}" already exists in clip "${clip.id}".`,
+        `Instrument track "${command.instrument.id}" already exists in clip "${clip.id}".`,
         command.type,
       );
     }
@@ -102,9 +102,9 @@ export function applyAddProjectInstrument(
 }
 
 export function applyUpdateProjectInstrument(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UpdateProjectInstrumentCommand,
-): ProjectState {
+): EditorSessionState {
   const instrument = requireProjectInstrument(state, command.instrumentId, command.type);
   const updatedInstrument: ProjectInstrument = {
     ...instrument,
@@ -135,9 +135,9 @@ export function applyUpdateProjectInstrument(
 }
 
 export function applyDeleteProjectInstrument(
-  state: ProjectState,
+  state: EditorSessionState,
   command: DeleteProjectInstrumentCommand,
-): ProjectState {
+): EditorSessionState {
   requireProjectInstrument(state, command.instrumentId, command.type);
 
   const projectInstrumentsById = omitRecordKey(state.projectInstrumentsById, command.instrumentId);
@@ -168,9 +168,9 @@ export function applyDeleteProjectInstrument(
 }
 
 export function applyReorderProjectInstruments(
-  state: ProjectState,
+  state: EditorSessionState,
   command: ReorderProjectInstrumentsCommand,
-): ProjectState {
+): EditorSessionState {
   const currentIds = new Set(state.instrumentOrder);
   const requestedIds = new Set(command.instrumentOrder);
 
@@ -201,9 +201,9 @@ export function applyReorderProjectInstruments(
 }
 
 export function applySaveInstrumentPreset(
-  state: ProjectState,
+  state: EditorSessionState,
   command: SaveInstrumentPresetCommand,
-): ProjectState {
+): EditorSessionState {
   const validation = validateInstrumentPreset(command.preset);
 
   if (!validation.valid) {
@@ -249,9 +249,9 @@ export function applySaveInstrumentPreset(
 }
 
 export function applyDeleteInstrumentPreset(
-  state: ProjectState,
+  state: EditorSessionState,
   command: DeleteInstrumentPresetCommand,
-): ProjectState {
+): EditorSessionState {
   requireInstrumentPreset(state, command.presetId, command.type);
 
   if (state.instrumentPresetOrder.length <= 1) {
@@ -275,7 +275,7 @@ export function applyDeleteInstrumentPreset(
 }
 
 function requireInstrumentPreset(
-  state: ProjectState,
+  state: EditorSessionState,
   presetId: PresetId,
   commandType: PianoRollCommand["type"],
 ): InstrumentPreset {

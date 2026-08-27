@@ -24,7 +24,7 @@ import {
   MAXIMUM_CLIP_NAME_LENGTH,
   type ClipCreationSettings,
   type Clip,
-  type Track,
+  type InstrumentTrack,
 } from "../../../domain/clips/clip";
 import { duplicateClipValue } from "../../../domain/clips/duplicate-clip";
 import {
@@ -472,7 +472,7 @@ function createEmptyClip(
   name?: string,
   settings?: ClipCreationSettings,
 ): Clip {
-  const tracksByInstrumentId: Record<InstrumentId, Track> = {};
+  const tracksByInstrumentId: Record<InstrumentId, InstrumentTrack> = {};
 
   for (const instrumentId of instrumentOrder) {
     tracksByInstrumentId[instrumentId] = {

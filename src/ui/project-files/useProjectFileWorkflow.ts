@@ -2,13 +2,13 @@ import {
   useCallback,
 } from "react";
 import type {
-  ProjectState,
+  EditorSessionState,
 } from "../../domain/project/project-document";
 import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
 import type {
-  ProjectWorkspaceState,
+  PersistedEditorWorkspace,
 } from "../../persistence/project-persistence-model";
 import {
   ProjectPersistenceError,
@@ -26,9 +26,9 @@ import type {
   ShowApplicationAlert,
 } from "../../use-cases/dialogs/application-dialog-port";
 import {
-  createDefaultProjectWorkspace,
-  createProjectState,
-  restoreProjectWorkspace,
+  createDefaultPersistedEditorWorkspace,
+  createEditorSessionState,
+  restorePersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";
 import {
   downloadBrowserFile,
@@ -37,14 +37,14 @@ import {
 export interface ProjectFileWorkflowOptions {
   readonly runtime: EditorRuntime;
   readonly documentId: string;
-  readonly captureWorkspace: () => ProjectWorkspaceState;
+  readonly captureWorkspace: () => PersistedEditorWorkspace;
   readonly stopPlayback: () => void;
   readonly resetInteraction: () => void;
   readonly clearClipboard: () => void;
   readonly clearPendingMidiImport: () => void;
   readonly onSelectionCleared: () => void;
   readonly onWorkspaceRestored: (
-    workspace: ProjectWorkspaceState,
+    workspace: PersistedEditorWorkspace,
   ) => void;
   readonly alert: ShowApplicationAlert;
 }
@@ -52,7 +52,7 @@ export interface ProjectFileWorkflowOptions {
 export interface ProjectFileWorkflow {
   readonly exportProject: () => void;
   readonly replaceActiveProject: (
-    project: ProjectState,
+    project: EditorSessionState,
     label: string,
   ) => void;
 }
@@ -70,7 +70,7 @@ export function useProjectFileWorkflow({
   alert,
 }: ProjectFileWorkflowOptions): ProjectFileWorkflow {
   const replaceActiveProject = useCallback((
-    project: ProjectState,
+    project: EditorSessionState,
     label: string,
   ): void => {
     stopPlayback();
@@ -79,12 +79,12 @@ export function useProjectFileWorkflow({
     clearPendingMidiImport();
     onSelectionCleared();
     runtime.selectionRequests.clear();
-    const workspace = createDefaultProjectWorkspace(project);
+    const workspace = createDefaultPersistedEditorWorkspace(project);
     runtime.editorCommands.replaceState(
-      createProjectState(project, workspace),
+      createEditorSessionState(project, workspace),
       label,
     );
-    restoreProjectWorkspace(runtime, workspace);
+    restorePersistedEditorWorkspace(runtime, workspace);
     onWorkspaceRestored(workspace);
   }, [
     clearClipboard,

@@ -134,7 +134,7 @@ export function compilePlaybackPlan(
 
     if (track === undefined || track.instrumentId !== instrumentId) {
       throw new PlaybackSnapshotCompilationError(
-        `Track "${instrumentId}" is missing or belongs to another instrument.`,
+        `Instrument track "${instrumentId}" is missing or belongs to another instrument.`,
       );
     }
 

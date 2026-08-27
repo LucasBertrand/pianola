@@ -16,10 +16,10 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
-| clips et groupes | `src/ui/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `WorkspaceState.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
+| clips et groupes | `src/ui/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
 | transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` et boucle du clip, enchaînement global et auto-scroll du document, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
 | persistance locale | `src/persistence/project-persistence-model.ts` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/persistence/__tests__/project-repository-contract.test.ts` |
-| fichiers `.pianola` | `src/project-io/portable/portable-project-codec.ts` | document + `ProjectWorkspaceState` | `src/persistence/__tests__/persistence-codecs.test.ts` |
+| fichiers `.pianola` | `src/project-io/portable/portable-project-codec.ts` | document + `PersistedEditorWorkspace` | `src/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
 

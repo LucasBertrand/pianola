@@ -8,7 +8,7 @@ import {
 } from "../../src/app/create-app-runtime";
 import {
   getActiveClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../src/domain/project/project-document";
 import {
   getMeasureCount,
@@ -426,7 +426,7 @@ describe("timeline clipboard", () => {
 
 function createClipboardProject(
   note = createTestNote({ id: "unused", startTick: 7_000 }),
-): ProjectState {
+): EditorSessionState {
   return withTimeMap(
     createTestProject({
       clips: [{ id: TEST_CLIP_ID, notes: [note] }],
@@ -467,9 +467,9 @@ function createClipboardProject(
 }
 
 function withTimeMap(
-  state: ProjectState,
+  state: EditorSessionState,
   update: (timeMap: TimeMap) => TimeMap,
-): ProjectState {
+): EditorSessionState {
   const clip = getActiveClip(state);
 
   return {

@@ -3,7 +3,7 @@ import type {
 } from "../../domain/project/project-document";
 import type {
   ProjectRepository,
-  ProjectWorkspaceState,
+  PersistedEditorWorkspace,
   StoredProject,
 } from "../../persistence/project-persistence-model";
 
@@ -20,7 +20,7 @@ export interface AutosaveScheduler {
 
 export interface ProjectAutosaveSnapshot {
   readonly document: ProjectDocument;
-  readonly workspace: ProjectWorkspaceState;
+  readonly workspace: PersistedEditorWorkspace;
 }
 
 export interface ProjectAutosaveOptions {

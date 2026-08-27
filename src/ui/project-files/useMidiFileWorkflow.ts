@@ -44,7 +44,7 @@ import type {
   EditorRuntime,
 } from "../../editor/runtime/editor-runtime";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   getActiveClip,
@@ -54,7 +54,7 @@ export interface MidiFileWorkflowOptions {
   readonly runtime: EditorRuntime;
   readonly pendingAnalysisRef: RefObject<MidiImportAnalysis | null>;
   readonly replaceActiveProject: (
-    project: ProjectState,
+    project: EditorSessionState,
     label: string,
   ) => void;
   readonly showDialog: (dialog: ApplicationDialogState) => void;

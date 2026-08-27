@@ -2,7 +2,7 @@ import type {
   ProjectDocument,
 } from "../../domain/project/project-document";
 import type {
-  ProjectWorkspaceState,
+  PersistedEditorWorkspace,
 } from "../../persistence/project-persistence-model";
 
 export const PORTABLE_PROJECT_FORMAT = "app.pianola.project";
@@ -12,5 +12,5 @@ export interface PortableProject {
   readonly sourceDocumentId: string;
   readonly exportedAt: string;
   readonly document: ProjectDocument;
-  readonly workspace: ProjectWorkspaceState;
+  readonly workspace: PersistedEditorWorkspace;
 }

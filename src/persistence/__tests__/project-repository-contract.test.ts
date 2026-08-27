@@ -19,7 +19,7 @@ import {
   idbTransaction,
 } from "../../pwa/persistence/pianola-indexed-db";
 import {
-  createDefaultProjectWorkspace,
+  createDefaultPersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";
 import {
   createInMemoryProjectStorage,
@@ -199,7 +199,7 @@ function createSnapshot(): StoredProject {
     revision: 0,
     updatedAt: "2026-08-22T10:00:00.000Z",
     document,
-    workspace: createDefaultProjectWorkspace(document),
+    workspace: createDefaultPersistedEditorWorkspace(document),
   };
 }
 

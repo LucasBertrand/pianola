@@ -44,16 +44,16 @@ export interface ProjectDocument {
   readonly masterBus: MasterBusState;
 }
 
-export interface WorkspaceState {
+export interface ActiveClipSelection {
   readonly activeClipId: ClipId;
 }
 
 /** Runtime aggregate. Only `document` participates in musical history. */
-export interface ProjectState extends ProjectDocument {
-  readonly workspace: WorkspaceState;
+export interface EditorSessionState extends ProjectDocument {
+  readonly workspace: ActiveClipSelection;
 }
 
-export function getActiveClip(state: ProjectState): Clip {
+export function getActiveClip(state: EditorSessionState): Clip {
   return getClip(state, state.workspace.activeClipId);
 }
 

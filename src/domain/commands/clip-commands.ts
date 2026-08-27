@@ -19,7 +19,7 @@ import {
   type NoteId,
 } from "../identifiers";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../project/project-document";
 import {
   MAXIMUM_CLIP_NAME_LENGTH,
@@ -29,7 +29,7 @@ import {
   MAXIMUM_CLIP_NOTE_COUNT,
 } from "../notes/note";
 import {
-  assertValidNoteForTrack,
+  assertValidNoteForInstrumentTrack,
 } from "../validation/note-validation";
 import {
   assertValidClipTimeline,
@@ -54,9 +54,9 @@ import { notesOverlapInInstrument } from "./active-clip-command-helpers";
 import { hasOwn, omitRecordKey, reject } from "./command-context";
 
 export function applyAddClip(
-  state: ProjectState,
+  state: EditorSessionState,
   command: AddClipCommand,
-): ProjectState {
+): EditorSessionState {
   if (Object.keys(state.clipsById).length >= MAXIMUM_PROJECT_CLIP_COUNT) {
     reject(
       "INVALID_COMMAND",
@@ -89,9 +89,9 @@ export function applyAddClip(
 }
 
 export function applyDeleteClip(
-  state: ProjectState,
+  state: EditorSessionState,
   command: DeleteClipCommand,
-): ProjectState {
+): EditorSessionState {
   if (state.clipsById[command.clipId] === undefined) {
     reject(
       "INVALID_COMMAND",
@@ -120,9 +120,9 @@ export function applyDeleteClip(
 }
 
 export function applyReorderClips(
-  state: ProjectState,
+  state: EditorSessionState,
   command: ReorderClipsCommand,
-): ProjectState {
+): EditorSessionState {
   const currentOrder = getClipPlaybackOrder(state.clipHierarchy);
   const currentIds = new Set(currentOrder);
   const requestedIds = new Set(command.clipOrder);
@@ -147,9 +147,9 @@ export function applyReorderClips(
 }
 
 export function applyCreateClipGroup(
-  state: ProjectState,
+  state: EditorSessionState,
   command: CreateClipGroupCommand,
-): ProjectState {
+): EditorSessionState {
   const name = command.name.trim();
   const color = command.color;
   const bypassEnabled = command.bypassEnabled
@@ -207,9 +207,9 @@ export function applyCreateClipGroup(
 }
 
 export function applyUpdateClipGroup(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UpdateClipGroupCommand,
-): ProjectState {
+): EditorSessionState {
   const group = findClipHierarchyGroup(state.clipHierarchy, command.groupId);
 
   if (group === undefined) {
@@ -266,9 +266,9 @@ export function applyUpdateClipGroup(
 }
 
 export function applyUngroupClipGroup(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UngroupClipGroupCommand,
-): ProjectState {
+): EditorSessionState {
   const hierarchy = unwrapGroup(state.clipHierarchy, command.groupId);
 
   if (hierarchy === null) {
@@ -279,9 +279,9 @@ export function applyUngroupClipGroup(
 }
 
 export function applyDeleteClipGroup(
-  state: ProjectState,
+  state: EditorSessionState,
   command: DeleteClipGroupCommand,
-): ProjectState {
+): EditorSessionState {
   const group = findClipHierarchyGroup(state.clipHierarchy, command.groupId);
 
   if (group === undefined) {
@@ -314,9 +314,9 @@ export function applyDeleteClipGroup(
 }
 
 export function applyConcatenateClipGroup(
-  state: ProjectState,
+  state: EditorSessionState,
   command: ConcatenateClipGroupCommand,
-): ProjectState {
+): EditorSessionState {
   const group = findClipHierarchyGroup(state.clipHierarchy, command.groupId);
 
   if (group === undefined) {
@@ -378,9 +378,9 @@ export function applyConcatenateClipGroup(
 }
 
 export function applySplitClipIntoGroup(
-  state: ProjectState,
+  state: EditorSessionState,
   command: SplitClipIntoGroupCommand,
-): ProjectState {
+): EditorSessionState {
   const sourceClip = state.clipsById[command.sourceClipId];
 
   if (sourceClip === undefined) {
@@ -477,9 +477,9 @@ export function applySplitClipIntoGroup(
 }
 
 export function applyMoveClipHierarchyNode(
-  state: ProjectState,
+  state: EditorSessionState,
   command: MoveClipHierarchyNodeCommand,
-): ProjectState {
+): EditorSessionState {
   if (!isValidInsertionIndex(command.targetIndex)) {
     reject("INVALID_COMMAND", "Clip hierarchy insertion index is invalid.", command.type);
   }
@@ -518,9 +518,9 @@ export function applyMoveClipHierarchyNode(
 }
 
 export function applyRenameClip(
-  state: ProjectState,
+  state: EditorSessionState,
   command: RenameClipCommand,
-): ProjectState {
+): EditorSessionState {
   const clip = state.clipsById[command.clipId];
   const name = command.name.trim();
 
@@ -557,9 +557,9 @@ export function applyRenameClip(
 }
 
 export function applyUpdateClip(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UpdateClipCommand,
-): ProjectState {
+): EditorSessionState {
   const clip = state.clipsById[command.clipId];
 
   if (clip === undefined) {
@@ -621,7 +621,7 @@ export function applyUpdateClip(
 }
 
 function assertValidClip(
-  state: ProjectState,
+  state: EditorSessionState,
   clip: Clip,
   commandType: PianoRollCommand["type"],
 ): void {
@@ -687,7 +687,7 @@ function assertValidClip(
         continue;
       }
 
-      assertValidNoteForTrack(note, instrumentId);
+      assertValidNoteForInstrumentTrack(note, instrumentId);
 
       if (
         track.notesById[note.id] !== note
@@ -738,7 +738,7 @@ function compareNotesForOverlapValidation(left: Note, right: Note): number {
 
 function assertHierarchy(
   hierarchy: readonly ClipHierarchyNode[],
-  state: ProjectState,
+  state: EditorSessionState,
   commandType: PianoRollCommand["type"],
 ): void {
   try {

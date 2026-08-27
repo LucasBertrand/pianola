@@ -8,7 +8,7 @@ import {
   type ClipId,
 } from "../../domain/identifiers";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   PROJECT_SCHEMA_VERSION,
@@ -27,7 +27,7 @@ import {
 } from "./version";
 
 export function serializeNativeProjectFile(
-  state: ProjectState,
+  state: EditorSessionState,
   metadata: NativeProjectFileMetadata,
   editorState: NativeEditorState,
 ): string {

@@ -10,7 +10,7 @@ import {
 } from "../config/editor-config";
 import {
   getActiveClip,
-  type ProjectState,
+  type EditorSessionState,
 } from "../domain/project/project-document";
 import {
   getClipDurationTicks,
@@ -88,7 +88,7 @@ import {
 
 /** Creates the runtime for one project. A future tab system can own one per tab. */
 export function createEditorRuntime(
-  initialProjectState: ProjectState,
+  initialProjectState: EditorSessionState,
 ): EditorRuntime {
   const viewportState = createInitialViewportState();
   const spatialIndex = new SpatialIndex();
@@ -320,7 +320,7 @@ function createInitialViewportState(): ViewportState {
 }
 
 function createInstrumentRenderStyles(
-  state: ProjectState,
+  state: EditorSessionState,
 ): Readonly<Record<InstrumentId, InstrumentRenderStyle>> {
   const styles: Record<InstrumentId, InstrumentRenderStyle> = {};
   const hasSolo = state.instrumentOrder.some(
@@ -343,7 +343,7 @@ function createInstrumentRenderStyles(
 }
 
 function rebuildSpatialIndex(
-  state: ProjectState,
+  state: EditorSessionState,
   spatialIndex: SpatialIndex,
   target: Note[],
 ): void {

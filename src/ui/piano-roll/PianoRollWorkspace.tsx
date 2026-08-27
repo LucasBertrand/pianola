@@ -189,14 +189,14 @@ import {
 } from "./usePianoRollProjectState";
 import type {
   ProjectRepository,
-  ProjectWorkspaceState,
+  PersistedEditorWorkspace,
 } from "../../persistence/project-persistence-model";
 import type {
   UserSettings,
   UserSettingsRepository,
 } from "../../persistence/user-settings-model";
 import {
-  captureProjectWorkspace,
+  capturePersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";
 import {
   createPersonalInstrumentPreset,
@@ -218,7 +218,7 @@ export interface PianoRollWorkspaceProps {
   readonly runtime: EditorRuntime;
   readonly documentId: string;
   readonly storedRevision: number;
-  readonly initialWorkspace: ProjectWorkspaceState;
+  readonly initialWorkspace: PersistedEditorWorkspace;
   readonly projectRepository: ProjectRepository;
   readonly initialUserSettings: UserSettings;
   readonly userSettingsRepository: UserSettingsRepository;
@@ -940,7 +940,7 @@ export function PianoRollWorkspace({
   } = useProjectFileWorkflow({
     runtime,
     documentId,
-    captureWorkspace: () => captureProjectWorkspace(
+    captureWorkspace: () => capturePersistedEditorWorkspace(
       runtime,
       selectedInstrumentId,
     ),

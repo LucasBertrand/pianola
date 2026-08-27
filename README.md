@@ -126,7 +126,8 @@ Le domaine est réparti par vocabulaire produit :
 - `src/domain/clips/clip.ts` pour pistes, timelines et clips ;
 - `src/domain/transport/transport.ts` pour horloge, métrique et boucle ;
 - `src/domain/master-bus.ts` pour le bus master ;
-- `src/domain/project/project-document.ts` pour le document et le workspace.
+- `src/domain/project/project-document.ts` pour le document et la sélection de
+  clip de la session d'éditeur.
 
 Les frontières exécutables couvrent toutes les racines TypeScript courantes,
 interdisent au domaine et au noyau d’éditeur de dépendre de React, du navigateur
@@ -140,13 +141,14 @@ Pianola distingue quatre durées de vie :
 | État | Propriétaire | Persisté | Undo/Redo |
 | --- | --- | --- | --- |
 | document musical | `ProjectDocument` dans `ProjectStore` | oui | oui |
-| espace de travail projet | `ProjectWorkspaceState` projeté dans le runtime | oui, avec le document | non |
+| session d'éditeur minimale | `EditorSessionState`, dont `ActiveClipSelection` | clip actif projeté à la sauvegarde | document uniquement |
+| contexte d'éditeur persistant | `PersistedEditorWorkspace`, dont `PersistedClipEditorState` par clip | oui, avec le document | non |
 | préférences utilisateur | `UserSettingsRepository` | oui, séparément | non |
 | session de geste | sélection, draft, lasso, presse-papier | non | non |
 | temps réel | transport AudioWorklet, voix DSP, buffers Canvas | non | non |
 
 Une intention validée produit au plus une transaction. Les déplacements
-intermédiaires du pointeur ne modifient pas `ProjectState`. Le détail complet se
+intermédiaires du pointeur ne modifient pas `EditorSessionState`. Le détail complet se
 trouve dans [`docs/state-ownership.md`](docs/state-ownership.md).
 
 ## Surfaces principales

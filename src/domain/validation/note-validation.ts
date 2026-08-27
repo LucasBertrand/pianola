@@ -8,7 +8,7 @@ import {
   type Note,
 } from "../notes/note";
 import {
-  type Track,
+  type InstrumentTrack,
 } from "../clips/clip";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
@@ -122,7 +122,7 @@ export function validateNote(note: Note): ValidationResult {
   };
 }
 
-export function validateNoteForTrack(
+export function validateNoteForInstrumentTrack(
   note: Note,
   trackInstrumentId: InstrumentId,
 ): ValidationResult {
@@ -142,7 +142,7 @@ export function validateNoteForTrack(
   };
 }
 
-export function validateTrack(track: Track): ValidationResult {
+export function validateInstrumentTrack(track: InstrumentTrack): ValidationResult {
   const issues: ValidationIssue[] = [];
 
   if (
@@ -156,12 +156,12 @@ export function validateTrack(track: Track): ValidationResult {
           : "INVALID_ID",
       path: "instrumentId",
       message:
-        `Track instrument ID must contain between 1 and ${MAXIMUM_ENTITY_ID_LENGTH} characters.`,
+        `Instrument track ID must contain between 1 and ${MAXIMUM_ENTITY_ID_LENGTH} characters.`,
     });
   }
 
   for (const [noteId, note] of Object.entries(track.notesById)) {
-    for (const issue of validateNoteForTrack(note, track.instrumentId).issues) {
+    for (const issue of validateNoteForInstrumentTrack(note, track.instrumentId).issues) {
       issues.push({
         ...issue,
         path: `notesById.${noteId}.${issue.path}`,
@@ -183,14 +183,14 @@ export function validateTrack(track: Track): ValidationResult {
   };
 }
 
-export function assertValidNoteForTrack(
+export function assertValidNoteForInstrumentTrack(
   note: Note,
   trackInstrumentId: InstrumentId,
 ): void {
-  assertValidationResult(validateNoteForTrack(note, trackInstrumentId));
+  assertValidationResult(validateNoteForInstrumentTrack(note, trackInstrumentId));
 }
 
-export function assertValidTrack(track: Track): void {
-  assertValidationResult(validateTrack(track));
+export function assertValidInstrumentTrack(track: InstrumentTrack): void {
+  assertValidationResult(validateInstrumentTrack(track));
 }
 

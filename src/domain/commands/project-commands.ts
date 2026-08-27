@@ -1,5 +1,5 @@
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../project/project-document";
 import {
   MAXIMUM_MASTER_GAIN,
@@ -21,9 +21,9 @@ import type {
 import { reject } from "./command-context";
 
 export function applySetAutoAdvanceEnabled(
-  state: ProjectState,
+  state: EditorSessionState,
   command: SetAutoAdvanceEnabledCommand,
-): ProjectState {
+): EditorSessionState {
   if (typeof command.enabled !== "boolean") {
     reject(
       "INVALID_COMMAND",
@@ -38,9 +38,9 @@ export function applySetAutoAdvanceEnabled(
 }
 
 export function applySetAutoScrollEnabled(
-  state: ProjectState,
+  state: EditorSessionState,
   command: SetAutoScrollEnabledCommand,
-): ProjectState {
+): EditorSessionState {
   if (typeof command.enabled !== "boolean") {
     reject(
       "INVALID_COMMAND",
@@ -55,9 +55,9 @@ export function applySetAutoScrollEnabled(
 }
 
 export function applyUpdateProjectTitle(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UpdateProjectTitleCommand,
-): ProjectState {
+): EditorSessionState {
   const title = command.title.trim();
 
   if (
@@ -82,9 +82,9 @@ export function applyUpdateProjectTitle(
 }
 
 export function applyUpdateMasterGain(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UpdateMasterGainCommand,
-): ProjectState {
+): EditorSessionState {
   if (
     !Number.isFinite(command.gain)
     || command.gain < MINIMUM_MASTER_GAIN
@@ -111,9 +111,9 @@ export function applyUpdateMasterGain(
 }
 
 export function applySetMasterMuted(
-  state: ProjectState,
+  state: EditorSessionState,
   command: SetMasterMutedCommand,
-): ProjectState {
+): EditorSessionState {
   if (typeof command.muted !== "boolean") {
     reject(
       "INVALID_COMMAND",
@@ -136,9 +136,9 @@ export function applySetMasterMuted(
 }
 
 export function applyUpdateMasterTuning(
-  state: ProjectState,
+  state: EditorSessionState,
   command: UpdateMasterTuningCommand,
-): ProjectState {
+): EditorSessionState {
   if (
     !Number.isFinite(command.tuningFrequencyHz)
     || command.tuningFrequencyHz

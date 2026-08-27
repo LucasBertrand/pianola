@@ -7,8 +7,8 @@ workspace réel, pas seulement l'intention.
 
 - Statut : EN ATTENTE DU LOT SUIVANT
 - Lot actif : aucun
-- Dernier lot terminé : 0 — Baseline et garde-fous
-- Prochaine action : démarrer le lot 1 par la revérification de sa condition d'entrée et des quatre propriétaires d'état
+- Dernier lot terminé : 1 — Vocabulaire d'état
+- Prochaine action : préparer le lot 2 en revérifiant sa condition d'entrée et le périmètre du nouveau format `.pianola`, sans conserver de compatibilité historique
 - Dernière mise à jour : 2026-08-27
 
 ## Baseline connue
@@ -44,7 +44,7 @@ D  docs/storage-strategies.md
 | Lot | Statut | Notes |
 | ---: | --- | --- |
 | 0 | TERMINÉ | Baseline, couverture et scénario de rendu connus ; garde-fous verts |
-| 1 | À FAIRE | Vocabulaire d'état |
+| 1 | TERMINÉ | Cinq types explicites adoptés ; alias supprimés ; garde-fous et suite complète verts |
 | 2 | À FAIRE | Format `.pianola` |
 | 3 | À FAIRE | Persistance |
 | 4 | À FAIRE | Cœur d'édition |
@@ -55,9 +55,11 @@ D  docs/storage-strategies.md
 
 ## Compatibilités temporaires
 
-Aucun alias ni aucune compatibilité de code ou de données n'a été ajouté au lot
-0. Le profiler opt-in `renderBaseline=1` est un diagnostic conservé jusqu'à la
-comparaison du lot 5, pas une façade de compatibilité.
+Aucun alias ni aucune compatibilité de code ou de données ne subsiste des lots
+0 et 1. Les alias de renommage créés pendant les sous-étapes du lot 1 ont été
+supprimés avant sa sortie. Le profiler opt-in `renderBaseline=1` est un
+diagnostic conservé jusqu'à la comparaison du lot 5, pas une façade de
+compatibilité.
 
 ## Écarts et découvertes
 
@@ -70,8 +72,117 @@ comparaison du lot 5, pas une façade de compatibilité.
   build non bloquant et préexistant ;
 - le premier passage du scénario de rendu est un outlier à froid ; la médiane
   de trois passages constitue la comparaison reproductible du lot 5.
+- les occurrences textuelles restantes de « Track » appartiennent au
+  vocabulaire du format MIDI (`End of Track`, numéro de piste) ; aucun
+  identifiant TypeScript produit n'utilise encore le type générique `Track` ;
+- les types renommés restent physiquement chez leurs propriétaires courants ;
+  leur déplacement de couche n'est pas anticipé et demeure réservé aux lots
+  prévus par la feuille de route.
 
 ## Journal
+
+### 2026-08-27 — Lot 1, démarrage
+
+- objectif : donner un sens unique aux états de document/session et de
+  workspace persisté, puis remplacer le type générique `Track` par
+  `InstrumentTrack`, sans modifier la persistance, Undo/Redo ni le comportement
+  produit ;
+- condition d'entrée vérifiée dans ce journal : le lot 0 est `TERMINÉ`, ses
+  baselines structurelle, de couverture et de rendu sont connues, et
+  `npm run verify` a été réexécuté avec succès juste avant son commit dédié
+  (63 fichiers de test et 421 tests réussis) ;
+- premier lot sélectionnable : le lot 1 est le premier et seul lot `À FAIRE`
+  avant cette mise en route ; aucun travail du lot 2 n'est anticipé ;
+- SHA de départ et point de rollback initial :
+  `5fe7ddccb3545106b5c8e53b25f4bc7c132735eb`, commit du lot 0
+  `5fe7ddc` ;
+- état initial du worktree vérifié par `git status --short` : propre ; aucun
+  changement préexistant de l'utilisateur à isoler au démarrage du lot 1 ;
+- audit préalable : définitions dans `project-document.ts`,
+  `project-persistence-model.ts` et `clip.ts` ; consommateurs recensés par
+  `rg` dans le store, les commandes, les codecs local/portable/native/MIDI,
+  les cas d'usage, la présentation et les supports de tests ; tests ciblés de
+  persistance, historique/commandes, MIDI et régression traversante identifiés ;
+- périmètre et fichiers prévus : renommage en place des trois modules de types
+  ci-dessus, puis mise à jour de leurs consommateurs sous `src/domain`,
+  `src/persistence`, `src/project-io`, `src/use-cases`, `src/editor`, `src/app`,
+  `src/audio`, `src/ui` et `tests`, ainsi que la documentation produit qui nomme
+  ces propriétaires (`README.md`, `docs/state-ownership.md`,
+  `docs/code-map.md`, `docs/guides/project-files.md` et guides locaux affectés) ;
+- stratégie de sous-étapes : types et codecs, application, présentation/tests,
+  puis suppression des alias après recherche d'anciens symboles ; chaque
+  sous-étape recevra une validation rapide et un patch ciblé hors du worktree
+  avant de commencer la suivante.
+- sous-étape types et codecs : `EditorSessionState`, `ActiveClipSelection`,
+  `PersistedEditorWorkspace`, `PersistedClipEditorState` et `InstrumentTrack`
+  sont définis chez les propriétaires courants ; le domaine, les commandes et
+  les codecs local, portable, natif et MIDI emploient les nouveaux noms ; la
+  structure JSON, les versions et les champs sérialisés restent inchangés ;
+- validations types et codecs : `npm run typecheck` et
+  `npm run check:boundaries` réussis ; 8 fichiers et 68 tests ciblés réussis
+  pour les commandes, la persistance, le parseur natif et le MIDI ;
+- rollback types et codecs : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot1-types-codecs.patch`,
+  SHA-256
+  `1BF5C4C8370C7AA72A5A4403AB8B6F3DC5D3153C3359D02AAF7139C5701D5D91`,
+  contenant uniquement les 23 fichiers modifiés sous `src/domain`,
+  `src/persistence` et `src/project-io` ; commande verte associée : la séquence
+  de validation ci-dessus.
+- sous-étape application : services de commandes, sélection pure, workflows de
+  notes/timeline, autosave, création/import de projet et composition utilisent
+  `EditorSessionState` et `PersistedEditorWorkspace` ; les fabriques et
+  projections exposent désormais des noms explicites tels que
+  `createEditorSessionState`, `capturePersistedEditorWorkspace` et
+  `restorePersistedEditorWorkspace` ; aucun champ sérialisé n'est renommé ;
+- validations application : `npm run typecheck` et
+  `npm run check:boundaries` réussis ; 5 fichiers et 13 tests ciblés réussis
+  pour autosave, création de session, historique de sélection et comportement
+  critique ;
+- rollback application : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot1-application.patch`,
+  SHA-256
+  `2203020D4949E0D436BB9E30ADBD1C8FC7297BD54F8F71FD14CDDDE1C4EC6AD8`,
+  contenant les 20 fichiers de l'application et leurs consommateurs directs
+  nécessaires à cette sous-étape ; commande verte associée : la séquence de
+  validation ci-dessus.
+- sous-étape présentation et tests : les props, workflows UI, fixtures et
+  scénarios traversants utilisent les nouveaux types ; les helpers de
+  validation et de commandes nomment explicitement les pistes d'instrument ;
+  tous les alias temporaires ont ensuite été supprimés ;
+- garde-fou ajouté : `npm run check:structure` refuse désormais les
+  identifiants TypeScript `ProjectState`, `WorkspaceState`,
+  `ProjectWorkspaceState`, `ProjectClipWorkspaceState` et `Track` dans le code
+  produit, sans confondre ce dernier avec les chaînes du format MIDI ;
+- documentation courante synchronisée : `README.md`, `docs/architecture.md`,
+  `docs/code-map.md`, `docs/state-ownership.md` et
+  `docs/guides/project-files.md` décrivent les propriétaires effectivement
+  présents après le lot 1 ;
+- validations présentation et suppression des alias : `npm run typecheck`,
+  `npm run check:boundaries`, `npm run check:docs` et
+  `npm run check:structure` réussis ; 12 fichiers et 85 tests ciblés réussis
+  pour les commandes, codecs, timelines, MIDI et comportement critique ;
+- recherches de sortie : aucun ancien identifiant d'état dans `src` ou
+  `tests` ; les seules occurrences exactes de `Track` sont les libellés MIDI
+  légitimes ; la recherche des noms génériques n'a révélé aucun nouveau dossier
+  ou module générique introduit par le lot ;
+- validation complète finale : `npm run verify` réussi — 32 fichiers Markdown,
+  324 fichiers source, frontières vertes sur 271 fichiers produit et 67 modules
+  de test, typecheck et build Vite réussis, smoke AudioWorklet réussi,
+  63 fichiers de test et 421 tests réussis ; l'avertissement de chunk supérieur
+  à 500 kB reste inchangé et non bloquant ;
+- statut du lot : `TERMINÉ`. La condition de sortie est satisfaite : les quatre
+  états ont chacun un sens documenté, `InstrumentTrack` remplace le type
+  générique, et aucun consommateur produit ni alias ne conserve les anciens
+  noms ;
+- point de rollback final : SHA de départ
+  `5fe7ddccb3545106b5c8e53b25f4bc7c132735eb` et patch complet
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot1-complete.patch`, contenant
+  uniquement les 69 fichiers du lot 1 ; appliquer son inverse seulement après
+  vérification qu'aucun de ces fichiers n'a reçu de changement utilisateur ;
+- prochaine action exacte : après revue du lot 1, ouvrir le lot 2 en vérifiant
+  de nouveau sa condition d'entrée puis créer le propriétaire du format
+  `.pianola` et sa nouvelle baseline de version. Aucun travail du lot 2 n'est
+  commencé dans ce worktree.
 
 ### 2026-08-27 — Lot 0, démarrage
 

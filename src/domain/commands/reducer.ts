@@ -2,7 +2,7 @@ import {
   type Clip,
 } from "../clips/clip";
 import {
-  type ProjectState,
+  type EditorSessionState,
 } from "../project/project-document";
 import { DomainValidationError } from "../validation/validation-result";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
@@ -107,9 +107,9 @@ import { assertValidTransaction } from "./transaction";
 import type { Transaction } from "./transaction";
 
 export function projectReducer(
-  state: ProjectState,
+  state: EditorSessionState,
   transaction: Transaction,
-): ProjectState {
+): EditorSessionState {
   assertValidTransaction(transaction);
 
   let nextState = state;
@@ -141,9 +141,9 @@ export function projectReducer(
 }
 
 function applyCommand(
-  state: ProjectState,
+  state: EditorSessionState,
   command: PianoRollCommand,
-): ProjectState {
+): EditorSessionState {
   switch (command.type) {
     case "AddClip":
       return applyAddClip(state, command);
@@ -227,9 +227,9 @@ type ActiveClipCommand = Exclude<
 >;
 
 function applyActiveClipCommand(
-  state: ProjectState,
+  state: EditorSessionState,
   command: ActiveClipCommand,
-): ProjectState {
+): EditorSessionState {
   const clip = state.clipsById[command.clipId];
 
   if (clip === undefined) {

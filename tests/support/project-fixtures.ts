@@ -21,10 +21,10 @@ import {
 import {
   getActiveClip,
   PROJECT_SCHEMA_VERSION,
-  type ProjectState,
+  type EditorSessionState,
 } from "../../src/domain/project/project-document";
 import {
-  type Track,
+  type InstrumentTrack,
 } from "../../src/domain/clips/clip";
 import {
   createFlatClipHierarchy,
@@ -126,7 +126,7 @@ export function createAudioTestProject({
   transport: transportChanges = {},
   instrumentOrder = ["voice-a"],
   projectInstrumentChangesById = {},
-}: AudioTestProjectOptions = {}): ProjectState {
+}: AudioTestProjectOptions = {}): EditorSessionState {
   const defaultTransport = createDefaultTransportState();
   const defaultClock = createDefaultProjectClock();
   const timeSignature: TimeSignature = {
@@ -148,7 +148,7 @@ export function createAudioTestProject({
     },
   };
   const projectInstrumentsById: Record<InstrumentId, ProjectInstrument> = {};
-  const tracksByInstrumentId: Record<InstrumentId, Track> = {};
+  const tracksByInstrumentId: Record<InstrumentId, InstrumentTrack> = {};
 
   for (
     let instrumentIndex = 0;
@@ -255,7 +255,7 @@ export function createAudioTestEditorState(
   };
 }
 
-export function getAudioTestActiveClip(state: ProjectState) {
+export function getAudioTestActiveClip(state: EditorSessionState) {
   return getActiveClip(state);
 }
 

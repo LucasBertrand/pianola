@@ -38,7 +38,7 @@ export const DEFAULT_CLIP_COLOR =
 export const DEFAULT_CLIP_BYPASS_ENABLED =
   PROJECT_CONSTANTS.defaultClipBypassEnabled;
 
-export interface Track {
+export interface InstrumentTrack {
   readonly instrumentId: InstrumentId;
   readonly notesById: Readonly<Record<NoteId, Note>>;
 }
@@ -60,7 +60,7 @@ export interface Clip {
   readonly color: string;
   readonly bypassEnabled: boolean;
   readonly timeline: ClipTimeline;
-  readonly tracksByInstrumentId: Readonly<Record<InstrumentId, Track>>;
+  readonly tracksByInstrumentId: Readonly<Record<InstrumentId, InstrumentTrack>>;
   readonly transportSettings: TransportState;
 }
 
