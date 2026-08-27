@@ -46,11 +46,12 @@ npm run verify
 | `npm run dev` | lancer Vite sur le port 5173 |
 | `npm run build` | vérifier TypeScript puis produire `dist/` |
 | `npm test` | exécuter la suite Vitest |
+| `npm run test:coverage:hotspots` | mesurer les six points de concentration avant découpage |
 | `npm run test:worklet-build` | charger et faire rendre le module AudioWorklet produit |
 | `npm run typecheck` | vérifier les trois configurations TypeScript |
 | `npm run check:docs` | vérifier liens locaux et chemins documentés |
 | `npm run check:structure` | vérifier géographie, guides et anciens chemins |
-| `npm run check:boundaries` | vérifier les dépendances entre couches |
+| `npm run check:boundaries` | vérifier couches, séparation produit/tests et cycles d'import |
 | `npm run verify` | exécuter tous les contrôles, le build et son smoke test audio |
 | `npm run preview` | servir localement le build de production |
 
@@ -127,8 +128,10 @@ Le domaine est réparti par vocabulaire produit :
 - `src/domain/master-bus.ts` pour le bus master ;
 - `src/domain/project/project-document.ts` pour le document et le workspace.
 
-Les frontières exécutables interdisent au domaine et au noyau d’éditeur de
-dépendre de React, du navigateur ou de la composition applicative.
+Les frontières exécutables couvrent toutes les racines TypeScript courantes,
+interdisent au domaine et au noyau d’éditeur de dépendre de React, du navigateur
+ou de la composition applicative, séparent le graphe produit du graphe de tests
+et refusent tout nouveau cycle d'import.
 
 ## Propriété des états
 
@@ -218,7 +221,8 @@ Avant livraison, exécuter `npm run verify`. Cette commande contrôle :
 
 1. liens et chemins documentaires ;
 2. structure, noms retirés et guides locaux ;
-3. frontières d’import et isolation navigateur ;
+3. frontières d’import, isolation navigateur, séparation produit/tests et
+   cycles ;
 4. TypeScript strict ;
 5. build Vite de production ;
 6. chargement et rendu du module AudioWorklet produit ;

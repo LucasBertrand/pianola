@@ -25,6 +25,9 @@ import {
   BrowserErrorDialog,
 } from "../ui/diagnostics/BrowserErrorDialog";
 import {
+  RenderBaselineProfiler,
+} from "../ui/diagnostics/RenderBaselineProfiler";
+import {
   browserErrorReporter,
 } from "../ui/diagnostics/browser-error-reporter";
 import {
@@ -266,17 +269,19 @@ function ActiveProjectEditor({
   }
 
   return (
-    <PianoRollWorkspace
-      runtime={runtimeRef.current}
-      documentId={storedProject.documentId}
-      storedRevision={storedProject.revision}
-      initialWorkspace={storedProject.workspace}
-      projectRepository={persistence.projects}
-      initialUserSettings={settings}
-      userSettingsRepository={persistence.userSettings}
-      onUserSettingsChange={onSettingsChange}
-      onCloseProject={onClose}
-    />
+    <RenderBaselineProfiler id="PianoRollWorkspace">
+      <PianoRollWorkspace
+        runtime={runtimeRef.current}
+        documentId={storedProject.documentId}
+        storedRevision={storedProject.revision}
+        initialWorkspace={storedProject.workspace}
+        projectRepository={persistence.projects}
+        initialUserSettings={settings}
+        userSettingsRepository={persistence.userSettings}
+        onUserSettingsChange={onSettingsChange}
+        onCloseProject={onClose}
+      />
+    </RenderBaselineProfiler>
   );
 }
 

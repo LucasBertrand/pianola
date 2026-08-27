@@ -30,6 +30,12 @@ DECISIONS.md > TARGET.md > ROADMAP.md > MAPPING.md > BASELINE.md > STATUS.md
   actuellement historisées, les checkpoints transitoires de sélection et leur
   destination parmi les quatre états introduits au lot 1.
 
+## Preuves des lots
+
+- [`LOT-0-BASELINES.md`](LOT-0-BASELINES.md) conserve la baseline structurelle,
+  la couverture ciblée, l'inventaire de persistance et le scénario de rendu
+  reproductible établis au lot 0.
+
 ## Relation avec la documentation produit
 
 Les documents hors de ce dossier décrivent le code réellement présent dans le

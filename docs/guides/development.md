@@ -36,6 +36,17 @@ npm test -- tests/integration/critical-behavior.test.ts
 npm test -- src/persistence/__tests__/project-repository-contract.test.ts
 ```
 
+Avant de découper un des six points de concentration architecturaux, actualiser
+le rapport V8 ciblé :
+
+```bash
+npm run test:coverage:hotspots
+```
+
+Cette commande exclut volontairement les benchmarks audio, dont les seuils de
+temps seraient faussés par l'instrumentation. La suite complète reste vérifiée
+sans couverture par `npm run verify`.
+
 ## Configurations TypeScript
 
 - `tsconfig.json` vérifie le noyau indépendant de React ;

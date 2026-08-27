@@ -148,6 +148,9 @@ import {
   useMidiFileWorkflow,
 } from "../../ui/project-files/useMidiFileWorkflow";
 import {
+  RenderBaselineProfiler,
+} from "../diagnostics/RenderBaselineProfiler";
+import {
   useTransportWorkflow,
 } from "../../ui/transport/useTransportWorkflow";
 import {
@@ -1006,7 +1009,8 @@ export function PianoRollWorkspace({
       aria-label={APPLICATION_CONSTANTS.productName}
       data-project-revision="0"
     >
-      <EditorHeader
+      <RenderBaselineProfiler id="EditorHeader">
+        <EditorHeader
         projectState={projectState}
         loopDragPreview={loopDragPreview}
         selectedNotes={selectedNotes}
@@ -1032,7 +1036,8 @@ export function PianoRollWorkspace({
         onMasterGainCommit={handleMasterGainCommit}
         onMasterMuteToggle={handleMasterMuteToggle}
         onMasterTuningCommit={handleMasterTuningCommit}
-      />
+        />
+      </RenderBaselineProfiler>
 
       <section
         className={
@@ -1130,7 +1135,8 @@ export function PianoRollWorkspace({
                 onClearSelection={clearTimelineSelection}
               />
               <div className="canvas-host">
-                <PianoRollLayers
+                <RenderBaselineProfiler id="PianoRollLayers">
+                  <PianoRollLayers
                   runtime={runtime}
                   selectionMode={selectionMode}
                   activeInstrumentId={selectedInstrumentId ?? ""}
@@ -1154,7 +1160,8 @@ export function PianoRollWorkspace({
                   onMarkerCollision={handleMarkerCollision}
                   globalLassoRef={globalLassoRef}
                   timelineDragPreview={timelineDragPreview}
-                />
+                  />
+                </RenderBaselineProfiler>
               </div>
               <PianoRollGlobalLasso elementRef={globalLassoRef} />
               <PianoRollPlayhead
@@ -1165,7 +1172,8 @@ export function PianoRollWorkspace({
             </div>
           </div>
 
-          <PianoRollViewportControls
+          <RenderBaselineProfiler id="PianoRollViewportControls">
+            <PianoRollViewportControls
             timelinePositionRef={barLabelRef}
             timelineTimeRef={timelineTimeRef}
             horizontalScrollRef={scrollInputRef}
@@ -1176,10 +1184,12 @@ export function PianoRollWorkspace({
             pitchSnapSettings={pitchSnapSettings}
             onPitchSnapSettingsChange={updatePitchSnapSettings}
             onAutoFit={handleAutoFit}
-          />
+            />
+          </RenderBaselineProfiler>
         </div>
         <ProjectInspectorResizeHandle inspectorOpen={projectInspectorOpen} />
-        <ProjectInspector
+        <RenderBaselineProfiler id="ProjectInspector">
+          <ProjectInspector
           open={projectInspectorOpen}
           portraitSection={projectInspectorSection}
           projectState={projectState}
@@ -1217,7 +1227,8 @@ export function PianoRollWorkspace({
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
           onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
-        />
+          />
+        </RenderBaselineProfiler>
       </section>
       {radialMenu.state === null ? null : (
         <FloatingRadialMenu

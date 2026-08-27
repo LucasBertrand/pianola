@@ -38,6 +38,13 @@ Règles exécutables :
 4. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
 5. une intention musicale validée produit au plus une transaction.
 
+Le contrôle couvre explicitement les onze racines TypeScript courantes avec une
+liste fermée de dépendances. Il construit deux graphes distincts pour le code
+produit et les tests, interdit tout import produit vers un test et détecte les
+cycles dans chacun. Le seul cycle accepté dans la baseline courante relie
+`spatial-index.ts` à `spatial-index-search.ts` ; sa suppression est planifiée au
+lot 4 et tout nouveau cycle échoue immédiatement.
+
 ## Composition
 
 `src/app/App.tsx` crée `EditorRuntime` et monte
@@ -219,6 +226,10 @@ courante à chaque vérification.
 build, smoke test du module worklet produit et la suite de tests. Les règles
 structurelles sont dans
 `scripts/check-structure.mjs`; les frontières techniques restent dans
-`scripts/check-import-boundaries.mjs`.
+`scripts/check-import-boundaries.mjs`. La couverture ciblée des modules à
+découper s'exécute avec `npm run test:coverage:hotspots`. Le scénario Edge
+headless conservant la baseline de rendu de `PianoRollWorkspace` s'exécute avec
+`node scripts/measure-render-baseline.mjs` ; il n'est actif dans l'application
+qu'avec le paramètre `renderBaseline=1`.
 
 La documentation de référence est indexée dans [`README.md`](README.md).
