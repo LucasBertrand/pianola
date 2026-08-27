@@ -43,7 +43,7 @@ function activeTimeline(store: ProjectStore) {
 }
 
 describe("meter marker commands", () => {
-  test("adds, moves, updates and deletes a marker with undo/redo", () => {
+  test("adds, updates and deletes a marker with undo/redo", () => {
     const store = new ProjectStore(createTestProject());
 
     dispatch(store, {
@@ -58,23 +58,10 @@ describe("meter marker commands", () => {
     expect(activeTimeline(store).durationTicks)
       .toBe(2 * MEASURE_TICKS + 3 * 3_360);
 
-    // Measure index 3 starts at tick 11_040 on the current map.
-    dispatch(store, {
-      type: "MoveMeterMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: 2 * MEASURE_TICKS,
-      targetTick: 11_040,
-    });
-
-    // The requested tick is projected forward onto the preceding 4/4 grid.
-    expect(
-      activeTimeline(store).timeMap.meterMarkers[1]?.startTick,
-    ).toBe(3 * MEASURE_TICKS);
-
     dispatch(store, {
       type: "UpdateMeterMarker",
       clipId: TEST_CLIP_ID,
-      startTick: 3 * MEASURE_TICKS,
+      startTick: 2 * MEASURE_TICKS,
       timeSignature: { numerator: 3, denominator: 4 },
     });
     expect(
@@ -84,7 +71,7 @@ describe("meter marker commands", () => {
     dispatch(store, {
       type: "DeleteMeterMarker",
       clipId: TEST_CLIP_ID,
-      startTick: 3 * MEASURE_TICKS,
+      startTick: 2 * MEASURE_TICKS,
     });
 
     expect(activeTimeline(store).timeMap.meterMarkers).toHaveLength(1);
@@ -121,30 +108,6 @@ describe("meter marker commands", () => {
     })).toThrow(CommandRejectedError);
   });
 
-  test("bounds a move between neighbouring markers", () => {
-    const store = new ProjectStore(createTestProject());
-
-    dispatch(store, {
-      type: "AddMeterMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: MEASURE_TICKS,
-      timeSignature: { numerator: 3, denominator: 4 },
-    });
-    // Measures: [0] 4/4, then 3/4 at 3_840, 6_720, 9_600.
-    dispatch(store, {
-      type: "AddMeterMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: 9_600,
-      timeSignature: { numerator: 5, denominator: 4 },
-    });
-
-    expect(() => dispatch(store, {
-      type: "MoveMeterMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: MEASURE_TICKS,
-      targetTick: 9_600,
-    })).toThrow(CommandRejectedError);
-  });
 });
 
 describe("tempo marker commands", () => {

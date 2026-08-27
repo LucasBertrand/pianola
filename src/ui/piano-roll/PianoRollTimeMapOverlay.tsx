@@ -17,6 +17,7 @@ import type {
 } from "../../editor/model/render-signal";
 import {
   formatMarkerFlagLabel,
+  isIsolatedMeterMarkerFlag,
   type TimeMapMarkerFlag,
 } from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
 import {
@@ -78,11 +79,15 @@ export function PianoRollTimeMapOverlay({
   const boundaryElementsRef = useRef(new Map<Tick, HTMLElement>());
   const previewBoundaryElementsRef = useRef(new Map<Tick, HTMLElement>());
   const hoveredMarkerTickRef = useRef<Tick | null>(null);
+  const suppressedActivationTickRef = useRef<Tick | null>(null);
   const getFlagElement = useCallback(
     (tick: Tick): HTMLButtonElement | null =>
       flagElementsRef.current.get(tick) ?? null,
     [],
   );
+  const suppressMarkerActivation = useCallback((tick: Tick): void => {
+    suppressedActivationTickRef.current = tick;
+  }, []);
   const syncMarkerPresentation = useCallback((): void => {
     const currentViewport = viewport.get();
     const pixelsPerTick =
@@ -97,6 +102,7 @@ export function PianoRollTimeMapOverlay({
         );
 
     for (const flag of flags) {
+      const isIsolatedMeter = isIsolatedMeterMarkerFlag(flag);
       const selected = selection.hasMarkerGroup(flag.startTick);
       const previewGroup = projection?.sourceGroupsByTick.get(flag.startTick);
       const remainingFlag = projection?.remainingFlagsByTick.has(
@@ -110,10 +116,11 @@ export function PianoRollTimeMapOverlay({
         && (remainingFlag === null || receivesPreview);
       const originalBoundaryVisible = isOriginalMarkerBoundaryVisible({
         selected,
-        hovered: hoveredMarkerTickRef.current === flag.startTick,
+        hovered: !isIsolatedMeter
+          && hoveredMarkerTickRef.current === flag.startTick,
         originalHidden: hideOriginal,
         sourcePreviewed: previewGroup !== undefined,
-      });
+      }) && !isIsolatedMeter;
       const x =
         flag.startTick * pixelsPerTick
         - currentViewport.scrollX;
@@ -131,14 +138,16 @@ export function PianoRollTimeMapOverlay({
         flagElement.classList.toggle("is-selected", selected);
         flagElement.setAttribute("aria-pressed", String(selected));
         flagElement.classList.toggle(
+          "has-section-marker",
+          flag.isInitial
+            && remainingFlag !== null
+            && remainingFlag.sectionComment !== null,
+        );
+        flagElement.classList.toggle(
           "is-selection-residual",
           projection !== null
             && previewGroup !== undefined
             && !hideOriginal,
-        );
-        flagElement.classList.toggle(
-          "has-visible-boundary",
-          originalBoundaryVisible,
         );
       }
 
@@ -229,6 +238,7 @@ export function PianoRollTimeMapOverlay({
     selectionMode,
     onSelectMarker,
     onMoveMarker,
+    onSuppressActivation: suppressMarkerActivation,
     getFlagElement,
   });
 
@@ -252,23 +262,61 @@ export function PianoRollTimeMapOverlay({
               className={
                 `bar-ruler-marker-flag${
                   flag.isInitial ? " is-initial" : ""
+                }${
+                  isIsolatedMeterMarkerFlag(flag) ? " is-meter-only" : ""
+                }${
+                  flag.isInitial && flag.sectionComment !== null
+                    ? " has-section-marker"
+                    : ""
                 }`
               }
               type="button"
               data-marker-tick={flag.startTick}
-              title="Click to select. Double-click to edit."
+              title={isIsolatedMeterMarkerFlag(flag)
+                ? "Click to edit."
+                : "Click to select. Double-click to edit."}
               aria-label={
                 `Timeline marker ${formatMarkerFlagLabel(flag)}`
               }
               onPointerDown={(event) => {
-                markerGesture.begin(flag, event);
+                if (suppressedActivationTickRef.current === flag.startTick) {
+                  suppressedActivationTickRef.current = null;
+                }
+                if (!isIsolatedMeterMarkerFlag(flag)) {
+                  markerGesture.begin(flag, event);
+                }
+              }}
+              onClick={(event) => {
+                // Moving the point markers can leave a meter-only button at
+                // this tick before the browser dispatches its synthetic click.
+                if (suppressedActivationTickRef.current === flag.startTick) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return;
+                }
+                if (isIsolatedMeterMarkerFlag(flag)) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onOpenMarker(flag.startTick);
+                }
               }}
               onDoubleClick={(event) => {
+                if (suppressedActivationTickRef.current === flag.startTick) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return;
+                }
+                if (isIsolatedMeterMarkerFlag(flag)) {
+                  return;
+                }
                 event.preventDefault();
                 event.stopPropagation();
                 onOpenMarker(flag.startTick);
               }}
               onPointerEnter={() => {
+                if (isIsolatedMeterMarkerFlag(flag)) {
+                  return;
+                }
                 hoveredMarkerTickRef.current = flag.startTick;
                 syncMarkerPresentation();
               }}

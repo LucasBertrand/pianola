@@ -88,7 +88,6 @@ import {
   applyDeleteTempoMarker,
   applyDeleteSectionMarker,
   applyInsertMeasure,
-  applyMoveMeterMarker,
   applyMoveScaleMarker,
   applyMoveTempoMarker,
   applyMoveSectionMarker,
@@ -291,9 +290,6 @@ function applyActiveClipCommand(
       break;
     case "AddMeterMarker":
       nextContext = applyAddMeterMarker(context, command);
-      break;
-    case "MoveMeterMarker":
-      nextContext = applyMoveMeterMarker(context, command);
       break;
     case "UpdateMeterMarker":
       nextContext = applyUpdateMeterMarker(context, command);

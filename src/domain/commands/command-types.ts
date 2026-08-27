@@ -308,13 +308,6 @@ export interface AddMeterMarkerCommand {
   readonly timeSignature: TimeSignature;
 }
 
-export interface MoveMeterMarkerCommand {
-  readonly type: "MoveMeterMarker";
-  readonly clipId: ClipId;
-  readonly startTick: Tick;
-  readonly targetTick: Tick;
-}
-
 export interface UpdateMeterMarkerCommand {
   readonly type: "UpdateMeterMarker";
   readonly clipId: ClipId;
@@ -476,7 +469,6 @@ export type PianoRollCommand =
   | UpdateTempoCommand
   | UpdateTimeSignatureCommand
   | AddMeterMarkerCommand
-  | MoveMeterMarkerCommand
   | UpdateMeterMarkerCommand
   | DeleteMeterMarkerCommand
   | AddTempoMarkerCommand

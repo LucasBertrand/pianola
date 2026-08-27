@@ -3,6 +3,7 @@ import {
   createTimeMapMarkerFlags,
   createMarkerDraft,
   formatMarkerFlagLabel,
+  isIsolatedMeterMarkerFlag,
   normalizeDraftBpm,
   normalizeDraftTimeSignature,
   planMarkerDeletionCommands,
@@ -107,6 +108,9 @@ describe("createTimeMapMarkerFlags", () => {
       "3/4",
       "90",
     ]);
+    expect(isIsolatedMeterMarkerFlag(flags[0]!)).toBe(false);
+    expect(isIsolatedMeterMarkerFlag(flags[1]!)).toBe(true);
+    expect(isIsolatedMeterMarkerFlag(flags[2]!)).toBe(false);
   });
 });
 
@@ -397,7 +401,40 @@ describe("planMarkerDeletionCommands", () => {
 });
 
 describe("planMarkerMoveCommands", () => {
-  test("moves the marker group to a free tick", () => {
+  test("moves only the optional section from the initial flag", () => {
+    const base = createProjectWithMarkers();
+    const clip = base.clipsById[TEST_CLIP_ID]!;
+    const state = {
+      ...base,
+      clipsById: {
+        ...base.clipsById,
+        [TEST_CLIP_ID]: {
+          ...clip,
+          timeline: {
+            ...clip.timeline,
+            timeMap: {
+              ...clip.timeline.timeMap,
+              sectionMarkers: [{ startTick: 0, comment: "Intro" }],
+            },
+          },
+        },
+      },
+    };
+
+    expect(planMarkerMoveCommands(
+      state,
+      TEST_CLIP_ID,
+      0,
+      960,
+    )).toEqual([{
+      type: "MoveSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: 0,
+      targetTick: 960,
+    }]);
+  });
+
+  test("moves grouped point markers without moving their meter", () => {
     const state = createProjectWithMarkers();
 
     expect(
@@ -407,49 +444,15 @@ describe("planMarkerMoveCommands", () => {
         2 * MEASURE_TICKS,
         MEASURE_TICKS,
       ),
-    ).toEqual([
-      {
-        type: "MoveMeterMarker",
-        clipId: TEST_CLIP_ID,
-        startTick: 2 * MEASURE_TICKS,
-        targetTick: MEASURE_TICKS,
-      },
-      {
-        type: "MoveTempoMarker",
-        clipId: TEST_CLIP_ID,
-        startTick: 2 * MEASURE_TICKS,
-        targetTick: MEASURE_TICKS,
-      },
-    ]);
+    ).toEqual([{
+      type: "MoveTempoMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: 2 * MEASURE_TICKS,
+      targetTick: MEASURE_TICKS,
+    }]);
   });
 
-  test("moves companions to the meter's projected boundary", () => {
-    const state = createProjectWithMarkers();
-
-    expect(
-      planMarkerMoveCommands(
-        state,
-        TEST_CLIP_ID,
-        2 * MEASURE_TICKS,
-        11_040,
-      ),
-    ).toEqual([
-      {
-        type: "MoveMeterMarker",
-        clipId: TEST_CLIP_ID,
-        startTick: 2 * MEASURE_TICKS,
-        targetTick: 11_040,
-      },
-      {
-        type: "MoveTempoMarker",
-        clipId: TEST_CLIP_ID,
-        startTick: 2 * MEASURE_TICKS,
-        targetTick: 3 * MEASURE_TICKS,
-      },
-    ]);
-  });
-
-  test("throws an error when moving a tempo companion onto an occupied tick", () => {
+  test("moves point markers and reports their collisions", () => {
     const base = createProjectWithMarkers();
     const clip = base.clipsById[TEST_CLIP_ID];
 
@@ -470,7 +473,7 @@ describe("planMarkerMoveCommands", () => {
               tempoMarkers: [
                 { startTick: 0, bpm: 120 },
                 { startTick: MEASURE_TICKS, bpm: 100 },
-                { startTick: 2 * MEASURE_TICKS, bpm: 90 },
+                { startTick: MEASURE_TICKS + 960, bpm: 90 },
               ],
                 scaleMarkers: [{
                   startTick: 0,
@@ -488,7 +491,7 @@ describe("planMarkerMoveCommands", () => {
       planMarkerMoveCommands(
         state,
         TEST_CLIP_ID,
-        2 * MEASURE_TICKS,
+        MEASURE_TICKS + 960,
         MEASURE_TICKS,
       ),
     ).toThrowError("A tempo marker already exists at this position.");

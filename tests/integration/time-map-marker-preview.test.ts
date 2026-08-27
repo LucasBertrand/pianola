@@ -41,7 +41,7 @@ describe("time-map marker preview", () => {
     );
   });
 
-  test("previews the complete standalone flag grouped at its destination", () => {
+  test("keeps the meter in place during a standalone point-marker preview", () => {
     const source = createFlag(960, {
       bpm: 90,
       timeSignature: { numerator: 3, denominator: 4 },
@@ -61,15 +61,51 @@ describe("time-map marker preview", () => {
       },
     );
 
-    expect(projection.remainingFlagsByTick.get(960)).toBeNull();
+    expect(projection.remainingFlagsByTick.get(960)).toEqual(
+      createFlag(960, {
+        timeSignature: { numerator: 3, denominator: 4 },
+      }),
+    );
     expect(projection.destinationFlagsByTick.get(1_200)).toEqual(
       createFlag(1_200, {
         bpm: 90,
-        timeSignature: { numerator: 3, denominator: 4 },
         rootNote: "F",
         patternType: "chord",
         patternId: "major",
       }),
+    );
+  });
+
+  test("previews only the optional section from the initial flag", () => {
+    const source = createFlag(0, {
+      bpm: 120,
+      timeSignature: { numerator: 4, denominator: 4 },
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "ionian",
+      sectionComment: "Intro",
+      isInitial: true,
+    });
+    const projection = createMarkerPreviewProjection(
+      [source],
+      [],
+      {
+        source: "markers",
+        deltaTicks: 240,
+        standaloneMarkerTick: 0,
+      },
+    );
+
+    expect(projection.remainingFlagsByTick.get(0)).toEqual(createFlag(0, {
+      bpm: 120,
+      timeSignature: { numerator: 4, denominator: 4 },
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "ionian",
+      isInitial: true,
+    }));
+    expect(projection.destinationFlagsByTick.get(240)).toEqual(
+      createFlag(240, { sectionComment: "Intro" }),
     );
   });
 

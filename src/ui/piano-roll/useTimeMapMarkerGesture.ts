@@ -15,7 +15,6 @@ import type {
   ProjectStorePort,
 } from "../../domain/project-store";
 import {
-  getMeasureSpans,
   snapTickToMeasureGrid,
 } from "../../domain/transport/time-map";
 import type {
@@ -55,6 +54,8 @@ export interface TimeMapMarkerGestureOptions {
   readonly selectionMode: SelectionMode;
   readonly onSelectMarker: (tick: Tick, mode: SelectionMode) => void;
   readonly onMoveMarker: (fromTick: Tick, toTick: Tick) => void;
+  /** Prevents the browser's post-drag click from activating the source flag. */
+  readonly onSuppressActivation: (tick: Tick) => void;
   readonly getFlagElement: (tick: Tick) => HTMLButtonElement | null;
 }
 
@@ -75,6 +76,7 @@ export function useTimeMapMarkerGesture({
   selectionMode,
   onSelectMarker,
   onMoveMarker,
+  onSuppressActivation,
   getFlagElement,
 }: TimeMapMarkerGestureOptions): TimeMapMarkerGestureController {
   const begin = useCallback((
@@ -89,7 +91,7 @@ export function useTimeMapMarkerGesture({
       ? "add"
       : selectionMode;
 
-    if (flag.isInitial) {
+    if (flag.isInitial && flag.sectionComment === null) {
       const handle = reactEvent.currentTarget;
       const pointerId = reactEvent.pointerId;
 
@@ -133,34 +135,15 @@ export function useTimeMapMarkerGesture({
     const originClientY = reactEvent.clientY;
     const originTick = flag.startTick;
     const movesSelection = selection.hasMarkerGroup(originTick);
-    const hasMeter = !movesSelection && flag.timeSignature !== null;
-    const splitsMeterFlag =
-      movesSelection
-      && flag.timeSignature !== null
-      && (
-        flag.bpm !== null
-        || flag.patternId !== null
-        || flag.sectionComment !== null
-      );
     const layerLeft = layer.getBoundingClientRect().left;
 
     const clip = getActiveClip(projectStore.getState());
     const { timeMap, durationTicks } = clip.timeline;
-    let measureBoundaryTicks: readonly number[] = [];
-
-    if (hasMeter) {
-      measureBoundaryTicks = getMeasureSpans(
-        projectStore.getState().clock.ppqn,
-        timeMap,
-        durationTicks,
-      ).map((span) => span.startTick);
-    }
-
     let targetTick = originTick;
     let dragging = false;
 
     const setDraggingVisual = (active: boolean): void => {
-      handle.classList.toggle("is-dragging", active && !splitsMeterFlag);
+      handle.classList.toggle("is-dragging", active);
     };
 
     handle.setPointerCapture(pointerId);
@@ -190,35 +173,17 @@ export function useTimeMapMarkerGesture({
 
       const rawTick = pointerTick(event.clientX);
 
-      if (hasMeter) {
-        targetTick = originTick;
-        let nearestDistance = Number.POSITIVE_INFINITY;
+      const resolution = Math.max(1, gridResolutionTicks.get());
+      const state = projectStore.getState();
 
-        for (const boundaryTick of measureBoundaryTicks) {
-          if (boundaryTick === 0) {
-            continue;
-          }
-
-          const distance = Math.abs(boundaryTick - rawTick);
-
-          if (distance < nearestDistance) {
-            nearestDistance = distance;
-            targetTick = boundaryTick;
-          }
-        }
-      } else {
-        const resolution = Math.max(1, gridResolutionTicks.get());
-        const state = projectStore.getState();
-
-        targetTick = snapTickToMeasureGrid(
-          state.clock.ppqn,
-          timeMap,
-          durationTicks,
-          rawTick,
-          resolution,
-        );
-        targetTick = Math.min(durationTicks, Math.max(0, targetTick));
-      }
+      targetTick = snapTickToMeasureGrid(
+        state.clock.ppqn,
+        timeMap,
+        durationTicks,
+        rawTick,
+        resolution,
+      );
+      targetTick = Math.min(durationTicks, Math.max(0, targetTick));
 
       if (movesSelection) {
         targetTick = originTick + clampTimelineSelectionDelta(
@@ -245,6 +210,7 @@ export function useTimeMapMarkerGesture({
       timelineDragPreview.set(null);
 
       if (dragging) {
+        onSuppressActivation(originTick);
         if (originTick !== targetTick) {
           onMoveMarker(originTick, targetTick);
         }
@@ -283,6 +249,7 @@ export function useTimeMapMarkerGesture({
     selectionMode,
     onSelectMarker,
     onMoveMarker,
+    onSuppressActivation,
     getFlagElement,
     selection,
     timelineDragPreview,

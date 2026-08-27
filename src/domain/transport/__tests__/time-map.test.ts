@@ -20,7 +20,6 @@ import {
   insertTempoMarker,
   insertTimeIntoTimeMap,
   isMeasureBoundary,
-  moveMeterMarker,
   moveTempoMarker,
   normalizeMeterMarkers,
   normalizeScaleMarkers,
@@ -215,28 +214,6 @@ describe("meter marker operations", () => {
 
     expect(identical.timeMap.meterMarkers.map((marker) => marker.startTick))
       .toEqual([0, 3_840]);
-  });
-
-  test("moves a marker onto a requested boundary", () => {
-    const edit = moveMeterMarker(
-      PPQN,
-      createMixedTimeMap(),
-      MIXED_DURATION,
-      14_400,
-      11_040,
-    );
-
-    // 11_040 is already a boundary in the preceding 7/8 segment.
-    expect(edit.timeMap.meterMarkers.map((marker) => marker.startTick))
-      .toEqual([0, 7_680, 11_040]);
-    expect(edit.durationTicks).toBe(11_040 + 3 * 2_880);
-    expect(() => moveMeterMarker(
-      PPQN,
-      createMixedTimeMap(),
-      MIXED_DURATION,
-      0,
-      3_840,
-    )).toThrow(RangeError);
   });
 
   test("preserves adjacent identical meters on update", () => {

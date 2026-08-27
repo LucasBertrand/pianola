@@ -1,4 +1,5 @@
 .roll-frame {
+  --piano-roll-ruler-height: 50px;
   display: grid;
   min-height: 0;
   flex: 1;
@@ -18,7 +19,7 @@
   top: 0;
   right: 0;
   left: 0;
-  height: 50px;
+  height: var(--piano-roll-ruler-height);
   border-bottom: 1px solid var(--color-border);
   border-right: 1px solid var(--color-border-subtle);
   background: var(--color-surface-app);
@@ -64,7 +65,7 @@
 
 .piano-keyboard-viewport {
   position: absolute;
-  top: 50px;
+  top: var(--piano-roll-ruler-height);
   right: 0;
   bottom: 0;
   left: 0;
@@ -165,7 +166,7 @@
 }
 
 .bar-ruler-marker-flag {
-  --marker-stem-color: var(--color-border-control);
+  --marker-stem-color: var(--color-border-primary);
   position: absolute;
   top: calc(50% - 7px);
   left: 0;
@@ -174,11 +175,11 @@
   margin: 0;
   max-width: min(190px, calc(100vw - 76px));
   padding: 0 8px 0 7px;
-  border: 1px solid var(--color-border-control);
+  border: 1px solid var(--color-border-primary);
   border-radius: 2px 5px 5px 2px;
   background: var(--color-surface-raised);
   box-shadow: 0 2px 5px var(--color-shadow-soft);
-  color: var(--color-text-secondary);
+  color: var(--color-text-strong);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 8px;
   font-weight: 700;
@@ -219,10 +220,40 @@
 }
 
 .bar-ruler-marker-flag.is-initial {
+  --marker-stem-color: var(--color-border-control);
+  border-color: var(--color-border-control);
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
+.bar-ruler-marker-flag.is-initial.has-section-marker {
   --marker-stem-color: var(--color-border-primary);
   border-color: var(--color-border-primary);
   color: var(--color-text-strong);
-  cursor: default;
+  cursor: grab;
+}
+
+.bar-ruler-marker-flag.is-initial:not(.has-section-marker):hover {
+  --marker-stem-color: var(--color-border-control);
+  z-index: auto;
+  border-color: var(--color-border-control);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+}
+
+.bar-ruler-marker-flag.is-meter-only {
+  --marker-stem-color: var(--color-border-control);
+  border-color: var(--color-border-control);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.bar-ruler-marker-flag.is-meter-only:hover {
+  --marker-stem-color: var(--color-border-control);
+  z-index: auto;
+  border-color: var(--color-border-control);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
 }
 
 .bar-ruler-marker-flag.is-dragging {
@@ -257,11 +288,7 @@
     0 0 8px var(--color-primary-medium);
 }
 
-.bar-ruler-marker-flag.has-visible-boundary {
-  --marker-stem-color: var(--color-accent-primary);
-}
-
-.bar-ruler-marker-flag.is-selected.is-selection-residual {
+.bar-ruler-marker-flag.is-selection-residual {
   --marker-stem-color: var(--color-border-control);
   border-color: var(--color-border-control);
   background: var(--color-surface-raised);
@@ -272,7 +299,7 @@
 .bar-ruler-marker-boundaries {
   position: absolute;
   z-index: 2;
-  top: 50px;
+  top: var(--piano-roll-ruler-height);
   right: 0;
   left: 0;
   height: 100vh;
@@ -392,7 +419,7 @@
   top: 0;
   right: 0;
   left: 0;
-  height: 50px;
+  height: var(--piano-roll-ruler-height);
   overflow: visible;
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
@@ -406,7 +433,7 @@
   inset: 0;
   display: block;
   width: 100%;
-  height: 50px;
+  height: var(--piano-roll-ruler-height);
   overflow: hidden;
   contain: strict;
   border-bottom: 1px solid var(--color-border);
@@ -435,7 +462,7 @@
 
 .canvas-host {
   position: absolute;
-  inset: 50px 0 0;
+  inset: var(--piano-roll-ruler-height) 0 0;
   contain: strict;
   overscroll-behavior: contain;
   border-right: 1px solid var(--color-border-subtle);

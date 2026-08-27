@@ -547,17 +547,17 @@ export function createSelectedMarkerGroup(
 function normalizeMarkerGroup(
   group: SelectedTimeMapMarkerGroup,
 ): SelectedTimeMapMarkerGroup | null {
-  if (!Number.isSafeInteger(group.startTick) || group.startTick <= 0) {
+  if (!Number.isSafeInteger(group.startTick) || group.startTick < 0) {
     return null;
   }
 
   const kinds: MovableTimeMapMarkerKind[] = [];
 
-  if (group.kinds.includes("tempo")) {
+  if (group.startTick > 0 && group.kinds.includes("tempo")) {
     kinds.push("tempo");
   }
 
-  if (group.kinds.includes("scale")) {
+  if (group.startTick > 0 && group.kinds.includes("scale")) {
     kinds.push("scale");
   }
 

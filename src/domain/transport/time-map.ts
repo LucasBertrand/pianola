@@ -717,11 +717,6 @@ export interface MeterMarkerEdit {
   readonly durationTicks: Tick;
 }
 
-export interface MeterMarkerMoveEdit extends MeterMarkerEdit {
-  /** Actual tick after forward projection onto the preceding meter grid. */
-  readonly movedMarkerTick: Tick;
-}
-
 /**
  * Adds a meter marker on an existing measure boundary. Following meter
  * markers advance only when needed to remain on complete boundaries. Point
@@ -769,77 +764,6 @@ export function insertMeterMarker(
     timeMap.sectionMarkers,
     durationTicks,
   );
-}
-
-/**
- * Moves a meter marker to another measure boundary. The target must keep the
- * marker strictly between its neighbours in measure order.
- */
-export function moveMeterMarker(
-  ppqn: number,
-  timeMap: TimeMap,
-  durationTicks: Tick,
-  startTick: Tick,
-  targetTick: Tick,
-): MeterMarkerMoveEdit {
-  const spans = getMeasureSpans(ppqn, timeMap, durationTicks);
-  const markerIndex = timeMap.meterMarkers.findIndex(
-    (marker) => marker.startTick === startTick,
-  );
-
-  if (markerIndex < 0) {
-    throw new RangeError(
-      `No meter marker starts at tick ${String(startTick)}.`,
-    );
-  }
-
-  if (markerIndex === 0) {
-    throw new RangeError("The initial meter marker cannot be moved.");
-  }
-
-  const targetSpan = spans.find(
-    (candidate) => candidate.startTick === targetTick,
-  );
-
-  if (targetSpan === undefined) {
-    throw new RangeError(
-      "A meter marker must start on a measure boundary.",
-    );
-  }
-
-  if (timeMap.meterMarkers.some(
-    (marker, index) =>
-      index !== markerIndex && marker.startTick === targetTick,
-  )) {
-    throw new RangeError(
-      "A meter marker already starts this measure.",
-    );
-  }
-
-  const movedMarker: MeterMarker = {
-    ...timeMap.meterMarkers[markerIndex]!,
-    startTick: targetSpan.startTick,
-  };
-  const requestedMarkers = timeMap.meterMarkers.map((marker, index) =>
-    index === markerIndex ? movedMarker : marker,
-  );
-  const normalizedMarkers = normalizeMeterMarkers(requestedMarkers);
-  const movedMarkerIndex = normalizedMarkers.indexOf(movedMarker);
-  const edit = rebuildMeterStructure(
-    ppqn,
-    normalizedMarkers,
-    timeMap.tempoMarkers,
-    timeMap.scaleMarkers,
-    timeMap.sectionMarkers,
-    durationTicks,
-  );
-
-  return {
-    ...edit,
-    movedMarkerTick: movedMarkerIndex >= 0
-      ? edit.timeMap.meterMarkers[movedMarkerIndex]!.startTick
-      : targetSpan.startTick,
-  };
 }
 
 /**
@@ -1275,9 +1199,9 @@ export function removeTimeFromTimeMap(
       removalStartTick === 0
       || !areTimeSignaturesEqual(meterBeforeSeam, meterAfterRemoval)
     ) ? [{
-        startTick: removalStartTick,
-        timeSignature: meterAfterRemoval,
-      }] : []),
+      startTick: removalStartTick,
+      timeSignature: meterAfterRemoval,
+    }] : []),
   ]);
 
   const tempoBeforeSeam = getTempoAtTick(

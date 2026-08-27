@@ -17,7 +17,6 @@ import {
   getMeterAtTick,
   getTempoAtTick,
   getScaleMarkerAtTick,
-  moveMeterMarker,
   isMeasureBoundary,
   type TimeMap,
   type TimeSignature,
@@ -42,6 +41,16 @@ export interface TimeMapMarkerFlag {
   readonly patternId: string | null;
   readonly sectionComment: string | null;
   readonly isInitial: boolean;
+}
+
+/** True when a ruler flag contains a meter and no movable point marker. */
+export function isIsolatedMeterMarkerFlag(
+  flag: TimeMapMarkerFlag,
+): boolean {
+  return flag.timeSignature !== null
+    && flag.bpm === null
+    && flag.patternId === null
+    && flag.sectionComment === null;
 }
 
 /** Transient dialog draft; never enters the document until confirmation. */
@@ -407,7 +416,7 @@ export interface MarkerMovePlan {
   readonly collisions: readonly TimeMapMarkerCollision[];
 }
 
-/** Plans a complete flag move and optionally removes occupied point markers. */
+/** Plans a point-marker move and optionally removes occupied point markers. */
 export function planMarkerMove(
   state: ProjectState,
   clipId: ClipId,
@@ -420,42 +429,12 @@ export function planMarkerMove(
   }
 
   const clip = getClip(state, clipId);
-  const { timeMap, durationTicks } = clip.timeline;
+  const { timeMap } = clip.timeline;
   const moveCommands: PianoRollCommand[] = [];
+  const groupTargetTick = toTick;
 
-  const hasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === fromTick);
-  let groupTargetTick = toTick;
-
-  if (hasMeter) {
-    const targetHasMeter = timeMap.meterMarkers.some((marker) => marker.startTick === toTick);
-    if (targetHasMeter) {
-      throw new Error("A meter marker already exists at this position.");
-    }
-
-    try {
-      const edit = moveMeterMarker(
-        state.clock.ppqn,
-        timeMap,
-        durationTicks,
-        fromTick,
-        toTick,
-      );
-      groupTargetTick = edit.movedMarkerTick;
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "The meter marker cannot be moved.",
-      );
-    }
-
-    moveCommands.push({
-      type: "MoveMeterMarker",
-      clipId,
-      startTick: fromTick,
-      targetTick: toTick,
-    });
-  }
-
-  const isMovingTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === fromTick);
+  const isMovingTempo = fromTick > 0
+    && timeMap.tempoMarkers.some((marker) => marker.startTick === fromTick);
   const targetHasTempo = timeMap.tempoMarkers.some((marker) => marker.startTick === groupTargetTick);
   const collisions: TimeMapMarkerCollision[] = [];
 
@@ -474,7 +453,8 @@ export function planMarkerMove(
     }
   }
 
-  const isMovingScale = timeMap.scaleMarkers.some((marker) => marker.startTick === fromTick);
+  const isMovingScale = fromTick > 0
+    && timeMap.scaleMarkers.some((marker) => marker.startTick === fromTick);
   const targetHasScale = timeMap.scaleMarkers.some((marker) => marker.startTick === groupTargetTick);
 
   if (isMovingScale) {

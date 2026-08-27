@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { EditorSelection } from "../../../editor/selection/editor-selection";
+import {
+  createSelectedMarkerGroup,
+  EditorSelection,
+} from "../../../editor/selection/editor-selection";
 import {
   createTestNote,
   TEST_INSTRUMENT_ID,
@@ -16,6 +19,14 @@ const SECOND_GROUP = {
 };
 
 describe("timeline marker selection", () => {
+  test("selects only the optional section from the initial flag", () => {
+    expect(createSelectedMarkerGroup(0, true, true, true)).toEqual({
+      startTick: 0,
+      kinds: ["section"],
+    });
+    expect(createSelectedMarkerGroup(0, true, true, false)).toBeNull();
+  });
+
   test("replace mode replaces notes and other marker groups", () => {
     const selection = new EditorSelection();
     selection.add(createTestNote({

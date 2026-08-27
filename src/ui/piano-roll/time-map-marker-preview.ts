@@ -12,9 +12,7 @@ import type {
   TimeMapMarkerFlag,
 } from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
 
-interface PreviewMarkerGroup extends SelectedTimeMapMarkerGroup {
-  readonly movesMeter: boolean;
-}
+type PreviewMarkerGroup = SelectedTimeMapMarkerGroup;
 
 export interface MarkerPreviewProjection {
   readonly deltaTicks: number;
@@ -111,10 +109,7 @@ function resolvePreviewMarkerGroups(
     preview.source !== "markers"
     || preview.standaloneMarkerTick === null
   ) {
-    return selectedGroups.map((group) => ({
-      ...group,
-      movesMeter: false,
-    }));
+    return selectedGroups;
   }
 
   const flag = flags.find(
@@ -127,11 +122,11 @@ function resolvePreviewMarkerGroups(
 
   const kinds: MovableTimeMapMarkerKind[] = [];
 
-  if (flag.bpm !== null) {
+  if (flag.startTick > 0 && flag.bpm !== null) {
     kinds.push("tempo");
   }
 
-  if (flag.patternId !== null) {
+  if (flag.startTick > 0 && flag.patternId !== null) {
     kinds.push("scale");
   }
 
@@ -142,7 +137,6 @@ function resolvePreviewMarkerGroups(
   return [{
     startTick: flag.startTick,
     kinds,
-    movesMeter: flag.timeSignature !== null,
   }];
 }
 
@@ -153,7 +147,7 @@ function removePreviewedMarkerKinds(
   const nextFlag: TimeMapMarkerFlag = {
     ...flag,
     bpm: group.kinds.includes("tempo") ? null : flag.bpm,
-    timeSignature: group.movesMeter ? null : flag.timeSignature,
+    timeSignature: flag.timeSignature,
     rootNote: group.kinds.includes("scale") ? null : flag.rootNote,
     patternType: group.kinds.includes("scale") ? null : flag.patternType,
     patternId: group.kinds.includes("scale") ? null : flag.patternId,
@@ -178,9 +172,7 @@ function addPreviewedMarkerKinds(
   return {
     ...target,
     bpm: group.kinds.includes("tempo") ? source.bpm : target.bpm,
-    timeSignature: group.movesMeter
-      ? source.timeSignature
-      : target.timeSignature,
+    timeSignature: target.timeSignature,
     rootNote: group.kinds.includes("scale") ? source.rootNote : target.rootNote,
     patternType: group.kinds.includes("scale")
       ? source.patternType

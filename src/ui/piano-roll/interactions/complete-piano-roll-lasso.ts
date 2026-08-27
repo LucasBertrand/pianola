@@ -97,7 +97,6 @@ export function completePianoRollLasso({
       if (
         startTick < minimumTick
         || startTick > maximumTick
-        || startTick === 0
       ) {
         continue;
       }

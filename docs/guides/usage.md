@@ -115,6 +115,11 @@ Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
 Undo/Redo.
 La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme, section). Un marqueur de section attache un commentaire à un tick du clip ; il se sélectionne, se déplace et se copie comme les marqueurs de tempo et de gamme.
 
+Un marqueur métrique isolé ne se sélectionne et ne se déplace pas : un clic
+sur son drapeau ouvre la modale qui permet de l'éditer ou de le supprimer. Si
+son drapeau contient aussi des marqueurs de tempo, gamme ou section, ceux-ci
+restent sélectionnables et déplaçables sans entraîner la métrique.
+
 Changer une métrique ne déplace ni les notes ni les marqueurs de tempo, de
 gamme ou de section. Si un marqueur métrique ultérieur ne tombe plus sur une barre de mesure,
 il avance automatiquement jusqu'à la prochaine barre valide. L'ajout ou la

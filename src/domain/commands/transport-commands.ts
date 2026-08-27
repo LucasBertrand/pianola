@@ -10,7 +10,6 @@ import {
   insertMeterMarker,
   insertTempoMarker,
   insertTimeIntoTimeMap,
-  moveMeterMarker,
   moveTempoMarker,
   removeMeterMarker,
   removeTempoMarker,
@@ -41,7 +40,6 @@ import type {
   DeleteMeterMarkerCommand,
   DeleteTempoMarkerCommand,
   InsertMeasureCommand,
-  MoveMeterMarkerCommand,
   MoveTempoMarkerCommand,
   RemoveMeasureCommand,
   SetLoopEnabledCommand,
@@ -384,26 +382,6 @@ export function applyAddMeterMarker(
         startTick: command.startTick,
         timeSignature: command.timeSignature,
       },
-    ));
-
-  return withMeterEdit(state, edit, command);
-}
-
-export function applyMoveMeterMarker(
-  state: ActiveClipProjectState,
-  command: MoveMeterMarkerCommand,
-): ActiveClipProjectState {
-  if (command.startTick === command.targetTick) {
-    return state;
-  }
-
-  const edit = applyMarkerOperation(command, () =>
-    moveMeterMarker(
-      state.clock.ppqn,
-      state.timeline.timeMap,
-      state.timeline.durationTicks,
-      command.startTick,
-      command.targetTick,
     ));
 
   return withMeterEdit(state, edit, command);
