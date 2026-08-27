@@ -24,6 +24,12 @@ DECISIONS.md > TARGET.md > ROADMAP.md > MAPPING.md > BASELINE.md > STATUS.md
 
 `STATUS.md` décrit ce qui est fait ; il ne peut pas modifier une décision.
 
+## Inventaires préparatoires
+
+- [`STATE-HISTORY-INVENTORY.md`](STATE-HISTORY-INVENTORY.md) classe les données
+  actuellement historisées, les checkpoints transitoires de sélection et leur
+  destination parmi les quatre états introduits au lot 1.
+
 ## Relation avec la documentation produit
 
 Les documents hors de ce dossier décrivent le code réellement présent dans le
