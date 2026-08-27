@@ -248,6 +248,10 @@ function createEngine(
   voiceCount: number,
 ): WorkletTimelineEngine {
   const pitches = new Uint8Array(voiceCount);
+  const noteIds = Array.from(
+    { length: voiceCount },
+    (_, noteIndex) => `dsp-${String(noteIndex)}`,
+  );
   const startTicks = new Float64Array(voiceCount);
   const durationTicks = new Float64Array(voiceCount);
   pitches.fill(69);
@@ -263,6 +267,7 @@ function createEngine(
     tempoBpms: new Float64Array([120]),
     instruments: [{
       instrumentId: "dsp",
+      noteIds,
       pitches,
       startTicks,
       durationTicks,

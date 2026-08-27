@@ -38,53 +38,74 @@ export class WorkletHeldNoteStarter {
     for (let runtimeIndex = 0; runtimeIndex < runtimes.length; runtimeIndex += 1) {
       const runtime = runtimes[runtimeIndex];
       if (runtime === undefined) continue;
-      if (!runtime.audible || runtime.timeline.endTickTreeLeafCount === 0) {
+
+      this.startInstrument(runtime, tick, diagnosticFrame,
+        playbackBoundaryTick, voiceBank, onDiagnostic);
+    }
+  }
+
+  public startInstrument(
+    runtime: WorkletRuntimeInstrument,
+    tick: number,
+    diagnosticFrame: number,
+    playbackBoundaryTick: number,
+    voiceBank: WorkletVoiceBank,
+    onDiagnostic:
+      ((event: HeldNoteStartDiagnostic) => void) | undefined,
+  ): void {
+    if (!runtime.audible || runtime.timeline.endTickTreeLeafCount === 0) {
+      return;
+    }
+
+    const heldNoteCount = collectHeldNoteIndexes(
+      runtime.timeline,
+      tick,
+      Math.min(runtime.config.polyphony, this.noteIndexes.length),
+      this.noteIndexes,
+    );
+
+    for (
+      let heldNoteOffset = 0;
+      heldNoteOffset < heldNoteCount;
+      heldNoteOffset += 1
+    ) {
+      const noteIndex = this.noteIndexes[heldNoteOffset];
+
+      if (noteIndex === undefined) {
         continue;
       }
 
-      const heldNoteCount = collectHeldNoteIndexes(
-        runtime.timeline,
-        tick,
-        Math.min(runtime.config.polyphony, this.noteIndexes.length),
-        this.noteIndexes,
-      );
+      const noteId = runtime.timeline.noteIds[noteIndex];
+      const startTick = runtime.timeline.startTicks[noteIndex];
+      const durationTicks = runtime.timeline.durationTicks[noteIndex];
+      const pitch = runtime.timeline.pitches[noteIndex];
 
-      for (
-        let heldNoteOffset = 0;
-        heldNoteOffset < heldNoteCount;
-        heldNoteOffset += 1
+      if (
+        noteId === undefined
+        || startTick === undefined
+        || durationTicks === undefined
+        || pitch === undefined
+        || voiceBank.hasActiveTimelineVoice(
+          runtime.timeline.instrumentId,
+          noteId,
+        )
       ) {
-        const noteIndex = this.noteIndexes[heldNoteOffset];
-
-        if (noteIndex === undefined) {
-          continue;
-        }
-
-        const startTick = runtime.timeline.startTicks[noteIndex];
-        const durationTicks = runtime.timeline.durationTicks[noteIndex];
-        const pitch = runtime.timeline.pitches[noteIndex];
-
-        if (
-          startTick === undefined
-          || durationTicks === undefined
-          || pitch === undefined
-        ) {
-          continue;
-        }
-
-        voiceBank.startTimelineVoice(
-          runtime,
-          pitch,
-          Math.min(playbackBoundaryTick, startTick + durationTicks),
-        );
-        onDiagnostic?.({
-          type: "note-start",
-          frame: diagnosticFrame,
-          tick,
-          instrumentId: runtime.timeline.instrumentId,
-          pitch,
-        });
+        continue;
       }
+
+      voiceBank.startTimelineVoice(
+        runtime,
+        noteId,
+        pitch,
+        Math.min(playbackBoundaryTick, startTick + durationTicks),
+      );
+      onDiagnostic?.({
+        type: "note-start",
+        frame: diagnosticFrame,
+        tick,
+        instrumentId: runtime.timeline.instrumentId,
+        pitch,
+      });
     }
   }
 }

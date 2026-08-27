@@ -1,5 +1,6 @@
 import type {
   InstrumentId,
+  NoteId,
 } from "../../domain/identifiers";
 import type {
   SubtractivePlaybackPresetSnapshot,
@@ -87,10 +88,82 @@ export class WorkletVoiceBank {
 
   public startTimelineVoice(
     runtime: WorkletRuntimeInstrument,
+    noteId: NoteId,
     pitch: number,
     endTick: number,
   ): void {
-    this.startVoice(runtime, pitch, endTick, null);
+    const voice = this.startVoice(runtime, pitch, endTick, null);
+
+    voice?.bindTimelineNote(noteId);
+  }
+
+  public hasActiveTimelineVoice(
+    instrumentId: InstrumentId,
+    noteId: NoteId,
+  ): boolean {
+    for (let voiceIndex = 0;
+      voiceIndex < this.voices.length;
+      voiceIndex += 1) {
+      const voice = this.voices[voiceIndex];
+
+      if (
+        voice !== undefined
+        && voice.instrumentId === instrumentId
+        && voice.noteId === noteId
+        && !voice.ended
+        && !voice.releasing
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Preserves matching voices and releases only events no longer sounding. */
+  public reconcileTimelineInstrument(
+    runtime: WorkletRuntimeInstrument,
+    currentTick: number,
+    playbackBoundaryTick: number,
+  ): void {
+    const { timeline } = runtime;
+
+    for (const voice of this.voices) {
+      if (
+        voice.instrumentId !== timeline.instrumentId
+        || voice.noteId === null
+        || voice.ended
+        || voice.releasing
+      ) {
+        continue;
+      }
+
+      const noteIndex = timeline.noteIds.indexOf(voice.noteId);
+      const startTick = timeline.startTicks[noteIndex];
+      const durationTicks = timeline.durationTicks[noteIndex];
+      const pitch = timeline.pitches[noteIndex];
+      const noteEndTick = startTick === undefined || durationTicks === undefined
+        ? Number.NEGATIVE_INFINITY
+        : startTick + durationTicks;
+
+      if (
+        !runtime.audible
+        || noteIndex < 0
+        || startTick === undefined
+        || pitch === undefined
+        || startTick > currentTick
+        || noteEndTick <= currentTick
+      ) {
+        voice.release(VOICE_STEAL_RELEASE_SECONDS);
+        continue;
+      }
+
+      voice.reconcileTimelineEvent(
+        pitch,
+        this.tuningFrequencyHz,
+        Math.min(playbackBoundaryTick, noteEndTick),
+      );
+    }
   }
 
   public startAuditionVoice(
@@ -186,7 +259,7 @@ export class WorkletVoiceBank {
     pitch: number,
     endTick: number | null,
     auditionSamples: number | null,
-  ): void {
+  ): SubtractiveWorkletVoice | undefined {
     const displacedVoice = reserveWorkletVoice(
       this.voices,
       runtime.timeline.instrumentId,
@@ -196,7 +269,7 @@ export class WorkletVoiceBank {
     const voice = displacedVoice ?? this.availableVoices.pop();
 
     if (voice === undefined) {
-      return;
+      return undefined;
     }
 
     this.voiceSequence += 1;
@@ -213,6 +286,7 @@ export class WorkletVoiceBank {
 
     this.configureVoiceMix(voice, runtime);
     this.voices.push(voice);
+    return voice;
   }
 
   private configureVoiceMix(

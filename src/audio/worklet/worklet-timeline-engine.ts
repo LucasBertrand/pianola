@@ -324,7 +324,7 @@ export class WorkletTimelineEngine {
   public replaceInstrumentEvents(
     instrumentId: InstrumentId,
     events: Pick<AudioWorkletTimeline["instruments"][number],
-      "pitches" | "startTicks" | "durationTicks"
+      "noteIds" | "pitches" | "startTicks" | "durationTicks"
       | "maximumEndTickTree" | "endTickTreeLeafCount">,
     sequence: number,
     stateVersion: number,
@@ -332,10 +332,25 @@ export class WorkletTimelineEngine {
     if (!this.acceptStateMessage(sequence, stateVersion)) return;
     const runtime = this.runtimeInstrumentsById.get(instrumentId);
     if (runtime === undefined) return;
-    this.releaseTimelineVoices();
     runtime.timeline = { ...runtime.timeline, ...events };
-    this.refreshCursors(this.currentTick);
-    if (this.currentStatus === "playing") this.startHeldNotes(this.currentTick);
+    runtime.cursor = lowerBound(runtime.timeline.startTicks, this.currentTick);
+    if (this.currentStatus === "playing") {
+      const playbackBoundaryTick = this.resolvePlaybackBoundaryTick();
+
+      this.voiceBank.reconcileTimelineInstrument(
+        runtime,
+        this.currentTick,
+        playbackBoundaryTick,
+      );
+      this.heldNoteStarter.startInstrument(
+        runtime,
+        this.currentTick,
+        this.renderedFrame,
+        playbackBoundaryTick,
+        this.voiceBank,
+        this.onDiagnostic,
+      );
+    }
   }
 
   public updateTransport(
@@ -481,7 +496,14 @@ export class WorkletTimelineEngine {
           );
 
           if (endTick > this.currentTick) {
-            this.voiceBank.startTimelineVoice(runtime, pitch, endTick);
+            const noteId = timeline.noteIds[runtime.cursor];
+
+            if (noteId === undefined) {
+              runtime.cursor += 1;
+              continue;
+            }
+
+            this.voiceBank.startTimelineVoice(runtime, noteId, pitch, endTick);
             this.onDiagnostic?.({
               type: "note-start",
               frame: this.renderedFrame,

@@ -256,6 +256,172 @@ describe("AudioWorklet timeline engine", () => {
     expect(engine.status).toBe("playing");
   });
 
+  test("keeps sounding voices when a future note is edited", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const snapshot = createSnapshotWithNotes([
+      createTestNote({
+        id: "held",
+        pitch: 60,
+        startTick: 0,
+        durationTicks: 1_920,
+      }),
+      createTestNote({
+        id: "future",
+        pitch: 72,
+        startTick: 960,
+        durationTicks: 240,
+      }),
+    ]);
+    const replacement = createSnapshotWithNotes([
+      createTestNote({
+        id: "held",
+        pitch: 60,
+        startTick: 0,
+        durationTicks: 1_920,
+      }),
+      createTestNote({
+        id: "future",
+        pitch: 72,
+        startTick: 1_200,
+        durationTicks: 240,
+      }),
+    ]);
+    const instrument = replacement.instruments[0];
+    const engine = createEngine(snapshot, diagnostics);
+
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+
+    engine.play(120);
+    renderFrames(engine, RENDER_QUANTUM);
+    const diagnosticCount = diagnostics.length;
+    const start = vi.spyOn(SubtractiveWorkletVoice.prototype, "start");
+
+    engine.replaceInstrumentEvents(
+      instrument.instrumentId,
+      createTransferableInstrumentEvents(instrument).events,
+      0,
+      1,
+    );
+
+    expect(diagnostics).toHaveLength(diagnosticCount);
+    expect(start).not.toHaveBeenCalled();
+    start.mockRestore();
+  });
+
+  test("updates a sounding note without restarting its envelope", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const snapshot = createSnapshotWithNotes([createTestNote({
+      id: "edited-held",
+      pitch: 60,
+      startTick: 0,
+      durationTicks: 1_920,
+    })]);
+    const replacement = createSnapshotWithNotes([createTestNote({
+      id: "edited-held",
+      pitch: 67,
+      startTick: 0,
+      durationTicks: 2_400,
+    })]);
+    const instrument = replacement.instruments[0];
+    const engine = createEngine(snapshot, diagnostics);
+
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+
+    engine.play(120);
+    renderFrames(engine, RENDER_QUANTUM);
+    const diagnosticCount = diagnostics.length;
+    const reconcile = vi.spyOn(
+      SubtractiveWorkletVoice.prototype,
+      "reconcileTimelineEvent",
+    );
+
+    engine.replaceInstrumentEvents(
+      instrument.instrumentId,
+      createTransferableInstrumentEvents(instrument).events,
+      0,
+      1,
+    );
+
+    expect(diagnostics).toHaveLength(diagnosticCount);
+    expect(reconcile).toHaveBeenCalledWith(67, 440, 2_400);
+    reconcile.mockRestore();
+  });
+
+  test("releases only a sounding note removed from an instrument", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const retained = createTestNote({
+      id: "retained",
+      pitch: 60,
+      startTick: 0,
+      durationTicks: 1_920,
+    });
+    const removed = createTestNote({
+      id: "removed",
+      pitch: 67,
+      startTick: 0,
+      durationTicks: 1_920,
+    });
+    const snapshot = createSnapshotWithNotes([retained, removed]);
+    const replacement = createSnapshotWithNotes([retained]);
+    const instrument = replacement.instruments[0];
+    const engine = createEngine(snapshot, diagnostics);
+
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+
+    engine.play(120);
+    renderFrames(engine, RENDER_QUANTUM);
+    const release = vi.spyOn(SubtractiveWorkletVoice.prototype, "release");
+
+    engine.replaceInstrumentEvents(
+      instrument.instrumentId,
+      createTransferableInstrumentEvents(instrument).events,
+      0,
+      1,
+    );
+
+    expect(release).toHaveBeenCalledOnce();
+    release.mockRestore();
+  });
+
+  test("starts only a note moved across the current playhead", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const snapshot = createSnapshotWithNotes([createTestNote({
+      id: "moved-under-playhead",
+      pitch: 72,
+      startTick: 960,
+      durationTicks: 240,
+    })]);
+    const replacement = createSnapshotWithNotes([createTestNote({
+      id: "moved-under-playhead",
+      pitch: 72,
+      startTick: 48,
+      durationTicks: 480,
+    })]);
+    const instrument = replacement.instruments[0];
+    const engine = createEngine(snapshot, diagnostics);
+
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+
+    engine.play(120);
+    renderFrames(engine, RENDER_QUANTUM);
+    const diagnosticCount = diagnostics.length;
+
+    engine.replaceInstrumentEvents(
+      instrument.instrumentId,
+      createTransferableInstrumentEvents(instrument).events,
+      0,
+      1,
+    );
+
+    expect(diagnostics.slice(diagnosticCount)).toEqual([
+      expect.objectContaining({ type: "note-start", pitch: 72 }),
+    ]);
+  });
+
   test("retunes active voices when the master tuning timeline changes", () => {
     const snapshot = createSnapshotWithNotes([createTestNote({
       id: "retuned-held-note",

@@ -162,6 +162,7 @@ describe("AudioWorklet browser transport", () => {
       ...snapshot,
       instruments: [{
         ...instrument,
+        noteIds: ["replacement-note"],
         pitches: new Uint8Array([64]),
         startTicks: new Float64Array([120]),
         durationTicks: new Float64Array([240]),
@@ -174,9 +175,44 @@ describe("AudioWorklet browser transport", () => {
     expect(updates[0]).toMatchObject({
       protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
       instrumentId: instrument.instrumentId,
+      noteIds: ["replacement-note"],
     });
     expect(fakePort.messages.filter((message) => message.type === "load-timeline"))
       .toHaveLength(1);
+    await transport.dispose();
+  });
+
+  test("retransfers events when only their stable note identity changes", async () => {
+    const project = createTestProject({
+      clips: [{
+        id: TEST_CLIP_ID,
+        notes: [createTestNote({ id: "original-note" })],
+      }],
+    });
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const instrument = snapshot.instruments[0];
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) return;
+    const fakePort = new FakeMessagePort();
+    const transport = new AudioWorkletTransport(
+      snapshot, clip.transportSettings, {}, 0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+    await transport.play(0);
+    const messageCount = fakePort.messages.length;
+
+    transport.replacePlaybackState({
+      ...snapshot,
+      instruments: [{
+        ...instrument,
+        noteIds: instrument.noteIds.map((noteId) => `${noteId}-replacement`),
+      }],
+    }, clip.transportSettings);
+
+    expect(fakePort.messages.slice(messageCount).map((message) => message.type))
+      .toEqual(["replace-instrument-events"]);
     await transport.dispose();
   });
 

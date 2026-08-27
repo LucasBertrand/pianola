@@ -772,9 +772,18 @@ function haveEqualEvents(
   previous: PlaybackSnapshot["instruments"][number],
   next: PlaybackSnapshot["instruments"][number],
 ): boolean {
-  return haveEqualNumbers(previous.pitches, next.pitches)
+  return haveEqualValues(previous.noteIds, next.noteIds)
+    && haveEqualNumbers(previous.pitches, next.pitches)
     && haveEqualNumbers(previous.startTicks, next.startTicks)
     && haveEqualNumbers(previous.durationTicks, next.durationTicks);
+}
+
+function haveEqualValues<T>(previous: ArrayLike<T>, next: ArrayLike<T>): boolean {
+  if (previous.length !== next.length) return false;
+  for (let index = 0; index < previous.length; index += 1) {
+    if (previous[index] !== next[index]) return false;
+  }
+  return true;
 }
 
 function haveEqualNumbers(previous: ArrayLike<number>,

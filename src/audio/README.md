@@ -34,6 +34,13 @@ message porte une version de protocole ; les mutations portent aussi la séquenc
 de timeline et une version d’état monotone, afin qu’une commande tardive ne
 modifie pas un remplacement ou un clip préchargé déjà activé.
 
+Chaque événement transféré conserve l'identifiant stable de sa note. Lors du
+remplacement des événements d'un instrument, le worklet réconcilie ses voix par
+identifiant : une note qui couvre toujours le playhead garde son oscillateur,
+son filtre et ses enveloppes. Sa hauteur et sa fin sont actualisées sans
+nouvelle attaque ; seules les notes supprimées ou sorties du playhead sont
+relâchées, et seules celles qui viennent de le recouvrir sont déclenchées.
+
 Le worklet avance le tick depuis le nombre d’échantillons rendus : aucun timer,
 frame React ou callback du thread principal ne déclenche une note.
 

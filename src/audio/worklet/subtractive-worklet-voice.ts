@@ -1,5 +1,6 @@
 import type {
   InstrumentId,
+  NoteId,
 } from "../../domain/identifiers";
 import type {
   SubtractivePlaybackPresetSnapshot,
@@ -20,6 +21,7 @@ const FILTER_COEFFICIENT_UPDATE_SAMPLES = 32;
 /** Reusable DSP voice initialized from the fixed worklet-side pool. */
 export class SubtractiveWorkletVoice {
   public instrumentId: InstrumentId = "";
+  public noteId: NoteId | null = null;
   public sequence = 0;
   public endTick: number | null = null;
   private auditionSamples: number | null = null;
@@ -77,6 +79,7 @@ export class SubtractiveWorkletVoice {
       : 0;
 
     this.instrumentId = instrumentId;
+    this.noteId = null;
     this.sequence = sequence;
     this.endTick = endTick;
     this.auditionSamples = auditionSamples;
@@ -121,6 +124,24 @@ export class SubtractiveWorkletVoice {
       this.sampleRate,
       filterEnvelopeStartValue,
     );
+  }
+
+  public bindTimelineNote(noteId: NoteId): void {
+    this.noteId = noteId;
+  }
+
+  /** Updates a sounding timeline event without resetting its DSP state. */
+  public reconcileTimelineEvent(
+    pitch: number,
+    tuningFrequencyHz: number,
+    endTick: number,
+  ): void {
+    this.pitch = pitch;
+    this.baseFrequencyHz = tuningFrequencyHz
+      * 2 ** ((pitch - 69) / 12);
+    this.targetFrequencyHz = this.baseFrequencyHz
+      * 2 ** (this.oscillatorDetuneCents / 1_200);
+    this.endTick = endTick;
   }
 
   public get ended(): boolean {

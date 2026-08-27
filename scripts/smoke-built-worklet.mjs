@@ -7,6 +7,7 @@ import {
 } from "node:url";
 
 const assetsDirectory = path.resolve("dist", "assets");
+const protocolVersion = 1;
 const workletAssetName = (await readdir(assetsDirectory)).find((fileName) => (
   fileName.startsWith("playback-processor-")
   && fileName.endsWith(".js")
@@ -77,7 +78,7 @@ const instrument = {
 
 processor.port.onmessage({
   data: {
-    protocolVersion: 1,
+    protocolVersion,
     type: "load-timeline",
     sequence: 1,
     stateVersion: 1,
@@ -92,6 +93,7 @@ processor.port.onmessage({
       tempoBpms: new Float64Array([120]),
       instruments: [{
         instrumentId: "smoke",
+        noteIds: ["smoke-note"],
         pitches: new Uint8Array([69]),
         startTicks: new Float64Array([0]),
         durationTicks: new Float64Array([960]),
@@ -115,7 +117,7 @@ processor.port.onmessage({
   },
 });
 processor.port.onmessage({
-  data: { protocolVersion: 1, type: "play", tick: 0 },
+  data: { protocolVersion, type: "play", tick: 0 },
 });
 
 const left = new Float32Array(128);
@@ -140,7 +142,7 @@ if (!processor.port.messages.some((message) => (
 }
 
 if (processor.port.messages.some((message) => (
-  message.protocolVersion !== 1
+  message.protocolVersion !== protocolVersion
 ))) {
   throw new Error("The production worklet published an unversioned message.");
 }

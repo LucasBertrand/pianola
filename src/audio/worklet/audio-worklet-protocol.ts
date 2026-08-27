@@ -1,6 +1,7 @@
 import type {
   ClipId,
   InstrumentId,
+  NoteId,
   Tick,
 } from "../../domain/identifiers";
 import type {
@@ -26,6 +27,7 @@ interface VersionedMessage {
 
 export interface AudioWorkletTimelineInstrument {
   readonly instrumentId: InstrumentId;
+  readonly noteIds: readonly NoteId[];
   readonly pitches: Uint8Array;
   readonly startTicks: Float64Array;
   readonly durationTicks: Float64Array;
@@ -74,6 +76,7 @@ export type MainToAudioWorkletMessage = VersionedMessage & (
   | {
       readonly type: "replace-instrument-events";
       readonly instrumentId: InstrumentId;
+      readonly noteIds: readonly NoteId[];
       readonly pitches: Uint8Array;
       readonly startTicks: Float64Array;
       readonly durationTicks: Float64Array;
