@@ -88,13 +88,12 @@ vérifier les contrats décrits dans le
 Exécuter depuis la racine :
 
 ```bash
-npm run check:docs
 npm run verify
 ```
 
-`check:docs` vérifie les liens et chemins documentés. `verify` contrôle la
-structure, les frontières d'import, les trois configurations TypeScript, le
-build Vite, le module AudioWorklet produit et la suite Vitest.
+`verify` vérifie les liens et chemins documentés, la structure, les frontières
+d'import, les trois configurations TypeScript, le build Vite, le module
+AudioWorklet produit et la suite Vitest.
 
 Relire ensuite le diff et confirmer :
 

@@ -1,5 +1,8 @@
 # Instructions pour les agents
 
+Pour une tâche sans rapport avec la migration, suivre les chemins et propriétaires
+du code courant documentés dans le README racine et `docs/`.
+
 Pour toute tâche qui prépare, exécute, vérifie ou reprend la migration
 architecturale, commencer par [`docs/migration/README.md`](docs/migration/README.md)
 et lire les documents qu'il impose dans l'ordre indiqué.
@@ -16,6 +19,3 @@ Pendant la migration :
   le lot 8 est uniquement la réconciliation finale ;
 - préserver les changements préexistants de l'utilisateur et suivre le rollback
   et les validations du runbook de migration.
-
-Pour une tâche sans rapport avec la migration, suivre les chemins et propriétaires
-du code courant documentés dans le README racine et `docs/`.

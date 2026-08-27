@@ -20,14 +20,14 @@ utiliser l’URL réseau affichée par Vite.
 
 ## Validation
 
-Avant livraison, exécuter d'abord `npm run check:docs`. `npm run verify`
-enchaîne ensuite :
+`npm run verify` enchaîne :
 
-1. `npm run check:structure` ;
-2. `npm run check:boundaries` ;
-3. `npm run build` et ses trois typechecks ;
-4. `npm run test:worklet-build` ;
-5. `npm test`.
+1. `npm run check:docs` ;
+2. `npm run check:structure` ;
+3. `npm run check:boundaries` ;
+4. `npm run build` et ses trois typechecks ;
+5. `npm run test:worklet-build` ;
+6. `npm test`.
 
 Pour cibler un témoin sans redistribuer la suite actuelle :
 

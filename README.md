@@ -214,8 +214,7 @@ portable appartenant à l'utilisateur.
 
 ## Tests et validation
 
-Avant livraison, exécuter `npm run check:docs`, puis `npm run verify`. Ces
-commandes contrôlent :
+Avant livraison, exécuter `npm run verify`. Cette commande contrôle :
 
 1. liens et chemins documentaires ;
 2. structure, noms retirés et guides locaux ;

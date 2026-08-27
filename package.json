@@ -22,7 +22,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "check:structure": "node scripts/check-structure.mjs",
     "check:boundaries": "node scripts/check-import-boundaries.mjs",
-    "verify": "npm run check:structure && npm run check:boundaries && npm run build && npm run test:worklet-build && npm test"
+    "verify": "npm run check:docs && npm run check:structure && npm run check:boundaries && npm run build && npm run test:worklet-build && npm test"
   },
   "dependencies": {
     "@tonaljs/tonal": "^4.10.0",
