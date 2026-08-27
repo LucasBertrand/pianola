@@ -20,12 +20,13 @@ utiliser l’URL réseau affichée par Vite.
 
 ## Validation
 
-`npm run verify` enchaîne :
+Avant livraison, exécuter d'abord `npm run check:docs`. `npm run verify`
+enchaîne ensuite :
 
-1. `npm run check:docs` ;
-2. `npm run check:structure` ;
-3. `npm run check:boundaries` ;
-4. `npm run build` et ses trois typechecks ;
+1. `npm run check:structure` ;
+2. `npm run check:boundaries` ;
+3. `npm run build` et ses trois typechecks ;
+4. `npm run test:worklet-build` ;
 5. `npm test`.
 
 Pour cibler un témoin sans redistribuer la suite actuelle :
@@ -43,7 +44,7 @@ npm test -- src/persistence/__tests__/project-repository-contract.test.ts
 
 ## Avant une pull request
 
-Utiliser la checklist de
+Suivre le [guide de contribution](contributing.md), puis utiliser la checklist de
 [`.github/PULL_REQUEST_TEMPLATE.md`](../../.github/PULL_REQUEST_TEMPLATE.md),
 mettre à jour [`../code-map.md`](../code-map.md) si le point d’entrée change et
 ne pas introduire de façade ou de dossier sans propriétaire fonctionnel.

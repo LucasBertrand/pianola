@@ -62,6 +62,7 @@ Les variantes de tests sont décrites dans le
 | Besoin | Point d’entrée |
 | --- | --- |
 | découvrir la documentation | [`docs/README.md`](docs/README.md) |
+| commencer une modification | [`docs/guides/contributing.md`](docs/guides/contributing.md) |
 | travailler sur la migration architecturale | [`docs/migration/README.md`](docs/migration/README.md) |
 | trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
 | comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
@@ -213,7 +214,8 @@ portable appartenant à l'utilisateur.
 
 ## Tests et validation
 
-La référence est `npm run verify`. Elle contrôle, dans l’ordre :
+Avant livraison, exécuter `npm run check:docs`, puis `npm run verify`. Ces
+commandes contrôlent :
 
 1. liens et chemins documentaires ;
 2. structure, noms retirés et guides locaux ;
@@ -253,7 +255,9 @@ Avant une modification structurelle, identifiez :
 - les tests, styles et documents concernés ;
 - le point d’entrée à mettre à jour dans `docs/code-map.md`.
 
-La checklist complète est fournie par
+Le parcours de contribution est décrit dans
+[`docs/guides/contributing.md`](docs/guides/contributing.md). La checklist de
+livraison est fournie par
 [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md).
 
 Les conventions principales sont : fichiers TypeScript en kebab-case,

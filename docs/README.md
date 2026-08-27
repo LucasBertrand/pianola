@@ -10,6 +10,7 @@ README.
 
 | Je veux… | Lire |
 | --- | --- |
+| commencer une modification | [`guides/contributing.md`](guides/contributing.md) |
 | installer ou tester | [`guides/development.md`](guides/development.md) |
 | préparer, exécuter ou reprendre la migration | [`migration/README.md`](migration/README.md) |
 | apprendre les contrôles | [`guides/usage.md`](guides/usage.md) |
