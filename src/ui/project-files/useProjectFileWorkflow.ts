@@ -14,14 +14,12 @@ import {
   ProjectPersistenceError,
 } from "../../persistence/project-persistence-model";
 import {
-  createNativeProjectFileName,
-} from "../../project-io/native/native-project-metadata";
+  createPianolaProjectFileName,
+} from "../../infrastructure/project-files/pianola/pianola-project-metadata";
 import {
-  serializePortableProject,
-} from "../../project-io/portable/portable-project-codec";
-import {
-  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
-} from "../../project-io/native/version";
+  serializePianolaProject,
+} from "../../infrastructure/project-files/pianola/pianola-project-codec";
+import { FILE_CONSTANTS } from "../../config/pianola-file-config";
 import type {
   ShowApplicationAlert,
 } from "../../use-cases/dialogs/application-dialog-port";
@@ -99,7 +97,7 @@ export function useProjectFileWorkflow({
   const exportProject = useCallback((): void => {
     try {
       const document = runtime.projectStore.getState();
-      const serialized = serializePortableProject({
+      const serialized = serializePianolaProject({
         sourceDocumentId: documentId,
         exportedAt: new Date().toISOString(),
         document,
@@ -109,7 +107,7 @@ export function useProjectFileWorkflow({
         type: "application/json;charset=utf-8",
       });
 
-      if (blob.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
+      if (blob.size > FILE_CONSTANTS.pianolaProjectMaximumBytes) {
         throw new ProjectPersistenceError(
           "INVALID_DATA",
           "The project is too large to export.",
@@ -118,7 +116,7 @@ export function useProjectFileWorkflow({
 
       downloadBrowserFile(
         blob,
-        createNativeProjectFileName(document.title),
+        createPianolaProjectFileName(document.title),
       );
     } catch (error: unknown) {
       alert(

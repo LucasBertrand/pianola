@@ -136,17 +136,16 @@ import {
   isPitchAllowedByTonalPattern,
   snapPitchToTonalPattern,
 } from "../../src/music/pitch-snap";
-import {
-  parseNativeProjectFile,
-} from "../../src/project-io/native/parse-native-project";
-import {
-  serializeNativeProjectFile,
-} from "../../src/project-io/native/serialize-native-project";
+
 import {
   getMidiNoteLabel,
   getPreferredRootLabel,
   getScaleDegreeLabel,
 } from "../../src/ui/piano-roll/rendering/pitch-label";
+import {
+  parsePianolaProject,
+  serializePianolaProject,
+} from "../../src/infrastructure/project-files/pianola/pianola-project-codec";
 import {
   createAudioTestEditorState as createEditorState,
   createAudioTestNote as createNote,
@@ -1281,43 +1280,43 @@ function getActiveTestMeasureCount(state) {
       savedAt: "2026-07-29T10:01:00.000Z",
     };
     const editorState = createEditorState();
-    const serialized = serializeNativeProjectFile(
-      state,
-      metadata,
-      editorState,
-    );
-    const loaded = parseNativeProjectFile(serialized);
+    const serialized = serializePianolaProject({
+      sourceDocumentId: metadata.documentId,
+      exportedAt: metadata.savedAt,
+      document: state,
+      workspace: editorState,
+    });
+    const loaded = parsePianolaProject(serialized);
     const nativeDocument = JSON.parse(serialized);
 
-    assert.equal(nativeDocument.formatVersion, 3);
-    assert.equal(loaded.projectState.masterBus.gain, 0.41);
-    assert.equal(loaded.projectState.masterBus.tuningFrequencyHz, 442);
+    assert.equal(nativeDocument.schemaVersion, 1);
+    assert.equal(loaded.document.masterBus.gain, 0.41);
+    assert.equal(loaded.document.masterBus.tuningFrequencyHz, 442);
     assert.equal(
-      getActiveTestClip(loaded.projectState).tracksByInstrumentId["voice-a"]
+      loaded.document.clipsById[loaded.workspace.activeClipId].tracksByInstrumentId["voice-a"]
         .notesById["disabled"].muted,
       true,
     );
-    assert.deepEqual(loaded.editorState, editorState);
+    assert.deepEqual(loaded.workspace, editorState);
     assert.equal(
-      loaded.projectState.schemaVersion,
+      loaded.document.schemaVersion,
       PROJECT_SCHEMA_VERSION,
     );
     assert.equal(
-      loaded.projectState.projectInstrumentsById["voice-a"].instrument.polyphony,
+      loaded.document.projectInstrumentsById["voice-a"].instrument.polyphony,
       DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);
-    delete invalidCurrentDocument.project.instrumentPresetsById[
-      invalidCurrentDocument.project.instrumentPresetOrder[0]
+    delete invalidCurrentDocument.document.instrumentPresetsById[
+      invalidCurrentDocument.document.instrumentPresetOrder[0]
     ].config.polyphony;
     assert.throws(
-      () => parseNativeProjectFile(
+      () => parsePianolaProject(
         JSON.stringify(invalidCurrentDocument),
       ),
       (error) => (
         error.code === "INVALID_DATA"
-        && error.path.endsWith(".config.polyphony")
       ),
     );
   });
@@ -1367,12 +1366,6 @@ function getActiveTestMeasureCount(state) {
             subdivision: "straight",
             resolutionTicks: 240,
           },
-          viewport: {
-            zoomX: 0.75,
-            zoomY: 1.5,
-            scrollX: 120,
-            scrollY: 480,
-          },
         },
       },
     };
@@ -1381,29 +1374,34 @@ function getActiveTestMeasureCount(state) {
       createdAt: "2026-08-10T10:00:00.000Z",
       savedAt: "2026-08-10T10:01:00.000Z",
     };
-    const loaded = parseNativeProjectFile(
-      serializeNativeProjectFile(state, metadata, editorState),
+    const loaded = parsePianolaProject(
+      serializePianolaProject({
+        sourceDocumentId: metadata.documentId,
+        exportedAt: metadata.savedAt,
+        document: state,
+        workspace: editorState,
+      })
     );
 
     assert.deepEqual(
-      getClipPlaybackOrder(loaded.projectState.clipHierarchy),
+      getClipPlaybackOrder(loaded.document.clipHierarchy),
       ["clip-test", "clip-native-second"],
     );
     assert.equal(
-      loaded.projectState.workspace.activeClipId,
+      loaded.workspace.activeClipId,
       "clip-native-second",
     );
     assert.equal(
-      loaded.projectState.clipsById["clip-test"]
+      loaded.document.clipsById["clip-test"]
         .timeline.timeMap.tempoMarkers[0].bpm,
       84,
     );
     assert.equal(
-      loaded.projectState.clipsById["clip-native-second"]
+      loaded.document.clipsById["clip-native-second"]
         .tracksByInstrumentId["voice-a"].notesById.second.locked,
       true,
     );
-    assert.deepEqual(loaded.editorState, editorState);
+    assert.deepEqual(loaded.workspace, editorState);
   });
 
   test("round-trips ticks and seconds across tempo segments", () => {

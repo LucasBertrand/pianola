@@ -5,10 +5,10 @@ workspace réel, pas seulement l'intention.
 
 ## État global
 
-- Statut : EN ATTENTE DU LOT SUIVANT
-- Lot actif : aucun
-- Dernier lot terminé : 1 — Vocabulaire d'état
-- Prochaine action : préparer le lot 2 en revérifiant sa condition d'entrée et le périmètre du nouveau format `.pianola`, sans conserver de compatibilité historique
+- Statut : EN ATTENTE
+- Lot actif : Aucun
+- Dernier lot terminé : 2 — Format `.pianola`
+- Prochaine action : ouvrir le lot 3 (Persistance) en vérifiant sa condition d'entrée
 - Dernière mise à jour : 2026-08-27
 
 ## Baseline connue
@@ -45,7 +45,7 @@ D  docs/storage-strategies.md
 | ---: | --- | --- |
 | 0 | TERMINÉ | Baseline, couverture et scénario de rendu connus ; garde-fous verts |
 | 1 | TERMINÉ | Cinq types explicites adoptés ; alias supprimés ; garde-fous et suite complète verts |
-| 2 | À FAIRE | Format `.pianola` |
+| 2 | TERMINÉ | Format `.pianola` |
 | 3 | À FAIRE | Persistance |
 | 4 | À FAIRE | Cœur d'édition |
 | 5 | À FAIRE | `PianoRollWorkspace` |
@@ -80,6 +80,20 @@ compatibilité.
   prévus par la feuille de route.
 
 ## Journal
+
+### 2026-08-27 — Lot 2, démarrage
+
+- objectif : créer le format `.pianola` sous `infrastructure/project-files/pianola`, extraire les parseurs réutilisables, et supprimer toute trace de `native` et `legacy` en repartant de la version 1.
+- condition d'entrée vérifiée dans ce journal : le lot 1 est `TERMINÉ` et la validation complète est au vert.
+- SHA de départ et point de rollback initial :
+  `0f0afca953190aa91ee30eed66ef62c991bf25bf`, commit du lot 1
+  `0f0afca` ;
+- état initial du worktree vérifié par `git status --short` : propre ; aucun changement utilisateur.
+- périmètre et fichiers prévus : `src/infrastructure/project-files/pianola/`, `src/project-io/native`, `src/project-io/portable`, `src/config/native-file-config.ts` (vers `pianola-file-config.ts`) et la mise à jour des consommateurs pour remplacer les noms `NATIVE_*`.
+- validation complète finale : `npm run verify` réussi — 61 fichiers de test et 402 tests réussis ;
+- statut du lot : `TERMINÉ`. La condition de sortie est satisfaite : le format `.pianola` (version 1) est centralisé, les anciens formats ont été supprimés, et tous les tests passent avec le nouveau codec.
+- point de rollback final : SHA de départ `0f0afca953190aa91ee30eed66ef62c991bf25bf` et patch complet `C:\Users\Bebou\AppData\Local\Temp\pianola-lot2-complete.patch` (SHA-256 `5A940C151B7CFBF1A3D7F2634178E7CA64F63050E5F7C82D8845D4E5D651E736`) ;
+- prochaine action exacte : après revue du lot 2, ouvrir le lot 3 en vérifiant de nouveau sa condition d'entrée. Aucun travail du lot 3 n'est commencé dans ce worktree.
 
 ### 2026-08-27 — Lot 1, démarrage
 

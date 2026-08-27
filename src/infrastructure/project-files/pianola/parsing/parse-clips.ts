@@ -1,49 +1,49 @@
-import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
-import { TONAL_SNAP_CONSTANTS } from "../../../config/music-config";
+import { PROJECT_CONSTANTS } from "../../../../config/domain-limits";
+import { TONAL_SNAP_CONSTANTS } from "../../../../config/music-config";
 import {
   DEFAULT_CLIP_BYPASS_ENABLED,
   type Clip,
   type ClipTimeline,
   type InstrumentTrack,
   DEFAULT_CLIP_COLOR,
-} from "../../../domain/clips/clip";
+} from "../../../../domain/clips/clip";
 import {
   DEFAULT_CLIP_GROUP_COLOR,
   DEFAULT_CLIP_GROUP_BYPASS_ENABLED,
   MAXIMUM_CLIP_GROUP_DEPTH,
   MAXIMUM_CLIP_GROUP_NAME_LENGTH,
   type ClipHierarchyNode,
-} from "../../../domain/clips/clip-hierarchy";
+} from "../../../../domain/clips/clip-hierarchy";
 import {
   type ClipId,
   type InstrumentId,
   type NoteId,
-} from "../../../domain/identifiers";
+} from "../../../../domain/identifiers";
 import {
   type LoopRegion,
   type ProjectClock,
   type TransportState,
-} from "../../../domain/transport/transport";
+} from "../../../../domain/transport/transport";
 import {
   type MeterMarker,
   type ScaleMarker,
   type SectionMarker,
   type TempoMarker,
   type TimeSignature,
-} from "../../../domain/transport/time-map";
-import { type Note } from "../../../domain/notes/note";
+} from "../../../../domain/transport/time-map";
+import { type Note } from "../../../../domain/notes/note";
 import {
   MAXIMUM_CLIP_NOTE_COUNT,
-} from "../../../domain/notes/note";
+} from "../../../../domain/notes/note";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
-} from "../../../domain/identifiers";
-import { validateNoteForInstrumentTrack } from "../../../domain/validation/note-validation";
+} from "../../../../domain/identifiers";
+import { validateNoteForInstrumentTrack } from "../../../../domain/validation/note-validation";
 import {
   validateClipTimeline,
   validateTransportState,
-} from "../../../domain/validation/transport-validation";
-import { fail } from "../native-project-error";
+} from "../../../../domain/validation/transport-validation";
+import { fail } from "../pianola-project-error";
 import {
   assertExactRecordKeys,
   readArray,

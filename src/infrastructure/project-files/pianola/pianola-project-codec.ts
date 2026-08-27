@@ -1,55 +1,53 @@
-import {
-  MAXIMUM_ENTITY_ID_LENGTH,
-} from "../../domain/identifiers";
+import { MAXIMUM_ENTITY_ID_LENGTH } from "../../../domain/identifiers";
 import {
   createProjectDocumentPayload,
-} from "../../persistence/project-document-payload";
+} from "../../../persistence/project-document-payload";
 import {
   ProjectPersistenceError,
-} from "../../persistence/project-persistence-model";
+} from "../../../persistence/project-persistence-model";
 import {
   parsePersistenceJson,
   readPersistenceInteger,
   readPersistenceIsoDate,
   readPersistenceRecord,
   readPersistenceString,
-} from "../../persistence/persistence-codec-readers";
+} from "../../../persistence/persistence-codec-readers";
 import {
   parsePersistedEditorWorkspace,
-} from "../../persistence/project-workspace-codec";
+} from "../../../persistence/project-workspace-codec";
 import {
   parseProjectSnapshot,
-} from "../native/parsing/parse-project";
+} from "./parsing/parse-project";
 import {
-  PORTABLE_PROJECT_FORMAT,
-  PORTABLE_PROJECT_SCHEMA_VERSION,
-  type PortableProject,
-} from "./portable-project-schema";
+  PIANOLA_PROJECT_FORMAT,
+  PIANOLA_PROJECT_SCHEMA_VERSION,
+  type PianolaProject,
+} from "./pianola-project-schema";
 
-export function serializePortableProject(
-  project: PortableProject,
+export function serializePianolaProject(
+  project: PianolaProject,
 ): string {
   const serialized = JSON.stringify({
-    format: PORTABLE_PROJECT_FORMAT,
-    schemaVersion: PORTABLE_PROJECT_SCHEMA_VERSION,
+    format: PIANOLA_PROJECT_FORMAT,
+    schemaVersion: PIANOLA_PROJECT_SCHEMA_VERSION,
     sourceDocumentId: project.sourceDocumentId,
     exportedAt: project.exportedAt,
     document: createProjectDocumentPayload(project.document),
     workspace: project.workspace,
   }, null, 2);
 
-  parsePortableProject(serialized);
+  parsePianolaProject(serialized);
   return serialized;
 }
 
-export function parsePortableProject(serialized: string): PortableProject {
+export function parsePianolaProject(serialized: string): PianolaProject {
   const source = readPersistenceRecord(
     parsePersistenceJson(serialized),
     "$",
   );
   const format = readPersistenceString(source["format"], "$.format", 64);
 
-  if (format !== PORTABLE_PROJECT_FORMAT) {
+  if (format !== PIANOLA_PROJECT_FORMAT) {
     throw new ProjectPersistenceError(
       "INVALID_DATA",
       "The selected file is not a Pianola project.",
@@ -62,17 +60,10 @@ export function parsePortableProject(serialized: string): PortableProject {
     1,
   );
 
-  if (version > PORTABLE_PROJECT_SCHEMA_VERSION) {
+  if (version !== PIANOLA_PROJECT_SCHEMA_VERSION) {
     throw new ProjectPersistenceError(
       "FUTURE_VERSION",
-      `Project file version ${version} is newer than this application.`,
-    );
-  }
-
-  if (version < 1) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      `Project file version ${version} is not supported.`,
+      `Project file version ${version} is not supported. Baseline is ${PIANOLA_PROJECT_SCHEMA_VERSION}.`,
     );
   }
 

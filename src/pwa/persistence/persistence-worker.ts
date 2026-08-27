@@ -12,7 +12,7 @@ import {
 } from "../../persistence/stored-project-codec";
 import {
   parseProjectSnapshot,
-} from "../../project-io/native/parsing/parse-project";
+} from "../../infrastructure/project-files/pianola/parsing/parse-project";
 
 type WorkerRequest =
   | {

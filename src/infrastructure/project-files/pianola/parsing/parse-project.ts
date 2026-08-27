@@ -1,39 +1,41 @@
 import {
   type Clip,
-} from "../../../domain/clips/clip";
+} from "../../../../domain/clips/clip";
 import {
   assertValidClipHierarchy,
   createFlatClipHierarchy,
   getClipPlaybackOrder,
   type ClipHierarchyNode,
-} from "../../../domain/clips/clip-hierarchy";
-import { PROJECT_CONSTANTS } from "../../../config/domain-limits";
+} from "../../../../domain/clips/clip-hierarchy";
+import { PROJECT_CONSTANTS } from "../../../../config/domain-limits";
 import {
   type ClipId,
-} from "../../../domain/identifiers";
+} from "../../../../domain/identifiers";
 import {
   type MasterBusState,
-} from "../../../domain/master-bus";
+} from "../../../../domain/master-bus";
 import {
   type ProjectClock,
-} from "../../../domain/transport/transport";
+} from "../../../../domain/transport/transport";
 import {
   type ProjectDocument,
-} from "../../../domain/project/project-document";
+} from "../../../../domain/project/project-document";
 import {
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
-} from "../../../domain/master-bus";
+} from "../../../../domain/master-bus";
 import {
   PROJECT_SCHEMA_VERSION,
-} from "../../../domain/project/project-document";
+} from "../../../../domain/project/project-document";
 import {
   validateProjectClock,
-} from "../../../domain/validation/transport-validation";
-import { fail } from "../native-project-error";
-import { MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH } from "../version";
+} from "../../../../domain/validation/transport-validation";
+import { fail } from "../pianola-project-error";
+import {
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+} from "../../../../domain/project/project-document";
 import {
   assertExactRecordKeys,
   readBoolean,
@@ -76,7 +78,7 @@ export function parseProjectSnapshot(
   const title = readNonEmptyString(
     project["title"],
     `${path}.title`,
-    MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
+    MAXIMUM_PROJECT_TITLE_LENGTH,
   );
   const clock = parseProjectClock(project["clock"], `${path}.clock`);
   const instrumentOrder = parseInstrumentOrder(

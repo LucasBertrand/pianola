@@ -50,11 +50,9 @@ import type {
   UserSettings,
 } from "../persistence/user-settings-model";
 import {
-  parsePortableProject,
-} from "../project-io/portable/portable-project-codec";
-import {
-  MAXIMUM_NATIVE_PROJECT_FILE_BYTES,
-} from "../project-io/native/version";
+  parsePianolaProject,
+} from "../infrastructure/project-files/pianola/pianola-project-codec";
+import { FILE_CONSTANTS } from "../config/pianola-file-config";
 import {
   requestPersistentBrowserStorage,
 } from "../pwa/persistence/browser-storage-policy";
@@ -182,11 +180,11 @@ function EditorApplication(): React.JSX.Element {
 
   const handleImport = useCallback((file: File) =>
     runLibraryAction(async () => {
-      if (file.size > MAXIMUM_NATIVE_PROJECT_FILE_BYTES) {
+      if (file.size > FILE_CONSTANTS.pianolaProjectMaximumBytes) {
         throw new Error("The selected project file is too large.");
       }
 
-      const imported = parsePortableProject(await file.text());
+      const imported = parsePianolaProject(await file.text());
       const candidate: StoredProject = {
         documentId: createDocumentId(),
         revision: 0,

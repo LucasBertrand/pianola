@@ -1,4 +1,4 @@
-import { INSTRUMENT_CONSTANTS } from "../../../config/domain-limits";
+import { INSTRUMENT_CONSTANTS } from "../../../../config/domain-limits";
 import {
   type AdsrEnvelope,
   type EffectDescriptor,
@@ -10,11 +10,11 @@ import {
   type ProjectInstrument,
   type ProjectInstrumentInterpretation,
   type SubtractiveSynthConfig,
-} from "../../../domain/instruments/instrument";
+} from "../../../../domain/instruments/instrument";
 import {
   type InstrumentId,
   type PresetId,
-} from "../../../domain/identifiers";
+} from "../../../../domain/identifiers";
 import {
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
@@ -22,15 +22,15 @@ import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
   MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-} from "../../../domain/instruments/instrument";
+} from "../../../../domain/instruments/instrument";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
-} from "../../../domain/identifiers";
+} from "../../../../domain/identifiers";
 import {
   validateInstrumentPreset,
   validateProjectInstrument,
-} from "../../../domain/validation/instrument-validation";
-import { fail } from "../native-project-error";
+} from "../../../../domain/validation/instrument-validation";
+import { fail } from "../pianola-project-error";
 import {
   assertExactRecordKeys,
   type JsonPrimitive,

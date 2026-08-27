@@ -7,7 +7,7 @@ import {
 } from "../../persistence/stored-project-codec";
 import {
   parseProjectSnapshot,
-} from "../native/parsing/parse-project";
+} from "../../infrastructure/project-files/pianola/parsing/parse-project";
 
 export const DIRECT_STORED_PROJECT_CODEC: StoredProjectCodec = {
   encode(snapshot) {

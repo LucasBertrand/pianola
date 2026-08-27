@@ -1,4 +1,4 @@
-import { fail } from "../native-project-error";
+import { fail } from "../pianola-project-error";
 
 export type JsonPrimitive = string | number | boolean;
 export type UnknownRecord = Readonly<Record<string, unknown>>;

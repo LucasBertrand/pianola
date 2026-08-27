@@ -8,7 +8,7 @@
 ## Format natif `.pianola`
 
 Le point d’entrée unique du format portable est
-`src/project-io/portable/portable-project-codec.ts`. Le fichier porte
+`src/infrastructure/project-files/pianola/pianola-project-codec.ts`. Le fichier porte
 `format: "app.pianola.project"`, sa propre `schemaVersion`, le document musical
 et un `PersistedEditorWorkspace` séparé. Il ne contient aucune préférence
 utilisateur.

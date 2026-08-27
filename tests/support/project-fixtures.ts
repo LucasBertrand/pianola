@@ -23,6 +23,7 @@ import {
   PROJECT_SCHEMA_VERSION,
   type EditorSessionState,
 } from "../../src/domain/project/project-document";
+
 import {
   type InstrumentTrack,
 } from "../../src/domain/clips/clip";
@@ -37,8 +38,8 @@ import {
   type ProjectInstrument,
 } from "../../src/domain/instruments/instrument";
 import type {
-  NativeEditorState,
-} from "../../src/project-io/native/native-project-schema";
+  PersistedEditorWorkspace,
+} from "../../src/persistence/project-persistence-model";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../src/music/pitch-snap";
@@ -222,14 +223,11 @@ export function createAudioTestProject({
 }
 
 export function createAudioTestEditorState(
-  overrides: Partial<NativeEditorState> = {},
-): NativeEditorState {
+  overrides: Partial<PersistedEditorWorkspace> = {},
+): PersistedEditorWorkspace {
   return {
     activeClipId: "clip-test",
     selectedInstrumentId: "voice-a",
-    selectionMode: "add",
-    noteColorMode: "pitch",
-    pitchPreviewEnabled: false,
     clipStatesById: {
       "clip-test": {
         pitchSnapSettings: {
@@ -243,18 +241,11 @@ export function createAudioTestEditorState(
           subdivision: "triplet",
           resolutionTicks: 320,
         },
-        viewport: {
-          zoomX: 1.4,
-          zoomY: 1.2,
-          scrollX: 240,
-          scrollY: 360,
-        },
       },
     },
     ...overrides,
   };
 }
-
 export function getAudioTestActiveClip(state: EditorSessionState) {
   return getActiveClip(state);
 }

@@ -4,7 +4,7 @@ import React, {
 } from "react";
 import {
   FILE_CONSTANTS,
-} from "../../config/native-file-config";
+} from "../../config/pianola-file-config";
 import type {
   ProjectSummary,
 } from "../../persistence/project-persistence-model";
@@ -159,7 +159,7 @@ function LocalProjectCollection({
             className="project-file-input"
             type="file"
             accept={
-              `${FILE_CONSTANTS.nativeProjectExtension},application/json`
+              `${FILE_CONSTANTS.pianolaProjectExtension},application/json`
             }
             onChange={(event) => void handleImport(event)}
           />

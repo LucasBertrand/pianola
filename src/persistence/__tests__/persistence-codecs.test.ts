@@ -7,9 +7,9 @@ import {
   createTestProject,
 } from "../../../tests/support/test-builders";
 import {
-  parsePortableProject,
-  serializePortableProject,
-} from "../../project-io/portable/portable-project-codec";
+  parsePianolaProject,
+  serializePianolaProject,
+} from "../../infrastructure/project-files/pianola/pianola-project-codec";
 import {
   createDefaultPersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";
@@ -56,15 +56,15 @@ describe("persistence codecs", () => {
         },
       },
     };
-    const serialized = serializePortableProject({
-      sourceDocumentId: "portable-project",
+    const serialized = serializePianolaProject({
+      sourceDocumentId: "pianola-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
       workspace: createDefaultPersistedEditorWorkspace(document),
     });
 
-    expect(parsePortableProject(serialized)).toMatchObject({
-      sourceDocumentId: "portable-project",
+    expect(parsePianolaProject(serialized)).toMatchObject({
+      sourceDocumentId: "pianola-project",
       document: {
         title: document.title,
         autoScrollEnabled: true,
@@ -74,7 +74,7 @@ describe("persistence codecs", () => {
     expect(serialized).not.toContain("selectionMode");
     expect(serialized).not.toContain("pitchPreviewEnabled");
     expect(serialized).not.toContain("playheadTick");
-    expect(parsePortableProject(serialized).document
+    expect(parsePianolaProject(serialized).document
       .clipsById[activeClipId]?.timeline.timeMap.sectionMarkers)
       .toEqual([{ startTick: 960, comment: "Verse" }]);
   });
@@ -94,21 +94,21 @@ describe("persistence codecs", () => {
       },
       instrumentPresetOrder: [...document.instrumentPresetOrder, preset.id],
     };
-    const serialized = serializePortableProject({
+    const serialized = serializePianolaProject({
       sourceDocumentId: "portable-personal-preset",
       exportedAt: "2026-08-24T12:00:00.000Z",
       document: withPreset,
       workspace: createDefaultPersistedEditorWorkspace(withPreset),
     });
 
-    expect(parsePortableProject(serialized)
+    expect(parsePianolaProject(serialized)
       .document.instrumentPresetsById[preset.id]).toEqual(preset);
   });
 
   test("refuses a future portable version", () => {
     const document = createTestProject();
-    const serialized = serializePortableProject({
-      sourceDocumentId: "portable-project",
+    const serialized = serializePianolaProject({
+      sourceDocumentId: "pianola-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
       workspace: createDefaultPersistedEditorWorkspace(document),
@@ -116,14 +116,14 @@ describe("persistence codecs", () => {
     const source = JSON.parse(serialized) as Record<string, unknown>;
     source["schemaVersion"] = 999;
 
-    expect(() => parsePortableProject(JSON.stringify(source)))
-      .toThrow("newer than this application");
+    expect(() => parsePianolaProject(JSON.stringify(source)))
+      .toThrow("Project file version 999 is not supported");
   });
 
   test("migrates v1 portable playhead fields to transient state", () => {
     const document = createTestProject();
-    const serialized = serializePortableProject({
-      sourceDocumentId: "portable-project",
+    const serialized = serializePianolaProject({
+      sourceDocumentId: "pianola-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
       workspace: createDefaultPersistedEditorWorkspace(document),
@@ -153,7 +153,7 @@ describe("persistence codecs", () => {
       legacy.workspace.clipStatesById[clipId]!["playheadTick"] = 480;
     }
 
-    const migrated = parsePortableProject(JSON.stringify(legacy));
+    const migrated = parsePianolaProject(JSON.stringify(legacy));
     const clipId = getClipPlaybackOrder(document.clipHierarchy)[0]!;
 
     expect(migrated.document.schemaVersion).toBe(12);
@@ -161,7 +161,7 @@ describe("persistence codecs", () => {
       .transportSettings).toBe(false);
     expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)
       .toBe(false);
-    expect(serializePortableProject(migrated)).not.toContain("playheadTick");
+    expect(serializePianolaProject(migrated)).not.toContain("playheadTick");
   });
 
   test("validates user settings and rejects duplicate shortcuts", () => {
@@ -247,7 +247,7 @@ describe("persistence codecs", () => {
       DIRECT_STORED_PROJECT_CODEC,
     );
 
-    expect(() => parsePortableProject("{invalid-json"))
+    expect(() => parsePianolaProject("{invalid-json"))
       .toThrow("valid JSON");
     await expect(repository.list()).resolves.toEqual([]);
   });

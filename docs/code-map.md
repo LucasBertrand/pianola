@@ -19,7 +19,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | clips et groupes | `src/ui/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
 | transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` et boucle du clip, enchaînement global et auto-scroll du document, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
 | persistance locale | `src/persistence/project-persistence-model.ts` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/persistence/__tests__/project-repository-contract.test.ts` |
-| fichiers `.pianola` | `src/project-io/portable/portable-project-codec.ts` | document + `PersistedEditorWorkspace` | `src/persistence/__tests__/persistence-codecs.test.ts` |
+| fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | document + `PersistedEditorWorkspace` | `src/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
 
@@ -48,7 +48,7 @@ restent le garde-fou de parité des flux transversaux.
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
 | modifier le master bus | `src/ui/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | commandes de transport, validation et painters ruler/grid |
-| modifier `.pianola` | `src/project-io/portable/portable-project-codec.ts` | workspace codec et parseur de document |
+| modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | workspace codec et parseur de document |
 | modifier autosave ou récupération | `src/use-cases/persistence/project-autosave.ts` | repository IndexedDB et Worker |
 | modifier le MIDI | `src/project-io/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/config/application-colors.ts` | tokens CSS et styles de surface |
@@ -177,7 +177,7 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 - `src/domain/note-collision.ts` possède l’algorithme cohérent de résolution ;
   son orchestration de dialogue est ailleurs.
 - `src/project-io/midi/smf-reader.ts` et
-  `src/project-io/native/parsing/parse-instruments.ts` regroupent chacun un
+  `src/infrastructure/project-files/pianola/parsing/parse-instruments.ts` regroupent chacun un
   parseur cohérent dont les sous-étapes restent internes au propriétaire.
 
 Le contrôle `npm run check:structure` signale tous les modules dépassant 500

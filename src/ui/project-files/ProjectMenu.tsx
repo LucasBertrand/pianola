@@ -9,8 +9,8 @@ import {
   MIDI_CONSTANTS,
 } from "../../config/midi-config";
 import {
-  MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH,
-} from "../../project-io/native/version";
+  MAXIMUM_PROJECT_TITLE_LENGTH,
+} from "../../domain/project/project-document";
 
 export interface ProjectMenuProps {
   readonly projectTitle: string;
@@ -99,7 +99,7 @@ export function ProjectMenu({
             key={projectTitle}
             className="project-menu-title-input"
             type="text"
-            maxLength={MAXIMUM_NATIVE_PROJECT_TITLE_LENGTH}
+            maxLength={MAXIMUM_PROJECT_TITLE_LENGTH}
             defaultValue={projectTitle}
             aria-label="Project title"
             onBlur={(event) => {
