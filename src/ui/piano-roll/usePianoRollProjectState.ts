@@ -19,6 +19,9 @@ import type {
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
+import {
+  useProjectStoreSelector,
+} from "./useProjectStoreSelector";
 
 export interface PianoRollProjectState {
   readonly project: EditorSessionState;
@@ -40,8 +43,9 @@ export function usePianoRollProjectState(
   runtime: EditorRuntime,
   controllerRef: RefObject<PianoRollControllerPort | null>,
 ): PianoRollProjectState {
-  const [project, setProject] = useState(
-    () => runtime.projectStore.getState(),
+  const project = useProjectStoreSelector(
+    runtime.projectStore,
+    selectEditorSessionState,
   );
   const [selectedInstrumentId, selectInstrument] =
     useState<InstrumentId | null>(
@@ -79,7 +83,6 @@ export function usePianoRollProjectState(
         clearInteractionSelection();
       }
 
-      setProject(state);
       selectInstrument((currentInstrumentId) => {
         if (
           currentInstrumentId !== null
@@ -105,4 +108,10 @@ export function usePianoRollProjectState(
     handleSelectionChange,
     clearInteractionSelection,
   };
+}
+
+function selectEditorSessionState(
+  state: EditorSessionState,
+): EditorSessionState {
+  return state;
 }

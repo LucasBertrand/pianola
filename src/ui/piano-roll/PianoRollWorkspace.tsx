@@ -6,9 +6,6 @@ import React, {
   useState,
 } from "react";
 import {
-  createPortal,
-} from "react-dom";
-import {
   APPLICATION_CONSTANTS,
 } from "../../config/product-config";
 import {
@@ -16,14 +13,8 @@ import {
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
-  MAXIMUM_MEASURE_COUNT,
 } from "../../domain/clips/clip";
 import {
-  countClipGroups,
-  MAXIMUM_CLIP_GROUP_COUNT,
-} from "../../domain/clips/clip-hierarchy";
-import {
-  getMeasureSpanAtTick,
   getMeasureSpans,
 } from "../../domain/transport/time-map";
 import { isNoteEditable } from "../../domain/notes/note";
@@ -37,29 +28,23 @@ import {
   useTimeMapMarkerWorkflow,
 } from "../../ui/piano-roll/useTimeMapMarkerWorkflow";
 import {
-  TempoMeterMarkerDialog,
-} from "../../ui/dialogs/TempoMeterMarkerDialog";
-import {
-  ManageMeasuresDialog,
-} from "../../ui/dialogs/ManageMeasuresDialog";
-import {
-  type MidiImportAnalysis,
-} from "../../project-io/midi/midi-import-types";
-import {
-  ApplicationDialogOverlay,
-} from "../../ui/dialogs/ApplicationDialogOverlay";
-import {
   useApplicationDialogs,
 } from "../../ui/dialogs/useApplicationDialogs";
+import {
+  PianoRollWorkspaceDialogs,
+} from "../../ui/dialogs/PianoRollWorkspaceDialogs";
+import {
+  usePianoRollDialogState,
+} from "../../ui/dialogs/usePianoRollDialogState";
 import {
   PianoRollLayers,
 } from "../../ui/piano-roll/PianoRollLayers";
 import {
+  PianoRollWorkspaceLayout,
+} from "../../ui/piano-roll/PianoRollWorkspaceLayout";
+import {
   PianoRollViewportControls,
 } from "../../ui/editor-toolbar/PianoRollViewportControls";
-import {
-  computeClipFitViewport,
-} from "../../editor/viewport/compute-clip-fit-viewport";
 import {
   PianoRollRuler,
   PianoRollPlayhead,
@@ -80,23 +65,8 @@ import {
   ProjectInspectorResizeHandle,
 } from "../../ui/inspector/ProjectInspectorResizeHandle";
 import {
-  InstrumentPresetDialog,
-} from "../../ui/dialogs/InstrumentPresetDialog";
-import {
-  ClipEditorDialog,
-} from "../../ui/dialogs/ClipEditorDialog";
-import {
-  ClipSplitDialog,
-} from "../../ui/dialogs/ClipSplitDialog";
-import {
   EditorHeader,
 } from "../../ui/editor-toolbar/EditorHeader";
-import {
-  useAudioPlayback,
-} from "../../ui/transport/useAudioPlayback";
-import {
-  getMaximumAdjacentMeasureCounts,
-} from "../../ui/transport/measure-management";
 import type {
   PianoRollControllerPort,
 } from "../../editor/interactions/piano-roll-controller-port";
@@ -106,12 +76,6 @@ import type {
 import {
   type PitchSnapSettings,
 } from "../../music/pitch-snap";
-import type {
-  SelectionMode,
-} from "../../editor/interactions/gestures/gesture-draft";
-import type {
-  NoteColorMode,
-} from "../../editor/model/note-color-mode";
 import type {
   EditorRuntime,
 } from "../../application/editor-session/editor-runtime";
@@ -134,25 +98,15 @@ import {
   usePianoRollSelectionWorkflow,
 } from "../../ui/piano-roll/usePianoRollSelectionWorkflow";
 import {
-  useProjectFileWorkflow,
-} from "../../ui/project-files/useProjectFileWorkflow";
-import {
-  useProjectAutosave,
-} from "../../ui/project-files/useProjectAutosave";
-import {
-  getPlaybackFollowTargetClipId,
-  resolvePlaybackFollowClipSelection,
-  shouldReturnViewportToStart,
-} from "../../ui/transport/playback-follow-policy";
-import {
-  useMidiFileWorkflow,
-} from "../../ui/project-files/useMidiFileWorkflow";
+  usePianoRollProjectLifecycle,
+} from "../../ui/project-files/usePianoRollProjectLifecycle";
 import {
   RenderBaselineProfiler,
 } from "../diagnostics/RenderBaselineProfiler";
 import {
-  useTransportWorkflow,
-} from "../../ui/transport/useTransportWorkflow";
+  usePianoRollTransportViewport,
+  usePlaybackFollowSelection,
+} from "../../ui/transport/usePianoRollTransportViewport";
 import {
   usePrimaryActionTrigger,
 } from "./interactions/usePrimaryActionTrigger";
@@ -161,23 +115,25 @@ import {
 } from "./interactions/useStylusAction";
 import {
   FloatingRadialMenu,
-  type FloatingRadialMenuItem,
 } from "./context-menu/FloatingRadialMenu";
-import {
-  CommandIcon,
-} from "../shared/CommandIcon";
 import {
   useFloatingRadialMenu,
 } from "./context-menu/useFloatingRadialMenu";
 import {
+  usePianoRollRadialMenuCommands,
+} from "./context-menu/usePianoRollRadialMenuCommands";
+import {
   useKeyboardShortcut,
 } from "./interactions/useKeyboardShortcut";
 import {
-  useViewportControls,
-} from "../../ui/piano-roll/useViewportControls";
+  useRenderSignalValue,
+} from "../../ui/piano-roll/useRenderSignalValue";
 import {
   useInstrumentDialogWorkflow,
 } from "../../ui/inspector/instruments/useInstrumentDialogWorkflow";
+import {
+  usePianoRollUserPreferences,
+} from "../../ui/inspector/instruments/usePianoRollUserPreferences";
 import {
   useNoteCollisionDialogWorkflow,
 } from "./interactions/useNoteCollisionDialogWorkflow";
@@ -195,24 +151,6 @@ import type {
   UserSettings,
   UserSettingsRepository,
 } from "../../application/ports/user-settings-repository";
-import {
-  capturePersistedEditorWorkspace,
-} from "../../application/editor-session/workspace-persistence";
-import {
-  createPersonalInstrumentPreset,
-  createPersonalInstrumentPresetId,
-  mergeInstrumentPresetLibraries,
-} from "../../domain/personal-instrument-presets";
-import {
-  MAXIMUM_INSTRUMENT_NAME_LENGTH,
-  MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-  type InstrumentPreset,
-  type SubtractiveSynthConfig,
-} from "../../domain/instruments/instrument";
-import type {
-  ClipId,
-  PresetId,
-} from "../../domain/identifiers";
 
 export interface PianoRollWorkspaceProps {
   readonly runtime: EditorRuntime;
@@ -251,9 +189,6 @@ export function PianoRollWorkspace({
     () => new MutableRenderSignal<LoopRegion | null>(null),
     [],
   );
-  const pendingMidiImportRef =
-    useRef<MidiImportAnalysis | null>(null);
-
   const {
     project: projectState,
     selectedInstrumentId,
@@ -266,31 +201,12 @@ export function PianoRollWorkspace({
   } = usePianoRollProjectState(runtime, pianoRollControllerRef);
   const [projectInspectorOpen, setGeneralInspectorOpen] =
     useState(false);
-  const [measureDialogOperation, setMeasureDialogOperation] =
-    useState<"insert" | "remove" | null>(null);
-  const [splitClipId, setSplitClipId] = useState<ClipId | null>(null);
+  const dialogState = usePianoRollDialogState();
   const [projectInspectorSection, setGeneralInspectorSection] =
     useState<"instruments" | "clips">("instruments");
-  const [
-    projectInspectorToolbarHost,
-    setGeneralInspectorToolbarHost,
-  ] = useState<HTMLDivElement | null>(null);
-  const [selectionMode, setSelectionMode] =
-    useState<SelectionMode>(initialUserSettings.selectionMode);
-  const [noteColorMode, setNoteColorMode] =
-    useState<NoteColorMode>(
-      initialUserSettings.noteColorMode,
-    );
-  const [pitchPreviewEnabled, setPitchPreviewEnabled] =
-    useState<boolean>(
-      initialUserSettings.pitchPreviewEnabled,
-    );
-  const [pitchSnapSettings, setPitchSnapSettings] =
-    useState<PitchSnapSettings>(
-      () => runtime.pitchSnapSettings.get(),
-  );
-  const [gridResolutionTicks, setGridResolutionTicks] = useState(
-    () => runtime.gridResolutionTicks.get(),
+  const pitchSnapSettings = useRenderSignalValue(runtime.pitchSnapSettings);
+  const gridResolutionTicks = useRenderSignalValue(
+    runtime.gridResolutionTicks,
   );
   const activeClip = getActiveClip(projectState);
   const autoScrollEnabled = projectState.autoScrollEnabled;
@@ -300,22 +216,6 @@ export function PianoRollWorkspace({
     activeClip.timeline.durationTicks,
   );
   const measureCount = measureSpans.length;
-  const mergedPresetLibrary = useMemo(() => mergeInstrumentPresetLibraries(
-    projectState.instrumentPresetsById,
-    projectState.instrumentPresetOrder,
-    initialUserSettings.personalInstrumentPresetsById,
-    initialUserSettings.personalInstrumentPresetOrder,
-  ), [
-    initialUserSettings.personalInstrumentPresetOrder,
-    initialUserSettings.personalInstrumentPresetsById,
-    projectState.instrumentPresetOrder,
-    projectState.instrumentPresetsById,
-  ]);
-  const personalPresetIds = useMemo(
-    () => new Set(initialUserSettings.personalInstrumentPresetOrder),
-    [initialUserSettings.personalInstrumentPresetOrder],
-  );
-
   useEffect(() => {
     setSelectedInstrumentId(initialWorkspace.selectedInstrumentId);
   }, [initialWorkspace.selectedInstrumentId, setSelectedInstrumentId]);
@@ -329,20 +229,9 @@ export function PianoRollWorkspace({
       };
 
       runtime.pitchSnapSettings.set(nextSettings);
-      setPitchSnapSettings(nextSettings);
     },
     [runtime],
   );
-  const handleAutoFit = useCallback(() => {
-    runtime.viewport.set(
-      computeClipFitViewport(
-        activeClip,
-        runtime.viewportWidth.get(),
-        runtime.viewportHeight.get(),
-      )
-    );
-  }, [runtime, activeClip]);
-
   const handlePitchSelect = useCallback((pitch: number): void => {
     pianoRollControllerRef.current
       ?.togglePitchSelection(pitch);
@@ -350,78 +239,37 @@ export function PianoRollWorkspace({
   const clearTimelineSelection = useCallback((): void => {
     pianoRollControllerRef.current?.clearSelection();
   }, []);
-  const clearPendingMidiImport = useCallback((): void => {
-    pendingMidiImportRef.current = null;
-  }, []);
+  const getPianoRollController = useCallback(
+    (): PianoRollControllerPort | null => pianoRollControllerRef.current,
+    [],
+  );
+  const applicationDialogs = useApplicationDialogs();
   const {
-    dialog: applicationDialog,
     showDialog: setApplicationDialog,
     alert: showApplicationAlert,
     confirm: showApplicationConfirmation,
-    accept: handleApplicationDialogConfirm,
-    acceptAlternate: handleApplicationDialogAlternate,
-    cancel: handleApplicationDialogCancel,
-  } = useApplicationDialogs(clearPendingMidiImport);
+    cancel: cancelApplicationDialog,
+  } = applicationDialogs;
+  const transportViewport = usePianoRollTransportViewport({
+    runtime,
+    activeClip,
+    inspectorOpen: projectInspectorOpen,
+    autoScrollEnabled,
+    selectedInstrumentId,
+    getController: getPianoRollController,
+    alert: showApplicationAlert,
+  });
   const {
     status: playbackStatus,
     playingClipId,
     togglePlayback,
     toggleClipPlayback,
     stopPlayback,
-    returnToStart,
     seek: seekPlayback,
-    auditionPitch,
     previewInstrumentGain,
     previewInstrumentSettings,
     previewMasterGain,
-  } = useAudioPlayback({
-    projectStore: runtime.projectStore,
-    playheadPosition: runtime.playheadPosition,
-    onError(error) {
-      showApplicationAlert(
-        "Playback unavailable",
-        formatAudioPlaybackError(error),
-        "danger",
-      );
-    },
-  });
-  const autosave = useProjectAutosave(
-    runtime,
-    documentId,
-    storedRevision,
-    projectRepository,
-    selectedInstrumentId,
-  );
-  const handlePitchAudition = useCallback((pitch: number): void => {
-    if (selectedInstrumentId !== null) {
-      auditionPitch(selectedInstrumentId, pitch);
-    }
-  }, [
-    auditionPitch,
-    selectedInstrumentId,
-  ]);
-
-  useEffect(
-    () => runtime.pitchSnapSettings.subscribe(() => {
-      setPitchSnapSettings(runtime.pitchSnapSettings.get());
-    }),
-    [runtime],
-  );
-  useEffect(
-    () => runtime.gridResolutionTicks.subscribe(() => {
-      setGridResolutionTicks(runtime.gridResolutionTicks.get());
-    }),
-    [runtime],
-  );
-
-  usePrimaryActionTrigger(
-    togglePlayback,
-    initialUserSettings.shortcuts["transport.toggle"],
-  );
-  const radialMenu = useFloatingRadialMenu();
-
-  useStylusAction(radialMenu.toggleAt);
-
+  } = transportViewport.playback;
   const {
     appShellRef,
     stageRef,
@@ -434,40 +282,19 @@ export function PianoRollWorkspace({
     beginHorizontalViewportInteraction,
     endHorizontalViewportInteraction,
     publishViewport,
-  } = useViewportControls(
-    runtime,
-    projectInspectorOpen,
-    autoScrollEnabled
-      && playbackStatus === "playing"
-      && playingClipId === activeClip.id,
-    seekPlayback,
-    handleAutoFit,
-  );
-  const handleReturnToStart = useCallback((): void => {
-    returnToStart();
-    const viewport = runtime.viewport.get();
+  } = transportViewport.viewport;
+  const handleAutoFit = transportViewport.autoFit;
+  const handleReturnToStart = transportViewport.returnToStart;
+  const handlePitchAudition = transportViewport.auditionPitch;
 
-    if (
-      shouldReturnViewportToStart(
-        autoScrollEnabled,
-        activeClip.id,
-        playingClipId,
-      )
-      && viewport.scrollX !== 0
-    ) {
-      publishViewport({
-        ...viewport,
-        scrollX: 0,
-      });
-    }
-  }, [
-    activeClip.id,
-    autoScrollEnabled,
-    playingClipId,
-    publishViewport,
-    returnToStart,
-    runtime,
-  ]);
+  usePrimaryActionTrigger(
+    togglePlayback,
+    initialUserSettings.shortcuts["transport.toggle"],
+  );
+  const radialMenu = useFloatingRadialMenu();
+
+  useStylusAction(radialMenu.toggleAt);
+
   const handleNoteCollision = useNoteCollisionDialogWorkflow({
     runtime,
     showDialog: setApplicationDialog,
@@ -495,175 +322,39 @@ export function PianoRollWorkspace({
     },
     confirm: showApplicationConfirmation,
   });
-  const savePersonalInstrumentPreset = useCallback(async (
-    presetName: string,
-    config: SubtractiveSynthConfig,
-  ): Promise<InstrumentPreset> => {
-    const normalizedName = validatePersonalPresetName(presetName);
-
-    const preset = createPersonalInstrumentPreset(
-      createPersonalInstrumentPresetId(),
-      normalizedName,
-      config,
-    );
-    const updatedSettings = await userSettingsRepository.update((current) => {
-      assertPersonalPresetNameAvailable(current, normalizedName);
-
-      if (
-        current.personalInstrumentPresetOrder.length
-        >= MAXIMUM_PROJECT_INSTRUMENT_COUNT
-      ) {
-        throw new Error("The personal preset library is full.");
-      }
-
-      return {
-        ...current,
-        personalInstrumentPresetsById: {
-          ...current.personalInstrumentPresetsById,
-          [preset.id]: preset,
-        },
-        personalInstrumentPresetOrder: [
-          ...current.personalInstrumentPresetOrder,
-          preset.id,
-        ],
-      };
-    });
-
-    onUserSettingsChange(updatedSettings);
-    return preset;
-  }, [onUserSettingsChange, userSettingsRepository]);
-  const updatePersonalInstrumentPreset = useCallback(async (
-    presetId: PresetId,
-    config: SubtractiveSynthConfig,
-  ): Promise<InstrumentPreset> => {
-    const updatedSettings = await userSettingsRepository.update((current) => {
-      const currentPreset = current.personalInstrumentPresetsById[presetId];
-
-      if (currentPreset === undefined) {
-        throw new Error("This personal preset no longer exists.");
-      }
-
-      return {
-        ...current,
-        personalInstrumentPresetsById: {
-          ...current.personalInstrumentPresetsById,
-          [presetId]: createPersonalInstrumentPreset(
-            presetId,
-            currentPreset.name,
-            config,
-          ),
-        },
-      };
-    });
-    const preset = updatedSettings.personalInstrumentPresetsById[presetId];
-
-    if (preset === undefined) {
-      throw new Error("The updated preset could not be loaded.");
-    }
-
-    onUserSettingsChange(updatedSettings);
-
-    if (runtime.projectStore.getState().instrumentPresetsById[presetId]) {
-      saveProjectInstrumentPreset(preset, "Update instrument preset");
-    }
-
-    return preset;
-  }, [
-    onUserSettingsChange,
+  const preferences = usePianoRollUserPreferences({
     runtime,
-    saveProjectInstrumentPreset,
-    userSettingsRepository,
-  ]);
-  const renamePersonalInstrumentPreset = useCallback(async (
-    presetId: PresetId,
-    presetName: string,
-  ): Promise<InstrumentPreset> => {
-    const normalizedName = validatePersonalPresetName(presetName);
-    const updatedSettings = await userSettingsRepository.update((current) => {
-      const preset = current.personalInstrumentPresetsById[presetId];
-
-      if (preset === undefined) {
-        throw new Error("This personal preset no longer exists.");
-      }
-
-      assertPersonalPresetNameAvailable(current, normalizedName, presetId);
-      return {
-        ...current,
-        personalInstrumentPresetsById: {
-          ...current.personalInstrumentPresetsById,
-          [presetId]: { ...preset, name: normalizedName },
-        },
-      };
-    });
-    const preset = updatedSettings.personalInstrumentPresetsById[presetId];
-
-    if (preset === undefined) {
-      throw new Error("The renamed preset could not be loaded.");
-    }
-
-    onUserSettingsChange(updatedSettings);
-
-    if (runtime.projectStore.getState().instrumentPresetsById[presetId]) {
-      saveProjectInstrumentPreset(preset, "Rename instrument preset");
-    }
-
-    return preset;
-  }, [
-    onUserSettingsChange,
-    runtime,
-    saveProjectInstrumentPreset,
-    userSettingsRepository,
-  ]);
-  const deletePersonalInstrumentPreset = useCallback(async (
-    presetId: PresetId,
-  ): Promise<void> => {
-    const updatedSettings = await userSettingsRepository.update((current) => {
-      if (current.personalInstrumentPresetsById[presetId] === undefined) {
-        throw new Error("This personal preset no longer exists.");
-      }
-
-      return {
-        ...current,
-        personalInstrumentPresetsById: Object.fromEntries(
-          Object.entries(current.personalInstrumentPresetsById).filter(
-            ([candidateId]) => candidateId !== presetId,
-          ),
-        ),
-        personalInstrumentPresetOrder:
-          current.personalInstrumentPresetOrder.filter(
-            (candidateId) => candidateId !== presetId,
-          ),
-      };
-    });
-
-    onUserSettingsChange(updatedSettings);
-    removeProjectInstrumentPreset(presetId, "Delete instrument preset");
-  }, [
-    onUserSettingsChange,
-    removeProjectInstrumentPreset,
-    userSettingsRepository,
-  ]);
+    settings: initialUserSettings,
+    projectPresetsById: projectState.instrumentPresetsById,
+    projectPresetOrder: projectState.instrumentPresetOrder,
+    repository: userSettingsRepository,
+    onSettingsChange: onUserSettingsChange,
+    onPersistenceError(error) {
+      showApplicationAlert(
+        "Settings not saved",
+        error instanceof Error ? error.message : "Unable to save settings.",
+        "danger",
+      );
+    },
+    saveProjectPreset: saveProjectInstrumentPreset,
+    removeProjectPreset: removeProjectInstrumentPreset,
+  });
   const instrumentDialog = useInstrumentDialogWorkflow({
     runtime,
     addInstrument: addProjectInstrument,
     updateInstrument: handleUpdateProjectInstrument,
     removeInstrument: handleDeleteProjectInstrument,
     previewInstrumentSettings,
-    presetsById: mergedPresetLibrary.presetsById,
-    personalPresetIds,
-    createPersonalPreset: savePersonalInstrumentPreset,
-    updatePersonalPreset: updatePersonalInstrumentPreset,
-    renamePersonalPreset: renamePersonalInstrumentPreset,
-    deletePersonalPreset: deletePersonalInstrumentPreset,
+    presetsById: preferences.presetsById,
+    personalPresetIds: preferences.personalPresetIds,
+    createPersonalPreset: preferences.createPersonalPreset,
+    updatePersonalPreset: preferences.updatePersonalPreset,
+    renamePersonalPreset: preferences.renamePersonalPreset,
+    deletePersonalPreset: preferences.deletePersonalPreset,
     dismissApplicationDialog(): void {
       setApplicationDialog(null);
     },
   });
-  const getPianoRollController = useCallback(
-    (): PianoRollControllerPort | null =>
-      pianoRollControllerRef.current,
-    [],
-  );
   const beginClipChange = useCallback((): void => {
     clearInteractionSelection();
   }, [clearInteractionSelection]);
@@ -698,41 +389,17 @@ export function PianoRollWorkspace({
       setApplicationDialog(null);
     },
   });
-  const handleClipSelectionRequest = useCallback((clipId: string): void => {
-    handleClipSelect(resolvePlaybackFollowClipSelection(
-      autoScrollEnabled,
-      playbackStatus,
-      clipId,
-      playingClipId,
-    ));
-  }, [
+  const handleClipSelectionRequest = usePlaybackFollowSelection({
     autoScrollEnabled,
-    handleClipSelect,
     playbackStatus,
+    activeClipId: activeClip.id,
     playingClipId,
-  ]);
+    selectClip: handleClipSelect,
+  });
   const handleSelectClipNotes = useCallback((clipId: string): void => {
     handleClipSelectionRequest(clipId);
     runtime.selectionRequests.selectAllNotes();
   }, [handleClipSelectionRequest, runtime]);
-  useEffect(() => {
-    const targetClipId = getPlaybackFollowTargetClipId(
-      autoScrollEnabled,
-      playbackStatus,
-      activeClip.id,
-      playingClipId,
-    );
-
-    if (targetClipId !== null) {
-      handleClipSelect(targetClipId);
-    }
-  }, [
-    activeClip.id,
-    autoScrollEnabled,
-    handleClipSelect,
-    playbackStatus,
-    playingClipId,
-  ]);
   const {
     insertMeasuresAtPlayhead: handleInsertMeasuresAtPlayhead,
     removeMeasuresAtPlayhead: handleRemoveMeasuresAtPlayhead,
@@ -744,11 +411,7 @@ export function PianoRollWorkspace({
     toggleAutoAdvance: handleToggleAutoAdvance,
     toggleAutoScroll: handleAutoScrollToggle,
     commitLoopRegion: handleLoopRegionCommit,
-  } = useTransportWorkflow({
-    runtime,
-    getController: getPianoRollController,
-    seekPlayback,
-  });
+  } = transportViewport.transport;
   const handleMarkerCollision = useMarkerCollisionDialogWorkflow({
     showDialog: setApplicationDialog,
   });
@@ -809,164 +472,39 @@ export function PianoRollWorkspace({
   const selectionWillBeMuted = selectedNotes.some(
     (note) => !note.muted,
   );
-  const radialMenuItems = useMemo<readonly FloatingRadialMenuItem[]>(() => [
-    {
-      id: "copy",
-      label: "Copy",
-      icon: <CommandIcon kind="copy" />,
-      disabled: !editableTimelineSelectionAvailable,
-      onSelect: handleCopy,
-    },
-    {
-      id: "cut",
-      label: "Cut",
-      icon: <CommandIcon kind="cut" />,
-      disabled: !editableTimelineSelectionAvailable,
-      tone: "danger",
-      onSelect: handleCut,
-    },
-    {
-      id: "paste",
-      label: "Paste",
-      icon: <CommandIcon kind="paste" />,
-      disabled: !clipboardAvailable,
-      onSelect: handlePaste,
-    },
-    {
-      id: "slice",
-      label: "Slice",
-      icon: <CommandIcon kind="slice" />,
-      disabled: !editableNoteSelectionAvailable,
-      onSelect: handleOpenSliceSelection,
-    },
-    {
-      id: "toggle-mute",
-      label: selectionWillBeMuted ? "Mute" : "Unmute",
-      icon: (
-        <CommandIcon
-          kind={selectionWillBeMuted ? "mute" : "unmute"}
-        />
-      ),
-      disabled: selectedNotes.length === 0,
-      tone: selectionWillBeMuted ? "danger" : "default",
-      onSelect: handleToggleSelectionMute,
-    },
-    {
-      id: "add-marker",
-      label: "Mark",
-      icon: <CommandIcon kind="marker" />,
-      tone: "default",
-      onSelect: timeMapMarkers.openMarkerAtPlayhead,
-    },
-  ], [
-    clipboardAvailable,
-    handleCopy,
-    handleCut,
-    handleOpenSliceSelection,
-    handlePaste,
-    handleToggleSelectionMute,
-    selectedNotes.length,
-    selectionWillBeMuted,
+  const radialMenuCommands = usePianoRollRadialMenuCommands({
     editableNoteSelectionAvailable,
     editableTimelineSelectionAvailable,
-    timeMapMarkers.openMarkerAtPlayhead,
-  ]);
-  const handleNoteColorModeToggle = useCallback((): void => {
-    setNoteColorMode((currentMode) => {
-      const nextMode: NoteColorMode =
-        currentMode === "instrument" ? "pitch" : "instrument";
-
-      runtime.noteColorMode.set(nextMode);
-      void userSettingsRepository.update((current) => ({
-        ...current,
-        noteColorMode: nextMode,
-      })).then(onUserSettingsChange).catch((error: unknown) => {
-        showApplicationAlert(
-          "Settings not saved",
-          error instanceof Error ? error.message : "Unable to save settings.",
-          "danger",
-        );
-      });
-      return nextMode;
-    });
-  }, [
-    onUserSettingsChange,
-    runtime,
-    showApplicationAlert,
-    userSettingsRepository,
-  ]);
-  const handleSelectionModeChange = useCallback((
-    nextMode: SelectionMode,
-  ): void => {
-    setSelectionMode(nextMode);
-    void userSettingsRepository.update((current) => ({
-      ...current,
-      selectionMode: nextMode,
-    })).then(onUserSettingsChange).catch((error: unknown) => {
-      showApplicationAlert(
-        "Settings not saved",
-        error instanceof Error ? error.message : "Unable to save settings.",
-        "danger",
-      );
-    });
-  }, [
-    onUserSettingsChange,
-    showApplicationAlert,
-    userSettingsRepository,
-  ]);
-  const handlePitchPreviewToggle = useCallback((): void => {
-    setPitchPreviewEnabled((enabled) => {
-      const nextEnabled = !enabled;
-      void userSettingsRepository.update((current) => ({
-        ...current,
-        pitchPreviewEnabled: nextEnabled,
-      })).then(onUserSettingsChange).catch((error: unknown) => {
-        showApplicationAlert(
-          "Settings not saved",
-          error instanceof Error ? error.message : "Unable to save settings.",
-          "danger",
-        );
-      });
-      return nextEnabled;
-    });
-  }, [
-    onUserSettingsChange,
-    showApplicationAlert,
-    userSettingsRepository,
-  ]);
-  const {
-    exportProject: handleExportProject,
-    replaceActiveProject,
-  } = useProjectFileWorkflow({
+    selectedNoteCount: selectedNotes.length,
+    selectionWillBeMuted,
+    clipboardAvailable,
+  }, {
+    copy: handleCopy,
+    cut: handleCut,
+    paste: handlePaste,
+    slice: handleOpenSliceSelection,
+    toggleMute: handleToggleSelectionMute,
+    addMarker: timeMapMarkers.openMarkerAtPlayhead,
+    togglePlayback,
+  }, playbackStatus === "playing");
+  const projectLifecycle = usePianoRollProjectLifecycle({
     runtime,
     documentId,
-    captureWorkspace: () => capturePersistedEditorWorkspace(
-      runtime,
-      selectedInstrumentId,
-    ),
+    storedRevision,
+    projectRepository,
+    selectedInstrumentId,
+    controllerRef: pianoRollControllerRef,
     stopPlayback,
-    resetInteraction() {
-      const controller = pianoRollControllerRef.current;
-
-      controller?.cancel();
-      controller?.clearSelection();
-    },
     clearClipboard: clearSelectionClipboard,
-    clearPendingMidiImport() {
-      pendingMidiImportRef.current = null;
-    },
     onSelectionCleared() {
       setSelectionAvailable(false);
     },
     onWorkspaceRestored(workspace) {
       setSelectedInstrumentId(workspace.selectedInstrumentId);
-      const activeState = workspace.clipStatesById[workspace.activeClipId];
-
-      if (activeState !== undefined) {
-        setPitchSnapSettings(activeState.pitchSnapSettings);
-      }
     },
+    showDialog: setApplicationDialog,
     alert: showApplicationAlert,
+    onCloseProject,
   });
   useKeyboardShortcut(
     [initialUserSettings.shortcuts["editor.undo"]],
@@ -976,87 +514,49 @@ export function PianoRollWorkspace({
     [initialUserSettings.shortcuts["editor.redo"]],
     handleRedo,
   );
-  const handleCloseProject = useCallback(async (): Promise<void> => {
-    try {
-      await autosave.flush();
-      await onCloseProject();
-    } catch (error: unknown) {
-      showApplicationAlert(
-        "Project not closed",
-        error instanceof Error
-          ? `The latest changes could not be saved. ${error.message}`
-          : "The latest changes could not be saved.",
-        "danger",
-      );
-    }
-  }, [autosave, onCloseProject, showApplicationAlert]);
-  const {
-    inputRef: importMidiInputRef,
-    openImport: handleOpenMidiImport,
-    importFile: handleMidiFileChange,
-    exportFile: handleExportMidi,
-  } = useMidiFileWorkflow({
-    runtime,
-    pendingAnalysisRef: pendingMidiImportRef,
-    replaceActiveProject,
-    showDialog: setApplicationDialog,
-    alert: showApplicationAlert,
-  });
+  const handleApplicationDialogCancellation = useCallback((): void => {
+    projectLifecycle.clearPendingMidiImport();
+    cancelApplicationDialog();
+  }, [cancelApplicationDialog, projectLifecycle]);
   return (
-    <main
-      ref={appShellRef}
-      className="app-shell"
-      aria-label={APPLICATION_CONSTANTS.productName}
-      data-project-revision="0"
-    >
-      <RenderBaselineProfiler id="EditorHeader">
+    <PianoRollWorkspaceLayout
+      appShellRef={appShellRef}
+      stageRef={stageRef}
+      productName={APPLICATION_CONSTANTS.productName}
+      inspectorOpen={projectInspectorOpen}
+      inspectorSection={projectInspectorSection}
+      header={(
+        <RenderBaselineProfiler id="EditorHeader">
         <EditorHeader
-        projectState={projectState}
-        loopDragPreview={loopDragPreview}
-        selectedNotes={selectedNotes}
-        selectedMarkerCount={selectedMarkerCount}
-        gridResolutionTicks={gridResolutionTicks}
-        pitchSnapSettings={pitchSnapSettings}
-        playbackStatus={playbackStatus}
-        autoScrollEnabled={autoScrollEnabled}
-        midiInputRef={importMidiInputRef}
-        saveStatus={autosave.status}
-        onCloseProject={handleCloseProject}
-        onExportProject={handleExportProject}
-        onOpenMidiImport={handleOpenMidiImport}
-        onExportMidi={handleExportMidi}
-        onMidiFileChange={handleMidiFileChange}
-        onProjectTitleCommit={handleProjectTitleCommit}
-        onReturnToStart={handleReturnToStart}
-        onTogglePlayback={togglePlayback}
-        onToggleLoop={handleToggleLoop}
-        onToggleAutoAdvance={handleToggleAutoAdvance}
-        onToggleAutoScroll={handleAutoScrollToggle}
-        onPreviewMasterGain={previewMasterGain}
-        onMasterGainCommit={handleMasterGainCommit}
-        onMasterMuteToggle={handleMasterMuteToggle}
-        onMasterTuningCommit={handleMasterTuningCommit}
+          projectState={projectState}
+          loopDragPreview={loopDragPreview}
+          selectedNotes={selectedNotes}
+          selectedMarkerCount={selectedMarkerCount}
+          gridResolutionTicks={gridResolutionTicks}
+          pitchSnapSettings={pitchSnapSettings}
+          playbackStatus={playbackStatus}
+          autoScrollEnabled={autoScrollEnabled}
+          midiInputRef={projectLifecycle.midiInputRef}
+          saveStatus={projectLifecycle.saveStatus}
+          onCloseProject={projectLifecycle.closeProject}
+          onExportProject={projectLifecycle.exportProject}
+          onOpenMidiImport={projectLifecycle.openMidiImport}
+          onExportMidi={projectLifecycle.exportMidi}
+          onMidiFileChange={projectLifecycle.importMidiFile}
+          onProjectTitleCommit={handleProjectTitleCommit}
+          onReturnToStart={handleReturnToStart}
+          onTogglePlayback={togglePlayback}
+          onToggleLoop={handleToggleLoop}
+          onToggleAutoAdvance={handleToggleAutoAdvance}
+          onToggleAutoScroll={handleAutoScrollToggle}
+          onPreviewMasterGain={previewMasterGain}
+          onMasterGainCommit={handleMasterGainCommit}
+          onMasterMuteToggle={handleMasterMuteToggle}
+          onMasterTuningCommit={handleMasterTuningCommit}
         />
-      </RenderBaselineProfiler>
-
-      <section
-        className={
-          `workspace${
-            projectInspectorOpen
-              ? " is-project-inspector-open"
-              : ""
-          }${
-            projectInspectorOpen
-            && projectInspectorSection === "clips"
-              ? " is-clips-inspector-open"
-              : ""
-          }`
-        }
-      >
-        <div className="editor-panel">
-          {projectInspectorToolbarHost === null
-            ? null
-            : createPortal(
+        </RenderBaselineProfiler>
+      )}
+      renderToolbar={() => (
           <EditorToolbar
             inspectorOpen={projectInspectorOpen}
             inspectorSection={projectInspectorSection}
@@ -1069,8 +569,8 @@ export function PianoRollWorkspace({
             selectionWillBeMuted={selectionWillBeMuted}
             clipboardSelectionAvailable={editableTimelineSelectionAvailable}
             clipboardAvailable={clipboardAvailable}
-            selectionMode={selectionMode}
-            noteColorMode={noteColorMode}
+            selectionMode={preferences.selectionMode}
+            noteColorMode={preferences.noteColorMode}
             onToggleInspector={(section) => {
               if (
                 projectInspectorOpen
@@ -1085,60 +585,58 @@ export function PianoRollWorkspace({
             }}
             onUndo={handleUndo}
             onRedo={handleRedo}
-            onAddMeasures={() => setMeasureDialogOperation("insert")}
-            onRemoveMeasures={() => setMeasureDialogOperation("remove")}
+            onAddMeasures={() => dialogState.openMeasure("insert")}
+            onRemoveMeasures={() => dialogState.openMeasure("remove")}
             onDeleteSelection={handleDeleteSelection}
             onToggleSelectionMute={handleToggleSelectionMute}
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={handlePaste}
-            onSelectionModeChange={handleSelectionModeChange}
-            onNoteColorModeToggle={handleNoteColorModeToggle}
+            onSelectionModeChange={preferences.changeSelectionMode}
+            onNoteColorModeToggle={preferences.toggleNoteColorMode}
             onOpenSliceSelection={handleOpenSliceSelection}
             onAddMarkerAtPlayhead={timeMapMarkers.openMarkerAtPlayhead}
             onTransformSelection={handleTransformSelection}
-          />,
-          projectInspectorToolbarHost,
-        )}
-
-          <div className="roll-frame">
-            <PianoKeyboard
-              viewport={runtime.viewport}
-              playheadTick={runtime.playheadTick}
-              timeMap={activeClip.timeline.timeMap}
-              previewEnabled={pitchPreviewEnabled}
-              pitchSnapSettings={pitchSnapSettings}
-              onPreviewToggle={handlePitchPreviewToggle}
-              onPitchAudition={handlePitchAudition}
-              onPitchLongPress={handlePitchSelect}
-              onPitchInteractionChange={(pitch) => {
-                runtime.highlightedPitch.set(pitch);
-              }}
-            />
-            <div ref={stageRef} className="roll-stage">
-              <PianoRollRuler
-                viewport={runtime.viewport}
-                projectStore={runtime.projectStore}
-                gridResolutionTicks={runtime.gridResolutionTicks}
-                markerFlags={createTimeMapMarkerFlags(
-                  activeClip.timeline.timeMap,
-                )}
-                selection={runtime.selection}
-                timelineDragPreview={timelineDragPreview}
-                loopDragPreview={loopDragPreview}
-                interactionStrategyRef={interactionStrategyRef}
-                selectionMode={selectionMode}
-                onLoopCommit={handleLoopRegionCommit}
-                onOpenMarker={timeMapMarkers.openMarker}
-                onSelectMarker={timeMapMarkers.selectMarker}
-                onMoveMarker={timeMapMarkers.moveMarker}
-                onClearSelection={clearTimelineSelection}
-              />
-              <div className="canvas-host">
-                <RenderBaselineProfiler id="PianoRollLayers">
-                  <PianoRollLayers
+          />
+      )}
+      pianoKeyboard={(
+        <PianoKeyboard
+          viewport={runtime.viewport}
+          playheadTick={runtime.playheadTick}
+          timeMap={activeClip.timeline.timeMap}
+          previewEnabled={preferences.pitchPreviewEnabled}
+          pitchSnapSettings={pitchSnapSettings}
+          onPreviewToggle={preferences.togglePitchPreview}
+          onPitchAudition={handlePitchAudition}
+          onPitchLongPress={handlePitchSelect}
+          onPitchInteractionChange={(pitch) => {
+            runtime.highlightedPitch.set(pitch);
+          }}
+        />
+      )}
+      ruler={(
+        <PianoRollRuler
+          viewport={runtime.viewport}
+          projectStore={runtime.projectStore}
+          gridResolutionTicks={runtime.gridResolutionTicks}
+          markerFlags={createTimeMapMarkerFlags(activeClip.timeline.timeMap)}
+          selection={runtime.selection}
+          timelineDragPreview={timelineDragPreview}
+          loopDragPreview={loopDragPreview}
+          interactionStrategyRef={interactionStrategyRef}
+          selectionMode={preferences.selectionMode}
+          onLoopCommit={handleLoopRegionCommit}
+          onOpenMarker={timeMapMarkers.openMarker}
+          onSelectMarker={timeMapMarkers.selectMarker}
+          onMoveMarker={timeMapMarkers.moveMarker}
+          onClearSelection={clearTimelineSelection}
+        />
+      )}
+      layers={(
+        <RenderBaselineProfiler id="PianoRollLayers">
+          <PianoRollLayers
                   runtime={runtime}
-                  selectionMode={selectionMode}
+                  selectionMode={preferences.selectionMode}
                   activeInstrumentId={selectedInstrumentId ?? ""}
                   totalTicks={totalTicks}
                   setViewport={publishViewport}
@@ -1160,20 +658,20 @@ export function PianoRollWorkspace({
                   onMarkerCollision={handleMarkerCollision}
                   globalLassoRef={globalLassoRef}
                   timelineDragPreview={timelineDragPreview}
-                  />
-                </RenderBaselineProfiler>
-              </div>
-              <PianoRollGlobalLasso elementRef={globalLassoRef} />
-              <PianoRollPlayhead
-                viewport={runtime.viewport}
-                clipId={activeClip.id}
-                playheadPosition={runtime.playheadPosition}
-              />
-            </div>
-          </div>
-
-          <RenderBaselineProfiler id="PianoRollViewportControls">
-            <PianoRollViewportControls
+          />
+        </RenderBaselineProfiler>
+      )}
+      globalLasso={<PianoRollGlobalLasso elementRef={globalLassoRef} />}
+      playhead={(
+        <PianoRollPlayhead
+          viewport={runtime.viewport}
+          clipId={activeClip.id}
+          playheadPosition={runtime.playheadPosition}
+        />
+      )}
+      viewportControls={(
+        <RenderBaselineProfiler id="PianoRollViewportControls">
+          <PianoRollViewportControls
             timelinePositionRef={barLabelRef}
             timelineTimeRef={timelineTimeRef}
             horizontalScrollRef={scrollInputRef}
@@ -1184,10 +682,13 @@ export function PianoRollWorkspace({
             pitchSnapSettings={pitchSnapSettings}
             onPitchSnapSettingsChange={updatePitchSnapSettings}
             onAutoFit={handleAutoFit}
-            />
-          </RenderBaselineProfiler>
-        </div>
+          />
+        </RenderBaselineProfiler>
+      )}
+      inspectorResizeHandle={(
         <ProjectInspectorResizeHandle inspectorOpen={projectInspectorOpen} />
+      )}
+      renderInspector={(setToolbarHost) => (
         <RenderBaselineProfiler id="ProjectInspector">
           <ProjectInspector
           open={projectInspectorOpen}
@@ -1202,7 +703,7 @@ export function PianoRollWorkspace({
           }
           selectedInstrumentId={selectedInstrumentId}
           selectionAvailable={editableNoteSelectionAvailable}
-          setToolbarHost={setGeneralInspectorToolbarHost}
+          setToolbarHost={setToolbarHost}
           onClipSelect={handleClipSelectionRequest}
           onToggleClipBypass={handleToggleClipBypass}
           onToggleClipPlayback={toggleClipPlayback}
@@ -1229,198 +730,36 @@ export function PianoRollWorkspace({
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
           />
         </RenderBaselineProfiler>
-      </section>
-      {radialMenu.state === null ? null : (
-        <FloatingRadialMenu
-          position={radialMenu.state.position}
-          revision={radialMenu.state.revision}
-          closing={radialMenu.state.closing}
-          items={radialMenuItems}
-          centerButton={{
-            label: playbackStatus === "playing" ? "Pause" : "Play",
-            icon: (
-              <CommandIcon
-                kind={playbackStatus === "playing" ? "pause" : "play"}
-              />
-            ),
-            onSelect: togglePlayback,
-          }}
-          onClose={radialMenu.close}
-        />
       )}
-      <ApplicationDialogOverlay
-        dialog={applicationDialog}
-        onConfirm={handleApplicationDialogConfirm}
-        onAlternate={handleApplicationDialogAlternate}
-        onCancel={handleApplicationDialogCancel}
-      />
-      {!clipDialog.open ? null : (
-        <ClipEditorDialog
-          clipName={clipDialog.name}
-          clipColor={clipDialog.color}
-          canDelete={clipDialog.canDelete}
-          onClipNameChange={clipDialog.setName}
-          onClipColorChange={clipDialog.setColor}
-          onConfirm={clipDialog.confirm}
-          onSplit={() => {
-            if (clipDialog.clipId !== null) {
-              setSplitClipId(clipDialog.clipId);
-              clipDialog.cancel();
-            }
-          }}
-          onDelete={clipDialog.remove}
-          onCancel={clipDialog.cancel}
-        />
-      )}
-      {splitClipId === null
-        || projectState.clipsById[splitClipId] === undefined ? null : (
-          <ClipSplitDialog
-            clip={projectState.clipsById[splitClipId]}
-            clock={projectState.clock}
-            projectClipCount={Object.keys(projectState.clipsById).length}
-            canCreateGroup={
-              countClipGroups(projectState.clipHierarchy)
-              < MAXIMUM_CLIP_GROUP_COUNT
-            }
-            onConfirm={(strategy) => {
-              if (handleSplitClip(splitClipId, strategy) !== null) {
-                setSplitClipId(null);
-              }
-            }}
-            onCancel={() => setSplitClipId(null)}
-          />
-        )}
-      {!instrumentDialog.open || instrumentDialog.config === null ? null : (
-        <InstrumentPresetDialog
-          mode={instrumentDialog.mode}
-          presetsById={mergedPresetLibrary.presetsById}
-          presetOrder={mergedPresetLibrary.presetOrder}
-          personalPresetIds={personalPresetIds}
-          selectedPresetId={instrumentDialog.selectedPresetId}
-          instrumentName={instrumentDialog.name}
-          instrumentColor={instrumentDialog.color}
-          instrument={instrumentDialog.config}
-          onPresetSelectionChange={instrumentDialog.selectPreset}
-          onInstrumentNameChange={instrumentDialog.setName}
-          onInstrumentColorChange={instrumentDialog.setColor}
-          onInstrumentChange={instrumentDialog.setConfig}
-          selectedPresetIsPersonal={instrumentDialog.selectedPresetIsPersonal}
-          onCreatePreset={instrumentDialog.createPreset}
-          onSavePreset={instrumentDialog.savePreset}
-          onRenamePreset={instrumentDialog.renamePreset}
-          onDeletePreset={instrumentDialog.deletePreset}
-          onConfirm={instrumentDialog.confirm}
-          onDelete={instrumentDialog.mode === "edit" ? instrumentDialog.remove : undefined}
-          onCancel={instrumentDialog.cancel}
-        />
-      )}
-      {timeMapMarkers.draft === null ? null : (
-        <TempoMeterMarkerDialog
-          mode={timeMapMarkers.draft.mode}
-          tempoIncluded={timeMapMarkers.draft.tempoIncluded}
-          meterIncluded={timeMapMarkers.draft.meterIncluded}
-          scaleIncluded={timeMapMarkers.draft.scaleIncluded}
-          sectionIncluded={timeMapMarkers.draft.sectionIncluded}
-          canChangeMarkerTypes={timeMapMarkers.draft.canChangeMarkerTypes}
-          bpm={timeMapMarkers.draft.bpm}
-          timeSignature={timeMapMarkers.draft.timeSignature}
-          rootNote={timeMapMarkers.draft.rootNote}
-          patternType={timeMapMarkers.draft.patternType}
-          patternId={timeMapMarkers.draft.patternId}
-          sectionComment={timeMapMarkers.draft.sectionComment}
-          onTempoIncludedChange={timeMapMarkers.setDraftTempoIncluded}
-          onMeterIncludedChange={timeMapMarkers.setDraftMeterIncluded}
-          onScaleIncludedChange={timeMapMarkers.setDraftScaleIncluded}
-          onSectionIncludedChange={timeMapMarkers.setDraftSectionIncluded}
-          onBpmChange={timeMapMarkers.setDraftBpm}
-          onTimeSignatureChange={timeMapMarkers.setDraftTimeSignature}
-          onRootNoteChange={timeMapMarkers.setDraftRootNote}
-          onPatternTypeChange={timeMapMarkers.setDraftPatternType}
-          onPatternIdChange={timeMapMarkers.setDraftPatternId}
-          onSectionCommentChange={timeMapMarkers.setDraftSectionComment}
-          onConfirm={timeMapMarkers.confirmDraft}
-          onCancel={timeMapMarkers.cancelDraft}
-        />
-      )}
-      {measureDialogOperation !== null ? (
-        <ManageMeasuresDialog
-          operation={measureDialogOperation}
-          maximumCountByPosition={resolveMeasureDialogMaximumCounts(
-            measureDialogOperation,
-            measureCount,
-            getMeasureSpanAtTick(
-              projectState.clock.ppqn,
-              activeClip.timeline.timeMap,
-              activeClip.timeline.durationTicks,
-              runtime.playheadTick.get(),
-            ).index,
+      overlays={(
+        <>
+          {radialMenu.state === null ? null : (
+            <FloatingRadialMenu
+              position={radialMenu.state.position}
+              revision={radialMenu.state.revision}
+              closing={radialMenu.state.closing}
+              items={radialMenuCommands.items}
+              centerButton={radialMenuCommands.centerButton}
+              onClose={radialMenu.close}
+            />
           )}
-          onConfirm={(count, position) => {
-            if (measureDialogOperation === "insert") {
-              handleInsertMeasuresAtPlayhead(count, position);
-            } else {
-              handleRemoveMeasuresAtPlayhead(count, position);
-            }
-
-            setMeasureDialogOperation(null);
-          }}
-          onCancel={() => setMeasureDialogOperation(null)}
-        />
-      ) : null}
-    </main>
+          <PianoRollWorkspaceDialogs
+            runtime={runtime}
+            projectState={projectState}
+            measureCount={measureCount}
+            application={applicationDialogs}
+            state={dialogState}
+            clip={clipDialog}
+            splitClip={handleSplitClip}
+            instrument={instrumentDialog}
+            preferences={preferences}
+            timeMapMarkers={timeMapMarkers}
+            insertMeasures={handleInsertMeasuresAtPlayhead}
+            removeMeasures={handleRemoveMeasuresAtPlayhead}
+            onApplicationCancel={handleApplicationDialogCancellation}
+          />
+        </>
+      )}
+    />
   );
-}
-
-function resolveMeasureDialogMaximumCounts(
-  operation: "insert" | "remove",
-  measureCount: number,
-  currentMeasureIndex: number,
-): Readonly<Record<"before" | "after", number>> {
-  if (operation === "insert") {
-    const maximumCount = MAXIMUM_MEASURE_COUNT - measureCount;
-
-    return { before: maximumCount, after: maximumCount };
-  }
-
-  return getMaximumAdjacentMeasureCounts(measureCount, currentMeasureIndex);
-}
-
-function validatePersonalPresetName(name: string): string {
-  const normalizedName = name.trim();
-
-  if (
-    normalizedName.length === 0
-    || normalizedName.length > MAXIMUM_INSTRUMENT_NAME_LENGTH
-  ) {
-    throw new Error(
-      `Preset names must contain between 1 and ${MAXIMUM_INSTRUMENT_NAME_LENGTH} characters.`,
-    );
-  }
-
-  return normalizedName;
-}
-
-function assertPersonalPresetNameAvailable(
-  settings: UserSettings,
-  name: string,
-  ignoredPresetId?: PresetId,
-): void {
-  const normalizedName = name.toLocaleLowerCase();
-  const duplicate = settings.personalInstrumentPresetOrder.some((presetId) => (
-    presetId !== ignoredPresetId
-    && settings.personalInstrumentPresetsById[presetId]?.name
-      .toLocaleLowerCase() === normalizedName
-  ));
-
-  if (duplicate) {
-    throw new Error(`A personal preset named "${name}" already exists.`);
-  }
-}
-
-function formatAudioPlaybackError(error: unknown): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message;
-  }
-
-  return "The browser could not initialize the audio engine.";
 }

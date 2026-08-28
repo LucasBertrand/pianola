@@ -1,8 +1,9 @@
 # Inventaire de la composition applicative
 
 > **État courant.** Ce document décrit la composition actuellement matérialisée.
-> La décomposition cible de `PianoRollWorkspace` et son avancement sont définis
-> dans [`migration/README.md`](migration/README.md) et `migration/STATUS.md`.
+> Le déroulement historique de la décomposition de `PianoRollWorkspace` est
+> consigné dans [`migration/README.md`](migration/README.md) et
+> `migration/STATUS.md`.
 
 `src/app/App.tsx` montre la création du runtime et la surface principale sans
 héberger les protocoles détaillés.
@@ -12,34 +13,35 @@ héberger les protocoles détaillés.
 | Intention | État | Propriétaire actuel | Justification |
 | --- | --- | --- | --- |
 | runtime | services et signaux décrits par `application/editor-session/EditorRuntime` | `App.tsx` via une ref stable | durée de vie de l’onglet et assemblage racine |
-| projet/clip | snapshot React, instrument sélectionné, sélection disponible | `usePianoRollProjectState` | synchronise le store et annule l’interaction au changement de clip |
-| inspecteur | ouvert, section portrait, hôte toolbar | `PianoRollWorkspace` | état de disposition de la surface |
+| projet/clip | snapshot React sélectionné, instrument sélectionné, sélection disponible | `usePianoRollProjectState` via `useProjectStoreSelector` | stabilise le snapshot, supprime les notifications inchangées et annule l’interaction au changement de clip |
+| inspecteur | ouvert et section portrait | `PianoRollWorkspace` ; hôte toolbar possédé par `PianoRollWorkspaceLayout` | état de disposition de la surface et portal sans logique métier |
 | sélection | mode et presse-papier | workflow sélection + `usePianoRollClipboard` | état transitoire du piano roll |
-| rendu | mode couleur et pitch preview | `PianoRollWorkspace` + signaux runtime | préférence visible non musicale |
-| snap | réglages actifs | runtime, reflété dans le workspace | partagé par contrôles et gestes |
+| rendu | mode couleur et pitch preview | `usePianoRollUserPreferences` + signaux runtime | préférence visible non musicale, persistée sans copie canonique |
+| snap | réglages actifs | runtime, lu par `useRenderSignalValue` pour le JSX | partagé par contrôles et gestes ; les invalidations Canvas restent directes |
 | dialogues métier | alerte, confirmation ou choix alternatif | `useApplicationDialogs` | protocole alert/confirm du workspace |
 | diagnostics navigateur | erreurs console, JavaScript, promesses et rendu React | `BrowserErrorReporter`, `BrowserErrorBoundary` et `BrowserErrorDialog` | file globale dédupliquée qui reste visible si le piano roll ne peut plus être rendu |
 | instrument | nom, couleur, preset et synthé en brouillon | `useInstrumentDialogWorkflow` | validation complète avant transaction |
 | collisions | choix merge/slice et séquence | `useNoteCollisionDialogWorkflow` | transforme une décision utilisateur en transaction |
 | clips et groupes | dialogues et orchestration des opérations de hiérarchie | `useClipDialogWorkflow`, `useClipWorkflow` et hooks de capacité associés | prépare une intention puis publie une transaction atomique |
 | marqueurs tempo/métrique/gamme/section | brouillon de la modale et gestes du ruler | `useTimeMapMarkerWorkflow` | une intention validée produit au plus une transaction |
-| fichiers | inputs, sauvegarde, chargement | `useProjectFileWorkflow` | propriétaire UI de la capacité native |
-| MIDI | input et analyse en attente | `useMidiFileWorkflow` | préparation/confirmation avant remplacement |
-| transport | statut et commandes | `useAudioPlayback` + `useTransportWorkflow` | pont explicite vers l’audio et le domaine |
-| viewport | refs DOM et interactions de scroll/zoom | `useViewportControls` | synchronisation DOM/signaux à haute fréquence |
+| fichiers | inputs, autosave, export et fermeture | `usePianoRollProjectLifecycle`, composé de `useProjectFileWorkflow` et `useProjectAutosave` | cycle de vie complet hors du composant racine |
+| MIDI | input et analyse en attente | `usePianoRollProjectLifecycle` via `useMidiFileWorkflow` | préparation/confirmation avant remplacement |
+| transport | statut, commandes et suivi de clip | `usePianoRollTransportViewport`, composé de `useAudioPlayback` et `useTransportWorkflow` | pont explicite vers l’audio, le domaine et la politique de suivi |
+| viewport | refs DOM et interactions de scroll/zoom | `usePianoRollTransportViewport` via `useViewportControls` | synchronisation DOM/signaux à haute fréquence |
 
 ## État React restant dans le workspace
 
-Les états restants sont uniquement de composition visible : panneau inspecteur,
-hôte du portal, mode de sélection, mode de couleur, pitch preview et reflet du
-snap. Aucun ne contient un protocole de validation, une collision, un import ou
-un brouillon métier complet.
+Le composant racine conserve uniquement l'ouverture et la section visible de
+l'inspecteur. Le layout possède l'hôte du portal ; les préférences, imports,
+dialogues, transport et viewport sont possédés par leurs hooks ou composants de
+surface. Aucun état à fréquence frame n'est copié dans le workspace.
 
 ## Surface racine
 
 `src/app/App.tsx` a moins de 350 lignes et 20 imports. Le contrôle structurel
 rend ces deux limites exécutables. La création du runtime reste volontairement
-dans cette couche ; `src/ui/piano-roll/PianoRollWorkspace.tsx` possède
-l’assemblage de l’espace de travail. La frontière d’erreur et la modale de
+dans cette couche ; `src/ui/piano-roll/PianoRollWorkspace.tsx` coordonne les
+contrats, tandis que `PianoRollWorkspaceLayout.tsx` possède la structure DOM.
+La frontière d’erreur et la modale de
 diagnostic entourent cette surface afin de rester disponibles après une erreur
 de rendu React.

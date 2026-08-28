@@ -7,10 +7,10 @@ workspace réel, pas seulement l'intention.
 
 - Statut : EN ATTENTE
 - Lot actif : Aucun
-- Dernier lot terminé : 4 — Cœur d'édition et session applicative
-- Prochaine action : après revue du lot 4, vérifier la condition d'entrée du
-  lot 5 et commencer uniquement son premier jalon ; ne pas décomposer
-  `PianoRollWorkspace` avant cette ouverture
+- Dernier lot terminé : 5 — Décomposition de `PianoRollWorkspace`
+- Prochaine action : après revue du lot 5, vérifier la condition d'entrée du
+  lot 6 et commencer uniquement sa première sous-étape ; ne déplacer aucune
+  configuration ou horizontale avant cette ouverture
 - Dernière mise à jour : 2026-08-28
 
 ## Politique de rollback en vigueur
@@ -28,7 +28,9 @@ le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 �
   `domain`, `editor`, `infrastructure`, `music`, `project-io`, `pwa`, `styles`,
   `ui`, `use-cases` ;
 - aucun cycle d'import produit ou test n'est accepté ;
-- `PianoRollWorkspace.tsx` est le principal point de concentration ;
+- `PianoRollWorkspace.tsx` est ramené à 766 lignes et coordonne des contrats
+  extraits ; `InstrumentPresetDialog.tsx` et `ClipInspector.tsx` restent les
+  principaux points de concentration UI ;
 - `time-map.ts` et `clip-commands.ts` dépassent désormais 1 000 lignes ;
 - le format `.pianola` est sous `infrastructure/project-files/pianola` et la
   persistance locale sous `infrastructure/persistence` ;
@@ -60,7 +62,7 @@ D  docs/storage-strategies.md
 | 2 | TERMINÉ | Format `.pianola` |
 | 3 | TERMINÉ | Ports applicatifs, adaptateurs infrastructure et reset local validés |
 | 4 | TERMINÉ | Historique et session sous `application`, cœur découplé, cycle supprimé |
-| 5 | À FAIRE | `PianoRollWorkspace` |
+| 5 | TERMINÉ | Six jalons caractérisés et validés ; rendu sans régression |
 | 6 | À FAIRE | Configurations et horizontales |
 | 7 | À FAIRE | Renommage physique des couches |
 | 8 | À FAIRE | Nettoyage final |
@@ -69,20 +71,24 @@ D  docs/storage-strategies.md
 
 Aucun alias ni aucune compatibilité de code ou de données ne subsiste des lots
 0 et 1. Les alias de renommage créés pendant les sous-étapes du lot 1 ont été
-supprimés avant sa sortie. Le profiler opt-in `renderBaseline=1` est un
-diagnostic conservé jusqu'à la comparaison du lot 5, pas une façade de
+supprimés avant sa sortie. Le profiler opt-in `renderBaseline=1` reste un
+diagnostic reproductible après la comparaison du lot 5, pas une façade de
 compatibilité. Le lot 3 n'ajoute aucun alias : les anciens chemins de
 persistance ont été supprimés et les anciennes données locales sont
 réinitialisées, pas converties. Le lot 4 n'ajoute aucun alias : les anciens
 chemins du store, du service de commandes, du runtime et de la projection du
-workspace sont supprimés.
+workspace sont supprimés. Le lot 5 n'ajoute aucun alias ni compatibilité : ses
+contrats de présentation remplacent directement les blocs extraits.
 
 ## Écarts et découvertes
 
 - l'instrumentation V8 fausse les seuils des benchmarks audio ; la couverture
   reste ciblée et la validation complète s'exécute sans instrumentation ;
-- les trois composants React concentrés ont une couverture directe nulle et
-  restent interdits de découpage avant leurs tests de caractérisation ;
+- `PianoRollWorkspace` possède désormais les caractérisations par jalon, les
+  tests de modèles/abonnements et le smoke navigateur requis ;
+  `ClipInspector.tsx` et `InstrumentPresetDialog.tsx` gardent une couverture
+  directe nulle et restent interdits de découpage avant leurs propres tests de
+  caractérisation ;
 - le chunk JavaScript principal supérieur à 500 kB reste un avertissement de
   build non bloquant et préexistant ;
 - le premier passage du scénario de rendu est un outlier à froid ; la médiane
@@ -97,6 +103,256 @@ workspace sont supprimés.
   et n'ont pas été déplacés par les lots 3 ou 4.
 
 ## Journal
+
+### 2026-08-28 — Lot 5, démarrage
+
+- objectif : décomposer `PianoRollWorkspace` dans les six jalons et dans
+  l'ordre imposés par `ROADMAP.md`, sans changement fonctionnel, sans source de
+  vérité concurrente, sans rerendu global causé par une valeur à fréquence
+  frame et sans commencer le lot 6 ;
+- condition d'entrée vérifiée dans `STATUS.md` avant toute modification du
+  lot : les lots 1 et 4 sont `TERMINÉ`, leurs validations complètes sont
+  vertes, le lot 5 est le premier lot `À FAIRE`, et aucun jalon du lot 6 n'est
+  commencé ;
+- condition d'entrée vérifiée dans le code : le document et le clip actif sont
+  possédés par `application/history/ProjectStore`, le workspace persistant est
+  projeté par `application/editor-session/workspace-persistence.ts`, la session
+  d'interaction reste dans `EditorSelection`, les hooks de capacité et les refs
+  locales, et les valeurs temps réel restent dans les signaux d'`EditorRuntime`;
+  `ProjectStorePort.subscribe` et les contrats `ReadonlyRenderSignal` sont
+  disponibles sans dépendre de `PianoRollWorkspace` ;
+- garde-fou de couverture préalable : la baseline du lot 0 mesure toujours
+  `PianoRollWorkspace.tsx` à 0 % et interdit son découpage sans
+  caractérisation. Chaque jalon commencera donc par les témoins du comportement
+  concerné ; aucun jalon suivant ne démarrera avant validation séparée du
+  précédent ;
+- commit de sauvegarde demandé avant le lot : `a602a32` (`chore: checkpoint
+  before migration lot 5`) fige les changements préexistants correspondant au
+  lot 4 ; le worktree est propre après ce commit ;
+- SHA de départ et point de rollback initial :
+  `a602a322b81955a0087caf6b7c6f4f56f171511e` ; le lot 5 n'a pas encore de
+  commit dédié, donc un retour éventuel doit être préparé par jalon à partir du
+  diff et des listes de fichiers consignées, sans patch préventif et sans
+  annuler un jalon déjà validé ;
+- validation de référence avant modification : `npm run verify` réussi —
+  33 fichiers Markdown, 321 fichiers source, frontières vertes sur 269 fichiers
+  produit et 66 modules de test, typecheck et build Vite réussis, smoke
+  AudioWorklet réussi, 62 fichiers de test et 405 tests réussis ; seul
+  l'avertissement préexistant de chunk supérieur à 500 kB subsiste ;
+- audit préalable de `PianoRollWorkspace.tsx` : 1 427 lignes ; préférences et
+  presets personnels aux lignes 278-317, 498-661 et 874-936 ; cycle de vie
+  projet aux lignes 254-255, 353-364, 388-394 et 937-1004 ; modèle du menu
+  radial aux lignes 417-423 et 790-873 ; dialogues et workflows de capacité
+  aux lignes 471-789 et 1251-1369 ; layout et portal aux lignes 1005-1250 ;
+  transport et viewport aux lignes 323-470 et 718-761 ;
+- périmètre prévu : `src/ui/piano-roll/PianoRollWorkspace.tsx`, nouveaux
+  composants/hooks/modèles fonctionnels colocalisés sous `src/ui/piano-roll/`
+  ou chez les surfaces déjà propriétaires (`ui/project-files`,
+  `ui/transport`, `ui/dialogs`, `ui/inspector`), adaptateur sélecteur étroit
+  pour `ProjectStorePort`, tests colocalisés de chaque extraction, scénario de
+  rendu du lot 0, puis documentation courante directement affectée ;
+- exclusions explicites : aucun déplacement de `src/config`, `src/music` ou
+  `src/ui/shared`, aucun découpage des commandes ou de `time-map.ts`, aucun
+  renommage physique de couche, aucun changement de schéma persistant, aucune
+  adoption de store UI externe et aucune action des lots 6 à 8 ;
+- stratégie de validation : après chacun des six jalons, exécuter
+  `npm run typecheck`, `npm run check:boundaries` et les tests ciblés du
+  propriétaire ; consigner le périmètre exact et le résultat avant de passer au
+  suivant. À la sortie, exécuter les recherches obligatoires, la validation
+  complète et trois passages du scénario reproductible de rendu comparés à la
+  baseline du lot 0.
+- jalon 1 — préférences et presets personnels : les états temporaires de mode
+  de sélection, couleur des notes et préécoute du pitch, ainsi que leur écriture
+  dans `UserSettingsRepository`, sont possédés par
+  `usePianoRollUserPreferences`. Les mutations de la bibliothèque personnelle
+  sont caractérisées par un modèle pur colocalisé avec l'inspecteur
+  d'instruments ; le projet continue de recevoir uniquement les snapshots de
+  presets déjà utilisés, sans modifier le format ni le repository ;
+- tests de caractérisation du jalon 1 : création avec normalisation du nom,
+  mise à jour et renommage sans changement d'identité, rejet des noms vides ou
+  doublons, suppression des deux index et rejet d'un preset disparu ; les tests
+  métier de fusion et les contrats des repositories de réglages restent verts ;
+- point de rollback du jalon 1 : SHA de départ `a602a32`, fichiers
+  `src/ui/piano-roll/PianoRollWorkspace.tsx`,
+  `src/ui/inspector/instruments/usePianoRollUserPreferences.ts`,
+  `src/ui/inspector/instruments/personal-instrument-preset-settings.ts` et son
+  test colocalisé ; revenir uniquement sur ces fichiers après comparaison du
+  diff, sans toucher au journal ni aux jalons validés ultérieurement ;
+- validations du jalon 1 : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 271 fichiers produit et 67 modules de
+  test ; 3 fichiers et 12 tests ciblés réussis pour les presets personnels et
+  la persistance des réglages. `PianoRollWorkspace.tsx` passe de 1 427 à
+  1 159 lignes ; statut du jalon : vert.
+- jalon 2 — cycle de vie projet : `usePianoRollProjectLifecycle` possède
+  désormais l'autosave, la fermeture avec flush, l'export `.pianola`, le
+  remplacement du projet actif et les imports/exports MIDI. La ref d'analyse
+  MIDI en attente et son nettoyage ne résident plus dans le composant racine ;
+  celui-ci injecte seulement les effets visuels de réinitialisation et de
+  restauration du workspace ;
+- caractérisation du jalon 2 : création initiale, ouverture et contrat des
+  repositories, clone, capture/flush d'autosave, codecs et aller-retour du
+  format `.pianola`, régressions d'import/export MIDI et conservation du
+  document/workspace sont couverts par les suites ciblées existantes ;
+- point de rollback du jalon 2 : SHA de départ `a602a32`, fichiers du jalon 1
+  déjà validés plus `src/ui/project-files/usePianoRollProjectLifecycle.ts` et
+  `src/ui/piano-roll/PianoRollWorkspace.tsx`. Un retour du seul jalon 2 doit
+  supprimer ce hook et rétablir uniquement son bloc d'intégration dans le
+  workspace, après vérification du diff ;
+- validations du jalon 2 : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 272 fichiers produit et 67 modules de
+  test ; 7 fichiers et 80 tests ciblés réussis en deux commandes pour la
+  création, l'ouverture, la persistance, le clone, l'autosave, `.pianola`, MIDI
+  et la régression audio/domaine. `PianoRollWorkspace.tsx` passe de 1 159 à
+  1 102 lignes ; statut du jalon : vert.
+- jalon 3 — menu radial : un modèle pur reçoit un snapshot explicite de la
+  sélection et du presse-papier et dérive disponibilité, libellé, icône et
+  tonalité des six commandes ; `usePianoRollRadialMenuCommands` lie ensuite ce
+  modèle aux callbacks injectés et à la commande centrale play/pause. Aucun de
+  ces modules ne lit implicitement le store, le runtime ou l'état interne de
+  `PianoRollWorkspace` ;
+- point de rollback du jalon 3 : SHA de départ `a602a32`, nouveaux fichiers
+  `piano-roll-radial-command-model.ts`,
+  `usePianoRollRadialMenuCommands.ts` et test colocalisé sous
+  `src/ui/piano-roll/context-menu/`, plus le seul bloc d'intégration modifié
+  dans `PianoRollWorkspace.tsx` ;
+- validations du jalon 3 : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 274 fichiers produit et 68 modules de
+  test ; les 7 tests des modèles de commandes et de géométrie du menu sont
+  verts. `PianoRollWorkspace.tsx` passe de 1 102 à 1 046 lignes ; statut du
+  jalon : vert.
+- jalon 4 — dialogues et workflows de capacité :
+  `usePianoRollDialogState` possède les seules identités d'ouverture qui
+  restaient dans le workspace (mesures et cible de découpe). Les brouillons
+  d'application, de clip, d'instrument et de time map restent chacun possédés
+  par leur workflow existant ; `PianoRollWorkspaceDialogs` ne fait que rendre
+  ces contrats et ne copie aucun état canonique ;
+- caractérisation du jalon 4 : ajout des témoins insertion/suppression de
+  mesures, maintien des tests de brouillon de marqueur, sélection de marqueur,
+  mesures adjacentes et presets personnels. Les validations confirment que les
+  formulaires n'écrivent le document qu'à leur confirmation ;
+- point de rollback du jalon 4 : SHA de départ `a602a32`, nouveaux fichiers
+  `src/ui/dialogs/PianoRollWorkspaceDialogs.tsx`,
+  `piano-roll-dialog-model.ts`, `usePianoRollDialogState.ts` et test colocalisé,
+  plus les blocs dialogue/mesures extraits de `PianoRollWorkspace.tsx` ;
+- validations du jalon 4 : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 277 fichiers produit et 69 modules de
+  test ; 5 fichiers et 31 tests ciblés réussis. Le composant de dialogues fait
+  224 lignes et `PianoRollWorkspace.tsx` passe de 1 046 à 900 lignes ; statut
+  du jalon : vert.
+- jalon 5 — layout et portals : `PianoRollWorkspaceLayout` possède maintenant
+  le shell, la hiérarchie DOM workspace/editor/frame/stage/canvas, la place de
+  l'inspecteur et le portal de sa toolbar. Il reçoit exclusivement des nœuds et
+  fonctions de rendu injectés ; aucune logique métier, de persistance ou de
+  cycle de vie n'a été déplacée avec la structure ;
+- smoke de layout : `scripts/measure-render-baseline.mjs` vérifie désormais la
+  présence et l'imbrication du shell, du workspace, de l'éditeur, de la frame,
+  du stage, du canvas, de l'inspecteur et de la toolbar portalée avant
+  d'exécuter son scénario. Le test pur des classes couvre inspecteur fermé,
+  instruments ouvert et clips ouvert ;
+- point de rollback du jalon 5 : SHA de départ `a602a32`, nouveaux fichiers
+  `PianoRollWorkspaceLayout.tsx` et son test colocalisé, structure extraite de
+  `PianoRollWorkspace.tsx`, et assertion de smoke ajoutée au script de mesure ;
+- validations du jalon 5 : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 278 fichiers produit et 70 modules de
+  test ; 2 fichiers et 7 tests ciblés réussis. Le smoke Edge 151 passe sur les
+  trois exécutions : 11 commits du workspace, 10 pour chacune des quatre
+  surfaces suivies, longues tâches 1/1/0 et aucune notification de sélecteur
+  inchangé. Le layout fait 100 lignes et `PianoRollWorkspace.tsx` 885 lignes ;
+  statut du jalon : vert. Ces mesures sont intermédiaires ; la comparaison de
+  sortie reste réservée au jalon 6.
+- jalon 6 — transport/viewport et abonnements :
+  `usePianoRollTransportViewport` possède l'audio, les commandes de transport,
+  l'auto-fit, le retour au début et les refs/contrôles de viewport ;
+  `usePlaybackFollowSelection` possède la politique de sélection du clip joué.
+  Le playhead, le viewport, les survols et les previews restent sur leurs
+  signaux et invalidations DOM/Canvas directes ;
+- `useProjectStoreSelector`, fondé sur `useSyncExternalStore`, lit le
+  propriétaire canonique sans recopier le store. Son adaptateur met en cache la
+  projection, conserve sa référence lorsqu'elle est égale et ne notifie pas
+  React pour une mutation sans rapport. `useRenderSignalValue` remplace les
+  copies manuelles des réglages de snap et de résolution visibles dans le JSX ;
+- tests d'abonnement du jalon 6 : même référence après modification d'un autre
+  champ, zéro notification lorsque `activeClipId` ne change pas, exactement une
+  notification et le nouveau snapshot lorsque la projection change ; les
+  politiques de suivi, l'état des contrôles transport, les bornes du viewport
+  et le comportement critique restent verts ;
+- point de rollback du jalon 6 : SHA de départ `a602a32`, nouveaux modules
+  `project-store-selector.ts`, `useProjectStoreSelector.ts`,
+  `useRenderSignalValue.ts`, `usePianoRollTransportViewport.ts` et test de
+  sélecteur, plus `usePianoRollProjectState.ts`, le bloc transport/viewport de
+  `PianoRollWorkspace.tsx` et l'instrumentation diagnostique affectée ;
+- validations rapides du jalon 6 : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 282 fichiers produit et 71 modules de
+  test ; 5 fichiers et 20 tests ciblés réussis pour abonnements, suivi,
+  contrôles, bornes et comportement critique. `PianoRollWorkspace.tsx` passe de
+  885 à 766 lignes ; statut du jalon : vert ;
+- scénario de rendu final : même commande, machine, Edge headless 151, viewport
+  1416 × 808, DPR 1 et trois passages que la baseline du lot 0. Résultats
+  11/11/11 commits pour `PianoRollWorkspace` contre 13/13/13 (médiane -15,4 %),
+  10/10/10 pour chacune des quatre surfaces suivies contre 12/12/12 (médiane
+  -16,7 %), longues tâches 3/1/1 contre 5/3/2 (médiane 1 contre 3, -66,7 %) et
+  notifications de sélecteur inchangé 0/0/0. Aucun seuil de +10 % n'est approché ;
+- documentation courante synchronisée : README racine, README de l'UI,
+  `docs/architecture.md`, `docs/code-map.md`, `docs/app-composition.md` et
+  `docs/state-ownership.md` décrivent les propriétaires, layout, hooks de
+  cycle de vie, transport/viewport et contrats d'abonnement réellement présents ;
+- recherches de sortie et contrôle du périmètre : aucun bloc résiduel de
+  préférences/presets, cycle de vie projet, modèle radial, rendu de dialogues,
+  portal ou orchestration transport/viewport dans `PianoRollWorkspace`; aucun
+  diff sous `src/config`, `src/music`, `src/ui/shared`, `clip-commands.ts` ou
+  `time-map.ts`. Les deux fichiers préexistants sous `src/ui/shared` restent
+  réservés au lot 6 ; aucun dossier générique, store externe, alias ou façade
+  temporaire n'a été ajouté ;
+- validation complète finale : `npm run verify` réussi — 33 fichiers Markdown,
+  339 fichiers source contrôlés par la structure, frontières vertes sur
+  282 fichiers produit et 71 modules de test, typecheck et build Vite réussis,
+  smoke AudioWorklet réussi, 67 fichiers de test et 420 tests réussis ; seul
+  l'avertissement préexistant de chunk supérieur à 500 kB subsiste ;
+- statut du lot : `TERMINÉ`. Les six jalons sont validés séparément, les
+  abonnements ne notifient pas pour un snapshot inchangé et le scénario
+  reproductible montre une amélioration des commits et longues tâches par
+  rapport à la baseline du lot 0. Le lot 6 n'est pas commencé ;
+- point de rollback final : SHA de départ
+  `a602a322b81955a0087caf6b7c6f4f56f171511e`, commit initial de sauvegarde
+  `a602a32`, aucun commit dédié au lot 5 et aucun patch créé. Le périmètre exact
+  compte 29 fichiers listés ci-dessous ; un retour doit être préparé par jalon à
+  partir du diff et ne doit jamais annuler un jalon validé sans viser ses seuls
+  fichiers ;
+- prochaine action exacte : après revue du lot 5, ouvrir le lot 6 en revérifiant
+  sa condition d'entrée, puis traiter uniquement sa première sous-étape de
+  redistribution. Ne pas anticiper le renommage physique du lot 7.
+
+```text
+README.md
+docs/app-composition.md
+docs/architecture.md
+docs/code-map.md
+docs/migration/STATUS.md
+docs/state-ownership.md
+scripts/measure-render-baseline.mjs
+src/ui/README.md
+src/ui/diagnostics/RenderBaselineProfiler.tsx
+src/ui/dialogs/PianoRollWorkspaceDialogs.tsx
+src/ui/dialogs/__tests__/piano-roll-dialog-model.test.ts
+src/ui/dialogs/piano-roll-dialog-model.ts
+src/ui/dialogs/usePianoRollDialogState.ts
+src/ui/inspector/instruments/__tests__/personal-instrument-preset-settings.test.ts
+src/ui/inspector/instruments/personal-instrument-preset-settings.ts
+src/ui/inspector/instruments/usePianoRollUserPreferences.ts
+src/ui/piano-roll/PianoRollWorkspace.tsx
+src/ui/piano-roll/PianoRollWorkspaceLayout.tsx
+src/ui/piano-roll/__tests__/piano-roll-workspace-layout.test.ts
+src/ui/piano-roll/__tests__/project-store-selector.test.ts
+src/ui/piano-roll/context-menu/__tests__/piano-roll-radial-command-model.test.ts
+src/ui/piano-roll/context-menu/piano-roll-radial-command-model.ts
+src/ui/piano-roll/context-menu/usePianoRollRadialMenuCommands.ts
+src/ui/piano-roll/project-store-selector.ts
+src/ui/piano-roll/usePianoRollProjectState.ts
+src/ui/piano-roll/useProjectStoreSelector.ts
+src/ui/piano-roll/useRenderSignalValue.ts
+src/ui/project-files/usePianoRollProjectLifecycle.ts
+src/ui/transport/usePianoRollTransportViewport.ts
+```
 
 ### 2026-08-28 — Lot 4, démarrage
 

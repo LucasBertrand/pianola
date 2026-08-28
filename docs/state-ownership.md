@@ -9,14 +9,14 @@ Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 27 août 2026.
+Dernière mise à jour : 28 août 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |
 | document projet | horloge globale (PPQN), clips, bypass par clip et par groupe, hiérarchie de groupes et ordre de lecture dérivé, timelines (marqueurs de tempo/métrique/gamme/section, durée), boucles locales, enchaînement global, auto-scroll du playhead, pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `application/history/ProjectStore` | ouverture du projet | oui, dans `StoredProject` et la section `document` du nouveau `.pianola` | oui, par transaction métier | faible à moyenne |
 | session d'éditeur minimale | document ouvert et clip actif canonique | `EditorSessionState`, dont `ActiveClipSelection` | ouverture du projet | clip actif projeté dans le contexte persistant | seul le `ProjectDocument` est historisé | moyenne |
 | contexte d'éditeur persistant | clip et instrument actifs, grille et snap tonal par clip | `PersistedEditorWorkspace`, avec un `PersistedClipEditorState` par clip, projeté par `application/editor-session/workspace-persistence.ts` dans `EditorRuntime` | durée de vie du projet | oui, atomiquement avec le document et dans une section portable distincte | non | moyenne |
-| préférences utilisateur | mode de sélection, couleur des notes, préécoute du pitch et raccourcis par action | `UserSettingsRepository` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
+| préférences utilisateur | mode de sélection, couleur des notes, préécoute du pitch, presets personnels et raccourcis par action | `UserSettingsRepository`, projeté temporairement par `usePianoRollUserPreferences` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
 | session d’édition | sélection de notes, presse-papier, draft de geste, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | snapshots d’identifiants avant/après pour la sélection ; les autres états restent hors historique | élevée |
 | prévisualisation audio | réglages d’instrument en cours d’édition | brouillon du dialogue projeté par message dans le worklet | ouverture du dialogue d’instrument | non | non ; la validation seule crée une transaction | élevée pendant l’interaction |
 | temps réel | playhead unique `{ clipId, tick }`, statut de lecture, tick à l’échantillon, voix DSP et buffers Canvas | `application/editor-session/EditorRuntime.playheadPosition`, `useAudioPlayback` et `WorkletTimelineEngine` | session ou frame courante | non | non | audio-rate ou frame |
@@ -25,6 +25,10 @@ Dernière mise à jour : 27 août 2026.
 
 - Une donnée n’a qu’un propriétaire canonique. Une copie destinée au rendu est
   un snapshot dérivé, pas une seconde source de vérité.
+- Les projections React de `ProjectStore` passent par
+  `useProjectStoreSelector`. Une projection inchangée conserve sa référence et
+  ne reçoit aucune notification. Les signaux de viewport, playhead, survol et
+  preview continuent d'invalider directement le DOM ou le Canvas.
 - `EditorSessionState` agrège le document et son `ActiveClipSelection` au
   runtime. Seul le
   document musical entre dans l'historique persistant ; un panneau ouvert, un

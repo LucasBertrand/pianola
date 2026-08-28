@@ -55,14 +55,19 @@ lot 4 et tout nouveau cycle échoue immédiatement.
 
 `src/app/App.tsx` crée l'agrégat `EditorRuntime`, dont le contrat appartient à
 `src/application/editor-session/editor-runtime.ts`, et monte
-`src/ui/piano-roll/PianoRollWorkspace.tsx`. Le workspace assemble les surfaces,
-mais délègue les protocoles à des hooks nommés :
+`src/ui/piano-roll/PianoRollWorkspace.tsx`. Le workspace coordonne les contrats,
+`PianoRollWorkspaceLayout` possède la structure DOM et le portal de toolbar,
+et les protocoles sont délégués à des hooks nommés :
 
 - `useApplicationDialogs` pour alertes et confirmations ;
 - `useInstrumentDialogWorkflow` pour le brouillon d’instrument ;
 - `useNoteCollisionDialogWorkflow` pour merge/slice ;
-- `usePianoRollProjectState` pour projet, clip, instrument et sélection ;
-- les workflows fichiers, MIDI, transport, viewport, clips et sélection.
+- `usePianoRollProjectState` et `useProjectStoreSelector` pour les snapshots
+  stables du projet, du clip, de l’instrument et de la sélection ;
+- `usePianoRollUserPreferences` pour préférences et presets personnels ;
+- `usePianoRollProjectLifecycle` pour autosave, fermeture et fichiers ;
+- `usePianoRollTransportViewport` pour audio, commandes, suivi et viewport ;
+- les workflows de clips, sélection et marqueurs.
 
 L’inventaire détaillé des états de composition est dans
 [`app-composition.md`](app-composition.md).
@@ -139,6 +144,13 @@ Les composants sont rangés par surface : dialogs, editor-toolbar, inspector,
 piano-roll, project-files et transport. Le piano roll garde ses adaptateurs DOM
 dans `src/ui/piano-roll/interactions/` et ses peintres Canvas dans
 `src/ui/piano-roll/rendering/`.
+
+Les valeurs partagées qui produisent du JSX passent par
+`useProjectStoreSelector` ou `useRenderSignalValue`, fondés sur
+`useSyncExternalStore`. Le sélecteur conserve sa référence tant que sa
+projection ne change pas et ne notifie pas React pour une mutation sans rapport.
+Le viewport, le playhead, les survols et les previews de geste restent des
+signaux à invalidation DOM/Canvas directe.
 
 `src/styles.css` importe des propriétaires symétriques : shell, application
 header, editor toolbar, transport, project files, piano roll, inspector,

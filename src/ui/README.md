@@ -17,7 +17,9 @@ adaptateurs de stockage navigateur vivent sous
 
 Lire `home/ApplicationHome.tsx` pour l'accueil et
 `piano-roll/PianoRollWorkspace.tsx` pour l’assemblage de l'éditeur, puis
-descendre dans la surface concernée. Pour le Canvas, utiliser
+`piano-roll/PianoRollWorkspaceLayout.tsx` pour sa structure DOM. Les fichiers,
+préférences, dialogues et transport/viewport ont chacun un hook propriétaire.
+Pour le Canvas, utiliser
 [`piano-roll/rendering/README.md`](piano-roll/rendering/README.md).
 
 ## Quelles dépendances sont autorisées ?
@@ -28,6 +30,6 @@ des formats. Aucun autre dossier ne doit dépendre de la composition UI.
 ## Où sont les tests ?
 
 Les peintres ont leurs contrats près de `piano-roll/rendering/__tests__/`. Les
-flux UI traversants sont couverts par `tests/integration/`. Le workspace reste
-au-dessus de 500 lignes comme composition de surface, mais ses protocoles
-complets sont tous délégués à des hooks nommés.
+modèles de layout, menu radial, dialogues, presets et sélecteurs ont leurs tests
+colocalisés. Les flux UI traversants sont couverts par `tests/integration/` et
+le smoke navigateur du scénario de rendu.

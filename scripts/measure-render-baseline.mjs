@@ -127,6 +127,7 @@ async function runScenario(cdp, runNumber) {
     document.querySelector('.app-shell') !== null
       && window.__PIANOLA_RENDER_BASELINE__ !== undefined
   `);
+  await assertWorkspaceLayout(cdp);
   await delay(400);
   await evaluate(cdp, "window.__PIANOLA_RENDER_BASELINE__.reset()");
 
@@ -197,6 +198,40 @@ async function runScenario(cdp, runNumber) {
       },
     },
   }))()`);
+}
+
+async function assertWorkspaceLayout(cdp) {
+  const layout = await evaluate(cdp, `(() => {
+    const appShell = document.querySelector('.app-shell');
+    const workspace = appShell?.querySelector(':scope > .workspace');
+    const editorPanel = workspace?.querySelector(':scope > .editor-panel');
+    const rollFrame = editorPanel?.querySelector(':scope > .roll-frame');
+    const rollStage = rollFrame?.querySelector(':scope > .roll-stage');
+    const canvasHost = rollStage?.querySelector(':scope > .canvas-host');
+    const inspector = workspace?.querySelector(':scope > #project-inspector');
+    const toolbarHost = inspector?.querySelector(
+      ':scope > .project-inspector-toolbar-host',
+    );
+    const toolbar = toolbarHost?.querySelector(':scope > .editor-toolbar');
+
+    return {
+      appShell: appShell instanceof HTMLElement,
+      workspace: workspace instanceof HTMLElement,
+      editorPanel: editorPanel instanceof HTMLElement,
+      rollFrame: rollFrame instanceof HTMLElement,
+      rollStage: rollStage instanceof HTMLElement,
+      canvasHost: canvasHost instanceof HTMLElement,
+      inspector: inspector instanceof HTMLElement,
+      toolbarPortal: toolbar instanceof HTMLElement,
+    };
+  })()`);
+  const missing = Object.entries(layout)
+    .filter(([, present]) => !present)
+    .map(([name]) => name);
+
+  if (missing.length > 0) {
+    throw new Error(`Workspace layout smoke failed: ${missing.join(', ')}.`);
+  }
 }
 
 async function exerciseViewport(cdp) {

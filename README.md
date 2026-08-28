@@ -115,9 +115,12 @@ composant visible
 
 `src/app/App.tsx` crée le runtime décrit par
 `src/application/editor-session/editor-runtime.ts` et monte
-`PianoRollWorkspace`. Les protocoles
-de dialogues, instruments, collisions, fichiers, sélection, transport et
-viewport appartiennent aux capacités UI correspondantes.
+`PianoRollWorkspace`. `PianoRollWorkspaceLayout` possède sa structure DOM et le
+portal de toolbar ; les protocoles de préférences, dialogues, instruments,
+collisions, fichiers, sélection, transport et viewport appartiennent aux
+capacités UI correspondantes. Les snapshots React partagés utilisent des
+sélecteurs `useSyncExternalStore`, tandis que les valeurs à fréquence frame
+restent sur les signaux du runtime.
 
 Le noyau de l’éditeur sous `src/editor/` ne connaît ni React ni le
 DOM. Les `PointerEvent` sont convertis en échantillons immuables par l’adaptateur

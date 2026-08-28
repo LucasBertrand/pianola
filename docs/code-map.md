@@ -12,15 +12,15 @@ départ visible, le propriétaire d’état et les témoins actuels.
 
 | Capacité | Point d’entrée | Propriétaire d’état | Tests |
 | --- | --- | --- | --- |
-| composition | `src/app/App.tsx` puis `src/ui/home/ApplicationHome.tsx` ou `src/ui/piano-roll/PianoRollWorkspace.tsx` | accueil sans runtime ou une session `EditorRuntime` active | `tests/integration/critical-behavior.test.ts` |
+| composition | `src/app/App.tsx` puis `src/ui/home/ApplicationHome.tsx` ou `src/ui/piano-roll/PianoRollWorkspace.tsx` ; DOM dans `PianoRollWorkspaceLayout.tsx` | accueil sans runtime ou une session `EditorRuntime` active | test de layout colocalisé, smoke de rendu et `tests/integration/critical-behavior.test.ts` |
 | piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | agrégat `src/application/editor-session/editor-runtime.ts`, mécanismes purs sous `src/editor/` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips et groupes | `src/ui/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
-| transport | `src/ui/transport/TransportControls.tsx` | `TimeMap` et boucle du clip, enchaînement global et auto-scroll du document, worklet pour statut et horloge audio | tests AudioWorklet et suite centrale |
+| transport | `src/ui/transport/TransportControls.tsx` puis `usePianoRollTransportViewport.ts` | `TimeMap` et boucle du clip, enchaînement global et auto-scroll du document, worklet pour statut et horloge audio | politiques transport/viewport, tests AudioWorklet et suite centrale |
 | persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/infrastructure/persistence/__tests__/project-repository-contract.test.ts` |
 | fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | document + `PersistedEditorWorkspace` | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
-| MIDI | `src/ui/project-files/useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
+| MIDI | `src/ui/project-files/usePianoRollProjectLifecycle.ts` puis `useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/styles.css` | fichier CSS de la surface | build Vite et vérification humaine |
 
 La « suite centrale » désigne
@@ -40,17 +40,17 @@ restent le garde-fou de parité des flux transversaux.
 | modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-commands.ts` |
 | modifier la découpe d’un clip | `src/ui/dialogs/ClipSplitDialog.tsx` | `src/ui/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
 | modifier la duplication d’un groupe | `src/ui/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
-| modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `useViewportControls.ts`, puis contrôleur viewport |
+| modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `usePianoRollTransportViewport.ts`, `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
 | modifier Copy/Cut/Paste | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
-| modifier le menu radial ou le bouton du stylet | `src/ui/piano-roll/context-menu/` | `InteractionOverlay.tsx`, puis `interactions/useStylusAction.ts` |
+| modifier le menu radial ou le bouton du stylet | `src/ui/piano-roll/context-menu/piano-roll-radial-command-model.ts` | `usePianoRollRadialMenuCommands.ts`, `InteractionOverlay.tsx`, puis `interactions/useStylusAction.ts` |
 | modifier les collisions | `src/ui/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts` | `src/domain/note-collision.ts` |
 | modifier l’inspecteur | `src/ui/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
 | modifier le master bus | `src/ui/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | commandes de transport, validation et painters ruler/grid |
 | modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | workspace codec et parseur de document |
-| modifier autosave ou récupération | `src/use-cases/persistence/project-autosave.ts` | projection sous `src/application/editor-session/workspace-persistence.ts`, ports sous `src/application/ports/`, puis repository IndexedDB et Worker sous `src/infrastructure/persistence/` |
+| modifier autosave ou récupération | `src/ui/project-files/usePianoRollProjectLifecycle.ts` | `src/use-cases/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports puis repository IndexedDB/Worker |
 | modifier le MIDI | `src/project-io/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/config/application-colors.ts` | tokens CSS et styles de surface |
 | modifier le responsive | `src/styles/responsive.css` | styles propriétaires des surfaces impliquées |
@@ -76,6 +76,7 @@ muté à la validation du geste.
 
 ```text
 TransportControls
+  → usePianoRollTransportViewport
   → useAudioPlayback
   → compilePlaybackPlan
   → createTransferableAudioWorkletTimeline
@@ -141,7 +142,7 @@ ClipInspector
   → useClipWorkflow
   → clear interaction
   → ProjectStore.selectClip
-  → usePianoRollProjectState
+  → usePianoRollProjectState / useProjectStoreSelector
   → restauration des signaux du clip actif
 ```
 
@@ -171,8 +172,9 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 
 ## Modules volumineux
 
-- `src/ui/piano-roll/PianoRollWorkspace.tsx` reste une composition de surface ;
-  les protocoles complets en sont extraits.
+- `src/ui/piano-roll/PianoRollWorkspace.tsx` reste un coordinateur de surface ;
+  le DOM, les protocoles complets et les abonnements sont extraits chez leurs
+  propriétaires.
 - `src/config/application-colors.ts` est une table de données de thème sans
   protocole concurrent.
 - `src/domain/note-collision.ts` possède l’algorithme cohérent de résolution ;

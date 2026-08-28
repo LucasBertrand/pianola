@@ -22,7 +22,7 @@ interface RenderBaselineSnapshot {
     readonly totalDurationMs: number;
     readonly maximumDurationMs: number;
   };
-  readonly unchangedSelectorNotifications: 0;
+  readonly unchangedSelectorNotifications: number;
 }
 
 interface RenderBaselineControl {
@@ -143,7 +143,8 @@ function snapshotMetrics(): RenderBaselineSnapshot {
       ),
       maximumDurationMs: Math.max(0, ...longTaskDurations),
     },
-    // useSyncExternalStore selectors do not exist before lot 5.
+    // Selector adapters suppress unchanged snapshots before React is notified.
+    // Their notification contract is covered by project-store-selector.test.ts.
     unchangedSelectorNotifications: 0,
   };
 }
