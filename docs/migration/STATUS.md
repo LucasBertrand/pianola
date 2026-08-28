@@ -7,10 +7,10 @@ workspace réel, pas seulement l'intention.
 
 - Statut : EN ATTENTE
 - Lot actif : aucun
-- Dernier lot terminé : 6 — Redistribution des horizontales
-- Prochaine action : faire relire le lot 6, puis vérifier les prérequis du lot 7
-  avant toute modification de renommage physique des couches
-- Dernière mise à jour : 2026-08-28
+- Dernier lot terminé : 7 — Renommage physique des couches
+- Prochaine action : faire relire le lot 7, puis vérifier les prérequis du lot 8
+  avant tout nettoyage final
+- Dernière mise à jour : 2026-08-29
 
 ## Politique de rollback en vigueur
 
@@ -23,9 +23,8 @@ le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 �
 
 ## Baseline connue
 
-- arborescence source actuelle : `app`, `application`, `audio`, `domain`,
-  `editor`, `infrastructure`, `project-io`, `pwa`, `styles`, `ui`,
-  `use-cases` ;
+- arborescence source actuelle : `application`, `bootstrap`, `domain`,
+  `editor-core`, `infrastructure` et `presentation` ;
 - aucun cycle d'import produit ou test n'est accepté ;
 - `PianoRollWorkspace.tsx` est ramené à 766 lignes et coordonne des contrats
   extraits ; `InstrumentPresetDialog.tsx` et `ClipInspector.tsx` restent les
@@ -36,7 +35,7 @@ le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 �
   famille ou invariant sous `domain/commands` et `domain/transport` ;
 - le format `.pianola` est sous `infrastructure/project-files/pianola` et la
   persistance locale sous `infrastructure/persistence` ;
-- les contrôles de sortie du lot 6 analysent 357 fichiers structurels et,
+- les contrôles de sortie du lot 7 analysent 357 fichiers structurels et,
   séparément, 300 fichiers produit et 71 modules de test ; tout cycle est
   interdit ;
 - la couverture ciblée et les trois mesures de rendu sont consignées dans
@@ -67,7 +66,7 @@ D  docs/storage-strategies.md
 | 4 | TERMINÉ | Historique et session sous `application`, cœur découplé, cycle supprimé |
 | 5 | TERMINÉ | Six jalons caractérisés et validés ; rendu sans régression |
 | 6 | TERMINÉ | Horizontales supprimées, concentrations métier découpées et garde-fous synchronisés |
-| 7 | À FAIRE | Renommage physique des couches |
+| 7 | TERMINÉ | Six racines cibles matérialisées, anciennes racines interdites |
 | 8 | À FAIRE | Nettoyage final |
 
 ## Compatibilités temporaires
@@ -86,6 +85,8 @@ Le lot 6 n'ajoute aucun alias ni compatibilité : les anciennes racines et les
 deux anciens modules de commandes sont supprimés. `domain/transport/time-map.ts`
 reste une façade de capacité publique aux exports explicites, pas un alias vers
 un ancien propriétaire.
+Le lot 7 n'ajoute aucun alias ni compatibilité : les couches et leurs importeurs
+emploient directement les six racines cibles.
 
 ## Écarts et découvertes
 
@@ -103,17 +104,205 @@ un ancien propriétaire.
 - les occurrences textuelles restantes de « Track » appartiennent au
   vocabulaire du format MIDI (`End of Track`, numéro de piste) ; aucun
   identifiant TypeScript produit n'utilise encore le type générique `Track` ;
-- les types renommés restent physiquement chez leurs propriétaires courants ;
-  leur déplacement de couche n'est pas anticipé et demeure réservé aux lots
-  prévus par la feuille de route.
-- `src/config`, `src/music` et `src/ui/shared` sont absents et protégés par le
-  contrôle structurel ; aucune racine cible du lot 7 n'a été créée ;
+- les types renommés restent physiquement chez leurs propriétaires cibles et
+  aucun alias de vocabulaire ou de chemin n'est réintroduit ;
+- les anciennes racines `src/app`, `src/use-cases`, `src/ui`, `src/editor`,
+  `src/audio`, `src/project-io`, `src/pwa` et `src/styles` sont absentes et
+  protégées par le contrôle structurel ; les six racines cibles sont présentes ;
 - les autres fichiers de plus de 500 lignes qui restent sont soit des
   propriétaires cohésifs hors des trois concentrations visées par le lot 6,
   soit `ClipInspector.tsx` et `InstrumentPresetDialog.tsx`, dont le découpage
   demeure interdit tant qu'une caractérisation directe n'existe pas.
 
 ## Journal
+
+### 2026-08-29 — Lot 7, démarrage
+
+- objectif : matérialiser les six racines de `TARGET.md` par déplacements
+  physiques séparés, sans changement fonctionnel, conceptuel, métier ou de
+  schéma persistant, puis interdire les anciens chemins ;
+- condition d'entrée vérifiée dans ce journal et dans le worktree avant toute
+  modification du lot : le lot 6 est `TERMINÉ`, aucun lot n'était actif, le lot
+  7 était le premier lot `À FAIRE`, les racines historiques `use-cases`, `ui`,
+  `editor`, `audio`, `project-io`, `pwa`, `styles` et `app` étaient encore
+  présentes et aucune racine `presentation`, `editor-core` ou `bootstrap`
+  n'avait été créée ; les propriétaires `application` et `infrastructure`
+  établis par les lots précédents sont présents ;
+- commit de sauvegarde demandé avant le lot : `ffdaeab`
+  (`chore(migration): checkpoint before lot 7`) fige les 169 chemins
+  préexistants du lot 6 ; le worktree est propre après ce commit ;
+- SHA de départ et point de rollback initial :
+  `ffdaeab9996e53e7315e6e13a31341d0419c5abe`. Aucun commit dédié au lot 7
+  n'existe encore et aucun patch préventif ne sera créé ; tout retour doit être
+  préparé à partir du diff et du périmètre consigné, sans annuler le commit de
+  sauvegarde ;
+- validation de référence fournie et déjà verte : 33 documents, 339 fichiers
+  structurels, frontières sur 282 fichiers produit et 71 tests, build Vite,
+  smoke AudioWorklet, 67 fichiers de test et 420 tests réussis. À la demande de
+  l'utilisateur, aucune validation intégrale n'est rejouée au démarrage ; les
+  validations rapides et ciblées seront exécutées après chaque sous-étape, puis
+  la validation complète à la sortie ;
+- audit préalable : 18 fichiers suivis sous `src/use-cases`, 141 sous `src/ui`,
+  35 sous `src/editor`, 34 sous `src/audio`, 17 sous `src/project-io`, un sous
+  `src/pwa`, 13 sous `src/styles`, deux sous `src/app`, plus `src/main.tsx` ;
+  les importeurs et références courantes ont été recensés sous `src`, `tests`,
+  `scripts`, les configurations TypeScript/Vitest/Vite, `index.html`, le README
+  racine et `docs/` hors journal de migration ;
+- sous-étapes et périmètre prévus, dans l'ordre de `ROADMAP.md` : (1) fusionner
+  `src/use-cases/{dialogs,persistence,piano-roll,project-files}` et son README
+  dans `src/application` ; (2) déplacer `src/ui` vers `src/presentation`, puis
+  les styles possédés vers `src/presentation/styles` ; (3) déplacer
+  `src/editor` vers `src/editor-core` ; (4) déplacer `src/audio` vers
+  `src/infrastructure/audio`, `src/project-io/midi` vers
+  `src/infrastructure/project-files/midi`, son README vers le propriétaire des
+  fichiers projet, et `src/pwa/register-service-worker.ts` vers
+  `src/infrastructure/browser/service-worker` ; (5) déplacer `src/app` et
+  `src/main.tsx` vers `src/bootstrap`. Chaque périmètre comprend ses importeurs
+  mécaniques, les tests colocalisés, les garde-fous, configurations et documents
+  courants directement affectés ;
+- exclusions explicites : aucun renommage conceptuel de module ou symbole,
+  aucun changement de comportement, de React state, d'Undo/Redo, de codec, de
+  persistance, de MIDI ou d'audio ; aucun nettoyage documentaire général,
+  déplacement de notes/audits/assets ou autre action réservée au lot 8.
+- sous-étape application : les 18 fichiers et le README de `src/use-cases`
+  résident désormais sous `src/application` ; l'ancienne racine est supprimée
+  et interdite. La configuration TypeScript couvre explicitement toute la
+  couche ; les documents courants directement affectés décrivent son
+  propriétaire réel ;
+- découverte de frontière : `midi-export-plan.ts` dépendait du type
+  infrastructurel `MidiExportPlan`. Les cinq DTO musicaux neutres appartiennent
+  désormais au plan applicatif et l'adaptateur MIDI les importe. La matrice
+  autorise temporairement `project-io → application` jusqu'au déplacement de
+  `project-io/midi` sous `infrastructure`, direction prévue par la cible ;
+- point de rollback application : SHA `ffdaeab`, périmètre limité aux 18
+  déplacements sous `src/application`, à `midi-exporter.ts`, leurs importeurs
+  mécaniques, `tsconfig.json`, aux deux garde-fous et leur test, aux documents
+  courants modifiés et à ce journal. Revenir uniquement sur ce périmètre après
+  comparaison avec le diff du SHA de départ ;
+- validations application : `npm run typecheck` réussi ; six fichiers et 40
+  tests ciblés réussis pour autosave, time map, création initiale, frontières
+  et MIDI ; `npm run check:boundaries` réussi sur 300 fichiers produit et 71
+  tests après l'ajustement transitoire documenté ; `npm run check:docs` réussi
+  sur 33 documents et `npm run check:structure` sur 357 fichiers source. La
+  recherche hors migration ne trouve plus l'ancien chemin, hormis sa règle
+  d'interdiction. Statut de la sous-étape : vert.
+- sous-étape présentation : les 141 fichiers de `src/ui`, leurs tests et README
+  résident sous `src/presentation`. Les treize propriétaires de `src/styles`
+  et l'agrégateur `src/styles.css` résident sous
+  `src/presentation/styles`, dont `index.css` est le point d'entrée ; les deux
+  anciennes racines sont supprimées et interdites. La matrice de dépendances,
+  les garde-fous de capacités internes, la couverture ciblée et la
+  documentation courante affectée utilisent les nouveaux chemins ;
+- point de rollback présentation : SHA `ffdaeab`, périmètre limité aux 155
+  déplacements de présentation/styles, à leurs importeurs mécaniques, aux
+  garde-fous et leur test, à `vitest.config.ts`, aux documents courants
+  affectés et à ce journal. Le diff doit être comparé au jalon application
+  avant tout retour ciblé ;
+- validations présentation : `npm run typecheck` et
+  `npm run check:boundaries` réussis sur 300 fichiers produit et 71 tests ; 22
+  fichiers et 79 tests colocalisés sous `src/presentation` réussis ;
+  `npm run check:docs` réussit sur 33 documents et
+  `npm run check:structure` sur 357 fichiers source. Aucune référence courante
+  aux anciennes racines `src/ui` ou `src/styles` ne subsiste hors règle
+  d'interdiction et historique de migration. Statut de la sous-étape : vert.
+- sous-étape cœur d'édition : les 35 fichiers et le README de `src/editor`
+  résident sous `src/editor-core`. L'ancienne racine est supprimée et interdite,
+  la configuration TypeScript, la matrice de frontières, les tests du
+  garde-fou et la documentation courante affectée utilisent le nouveau nom ;
+- point de rollback cœur d'édition : SHA `ffdaeab`, périmètre limité aux 35
+  déplacements, à leurs importeurs mécaniques, `tsconfig.json`, aux deux
+  garde-fous et leur test, aux documents courants affectés et à ce journal ;
+- validations cœur d'édition : `npm run typecheck` et
+  `npm run check:boundaries` réussis sur 300 fichiers produit et 71 tests ; sept
+  fichiers et 33 tests ciblés réussis pour géométrie, gestes, intégrations
+  contrôleur/sélection et garde-fous ; `npm run check:docs` réussit sur 33
+  documents et `npm run check:structure` sur 357 fichiers source. Aucune
+  référence courante à `src/editor` ne subsiste hors règle d'interdiction et
+  historique de migration. Statut de la sous-étape : vert.
+- sous-étape infrastructure : les 34 fichiers de `src/audio` résident sous
+  `src/infrastructure/audio`, les seize modules MIDI de `src/project-io/midi`
+  sous `src/infrastructure/project-files/midi`, leur README au niveau du
+  propriétaire `project-files`, et l'adaptateur de `src/pwa` sous
+  `src/infrastructure/browser/service-worker`. Les trois anciennes racines sont
+  supprimées et interdites ; la matrice applique désormais la direction cible
+  `infrastructure → application/domain/editor-core`, ce qui clôt l'autorisation
+  transitoire `project-io → application` ;
+- écart local corrigé : le déplacement initial du répertoire PWA avait conservé
+  un niveau `service-worker/pwa/register-service-worker.ts`. Le premier
+  typecheck UI l'a refusé ; le fichier a été replacé au chemin exact
+  `service-worker/register-service-worker.ts` avant toute autre validation, puis
+  le typecheck complet est repassé au vert ;
+- point de rollback infrastructure : SHA `ffdaeab`, périmètre limité aux 52
+  déplacements audio/MIDI/navigateur et README, à leurs importeurs mécaniques,
+  `tsconfig.json`, aux garde-fous, aux documents courants affectés et à ce
+  journal. Le diff doit être comparé aux trois jalons déjà verts avant retour ;
+- validations infrastructure : après la correction ci-dessus,
+  `npm run typecheck` et `npm run check:boundaries` réussissent sur 300 fichiers
+  produit et 71 tests ; douze fichiers et 126 tests ciblés audio, DSP, MIDI et
+  régressions critiques réussissent ; `npm run check:docs` passe sur 33
+  documents et `npm run check:structure` sur 357 fichiers source. Aucune
+  référence courante aux anciennes racines `src/audio`, `src/project-io` ou
+  `src/pwa` ne subsiste hors règles d'interdiction et historique de migration.
+  Statut de la sous-étape : vert.
+- sous-étape bootstrap : `src/app/{App.tsx,create-app-runtime.ts}` et
+  `src/main.tsx` résident sous `src/bootstrap`; l'entrée Vite d'`index.html`
+  vise `src/bootstrap/main.tsx`. Les anciens chemins sont interdits, le
+  garde-fou de composition limite `bootstrap` à ces trois fichiers et aucune
+  autre couche n'est autorisée à en dépendre ;
+- point de rollback bootstrap : SHA `ffdaeab`, périmètre limité aux trois
+  déplacements, à leurs importeurs mécaniques, `index.html`, aux deux
+  garde-fous, aux documents courants affectés et à ce journal ;
+- validations bootstrap : `npm run typecheck` et
+  `npm run check:boundaries` réussis sur 300 fichiers produit et 71 tests ; huit
+  fichiers et 86 tests d'intégration ciblés du runtime, de l'historique, des
+  gestes et des frontières réussis ; `npm run check:docs` passe sur 33
+  documents et `npm run check:structure` sur 357 fichiers source. Aucune
+  référence courante à `src/app/` ou `src/main.tsx` ne subsiste hors règles
+  d'interdiction et historique de migration. Statut de la sous-étape : vert.
+- garde-fous finaux synchronisés : la matrice fermée n'enregistre plus que
+  `bootstrap`, `presentation`, `application`, `editor-core`, `domain` et
+  `infrastructure` avec les directions de `TARGET.md`; React n'est admis que
+  dans `bootstrap` et `presentation`, les trois couches protégées restent sans
+  navigateur, aucun cycle n'est accepté et aucune couche ne peut importer
+  `bootstrap`. Le contrôle structurel interdit les huit anciennes racines et
+  l'ancien point d'entrée `src/main.tsx`, exige les README déplacés et le point
+  d'entrée CSS de présentation ;
+- documentation courante synchronisée : `README.md`, `docs/app-composition.md`,
+  `docs/architecture.md`, `docs/code-map.md`, les guides de contribution,
+  développement, fichiers projet et dépannage, ainsi que les README locaux de
+  l'application, du cœur éditeur, de l'audio, des fichiers projet, de la
+  présentation et du rendu Canvas décrivent les chemins réels ;
+- recherches de sortie : `src` ne contient que les six racines cibles. Aucune
+  référence courante à `src/app`, `src/use-cases`, `src/ui`, `src/editor`,
+  `src/audio`, `src/project-io`, `src/pwa`, `src/styles` ou `src/main.tsx` ne
+  subsiste hors règles d'interdiction et historique de migration ; aucun import
+  d'une couche vers `bootstrap` et aucun fichier ou dossier générique exact
+  `utils`, `helpers`, `common`, `shared`, `types` ou `data` n'ont été trouvés ;
+- point de rollback final avant validation complète : SHA de départ
+  `ffdaeab9996e53e7315e6e13a31341d0419c5abe`. Le worktree était propre à ce
+  SHA ; `git diff HEAD --name-only` constitue donc le périmètre exact du lot 7,
+  soit 298 chemins : 272 sous `src`, douze sous `tests`, huit documents sous
+  `docs`, le README racine, `index.html`, les deux scripts de garde-fous,
+  `tsconfig.json` et `vitest.config.ts`. Aucun patch de rollback n'est créé.
+- premier passage de validation complète : documentation, structure,
+  frontières et trois typechecks réussis, puis le build Vite a signalé
+  l'import CSS `./presentation/styles/index.css` resté relatif à l'ancienne
+  profondeur de `src/main.tsx`. L'import de `src/bootstrap/main.tsx` a été
+  corrigé vers `../presentation/styles/index.css`; la validation complète a
+  ensuite été rejouée depuis le début avant clôture.
+- validation complète finale : `npm run verify` réussi depuis le début — 33
+  documents, 357 fichiers source, frontières vertes sur 300 fichiers produit
+  et 71 modules de test, trois typechecks et build Vite réussis avec 326 modules
+  transformés, smoke AudioWorklet réussi sur 128 frames stéréo, 67 fichiers de
+  test et 430 tests réussis. L'avertissement de chunk principal supérieur à
+  500 kB reste inchangé et non bloquant ;
+- statut de sortie : lot 7 `TERMINÉ`, aucun lot actif. L'arborescence de
+  `TARGET.md` est matérialisée, les anciens chemins sont absents et interdits,
+  et aucune modification fonctionnelle ou de schéma persistant n'est incluse ;
+- prochaine action exacte : faire relire le lot 7, puis ouvrir le lot 8 en
+  vérifiant de nouveau sa condition d'entrée. Aucun nettoyage final,
+  déplacement de notes/audits/assets ou suppression supplémentaire du lot 8
+  n'est commencé dans ce worktree.
 
 ### 2026-08-28 — Lot 6, exécution et clôture
 

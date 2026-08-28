@@ -78,20 +78,20 @@ Les variantes de tests sont décrites dans le
 
 ```text
 src/
-├── app/                         création du runtime et assemblage racine
-├── application/editor-session/ agrégat de session et workspace persistant
-├── application/history/        store, transactions et sélection Undo/Redo
-├── application/ports/          contrats applicatifs de persistance
-├── application/product/        identité produit partagée
+├── bootstrap/                   entrée Vite, création du runtime et assemblage
+├── application/                intentions et orchestrations indépendantes de React
+│   ├── editor-session/          agrégat de session et workspace persistant
+│   ├── history/                 store, transactions et sélection Undo/Redo
+│   ├── piano-roll/              intentions notes, sélection et timeline
+│   └── ports/                   contrats applicatifs de persistance
 ├── domain/                     document, commandes, théorie musicale et invariants
-├── editor/                     noyau d’édition indépendant du DOM
-├── use-cases/piano-roll/        intentions notes et sélection
-├── audio/                       timeline et moteur AudioWorklet
-├── infrastructure/              `.pianola`, codecs et adaptateurs de persistance
-├── project-io/                  Standard MIDI File
-├── pwa/                         enregistrement du service worker
-├── ui/                          React, Canvas et adaptateurs navigateur
-└── styles/                      CSS et couleurs par surface propriétaire
+├── editor-core/                noyau d’édition indépendant du DOM
+├── infrastructure/             adaptateurs navigateur et formats
+│   ├── audio/                   timeline et moteur AudioWorklet
+│   ├── browser/                 enregistrement du service worker
+│   ├── persistence/             IndexedDB, Worker et codecs locaux
+│   └── project-files/           formats `.pianola` et Standard MIDI File
+└── presentation/                React, DOM, Canvas et styles par surface
 ```
 
 Les tests purs vivent près de leur module. Les flux traversant plusieurs
@@ -112,7 +112,7 @@ composant visible
   → snapshot dérivé pour Canvas ou Web Audio
 ```
 
-`src/app/App.tsx` crée le runtime décrit par
+`src/bootstrap/App.tsx` crée le runtime décrit par
 `src/application/editor-session/editor-runtime.ts` et monte
 `PianoRollWorkspace`. `PianoRollWorkspaceLayout` possède sa structure DOM et le
 portal de toolbar ; les protocoles de préférences, dialogues, instruments,
@@ -121,7 +121,7 @@ capacités UI correspondantes. Les snapshots React partagés utilisent des
 sélecteurs `useSyncExternalStore`, tandis que les valeurs à fréquence frame
 restent sur les signaux du runtime.
 
-Le noyau de l’éditeur sous `src/editor/` ne connaît ni React ni le
+Le noyau de l’éditeur sous `src/editor-core/` ne connaît ni React ni le
 DOM. Les `PointerEvent` sont convertis en échantillons immuables par l’adaptateur
 UI avant d’entrer dans la stratégie de gestes.
 
@@ -172,30 +172,30 @@ trouve dans [`docs/state-ownership.md`](docs/state-ownership.md).
 
 L’en-tête contient le titre du projet, les fichiers, les métriques musicales et
 le transport. Le bouton de lecture part de
-`src/ui/transport/TransportControls.tsx`, traverse
-`src/ui/transport/useAudioPlayback.ts`, puis la façade
-`src/audio/audio-worklet-transport.ts`.
+`src/presentation/transport/TransportControls.tsx`, traverse
+`src/presentation/transport/useAudioPlayback.ts`, puis la façade
+`src/infrastructure/audio/audio-worklet-transport.ts`.
 
 ### Piano roll
 
 Le piano roll assemble ruler, boucle, clavier, couches Canvas, playhead et
 contrôles de viewport. Le flux complet d’un geste est documenté dans
-[`src/editor/README.md`](src/editor/README.md).
+[`src/editor-core/README.md`](src/editor-core/README.md).
 
 Le rendu musical est dessiné sur Canvas. Les éléments DOM transitoires ne
 servent qu’aux fantômes de notes, sélections, lasso et contrôles accessibles.
 
 ### Inspecteur projet
 
-`src/ui/inspector/ProjectInspector.tsx` rend les clips et instruments. Le
+`src/presentation/inspector/ProjectInspector.tsx` rend les clips et instruments. Le
 document musical reste propriétaire des valeurs durables ; les hooks
 d’inspecteur ne gardent que le protocole d’interaction.
 
 ### Fichiers projet
 
-Le menu du projet est dans `src/ui/project-files/ProjectMenu.tsx`. Le
+Le menu du projet est dans `src/presentation/project-files/ProjectMenu.tsx`. Le
 format `.pianola` vit sous `src/infrastructure/project-files/pianola/` et le
-MIDI sous `src/project-io/midi/`.
+MIDI sous `src/infrastructure/project-files/midi/`.
 Consultez le [guide des fichiers](docs/guides/project-files.md) avant de modifier
 un schéma, un parseur ou un export.
 
@@ -251,8 +251,8 @@ fichier :
 
 ```bash
 npm test -- tests/integration/critical-behavior.test.ts
-npm test -- src/audio/__tests__/playback-plan.test.ts
-npm test -- src/audio/__tests__/worklet-timeline-engine.test.ts
+npm test -- src/infrastructure/audio/__tests__/playback-plan.test.ts
+npm test -- src/infrastructure/audio/__tests__/worklet-timeline-engine.test.ts
 ```
 
 Les interactions réelles tactiles, Canvas et Web Audio conservent une part de

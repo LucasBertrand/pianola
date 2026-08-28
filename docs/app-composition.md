@@ -5,7 +5,7 @@
 > consigné dans [`migration/README.md`](migration/README.md) et
 > `migration/STATUS.md`.
 
-`src/app/App.tsx` montre la création du runtime et la surface principale sans
+`src/bootstrap/App.tsx` montre la création du runtime et la surface principale sans
 héberger les protocoles détaillés.
 
 ## États et propriétaires
@@ -38,9 +38,9 @@ surface. Aucun état à fréquence frame n'est copié dans le workspace.
 
 ## Surface racine
 
-`src/app/App.tsx` a moins de 350 lignes et 20 imports. Le contrôle structurel
+`src/bootstrap/App.tsx` a moins de 350 lignes et 20 imports. Le contrôle structurel
 rend ces deux limites exécutables. La création du runtime reste volontairement
-dans cette couche ; `src/ui/piano-roll/PianoRollWorkspace.tsx` coordonne les
+dans cette couche ; `src/presentation/piano-roll/PianoRollWorkspace.tsx` coordonne les
 contrats, tandis que `PianoRollWorkspaceLayout.tsx` possède la structure DOM.
 La frontière d’erreur et la modale de
 diagnostic entourent cette surface afin de rester disponibles après une erreur

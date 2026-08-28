@@ -5,7 +5,7 @@ import {
   TEST_CLIP_ID,
   TEST_INSTRUMENT_ID,
 } from "../../../../tests/support/test-builders";
-import { compilePlaybackPlan } from "../../../audio/playback-snapshot";
+import { compilePlaybackPlan } from "../../../infrastructure/audio/playback-snapshot";
 import { ProjectStore } from "../../../application/history/project-store";
 import { CommandRejectedError } from "../command-errors";
 

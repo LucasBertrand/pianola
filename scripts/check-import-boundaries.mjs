@@ -7,89 +7,57 @@ import process from "node:process";
 import ts from "typescript";
 
 const CURRENT_SOURCE_ZONE_IMPORTS = new Map([
-  ["app", new Set([
-    "app",
+  ["bootstrap", new Set([
     "application",
-    "audio",
+    "bootstrap",
     "domain",
-    "editor",
+    "editor-core",
     "infrastructure",
-    "project-io",
-    "pwa",
-    "ui",
-    "use-cases",
+    "presentation",
   ])],
   ["application", new Set([
     "application",
     "domain",
-    "editor",
+    "editor-core",
   ])],
-  ["audio", new Set(["audio", "domain"])],
   ["domain", new Set(["domain"])],
   ["infrastructure", new Set([
     "application",
     "domain",
-    "editor",
+    "editor-core",
     "infrastructure",
   ])],
-  ["editor", new Set([
+  ["editor-core", new Set([
     "domain",
-    "editor",
+    "editor-core",
   ])],
-  ["project-io", new Set([
-    "domain",
-    "editor",
-    "infrastructure",
-    "project-io",
-  ])],
-  ["pwa", new Set([
-    "application",
-    "infrastructure",
-    "project-io",
-    "pwa",
-    "use-cases",
-  ])],
-  ["styles", new Set(["styles"])],
-  ["ui", new Set([
-    "application",
-    "audio",
-    "domain",
-    "editor",
-    "infrastructure",
-    "project-io",
-    "pwa",
-    "styles",
-    "ui",
-    "use-cases",
-  ])],
-  ["use-cases", new Set([
+  ["presentation", new Set([
     "application",
     "domain",
-    "editor",
-    "project-io",
-    "use-cases",
+    "editor-core",
+    "infrastructure",
+    "presentation",
   ])],
 ]);
 const COMPOSITION_SOURCE_ZONE = "<entrypoint>";
 const PROTECTED_CORE_SOURCE_ZONES = new Set([
   "domain",
-  "editor",
+  "editor-core",
 ]);
 const BROWSER_FREE_SOURCE_ZONES = new Set([
   "application",
   "domain",
-  "editor",
-  "styles",
-  "use-cases",
+  "editor-core",
 ]);
 const REACT_SOURCE_ZONES = new Set([
   COMPOSITION_SOURCE_ZONE,
-  "app",
-  "ui",
+  "bootstrap",
+  "presentation",
 ]);
-const ALLOWED_APP_FILES = new Set([
+const ALLOWED_BOOTSTRAP_FILES = new Set([
   "App.tsx",
   "create-app-runtime.ts",
+  "main.tsx",
 ]);
 const GENERIC_SOURCE_FILE_NAMES = new Set([
   "common.ts",
@@ -473,16 +441,15 @@ function evaluateImport(sourceRootPath, sourceFile, specifier) {
 }
 
 function selectLayerRule(sourceZone, targetZone) {
-  if (targetZone === "app") {
+  if (targetZone === "bootstrap") {
     return "composition-isolation";
   }
 
-  if (PROTECTED_CORE_SOURCE_ZONES.has(sourceZone) && targetZone === "ui") {
+  if (
+    PROTECTED_CORE_SOURCE_ZONES.has(sourceZone)
+    && targetZone === "presentation"
+  ) {
     return "core-isolation";
-  }
-
-  if (sourceZone === "use-cases" && targetZone === "ui") {
-    return "use-case-isolation";
   }
 
   return "current-layer-direction";
@@ -506,12 +473,15 @@ function evaluateSourceLayout(sourceRootPath, sourceFile) {
     ));
   }
 
-  if (sourceZone === "app" && !ALLOWED_APP_FILES.has(fileName)) {
+  if (
+    sourceZone === "bootstrap"
+    && !ALLOWED_BOOTSTRAP_FILES.has(fileName)
+  ) {
     layoutViolations.push(createViolation(
       relativeSourceFile,
       "<source-layout>",
-      "app-composition-layout",
-      `app may only contain ${[...ALLOWED_APP_FILES].join(", ")}.`,
+      "bootstrap-composition-layout",
+      `bootstrap may only contain ${[...ALLOWED_BOOTSTRAP_FILES].join(", ")}.`,
     ));
   }
 

@@ -1,28 +1,28 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import {
   getActiveClip,
 } from "../../src/domain/project/project-document";
 import {
   PianoRollInteractionSession,
-} from "../../src/editor/interactions/piano-roll-interaction-session";
+} from "../../src/editor-core/interactions/piano-roll-interaction-session";
 import type {
   PointerSample,
-} from "../../src/editor/interactions/pointer/pointer-sample";
+} from "../../src/editor-core/interactions/pointer/pointer-sample";
 import {
   NoteGestureWorkflowAdapter,
-} from "../../src/ui/piano-roll/interactions/note-gesture-workflow-adapter";
+} from "../../src/presentation/piano-roll/interactions/note-gesture-workflow-adapter";
 import {
   createPianoRollGestureStrategy,
-} from "../../src/ui/piano-roll/interactions/piano-roll-gesture-strategy";
+} from "../../src/presentation/piano-roll/interactions/piano-roll-gesture-strategy";
 import type {
   InteractionVisualController,
-} from "../../src/ui/piano-roll/interactions/interaction-visual-controller";
+} from "../../src/presentation/piano-roll/interactions/interaction-visual-controller";
 import {
   PianoRollSelectionController,
-} from "../../src/ui/piano-roll/interactions/piano-roll-selection-controller";
+} from "../../src/presentation/piano-roll/interactions/piano-roll-selection-controller";
 import {
   createTestNote,
   createTestProject,

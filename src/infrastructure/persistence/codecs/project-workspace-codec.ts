@@ -1,9 +1,9 @@
 import {
   EDITOR_CONSTANTS,
-} from "../../../editor/model/editor-constants";
+} from "../../../editor-core/model/editor-constants";
 import {
   VIEWPORT_CONSTANTS,
-} from "../../../editor/viewport/viewport-constants";
+} from "../../../editor-core/viewport/viewport-constants";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
   type ClipId,
@@ -17,7 +17,7 @@ import {
 import {
   createGridSettings,
   parseGridSubdivision,
-} from "../../../editor/model/grid-settings";
+} from "../../../editor-core/model/grid-settings";
 import type {
   TonalPatternType,
 } from "../../../domain/music-theory/pitch-snap";

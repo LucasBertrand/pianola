@@ -5,20 +5,20 @@ import {
 } from "vitest";
 import {
   compilePlaybackPlan,
-} from "../../src/audio/playback-snapshot";
+} from "../../src/infrastructure/audio/playback-snapshot";
 import {
   createClipPlaybackSource,
-} from "../../src/audio/playback-source";
+} from "../../src/infrastructure/audio/playback-source";
 import {
   WorkletTimelineEngine,
   type TimelineEngineDiagnostic,
-} from "../../src/audio/worklet/worklet-timeline-engine";
+} from "../../src/infrastructure/audio/worklet/worklet-timeline-engine";
 import {
   createTransferableAudioWorkletTimeline,
-} from "../../src/audio/worklet/create-audio-worklet-timeline";
+} from "../../src/infrastructure/audio/worklet/create-audio-worklet-timeline";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import type {
   PianoRollCommand,
 } from "../../src/domain/commands/command-types";

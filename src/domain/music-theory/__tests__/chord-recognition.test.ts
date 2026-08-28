@@ -3,7 +3,7 @@ import { createTestNote } from "../../../../tests/support/test-builders";
 import type { TimeMap } from "../../transport/time-map";
 import {
   resolvePitchSnapSettings,
-} from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
+} from "../../../application/piano-roll/timeline/pitch-snap-resolution";
 import { detectChordsFromNotes } from "../chord-recognition";
 import type { PitchSnapSettings } from "../pitch-snap";
 import { spellPitchClass } from "../tonal-spelling";

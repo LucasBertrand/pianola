@@ -50,7 +50,7 @@ sans couverture par `npm run verify`.
 ## Configurations TypeScript
 
 - `tsconfig.json` vérifie le noyau indépendant de React ;
-- `tsconfig.ui.json` vérifie l’application et l’UI ;
+- `tsconfig.ui.json` vérifie l’application et la présentation ;
 - `tsconfig.test.json` vérifie les tests et fixtures.
 
 ## Avant une pull request

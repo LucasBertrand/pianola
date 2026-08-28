@@ -48,14 +48,14 @@ npm test -- src/infrastructure/persistence/__tests__/indexed-db-reset.test.ts
 
 ## MIDI
 
-`src/project-io/midi/smf-reader.ts` et
-`src/project-io/midi/smf-writer.ts` possèdent le codec binaire. L’analyse
+`src/infrastructure/project-files/midi/smf-reader.ts` et
+`src/infrastructure/project-files/midi/smf-writer.ts` possèdent le codec binaire. L’analyse
 d’import, les avertissements, le timing, les collisions et la construction du
 projet sont des modules séparés dans la même capacité.
 
-Le workflow UI est `src/ui/project-files/useMidiFileWorkflow.ts`. L’export
+Le workflow UI est `src/presentation/project-files/useMidiFileWorkflow.ts`. L’export
 reçoit un `MidiExportPlan` construit par
-`src/use-cases/project-files/midi-export-plan.ts`.
+`src/application/project-files/midi-export-plan.ts`.
 
 Test ciblé actuel :
 

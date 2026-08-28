@@ -23,13 +23,13 @@ dialogue applicatif.
 Lancer le témoin audio et le contrôle complet :
 
 ```bash
-npm test -- src/audio/__tests__/playback-plan.test.ts
-npm test -- src/audio/__tests__/worklet-timeline-engine.test.ts
+npm test -- src/infrastructure/audio/__tests__/playback-plan.test.ts
+npm test -- src/infrastructure/audio/__tests__/worklet-timeline-engine.test.ts
 npm run verify
 ```
 
-Rechercher ensuite dans `src/audio/worklet/worklet-timeline-engine.ts` pour
-l’horloge/DSP et dans `src/audio/audio-worklet-transport.ts` pour le cycle de
+Rechercher ensuite dans `src/infrastructure/audio/worklet/worklet-timeline-engine.ts` pour
+l’horloge/DSP et dans `src/infrastructure/audio/audio-worklet-transport.ts` pour le cycle de
 vie navigateur. Le site doit être servi depuis HTTPS ou `localhost`, condition
 nécessaire à `AudioWorklet`.
 
@@ -37,7 +37,7 @@ nécessaire à `AudioWorklet`.
 
 Vérifier zoom navigateur, ratio de pixels et orientation. Le pipeline Canvas est
 documenté dans
-[`../../src/ui/piano-roll/rendering/README.md`](../../src/ui/piano-roll/rendering/README.md).
+[`../../src/presentation/piano-roll/rendering/README.md`](../../src/presentation/piano-roll/rendering/README.md).
 
 ## Un fichier ne charge pas
 

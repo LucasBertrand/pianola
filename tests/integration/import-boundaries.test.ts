@@ -31,16 +31,16 @@ afterEach(() => {
 test("reports an actionable failure for a forbidden import", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "pianola-boundaries-"));
   const domainDirectory = path.join(fixtureRoot, "src", "domain");
-  const uiDirectory = path.join(fixtureRoot, "src", "ui");
+  const presentationDirectory = path.join(fixtureRoot, "src", "presentation");
 
   temporaryDirectories.push(fixtureRoot);
   mkdirSync(domainDirectory, { recursive: true });
-  mkdirSync(uiDirectory, { recursive: true });
+  mkdirSync(presentationDirectory, { recursive: true });
   writeFileSync(
     path.join(domainDirectory, "forbidden.ts"),
-    'import "../ui/component";\n',
+    'import "../presentation/component";\n',
   );
-  writeFileSync(path.join(uiDirectory, "component.ts"), "export {};\n");
+  writeFileSync(path.join(presentationDirectory, "component.ts"), "export {};\n");
 
   const result = spawnSync(
     process.execPath,
@@ -56,7 +56,7 @@ test("reports an actionable failure for a forbidden import", () => {
 
   expect(result.status).toBe(1);
   expect(result.stderr).toContain("src/domain/forbidden.ts:1");
-  expect(result.stderr).toContain('imports "../ui/component"');
+  expect(result.stderr).toContain('imports "../presentation/component"');
   expect(result.stderr).toContain("[core-isolation]");
 });
 
@@ -117,25 +117,25 @@ test("rejects the retired config root", () => {
   expect(result.stderr).toContain("[unregistered-source-zone]");
 });
 
-test("rejects an editor dependency on use-case orchestration", () => {
+test("rejects an editor dependency on application orchestration", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "pianola-boundaries-"));
-  const editorDirectory = path.join(fixtureRoot, "src", "editor");
-  const useCasesDirectory = path.join(fixtureRoot, "src", "use-cases");
+  const editorDirectory = path.join(fixtureRoot, "src", "editor-core");
+  const applicationDirectory = path.join(fixtureRoot, "src", "application");
 
   temporaryDirectories.push(fixtureRoot);
   mkdirSync(editorDirectory, { recursive: true });
-  mkdirSync(useCasesDirectory, { recursive: true });
+  mkdirSync(applicationDirectory, { recursive: true });
   writeFileSync(
     path.join(editorDirectory, "invalid-runtime.ts"),
-    'import "../use-cases/commands";\n',
+    'import "../application/commands";\n',
   );
-  writeFileSync(path.join(useCasesDirectory, "commands.ts"), "export {};\n");
+  writeFileSync(path.join(applicationDirectory, "commands.ts"), "export {};\n");
 
   const result = runBoundaryCheck(fixtureRoot);
 
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain("src/editor/invalid-runtime.ts:1");
-  expect(result.stderr).toContain("editor must not depend on use-cases");
+  expect(result.stderr).toContain("src/editor-core/invalid-runtime.ts:1");
+  expect(result.stderr).toContain("editor-core must not depend on application");
   expect(result.stderr).toContain("[current-layer-direction]");
 });
 
@@ -164,20 +164,20 @@ test("checks test cycles separately without applying production layer rules", ()
     "domain",
     "__tests__",
   );
-  const uiDirectory = path.join(fixtureRoot, "src", "ui");
+  const presentationDirectory = path.join(fixtureRoot, "src", "presentation");
 
   temporaryDirectories.push(fixtureRoot);
   mkdirSync(domainTestsDirectory, { recursive: true });
-  mkdirSync(uiDirectory, { recursive: true });
+  mkdirSync(presentationDirectory, { recursive: true });
   writeFileSync(
     path.join(domainTestsDirectory, "left.test.ts"),
-    'import "./right.test";\nimport "../../ui/component";\n',
+    'import "./right.test";\nimport "../../presentation/component";\n',
   );
   writeFileSync(
     path.join(domainTestsDirectory, "right.test.ts"),
     'import "./left.test";\n',
   );
-  writeFileSync(path.join(uiDirectory, "component.ts"), "export {};\n");
+  writeFileSync(path.join(presentationDirectory, "component.ts"), "export {};\n");
 
   const result = runBoundaryCheck(fixtureRoot);
 

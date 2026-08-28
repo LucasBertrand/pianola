@@ -16,7 +16,7 @@ import {
 import {
   EditorSelection,
   type SelectedTimeMapMarkerGroup,
-} from "../../editor/selection/editor-selection";
+} from "../../editor-core/selection/editor-selection";
 
 export interface EditorSelectionHistoryTarget {
   readonly clipId: ClipId;

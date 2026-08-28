@@ -7,7 +7,7 @@ import type {
 } from "../../domain/project/project-document";
 import type {
   GridSettings,
-} from "../../editor/model/grid-settings";
+} from "../../editor-core/model/grid-settings";
 import type {
   PitchSnapSettings,
 } from "../../domain/music-theory/pitch-snap";

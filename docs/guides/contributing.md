@@ -28,13 +28,13 @@ Un fichier doit avoir un propriétaire fonctionnel unique :
 | Responsabilité | Zone actuelle | Premier guide |
 | --- | --- | --- |
 | invariants et document musical | `src/domain/` | [`src/domain/README.md`](../../src/domain/README.md) |
-| géométrie et gestes sans DOM | `src/editor/` | [`src/editor/README.md`](../../src/editor/README.md) |
+| géométrie et gestes sans DOM | `src/editor-core/` | [`src/editor-core/README.md`](../../src/editor-core/README.md) |
 | historique, commandes et session | `src/application/history/`, `src/application/editor-session/` | [`docs/state-ownership.md`](../state-ownership.md) |
-| autres intentions et orchestrations neutres | `src/use-cases/` | [`src/use-cases/README.md`](../../src/use-cases/README.md) |
-| timeline et moteur temps réel | `src/audio/` | [`src/audio/README.md`](../../src/audio/README.md) |
-| formats `.pianola` et MIDI | `src/project-io/` | [`src/project-io/README.md`](../../src/project-io/README.md) |
-| React et adaptateurs d'interface | `src/ui/` | [`src/ui/README.md`](../../src/ui/README.md) |
-| rendu du piano roll | `src/ui/piano-roll/rendering/` | [`README local`](../../src/ui/piano-roll/rendering/README.md) |
+| intentions et orchestrations neutres | `src/application/` | [`src/application/README.md`](../../src/application/README.md) |
+| timeline et moteur temps réel | `src/infrastructure/audio/` | [`src/infrastructure/audio/README.md`](../../src/infrastructure/audio/README.md) |
+| formats `.pianola` et MIDI | `src/infrastructure/project-files/` | [`src/infrastructure/project-files/README.md`](../../src/infrastructure/project-files/README.md) |
+| React et adaptateurs d'interface | `src/presentation/` | [`src/presentation/README.md`](../../src/presentation/README.md) |
+| rendu du piano roll | `src/presentation/piano-roll/rendering/` | [`README local`](../../src/presentation/piano-roll/rendering/README.md) |
 
 Avant d'ajouter un dossier, une façade ou une abstraction, vérifier qu'un
 propriétaire existant ne couvre pas déjà la responsabilité. Éviter les modules

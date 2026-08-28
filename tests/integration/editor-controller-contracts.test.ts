@@ -5,7 +5,7 @@ import {
 } from "vitest";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import {
   createDefaultTimeMap,
 } from "../../src/domain/transport/time-map";
@@ -14,24 +14,24 @@ import {
 } from "../../src/domain/project/project-document";
 import type {
   GestureCompletion,
-} from "../../src/editor/interactions/gestures/gesture-state-machine";
+} from "../../src/editor-core/interactions/gestures/gesture-state-machine";
 import {
   PianoRollInteractionSession,
-} from "../../src/editor/interactions/piano-roll-interaction-session";
+} from "../../src/editor-core/interactions/piano-roll-interaction-session";
 import {
   ViewportController,
   formatElapsedTime,
   formatMusicalPosition,
-} from "../../src/editor/viewport/viewport-controller";
+} from "../../src/editor-core/viewport/viewport-controller";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../src/domain/music-theory/pitch-snap";
 import {
   NoteGestureWorkflowAdapter,
-} from "../../src/ui/piano-roll/interactions/note-gesture-workflow-adapter";
+} from "../../src/presentation/piano-roll/interactions/note-gesture-workflow-adapter";
 import {
   PianoRollSelectionController,
-} from "../../src/ui/piano-roll/interactions/piano-roll-selection-controller";
+} from "../../src/presentation/piano-roll/interactions/piano-roll-selection-controller";
 import {
   createTestNote,
   createTestProject,

@@ -11,7 +11,7 @@ import type {
 } from "../../domain/project/project-document";
 import {
   DEFAULT_GRID_SETTINGS,
-} from "../../editor/model/grid-settings";
+} from "../../editor-core/model/grid-settings";
 import type {
   ClipEditorRuntimeState,
   EditorRuntime,

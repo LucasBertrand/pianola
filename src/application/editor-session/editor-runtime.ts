@@ -3,7 +3,7 @@ import type {
 } from "../history/editor-command-service";
 import type {
   EditorSelectionRequests,
-} from "../../editor/selection/editor-selection-requests";
+} from "../../editor-core/selection/editor-selection-requests";
 import {
   type ClipId,
   type InstrumentId,
@@ -13,35 +13,35 @@ import type {
 } from "../history/project-store";
 import type {
   ViewportState,
-} from "../../editor/geometry/converter";
+} from "../../editor-core/geometry/converter";
 import type {
   Rect,
-} from "../../editor/geometry/rect";
+} from "../../editor-core/geometry/rect";
 import type {
   SpatialIndex,
-} from "../../editor/geometry/spatial-index";
+} from "../../editor-core/geometry/spatial-index";
 import type {
   PitchSnapSettings,
 } from "../../domain/music-theory/pitch-snap";
 import type {
   GridSettings,
-} from "../../editor/model/grid-settings";
+} from "../../editor-core/model/grid-settings";
 import type {
   InstrumentRenderStyle,
-} from "../../editor/model/instrument-render-style";
+} from "../../editor-core/model/instrument-render-style";
 import type {
   NoteColorMode,
-} from "../../editor/model/note-color-mode";
+} from "../../editor-core/model/note-color-mode";
 import type {
   MutableRenderSignal,
   ReadonlyRenderSignal,
-} from "../../editor/model/render-signal";
+} from "../../editor-core/model/render-signal";
 import type {
   EditorSelection,
-} from "../../editor/selection/editor-selection";
+} from "../../editor-core/selection/editor-selection";
 import type {
   PlayheadPosition,
-} from "../../editor/model/playhead-position";
+} from "../../editor-core/model/playhead-position";
 
 /** Long-lived services and high-frequency signals owned by one editor tab. */
 export interface EditorRuntime {

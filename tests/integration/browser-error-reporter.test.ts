@@ -8,7 +8,7 @@ import {
   installBrowserErrorCapture,
   type BrowserConsoleTarget,
   type BrowserErrorCaptureTarget,
-} from "../../src/ui/diagnostics/browser-error-reporter";
+} from "../../src/presentation/diagnostics/browser-error-reporter";
 
 describe("browser error reporter", () => {
   test("queues errors, removes duplicates and advances on dismissal", () => {

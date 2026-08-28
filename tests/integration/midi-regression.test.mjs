@@ -27,25 +27,25 @@ import {
 } from "../../src/domain/project-instrument-factory";
 import {
   MidiCodecError,
-} from "../../src/project-io/midi/midi-codec-error";
+} from "../../src/infrastructure/project-files/midi/midi-codec-error";
 import {
   createMidiExport as createProjectedMidiExport,
-} from "../../src/project-io/midi/midi-exporter";
+} from "../../src/infrastructure/project-files/midi/midi-exporter";
 import {
   createMidiExportPlan,
-} from "../../src/use-cases/project-files/midi-export-plan";
+} from "../../src/application/project-files/midi-export-plan";
 import {
   analyzeMidiImport,
-} from "../../src/project-io/midi/analyze-midi-import";
+} from "../../src/infrastructure/project-files/midi/analyze-midi-import";
 import {
   createProjectFromMidiImport,
-} from "../../src/project-io/midi/create-project-from-midi-import";
+} from "../../src/infrastructure/project-files/midi/create-project-from-midi-import";
 import {
   readStandardMidiFile,
-} from "../../src/project-io/midi/smf-reader";
+} from "../../src/infrastructure/project-files/midi/smf-reader";
 import {
   writeStandardMidiFile,
-} from "../../src/project-io/midi/smf-writer";
+} from "../../src/infrastructure/project-files/midi/smf-writer";
 import {
   createMidiImportAnalysisFixture as createImportAnalysis,
   createRawFormatZeroMidiFile as createRawFormatZeroFile,

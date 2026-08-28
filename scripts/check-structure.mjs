@@ -19,38 +19,48 @@ if (process.exitCode !== undefined && process.exitCode !== 0) {
 const forbiddenPaths = [
   "src/config",
   "src/music",
-  "src/ui/shared",
+  "src/ui",
+  "src/styles",
+  "src/audio",
+  "src/project-io",
+  "src/pwa",
+  "src/app",
+  "src/main.tsx",
+  "src/presentation/shared",
   "src/domain/commands/active-clip-command-helpers.ts",
   "src/domain/commands/clip-commands.ts",
   "src/domain/model.ts",
-  "src/editor/piano-roll",
-  "src/use-cases/notes",
-  "src/use-cases/selection",
-  "src/ui/piano-roll/Timeline.tsx",
-  "src/ui/editor-toolbar/ViewControls.tsx",
-  "src/ui/inspector/GeneralInspector.tsx",
-  "src/ui/piano-roll/useSelectionWorkflow.ts",
-  "src/styles/header-transport.css",
+  "src/editor",
+  "src/editor-core/piano-roll",
+  "src/use-cases",
+  "src/application/notes",
+  "src/application/selection",
+  "src/presentation/piano-roll/Timeline.tsx",
+  "src/presentation/editor-toolbar/ViewControls.tsx",
+  "src/presentation/inspector/GeneralInspector.tsx",
+  "src/presentation/piano-roll/useSelectionWorkflow.ts",
+  "src/presentation/styles/header-transport.css",
 ];
 const requiredGuides = [
   "src/domain/README.md",
-  "src/editor/README.md",
-  "src/use-cases/README.md",
-  "src/audio/README.md",
-  "src/project-io/README.md",
-  "src/ui/README.md",
+  "src/editor-core/README.md",
+  "src/application/README.md",
+  "src/infrastructure/audio/README.md",
+  "src/infrastructure/project-files/README.md",
+  "src/presentation/README.md",
 ];
 const requiredStyles = [
-  "src/styles/application-header.css",
-  "src/styles/dialogs.css",
-  "src/styles/editor-toolbar.css",
-  "src/styles/inspector.css",
-  "src/styles/piano-roll.css",
-  "src/styles/project-files.css",
-  "src/styles/responsive.css",
-  "src/styles/shell.css",
-  "src/styles/tokens-reset.css",
-  "src/styles/transport.css",
+  "src/presentation/styles/index.css",
+  "src/presentation/styles/application-header.css",
+  "src/presentation/styles/dialogs.css",
+  "src/presentation/styles/editor-toolbar.css",
+  "src/presentation/styles/inspector.css",
+  "src/presentation/styles/piano-roll.css",
+  "src/presentation/styles/project-files.css",
+  "src/presentation/styles/responsive.css",
+  "src/presentation/styles/shell.css",
+  "src/presentation/styles/tokens-reset.css",
+  "src/presentation/styles/transport.css",
 ];
 const forbiddenGenericFileNames = new Set([
   "common.ts",
@@ -71,16 +81,16 @@ const retiredStateTypeNames = new Set([
 const internalCapabilities = [
   {
     targets: [
-      "src/audio/audio-param-automation.ts",
-      "src/audio/playback-occurrence-scheduler.ts",
-      "src/audio/playback-transport-query.ts",
-      "src/audio/web-audio-routing.ts",
+      "src/infrastructure/audio/audio-param-automation.ts",
+      "src/infrastructure/audio/playback-occurrence-scheduler.ts",
+      "src/infrastructure/audio/playback-transport-query.ts",
+      "src/infrastructure/audio/web-audio-routing.ts",
     ],
-    owner: "src/audio/",
+    owner: "src/infrastructure/audio/",
   },
   {
-    targets: ["src/ui/piano-roll/interactions/"],
-    owner: "src/ui/piano-roll/",
+    targets: ["src/presentation/piano-roll/interactions/"],
+    owner: "src/presentation/piano-roll/",
   },
 ];
 
@@ -148,7 +158,7 @@ for (const sourceFile of sourceFiles) {
   }
 }
 
-const appPath = path.join(sourceRoot, "app", "App.tsx");
+const appPath = path.join(sourceRoot, "bootstrap", "App.tsx");
 const appText = await readFile(appPath, "utf8");
 const appParsed = ts.createSourceFile(
   appPath,
@@ -161,11 +171,11 @@ const appLineCount = appText.split(/\r?\n/).length;
 const appImportCount = appParsed.statements.filter(ts.isImportDeclaration).length;
 
 if (appLineCount >= 350) {
-  violations.push(`src/app/App.tsx has ${appLineCount} lines; expected fewer than 350.`);
+  violations.push(`src/bootstrap/App.tsx has ${appLineCount} lines; expected fewer than 350.`);
 }
 
 if (appImportCount >= 20) {
-  violations.push(`src/app/App.tsx has ${appImportCount} imports; expected fewer than 20.`);
+  violations.push(`src/bootstrap/App.tsx has ${appImportCount} imports; expected fewer than 20.`);
 }
 
 const lineReview = [];

@@ -10,7 +10,7 @@ comportement précis, partir de la [carte du code](code-map.md). Pour décider s
 un état doit persister ou entrer dans Undo/Redo, consulter
 [`state-ownership.md`](state-ownership.md).
 
-Dernière revue complète : 28 août 2026.
+Dernière revue complète : 29 août 2026.
 
 ## Vue d’ensemble
 
@@ -18,33 +18,28 @@ Pianola est une application web statique. Le document, l’historique, le runtim
 d’édition et le moteur audio vivent dans l’onglet du navigateur.
 
 ```text
-main.tsx
-  → app                    création du runtime
-  → ui                     composition React et adaptateurs DOM/Canvas
-  → application/history    historique et transactions d'édition
-  → application/editor-session agrégat et workspace de session
-  → use-cases              intentions indépendantes de React
-  → application/ports      contrats injectés
+bootstrap/main.tsx
+  → bootstrap/App.tsx      création du runtime
+  → presentation           composition React et adaptateurs DOM/Canvas
+  → application            intentions, historique, session et ports
   → domain                 document, commandes et invariants
 
-editor                     noyau d’édition sans DOM
-audio                      snapshot, transport, occurrences, voix et bus
-infrastructure             `.pianola`, IndexedDB, Worker et codecs locaux
-project-io                 Standard MIDI File
+editor-core                noyau d’édition sans DOM
+infrastructure             audio, fichiers projet, navigateur et persistance
 ```
 
 Règles exécutables :
 
-1. `src/app/` assemble et n’héberge aucun protocole complet ;
-2. `src/domain/` — théorie musicale comprise — et `src/editor/` ne connaissent
+1. `src/bootstrap/` démarre et assemble sans héberger de protocole complet ;
+2. `src/domain/` — théorie musicale comprise — et `src/editor-core/` ne connaissent
    ni React ni le navigateur ;
-3. `src/editor/` ne dépend ni de `src/application/` ni de `src/use-cases/` ;
-4. `src/use-cases/` ne dépend pas de l’UI ;
+3. `src/editor-core/` ne dépend pas de `src/application/` ;
+4. `src/application/` ne dépend pas de l’UI ni de l’infrastructure ;
 5. `src/infrastructure/` implémente les ports sans dépendre de la composition ;
-6. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
+6. `src/infrastructure/audio/` et `src/infrastructure/project-files/` ne dépendent pas de la composition ;
 7. une intention musicale validée produit au plus une transaction.
 
-Le contrôle couvre explicitement les onze racines TypeScript courantes avec une
+Le contrôle couvre explicitement les six racines TypeScript courantes avec une
 liste fermée de dépendances. Il construit deux graphes distincts pour le code
 produit et les tests, interdit tout import produit vers un test et détecte les
 cycles dans chacun. Aucun cycle n'est accepté ; tout nouveau cycle échoue
@@ -52,9 +47,9 @@ immédiatement.
 
 ## Composition
 
-`src/app/App.tsx` crée l'agrégat `EditorRuntime`, dont le contrat appartient à
+`src/bootstrap/App.tsx` crée l'agrégat `EditorRuntime`, dont le contrat appartient à
 `src/application/editor-session/editor-runtime.ts`, et monte
-`src/ui/piano-roll/PianoRollWorkspace.tsx`. Le workspace coordonne les contrats,
+`src/presentation/piano-roll/PianoRollWorkspace.tsx`. Le workspace coordonne les contrats,
 `PianoRollWorkspaceLayout` possède la structure DOM et le portal de toolbar,
 et les protocoles sont délégués à des hooks nommés :
 
@@ -123,7 +118,7 @@ un groupe à la même position dans la hiérarchie.
 ## Noyau du piano roll
 
 Tout le noyau propre à l’éditeur visible partage la racine
-`src/editor/` :
+`src/editor-core/` :
 
 ```text
 geometry/       conversions, bornes, région visible et index spatial
@@ -135,16 +130,16 @@ viewport/       publication, batching et suivi de lecture
 
 L'agrégat de session qui compose ces mécanismes reste hors du noyau, sous
 `src/application/editor-session/`. Les cas d’usage correspondants partagent
-`src/use-cases/piano-roll/notes/` et
-`src/use-cases/piano-roll/selection/`. Le service de commandes transversal est
+`src/application/piano-roll/notes/` et
+`src/application/piano-roll/selection/`. Le service de commandes transversal est
 possédé par `src/application/history/`.
 
-## UI et styles
+## Présentation et styles
 
 Les composants sont rangés par surface : dialogs, editor-toolbar, inspector,
 piano-roll, project-files et transport. Le piano roll garde ses adaptateurs DOM
-dans `src/ui/piano-roll/interactions/` et ses peintres Canvas dans
-`src/ui/piano-roll/rendering/`.
+dans `src/presentation/piano-roll/interactions/` et ses peintres Canvas dans
+`src/presentation/piano-roll/rendering/`.
 
 Les valeurs partagées qui produisent du JSX passent par
 `useProjectStoreSelector` ou `useRenderSignalValue`, fondés sur
@@ -153,7 +148,7 @@ projection ne change pas et ne notifie pas React pour une mutation sans rapport.
 Le viewport, le playhead, les survols et les previews de geste restent des
 signaux à invalidation DOM/Canvas directe.
 
-`src/styles.css` importe des propriétaires symétriques : shell, application
+`src/presentation/styles/index.css` importe des propriétaires symétriques : shell, application
 header, editor toolbar, transport, project files, piano roll, inspector,
 dialogs et responsive. Le fichier responsive ne coordonne que plusieurs
 surfaces.
@@ -213,8 +208,8 @@ suivantes. Aucune note n’est recompilée pendant cette interaction. Annuler re
 le paramètre transitoire ; confirmer publie une unique transaction dans
 `ProjectStore`.
 
-La façade publique est `src/audio/audio-worklet-transport.ts`. Le protocole et
-le DSP sont sous `src/audio/worklet/`. L’adaptateur navigateur peut être remplacé
+La façade publique est `src/infrastructure/audio/audio-worklet-transport.ts`. Le protocole et
+le DSP sont sous `src/infrastructure/audio/worklet/`. L’adaptateur navigateur peut être remplacé
 sans modifier le moteur temps réel pur.
 
 ## Persistance et fichiers projet

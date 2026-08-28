@@ -1,0 +1,12 @@
+@import "./tokens-reset.css";
+@import "./shell.css";
+@import "./application-header.css";
+@import "./editor-toolbar.css";
+@import "./transport.css";
+@import "./project-files.css";
+@import "./application-home.css";
+@import "./piano-roll.css";
+@import "./radial-menu.css";
+@import "./inspector.css";
+@import "./dialogs.css";
+@import "./responsive.css";

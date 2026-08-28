@@ -5,7 +5,7 @@ import {
 } from "vitest";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import {
   getActiveClip,
   type EditorSessionState,
@@ -15,37 +15,37 @@ import type {
 } from "../../src/domain/transport/time-map";
 import {
   PianoRollInteractionSession,
-} from "../../src/editor/interactions/piano-roll-interaction-session";
+} from "../../src/editor-core/interactions/piano-roll-interaction-session";
 import {
   createSelectedMarkerGroup,
-} from "../../src/editor/selection/editor-selection";
+} from "../../src/editor-core/selection/editor-selection";
 import type {
   GestureCompletion,
-} from "../../src/editor/interactions/gestures/gesture-state-machine";
+} from "../../src/editor-core/interactions/gestures/gesture-state-machine";
 import {
   NoteGestureWorkflow,
-} from "../../src/use-cases/piano-roll/notes/note-gesture-workflow";
+} from "../../src/application/piano-roll/notes/note-gesture-workflow";
 import {
   planSelectedMarkerMove,
-} from "../../src/use-cases/piano-roll/selection/timeline-selection-move";
+} from "../../src/application/piano-roll/selection/timeline-selection-move";
 import {
   planMarkerMove,
-} from "../../src/use-cases/piano-roll/timeline/time-map-marker-plans";
+} from "../../src/application/piano-roll/timeline/time-map-marker-plans";
 import {
   createNoteCollisionResolutionPlan,
 } from "../../src/domain/note-collision";
 import type {
   NoteCollisionResolutionRequest,
-} from "../../src/use-cases/piano-roll/notes/note-collision-resolution";
+} from "../../src/application/piano-roll/notes/note-collision-resolution";
 import type {
   MarkerCollisionResolutionRequest,
-} from "../../src/use-cases/piano-roll/timeline/marker-collision-resolution";
+} from "../../src/application/piano-roll/timeline/marker-collision-resolution";
 import {
   completePianoRollLasso,
-} from "../../src/ui/piano-roll/interactions/complete-piano-roll-lasso";
+} from "../../src/presentation/piano-roll/interactions/complete-piano-roll-lasso";
 import {
   PianoRollSelectionController,
-} from "../../src/ui/piano-roll/interactions/piano-roll-selection-controller";
+} from "../../src/presentation/piano-roll/interactions/piano-roll-selection-controller";
 import {
   createTestNote,
   createTestProject,

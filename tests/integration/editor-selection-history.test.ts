@@ -5,13 +5,13 @@ import {
 } from "vitest";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import {
   getActiveClip,
 } from "../../src/domain/project/project-document";
 import {
   NoteGestureWorkflow,
-} from "../../src/use-cases/piano-roll/notes/note-gesture-workflow";
+} from "../../src/application/piano-roll/notes/note-gesture-workflow";
 import {
   createTestNote,
   createTestProject,

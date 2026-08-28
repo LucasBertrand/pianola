@@ -5,11 +5,11 @@ import {
 } from "vitest";
 import type {
   TimeMapMarkerFlag,
-} from "../../src/use-cases/piano-roll/timeline/time-map-marker-plans";
+} from "../../src/application/piano-roll/timeline/time-map-marker-plans";
 import {
   createMarkerPreviewProjection,
   isOriginalMarkerBoundaryVisible,
-} from "../../src/ui/piano-roll/time-map-marker-preview";
+} from "../../src/presentation/piano-roll/time-map-marker-preview";
 
 describe("time-map marker preview", () => {
   test("keeps a non-selected meter at the source of a selection move", () => {

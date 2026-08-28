@@ -18,7 +18,7 @@ import {
 } from "../../src/domain/project/project-document";
 import type {
   MidiImportAnalysis,
-} from "../../src/project-io/midi/midi-import-types";
+} from "../../src/infrastructure/project-files/midi/midi-import-types";
 
 export function createRawFormatZeroMidiFile(
   trackBytes: Uint8Array,

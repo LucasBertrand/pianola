@@ -5,7 +5,7 @@ import {
 } from "vitest";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import {
   getActiveClip,
   type EditorSessionState,
@@ -17,7 +17,7 @@ import {
 import {
   buildAddNoteCommands,
   buildDeleteNoteCommands,
-} from "../../src/use-cases/piano-roll/notes/note-edit-commands";
+} from "../../src/application/piano-roll/notes/note-edit-commands";
 import {
   buildDeleteClipboardMarkerCommands,
   buildDeleteSelectedMarkerCommands,
@@ -27,7 +27,7 @@ import {
   createPianoRollClipboard,
   getRequiredMeasureCountForTimelineContent,
   planPastedMarkerCommands,
-} from "../../src/use-cases/piano-roll/selection/selection-edit-plans";
+} from "../../src/application/piano-roll/selection/selection-edit-plans";
 import {
   createTestNote,
   createTestProject,

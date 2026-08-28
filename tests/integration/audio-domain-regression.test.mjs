@@ -7,18 +7,18 @@ import {
 } from "../../src/application/history/editor-command-service";
 import {
   EditorSelectionRequests,
-} from "../../src/editor/selection/editor-selection-requests";
+} from "../../src/editor-core/selection/editor-selection-requests";
 import {
   EditorSelection,
-} from "../../src/editor/selection/editor-selection";
+} from "../../src/editor-core/selection/editor-selection";
 import {
   buildDeleteNoteCommands,
   buildRepositionNoteCommands,
   buildSetNotesMutedCommands,
-} from "../../src/use-cases/piano-roll/notes/note-edit-commands";
+} from "../../src/application/piano-roll/notes/note-edit-commands";
 import {
   NoteGestureWorkflow,
-} from "../../src/use-cases/piano-roll/notes/note-gesture-workflow";
+} from "../../src/application/piano-roll/notes/note-gesture-workflow";
 import {
   buildSliceCommandsForNotes,
   buildSliceCommandsForNotesAtTicks,
@@ -27,24 +27,24 @@ import {
   createPastedNotes,
   findNotesByIds,
   getRequiredMeasureCountForNotes,
-} from "../../src/use-cases/piano-roll/selection/selection-edit-plans";
+} from "../../src/application/piano-roll/selection/selection-edit-plans";
 import {
   createEditorRuntime,
-} from "../../src/app/create-app-runtime";
+} from "../../src/bootstrap/create-app-runtime";
 import {
   resolveNoteEnvelopePeakLevel,
-} from "../../src/audio/note-dynamics";
+} from "../../src/infrastructure/audio/note-dynamics";
 import {
   compilePlaybackPlan as compileExplicitPlaybackSnapshot,
-} from "../../src/audio/playback-snapshot";
+} from "../../src/infrastructure/audio/playback-snapshot";
 import {
   createClipPlaybackSource,
-} from "../../src/audio/playback-source";
+} from "../../src/infrastructure/audio/playback-source";
 import {
   projectTickIntoLoop,
   secondsToTick,
   tickToSeconds,
-} from "../../src/audio/time-math";
+} from "../../src/infrastructure/audio/time-math";
 import {
   CommandRejectedError,
 } from "../../src/domain/commands/command-errors";
@@ -90,7 +90,7 @@ import {
 } from "../../src/domain/selection-transformations";
 import {
   VIEWPORT_CONSTANTS,
-} from "../../src/editor/viewport/viewport-constants";
+} from "../../src/editor-core/viewport/viewport-constants";
 import {
   constrainViewportToContent,
   getMaximumHorizontalScroll,
@@ -100,33 +100,33 @@ import {
   getPagedScrollXForTick,
   getPlaybackFollowScrollX,
   getScrollXToRevealTick,
-} from "../../src/editor/geometry/viewport-bounds";
+} from "../../src/editor-core/geometry/viewport-bounds";
 import {
   EditingNoteMask,
-} from "../../src/editor/interactions/editing-note-mask";
+} from "../../src/editor-core/interactions/editing-note-mask";
 import {
   PianoRollGestureStateMachine,
-} from "../../src/editor/interactions/gestures/gesture-state-machine";
+} from "../../src/editor-core/interactions/gestures/gesture-state-machine";
 import {
   buildRepositionedNotes as buildGestureRepositionedNotes,
   calculateResizeDeltaBounds,
   measureNoteSelection,
   quantizeTick,
   snapTickToCellStart,
-} from "../../src/editor/interactions/gestures/note-gesture-math";
+} from "../../src/editor-core/interactions/gestures/note-gesture-math";
 import {
   classifyPinchZoomAxis,
   PinchViewportGesture,
-} from "../../src/editor/interactions/gestures/pinch-viewport-gesture";
+} from "../../src/editor-core/interactions/gestures/pinch-viewport-gesture";
 import {
   createInteractionDraft,
-} from "../../src/editor/interactions/gestures/gesture-draft";
+} from "../../src/editor-core/interactions/gestures/gesture-draft";
 import {
   TwoPointerDoubleTapGesture,
-} from "../../src/editor/interactions/gestures/two-pointer-double-tap";
+} from "../../src/editor-core/interactions/gestures/two-pointer-double-tap";
 import {
   PianoRollInteractionSession,
-} from "../../src/editor/interactions/piano-roll-interaction-session";
+} from "../../src/editor-core/interactions/piano-roll-interaction-session";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   getPitchScaleDegreeColorIndex,
@@ -141,7 +141,7 @@ import {
   getMidiNoteLabel,
   getPreferredRootLabel,
   getScaleDegreeLabel,
-} from "../../src/ui/piano-roll/rendering/pitch-label";
+} from "../../src/presentation/piano-roll/rendering/pitch-label";
 import {
   parsePianolaProject,
   serializePianolaProject,

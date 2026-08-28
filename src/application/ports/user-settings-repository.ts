@@ -1,6 +1,6 @@
 import {
   EDITOR_CONSTANTS,
-} from "../../editor/model/editor-constants";
+} from "../../editor-core/model/editor-constants";
 import type {
   PresetId,
 } from "../../domain/identifiers";
@@ -12,10 +12,10 @@ import {
 } from "../../domain/personal-instrument-presets";
 import type {
   SelectionMode,
-} from "../../editor/interactions/gestures/gesture-draft";
+} from "../../editor-core/interactions/gestures/gesture-draft";
 import type {
   NoteColorMode,
-} from "../../editor/model/note-color-mode";
+} from "../../editor-core/model/note-color-mode";
 
 export const USER_SETTINGS_SCHEMA_VERSION = 1;
 
