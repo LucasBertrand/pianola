@@ -91,3 +91,15 @@ migration.
 Les alias temporaires nécessaires aux renommages de code restent permis par
 D-005 pendant un lot, mais doivent disparaître avant sa sortie ou au plus tard
 au lot 8. Ils ne constituent pas une compatibilité de données.
+
+## D-010 — Aucun patch de rollback
+
+La migration ne produit plus de fichier patch pour préparer un rollback, ni à
+la fin d'une sous-étape ni à la fin d'un lot. Les patches déjà mentionnés dans
+le journal des lots 0 à 3 restent des preuves historiques ; ils ne constituent
+pas un modèle à suivre pour les lots suivants.
+
+La réversibilité repose sur le SHA de départ, un périmètre de fichiers exact,
+des validations consignées et, lorsqu'un commit dédié existe déjà, sur
+`git revert`. La création d'un commit reste soumise à l'autorisation habituelle
+et ne doit jamais incorporer les changements préexistants de l'utilisateur.

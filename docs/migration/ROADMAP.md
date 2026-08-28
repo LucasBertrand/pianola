@@ -106,8 +106,8 @@ Jalons obligatoires, à valider et consigner séparément :
 6. transport/viewport : tests d'abonnement et scénario de performance de
    `VALIDATION.md` verts par rapport à la baseline du lot 0.
 
-Après chaque jalon : validation rapide, tests ciblés et point de rollback
-distinct. Ne pas commencer le jalon suivant si le précédent n'est pas vert.
+Après chaque jalon : validation rapide, tests ciblés. Ne pas commencer le jalon
+suivant si le précédent n'est pas vert.
 
 Pendant ces extractions :
 

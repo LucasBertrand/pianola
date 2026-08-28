@@ -13,6 +13,15 @@ workspace réel, pas seulement l'intention.
   avant cette ouverture
 - Dernière mise à jour : 2026-08-28
 
+## Politique de rollback en vigueur
+
+Depuis le 2026-08-28, aucun fichier patch de rollback ne doit être créé pour
+les prochains lots ou sous-étapes. Les points de rollback consignent le SHA de
+départ, le périmètre exact et les validations vertes ; un commit dédié déjà
+existant peut être annulé avec `git revert`. Les références à des patches dans
+le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 à
+3 et ne doivent pas être reproduites.
+
 ## Baseline connue
 
 - arborescence source actuelle : `app`, `application`, `audio`, `config`,

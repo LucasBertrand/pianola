@@ -8,8 +8,9 @@
 4. Lire le lot actif dans `STATUS.md`.
 5. Vérifier que ses prérequis et son périmètre sont explicites.
 6. Relever les imports et tests des fichiers concernés avant de les modifier.
-7. Enregistrer dans `STATUS.md` le SHA de `HEAD`, l'état du worktree et le point
-   de rollback choisi avant toute modification du lot.
+7. Enregistrer dans `STATUS.md` le SHA de `HEAD`, l'état du worktree, le
+   périmètre exact et les validations de référence avant toute modification du
+   lot.
 
 Si aucun lot n'est marqué `EN COURS`, sélectionner uniquement le premier lot
 `À FAIRE`. Ne pas sauter de lot sans consigner la raison.
@@ -29,19 +30,16 @@ Si aucun lot n'est marqué `EN COURS`, sélectionner uniquement le premier lot
 
 ## Rollback opérationnel
 
-Un point de rollback est une unité vérifiable, pas seulement une intention :
+Un point de rollback est une unité vérifiable, pas seulement une intention. Il
+ne donne lieu à la création d'aucun fichier patch :
 
-- privilégier un commit dédié par sous-étape lorsque la création de commits est
-  autorisée ; ce commit ne contient aucun changement préexistant de
-  l'utilisateur ;
-- sinon, conserver une liste exacte des fichiers du lot et un patch binaire de
-  la seule sous-étape hors du worktree, puis ne commencer aucune autre
-  sous-étape avant validation ;
-- inscrire dans `STATUS.md` le SHA de départ, l'identifiant du commit ou du
-  patch, les fichiers inclus et la commande de validation qui était verte ;
-- pour revenir en arrière, préférer `git revert` sur un commit dédié. Pour une
-  sous-étape non commitée, vérifier d'abord qu'aucun fichier concerné n'a reçu
-  de changement utilisateur, puis appliquer l'inverse du patch ciblé ;
+- inscrire dans `STATUS.md` le SHA de départ, la liste exacte des fichiers de
+  la sous-étape et les commandes de validation qui étaient vertes ;
+- lorsqu'un commit dédié existe et ne contient aucun changement préexistant de
+  l'utilisateur, préférer `git revert` pour revenir en arrière ;
+- lorsqu'aucun commit dédié n'existe, arrêter le lot et établir un plan de
+  retour ciblé à partir du diff et du journal avant toute modification ; ne
+  jamais fabriquer un patch de rollback préventif ;
 - ne jamais employer `git reset --hard`, restaurer tout le worktree ou inclure
   des fichiers hors périmètre pour simplifier un rollback.
 
@@ -79,7 +77,7 @@ Objectif :
 Fichiers touchés :
 Déplacements/renommages :
 Compatibilités temporaires :
-Point de rollback (SHA + commit/patch + fichiers) :
+Point de rollback (SHA + commit éventuel + fichiers) :
 Validations exécutées :
 Résultats :
 Écarts découverts :
