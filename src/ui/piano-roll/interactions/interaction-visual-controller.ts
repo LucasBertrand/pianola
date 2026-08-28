@@ -12,7 +12,7 @@ import type {
 } from "../../../editor/model/instrument-render-style";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import type {
   ResizeEdge,
 } from "../../../editor/interactions/gestures/gesture-draft";

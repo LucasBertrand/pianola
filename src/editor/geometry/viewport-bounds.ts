@@ -1,6 +1,6 @@
 import {
   VIEWPORT_CONSTANTS,
-} from "../../config/editor-config";
+} from "../viewport/viewport-constants";
 import type {
   ViewportState,
 } from "./converter";

@@ -50,7 +50,7 @@ import {
 import {
   parsePianolaProject,
 } from "../infrastructure/project-files/pianola/pianola-project-codec";
-import { FILE_CONSTANTS } from "../config/pianola-file-config";
+import { FILE_CONSTANTS } from "../infrastructure/project-files/pianola/pianola-file-constants";
 import {
   requestPersistentBrowserStorage,
 } from "../infrastructure/persistence/browser/browser-storage-policy";

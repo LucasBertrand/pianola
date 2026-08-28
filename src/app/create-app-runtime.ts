@@ -6,8 +6,10 @@ import {
 } from "../editor/selection/editor-selection-requests";
 import {
   EDITOR_CONSTANTS,
+} from "../editor/model/editor-constants";
+import {
   VIEWPORT_CONSTANTS,
-} from "../config/editor-config";
+} from "../editor/viewport/viewport-constants";
 import {
   getActiveClip,
   type EditorSessionState,
@@ -45,7 +47,7 @@ import {
 } from "../editor/geometry/visible-region";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../music/pitch-snap";
+} from "../domain/music-theory/pitch-snap";
 import {
   DEFAULT_GRID_SETTINGS,
   type GridSettings,

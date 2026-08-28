@@ -6,11 +6,10 @@ workspace réel, pas seulement l'intention.
 ## État global
 
 - Statut : EN ATTENTE
-- Lot actif : Aucun
-- Dernier lot terminé : 5 — Décomposition de `PianoRollWorkspace`
-- Prochaine action : après revue du lot 5, vérifier la condition d'entrée du
-  lot 6 et commencer uniquement sa première sous-étape ; ne déplacer aucune
-  configuration ou horizontale avant cette ouverture
+- Lot actif : aucun
+- Dernier lot terminé : 6 — Redistribution des horizontales
+- Prochaine action : faire relire le lot 6, puis vérifier les prérequis du lot 7
+  avant toute modification de renommage physique des couches
 - Dernière mise à jour : 2026-08-28
 
 ## Politique de rollback en vigueur
@@ -24,18 +23,22 @@ le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 �
 
 ## Baseline connue
 
-- arborescence source actuelle : `app`, `application`, `audio`, `config`,
-  `domain`, `editor`, `infrastructure`, `music`, `project-io`, `pwa`, `styles`,
-  `ui`, `use-cases` ;
+- arborescence source actuelle : `app`, `application`, `audio`, `domain`,
+  `editor`, `infrastructure`, `project-io`, `pwa`, `styles`, `ui`,
+  `use-cases` ;
 - aucun cycle d'import produit ou test n'est accepté ;
 - `PianoRollWorkspace.tsx` est ramené à 766 lignes et coordonne des contrats
   extraits ; `InstrumentPresetDialog.tsx` et `ClipInspector.tsx` restent les
   principaux points de concentration UI ;
-- `time-map.ts` et `clip-commands.ts` dépassent désormais 1 000 lignes ;
+- les anciens monolithes `clip-commands.ts` et
+  `active-clip-command-helpers.ts` sont supprimés ; `time-map.ts` est une
+  façade publique explicite, et leurs responsabilités sont réparties par
+  famille ou invariant sous `domain/commands` et `domain/transport` ;
 - le format `.pianola` est sous `infrastructure/project-files/pianola` et la
   persistance locale sous `infrastructure/persistence` ;
-- les contrôles analysent séparément 269 fichiers produit et 66 modules de
-  test ; tout cycle est interdit ;
+- les contrôles de sortie du lot 6 analysent 357 fichiers structurels et,
+  séparément, 300 fichiers produit et 71 modules de test ; tout cycle est
+  interdit ;
 - la couverture ciblée et les trois mesures de rendu sont consignées dans
   `LOT-0-BASELINES.md`.
 
@@ -63,7 +66,7 @@ D  docs/storage-strategies.md
 | 3 | TERMINÉ | Ports applicatifs, adaptateurs infrastructure et reset local validés |
 | 4 | TERMINÉ | Historique et session sous `application`, cœur découplé, cycle supprimé |
 | 5 | TERMINÉ | Six jalons caractérisés et validés ; rendu sans régression |
-| 6 | À FAIRE | Configurations et horizontales |
+| 6 | TERMINÉ | Horizontales supprimées, concentrations métier découpées et garde-fous synchronisés |
 | 7 | À FAIRE | Renommage physique des couches |
 | 8 | À FAIRE | Nettoyage final |
 
@@ -79,6 +82,10 @@ réinitialisées, pas converties. Le lot 4 n'ajoute aucun alias : les anciens
 chemins du store, du service de commandes, du runtime et de la projection du
 workspace sont supprimés. Le lot 5 n'ajoute aucun alias ni compatibilité : ses
 contrats de présentation remplacent directement les blocs extraits.
+Le lot 6 n'ajoute aucun alias ni compatibilité : les anciennes racines et les
+deux anciens modules de commandes sont supprimés. `domain/transport/time-map.ts`
+reste une façade de capacité publique aux exports explicites, pas un alias vers
+un ancien propriétaire.
 
 ## Écarts et découvertes
 
@@ -99,10 +106,194 @@ contrats de présentation remplacent directement les blocs extraits.
 - les types renommés restent physiquement chez leurs propriétaires courants ;
   leur déplacement de couche n'est pas anticipé et demeure réservé aux lots
   prévus par la feuille de route.
-- les deux fichiers préexistants sous `src/ui/shared` restent réservés au lot 6
-  et n'ont pas été déplacés par les lots 3 ou 4.
+- `src/config`, `src/music` et `src/ui/shared` sont absents et protégés par le
+  contrôle structurel ; aucune racine cible du lot 7 n'a été créée ;
+- les autres fichiers de plus de 500 lignes qui restent sont soit des
+  propriétaires cohésifs hors des trois concentrations visées par le lot 6,
+  soit `ClipInspector.tsx` et `InstrumentPresetDialog.tsx`, dont le découpage
+  demeure interdit tant qu'une caractérisation directe n'existe pas.
 
 ## Journal
+
+### 2026-08-28 — Lot 6, exécution et clôture
+
+- objectif : supprimer les destinations horizontales `src/config`, `src/music`
+  et `src/ui/shared`, puis découper les trois points de concentration métier du
+  lot par famille ou invariant, sans changement fonctionnel, de vocabulaire
+  musical, de schéma persistant ni renommage physique global des couches ;
+- condition d'entrée vérifiée dans ce journal avant toute modification du lot :
+  le lot 5 est `TERMINÉ`, ses six jalons sont consignés séparément, sa validation
+  complète est verte et son scénario reproductible améliore les commits et les
+  longues tâches par rapport au lot 0 ; le lot 6 est le premier lot `À FAIRE`
+  et aucun travail du lot 7 n'est commencé ;
+- commit de sauvegarde demandé avant le lot : `8998072` (`chore: checkpoint
+  before migration lot 6`) fige les 29 fichiers préexistants du lot 5 ; le
+  worktree est propre après ce commit ;
+- SHA de départ et point de rollback initial :
+  `89980728188f3782fa8b05858579033a0738be4c` ; aucun commit dédié au lot 6
+  n'existe encore et aucun patch préventif ne sera créé. Chaque retour doit être
+  préparé à partir du diff et du périmètre consigné de la sous-étape, sans
+  annuler le commit de sauvegarde ;
+- validation de référence fournie et déjà verte : 33 documents, 339 fichiers
+  structurels, frontières sur 282 fichiers produit et 71 tests, build Vite et
+  smoke AudioWorklet réussis, 67 fichiers de test et 420 tests réussis. À la
+  demande de l'utilisateur, la suite intégrale ne sera pas relancée ; chaque
+  sous-étape recevra le typecheck, les frontières et ses tests ciblés, puis les
+  contrôles documentaires, structurels, build et worklet seront rejoués à la
+  sortie ;
+- garde-fou de couverture préalable : la matrice du lot 0 couvre `time-map.ts`
+  à 87,76 % des lignes / 80,48 % des branches, `clip-commands.ts` à 50 % /
+  47,91 % et `active-clip-command-helpers.ts` à 39,83 % / 40,86 %. Avant les
+  découpages, les lacunes critiques encore listées dans
+  `LOT-0-BASELINES.md` seront caractérisées : rejets concaténation/découpe et
+  payloads de hiérarchie, transformations complètes pistes/notes et bornage,
+  branches défensives de time map et marqueurs absents ;
+- audit des horizontales : `src/config` contient dix modules et un test ;
+  `domain-limits.ts` mélange les constantes projet et instrument,
+  `editor-config.ts` mélange viewport, valeurs persistées et réponses de
+  contrôles, tandis que les huit autres modules ont déjà un propriétaire
+  fonctionnel explicite. `src/music` ne contient que trois calculs purs de
+  théorie musicale et un test. `src/ui/shared` contient seulement l'icône de
+  commandes consommée par la toolbar et le menu radial, et le hook de
+  réordonnancement consommé par l'inspecteur ;
+- audit des points de concentration : `clip-commands.ts` fait 1 042 lignes et
+  expose les familles clip, groupes, concaténation/découpe et hiérarchie ;
+  `active-clip-command-helpers.ts` fait 469 lignes et mêle transformations de
+  pistes, transport/boucle, invariants de notes et trimming ; `time-map.ts`
+  fait 1 329 lignes et mêle modèles, navigation/conversions, normalisation,
+  mutations de marqueurs et insertion/suppression de temps ;
+- sous-étapes prévues et périmètre : (1) déplacer les modules de `src/config`
+  vers les propriétaires courants sous `src/app`, `src/audio`, `src/domain`,
+  `src/editor`, `src/infrastructure/project-files/pianola`, `src/project-io/midi`,
+  `src/styles` et `src/ui/piano-roll/rendering`, avec leurs importeurs recensés
+  sous `src`, `tests/support` et `tests/integration`, puis supprimer la racine ;
+  (2) déplacer `src/music/{pitch-snap,tonal-spelling,chord-recognition}.ts` et
+  son test vers `src/domain/music-theory` ; (3) déplacer `CommandIcon.tsx` chez
+  `src/ui/editor-toolbar` et `useCardReorder.ts` dans une capacité nommée sous
+  `src/ui/interactions/card-reorder`, puis supprimer `src/ui/shared` ;
+  (4) ajouter les caractérisations manquantes et découper
+  `clip-commands.ts`/`active-clip-command-helpers.ts` en modules fonctionnels
+  sous `src/domain/commands` ; (5) ajouter les caractérisations manquantes et
+  découper `time-map.ts` en modules cohérents sous `src/domain/transport`, en
+  conservant un point d'import public ciblé si nécessaire pour ne pas mêler un
+  changement d'API au découpage ; (6) synchroniser les garde-fous, README et
+  documents produit directement affectés ;
+- exclusions explicites : aucun déplacement global de `use-cases`, `ui`,
+  `editor`, `audio`, `project-io` ou `app`, aucune création de leurs racines
+  renommées du lot 7, aucun découpage de `ClipInspector.tsx` ou
+  `InstrumentPresetDialog.tsx` faute de caractérisation directe, aucun
+  changement métier, de format `.pianola`, d'Undo/Redo ou de persistance.
+- sous-étape configurations : la racine `src/config` est supprimée. Les
+  propriétaires sont désormais `application/product/product-constants.ts`,
+  `audio/audio-constants.ts`, `domain/project/project-constants.ts`,
+  `domain/instruments/instrument-constants.ts`,
+  `domain/music-theory/tonal-snap-constants.ts`,
+  `editor/model/editor-constants.ts`,
+  `editor/viewport/viewport-constants.ts`,
+  `editor/interactions/interaction-constants.ts`,
+  `infrastructure/project-files/pianola/pianola-file-constants.ts`,
+  `project-io/midi/midi-constants.ts`, `styles/application-colors.ts` et
+  `ui/piano-roll/rendering/rendering-constants.ts`. Le titre de projet par
+  défaut a été séparé de l'identité produit après détection d'une dépendance
+  interdite `project-io → application` ;
+- point de rollback configurations : SHA `8998072`, 101 chemins au total
+  (`git diff HEAD --name-only` : 99 chemins suivis ; `git ls-files --others
+  --exclude-standard` : les deux nouveaux modules d'instrument et de viewport).
+  Le périmètre comprend uniquement les douze propriétaires ci-dessus, leurs
+  importeurs mécaniquement mis à jour sous `src`/`tests`, le garde-fou de
+  frontières, son test et ce journal ; le diff doit être filtré à ce point de
+  reprise avant tout retour ciblé ;
+- validations configurations : `npm run typecheck` réussi ;
+  `npm run check:boundaries` réussi sur 284 fichiers produit et 71 tests ; six
+  fichiers et 31 tests ciblés réussis pour interactions, viewport, validation
+  transport, création initiale, rendu Canvas et garde-fous. Un premier passage
+  a correctement signalé les propriétaires `app` et `styles` non conformes ;
+  ils ont été corrigés avant le passage vert. Statut de la sous-étape : vert.
+- sous-étape théorie musicale : les trois calculs purs `pitch-snap`,
+  `tonal-spelling` et `chord-recognition`, leur test et les constantes de snap
+  tonal résident sous `src/domain/music-theory`. La racine `src/music` est
+  supprimée et retirée de la matrice de frontières ; le test d'isolation
+  navigateur vise désormais explicitement `domain/music-theory` ;
+- point de rollback théorie musicale : SHA `8998072`, fichiers déplacés
+  `src/music/{pitch-snap,tonal-spelling,chord-recognition}.ts` et
+  `src/music/__tests__/chord-recognition.test.ts`, leurs destinations sous
+  `src/domain/music-theory`, leurs importeurs recensés par `rg 'music/'` sous
+  `src` et `tests`, `scripts/check-import-boundaries.mjs` et son test. Revenir
+  uniquement sur ces chemins après comparaison avec le jalon configurations ;
+- validations théorie musicale : `npm run typecheck` et
+  `npm run check:boundaries` réussis — 284 fichiers produit et 71 tests ; cinq
+  fichiers et 54 tests ciblés réussis pour accords/orthographe, snap des gestes,
+  time map, styles de notes et garde-fous. Statut de la sous-étape : vert.
+- sous-étape UI horizontale : `CommandIcon.tsx` appartient désormais à
+  `ui/editor-toolbar` et `useCardReorder.ts` à la capacité nommée
+  `ui/interactions/card-reorder`. Les trois importeurs sont mis à jour et
+  `src/ui/shared` est supprimé ; le typecheck, les frontières et sept tests
+  ciblés du menu radial et du réordonnancement hiérarchique sont verts ;
+- caractérisation préalable des commandes : les tests couvrent désormais le
+  décalage, l'extension, le raccourcissement et la suppression de notes lors
+  des transformations temporelles, le trimming et la boucle, le rejet hors
+  projet, les concaténations vides, les découpes invalides et les hiérarchies
+  absentes. Les deux fichiers et seize tests sont verts avant découpage ;
+- sous-étape commandes du clip actif :
+  `active-clip-command-helpers.ts` est supprimé au profit de cinq propriétaires
+  d'invariants ou de transformations : `active-clip-note-invariants.ts`,
+  `active-clip-track-time-transforms.ts`,
+  `clip-transport-time-transforms.ts`, `measure-command-invariants.ts` et
+  `removed-time-tick.ts`. Le typecheck, les frontières sur 288 fichiers produit
+  et 71 tests, puis cinq fichiers et quarante tests ciblés sont verts ;
+- sous-étape commandes de clips : `clip-commands.ts` est supprimé au profit de
+  `clip-value-commands.ts`, `clip-group-commands.ts`,
+  `clip-concatenation-commands.ts`, `clip-hierarchy-commands.ts`,
+  `clip-command-invariants.ts` et `clip-hierarchy-command-transforms.ts`. Le
+  reducer importe directement ces familles. Après suppression d'un import de
+  type inutilisé signalé par le premier typecheck, le typecheck, les frontières
+  sur 293 fichiers produit et 71 tests, puis huit fichiers et 58 tests ciblés
+  sont verts ;
+- caractérisation préalable de la time map : les tests défensifs couvrent les
+  cartes sans marqueur à tick zéro, les tableaux de marqueurs clairsemés et les
+  mutations visant un marqueur d'échelle ou de section absent. Le typecheck et
+  les 38 tests du fichier sont verts avant découpage ;
+- sous-étape time map : le modèle, la signature temporelle, la navigation, la
+  normalisation, les opérations de marqueurs de mesure et ponctuels et les
+  éditions structurelles résident dans sept modules dédiés sous
+  `domain/transport`. `time-map.ts` ne conserve que les exports publics
+  explicites. Le typecheck, les frontières sur 300 fichiers produit et 71
+  tests, puis sept fichiers et 138 tests ciblés sont verts ;
+- garde-fous synchronisés : `tsconfig.json` et la couverture ne visent plus les
+  anciens chemins ; le contrôle structurel interdit `src/config`, `src/music`,
+  `src/ui/shared`, `active-clip-command-helpers.ts` et `clip-commands.ts`. La
+  matrice de frontières retire les deux anciennes zones horizontales,
+  enregistre `styles` comme zone actuelle et n'accepte aucun cycle. Un premier
+  contrôle structurel a détecté les deux répertoires vides `src/config` et
+  `src/music` ; leur vacuité a été vérifiée avant suppression, puis le contrôle
+  est repassé au vert ;
+- documentation courante synchronisée : `README.md`, `docs/architecture.md`,
+  `docs/code-map.md` et les README de `domain`, `editor`, `audio`, `project-io`,
+  `ui` et `ui/piano-roll/rendering` décrivent les propriétaires réels. La
+  recherche des anciens chemins dans la documentation courante ne retourne
+  aucune référence résiduelle ;
+- couverture ciblée de sortie : `npm run test:coverage:hotspots` réussit sur
+  sept fichiers et 83 tests. `domain/commands` atteint 67,81 % des lignes et
+  60,48 % des branches ; `domain/transport` atteint 89,29 % des lignes et
+  82,43 % des branches. Les trois composants UI suivis restent à 0 %, sans
+  découpage anticipé de ceux qui ne sont pas directement caractérisés ;
+- validation de sortie : `npm run check:docs` réussit sur 33 documents,
+  `npm run check:structure` sur 357 fichiers source,
+  `npm run check:boundaries` sur 300 fichiers produit et 71 tests,
+  `npm run build` réussit avec ses typechecks et 326 modules Vite transformés,
+  et `npm run test:worklet-build` produit 128 frames stéréo. L'avertissement de
+  chunk principal supérieur à 500 kB est inchangé et non bloquant. La suite
+  intégrale n'est volontairement pas rejouée conformément à la demande ;
+- point de rollback final : SHA de départ `8998072`. Le worktree était propre
+  à ce SHA ; l'union triée de `git diff --name-only 8998072` et de
+  `git ls-files --others --exclude-standard` constitue donc le périmètre exact
+  du lot 6, soit 169 chemins à la clôture. Elle contient les suppressions et
+  propriétaires détaillés ci-dessus, leurs importeurs, les tests, les neuf
+  documents courants, les deux scripts de garde-fous, `tsconfig.json`,
+  `vitest.config.ts` et ce journal. Aucun changement ne relève du lot 7 ;
+- statut de sortie : lot 6 `TERMINÉ`, aucun lot actif. La prochaine reprise doit
+  relire ce lot et vérifier les prérequis du lot 7 avant de le passer
+  explicitement `EN COURS` ; aucun renommage physique du lot 7 n'est commencé.
 
 ### 2026-08-28 — Lot 5, démarrage
 

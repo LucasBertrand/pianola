@@ -1,6 +1,6 @@
 import {
   EDITOR_CONSTANTS,
-} from "../../config/editor-config";
+} from "./editor-constants";
 
 export type GridSubdivision = "straight" | "triplet" | "dotted";
 

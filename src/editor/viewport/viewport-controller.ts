@@ -1,7 +1,9 @@
 import {
   EDITOR_CONSTANTS,
+} from "../model/editor-constants";
+import {
   VIEWPORT_CONSTANTS,
-} from "../../config/editor-config";
+} from "./viewport-constants";
 import {
   getActiveClip,
   type EditorSessionState,

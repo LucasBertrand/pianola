@@ -7,19 +7,23 @@ import {
 import { DomainValidationError } from "../validation/validation-result";
 import type { ActiveClipProjectState } from "./active-clip-project-state";
 import {
-  applyAddClip,
   applyConcatenateClipGroup,
+  applySplitClipIntoGroup,
+} from "./clip-concatenation-commands";
+import {
   applyCreateClipGroup,
-  applyDeleteClip,
   applyDeleteClipGroup,
   applyUngroupClipGroup,
-  applyMoveClipHierarchyNode,
-  applyRenameClip,
-  applySplitClipIntoGroup,
   applyUpdateClipGroup,
+} from "./clip-group-commands";
+import { applyMoveClipHierarchyNode } from "./clip-hierarchy-commands";
+import {
+  applyAddClip,
+  applyDeleteClip,
+  applyRenameClip,
   applyReorderClips,
   applyUpdateClip,
-} from "./clip-commands";
+} from "./clip-value-commands";
 import { CommandRejectedError } from "./command-errors";
 import { assertNever, reject } from "./command-context";
 import type {

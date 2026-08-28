@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import {
   MIDI_CONSTANTS,
-} from "../../config/midi-config";
+} from "../../project-io/midi/midi-constants";
 import {
   MAXIMUM_PROJECT_TITLE_LENGTH,
 } from "../../domain/project/project-document";

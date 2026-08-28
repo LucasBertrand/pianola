@@ -6,7 +6,7 @@ import {
 } from "../../../domain/transport/time-map";
 import {
   INTERACTION_CONSTANTS,
-} from "../../../config/interaction-config";
+} from "../../../editor/interactions/interaction-constants";
 import {
   type InstrumentId,
 } from "../../../domain/identifiers";
@@ -49,7 +49,7 @@ import type {
 } from "../../../editor/model/timeline-drag-preview";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   resolvePitchSnapSettings,
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";

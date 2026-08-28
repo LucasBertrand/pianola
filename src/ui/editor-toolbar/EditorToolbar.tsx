@@ -14,7 +14,7 @@ import type {
 } from "../../editor/model/note-color-mode";
 import {
   CommandIcon,
-} from "../shared/CommandIcon";
+} from "./CommandIcon";
 
 export interface EditorToolbarProps {
   readonly inspectorOpen: boolean;

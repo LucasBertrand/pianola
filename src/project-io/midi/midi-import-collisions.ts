@@ -1,4 +1,6 @@
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+import {
+  PROJECT_CONSTANTS,
+} from "../../domain/project/project-constants";
 import {
   type Note,
 } from "../../domain/notes/note";

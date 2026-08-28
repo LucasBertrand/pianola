@@ -1,5 +1,7 @@
-import { PROJECT_CONSTANTS } from "../config/domain-limits";
-import { TONAL_SNAP_CONSTANTS } from "../config/music-config";
+import {
+  PROJECT_CONSTANTS,
+} from "../project/project-constants";
+import { TONAL_SNAP_CONSTANTS } from "./tonal-snap-constants";
 import { ScaleType, ChordType, Interval, Note } from "@tonaljs/tonal";
 
 export type TonalPatternType = "scale" | "chord";

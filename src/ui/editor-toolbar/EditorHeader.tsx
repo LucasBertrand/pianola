@@ -32,13 +32,13 @@ import type {
 } from "../../use-cases/persistence/project-autosave";
 import {
   detectChordsFromNotes,
-} from "../../music/chord-recognition";
+} from "../../domain/music-theory/chord-recognition";
 import type {
   PitchSnapSettings,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 import {
   spellPitchClass,
-} from "../../music/tonal-spelling";
+} from "../../domain/music-theory/tonal-spelling";
 import {
   resolvePitchSnapSettings,
 } from "../../use-cases/piano-roll/timeline/pitch-snap-resolution";

@@ -1,6 +1,6 @@
 import {
   APPLICATION_COLORS,
-} from "../../../config/application-colors";
+} from "../../../styles/application-colors";
 import type {
   Note,
 } from "../../../domain/notes/note";
@@ -12,7 +12,7 @@ import type {
 } from "../../../editor/geometry/converter";
 import {
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import type {
   EditingNoteMask,
 } from "../../../editor/interactions/editing-note-mask";

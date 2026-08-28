@@ -3,12 +3,12 @@ import { ChordType } from "@tonaljs/tonal";
 
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
-import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
+} from "../../domain/project/project-constants";
+import { TONAL_SNAP_CONSTANTS } from "../../domain/music-theory/tonal-snap-constants";
 import type {
   TimeSignature,
 } from "../../domain/transport/time-map";
-import type { TonalPatternType } from "../../music/pitch-snap";
+import type { TonalPatternType } from "../../domain/music-theory/pitch-snap";
 
 const DENOMINATOR_OPTIONS = [1, 2, 4, 8, 16, 32] as const;
 

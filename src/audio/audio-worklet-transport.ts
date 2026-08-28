@@ -11,7 +11,7 @@ import type {
 } from "../domain/instruments/instrument";
 import {
   AUDIO_CONSTANTS,
-} from "../config/audio-config";
+} from "./audio-constants";
 import type {
   AudioTransportController,
   PlaybackSnapshot,

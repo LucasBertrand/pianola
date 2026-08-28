@@ -21,12 +21,14 @@ import {
   insertTimeIntoTimeMap,
   isMeasureBoundary,
   moveTempoMarker,
+  moveScaleMarker,
   normalizeMeterMarkers,
   normalizeScaleMarkers,
   normalizeTempoMarkers,
   removeMeterMarker,
   removeTempoMarker,
   removeTimeFromTimeMap,
+  removeSectionMarker,
   replaceInitialMeter,
   snapTickToMeasureCellStart,
   snapTickToMeasureGrid,
@@ -34,6 +36,7 @@ import {
   updateMeterMarker,
   updateTempoMarker,
   type TimeMap,
+  type TempoMarker,
 } from "../time-map";
 
 const PPQN = 960;
@@ -147,6 +150,27 @@ describe("time-map navigation", () => {
     expect(tickToSeconds(PPQN, timeMap, 7_680)).toBe(4);
     // 120 BPM until 7_680 (4 s), then 60 BPM for 1_920 ticks (2 s).
     expect(tickToSeconds(PPQN, timeMap, 9_600)).toBe(6);
+  });
+
+  test("rejects maps without their required tick-zero marker", () => {
+    const inconsistent: TimeMap = {
+      ...createDefaultTimeMap(),
+      meterMarkers: [],
+    };
+
+    expect(() => getMeterAtTick(inconsistent, 0))
+      .toThrow("must start with a marker at tick 0");
+  });
+
+  test("falls back to the initial marker when a sparse marker array is read", () => {
+    const sparseMarkers = new Array<TempoMarker>(2);
+    sparseMarkers[0] = { startTick: 0, bpm: 120 };
+    const inconsistent: TimeMap = {
+      ...createDefaultTimeMap(),
+      tempoMarkers: sparseMarkers,
+    };
+
+    expect(getTempoAtTick(inconsistent, 10_000)).toBe(120);
   });
 });
 
@@ -404,6 +428,15 @@ describe("tempo marker operations", () => {
     ]);
 
     expect(normalized.map((marker) => marker.startTick)).toEqual([0, 3_840]);
+  });
+
+  test("rejects mutation requests for absent point markers", () => {
+    const timeMap = createDefaultTimeMap();
+
+    expect(() => moveScaleMarker(timeMap, 3_840, 7_680))
+      .toThrow("No scale marker starts at tick 3840");
+    expect(() => removeSectionMarker(timeMap, 3_840))
+      .toThrow("No section marker starts at tick 3840");
   });
 });
 

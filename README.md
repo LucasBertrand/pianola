@@ -82,7 +82,8 @@ src/
 ├── application/editor-session/ agrégat de session et workspace persistant
 ├── application/history/        store, transactions et sélection Undo/Redo
 ├── application/ports/          contrats applicatifs de persistance
-├── domain/                     document musical et invariants
+├── application/product/        identité produit partagée
+├── domain/                     document, commandes, théorie musicale et invariants
 ├── editor/                     noyau d’édition indépendant du DOM
 ├── use-cases/piano-roll/        intentions notes et sélection
 ├── audio/                       timeline et moteur AudioWorklet
@@ -90,9 +91,7 @@ src/
 ├── project-io/                  Standard MIDI File
 ├── pwa/                         enregistrement du service worker
 ├── ui/                          React, Canvas et adaptateurs navigateur
-├── styles/                      CSS par surface propriétaire
-├── music/                       vocabulaire tonal déterministe
-└── config/                      limites et réglages par propriétaire
+└── styles/                      CSS et couleurs par surface propriétaire
 ```
 
 Les tests purs vivent près de leur module. Les flux traversant plusieurs
@@ -133,9 +132,17 @@ Le domaine est réparti par vocabulaire produit :
 - `src/domain/instruments/instrument.ts` pour sons et instruments projet ;
 - `src/domain/clips/clip.ts` pour pistes, timelines et clips ;
 - `src/domain/transport/transport.ts` pour horloge, métrique et boucle ;
+- `src/domain/transport/time-map.ts` comme surface publique des modules de
+  modèle, navigation, marqueurs et éditions structurelles de la time map ;
+- `src/domain/music-theory/` pour snap tonal, orthographe et accords ;
 - `src/domain/master-bus.ts` pour le bus master ;
 - `src/domain/project/project-document.ts` pour le document et la sélection de
   clip de la session d'éditeur.
+
+Les constantes ne vivent plus dans une racine horizontale : chaque famille est
+colocalisée avec son propriétaire (`domain`, `editor`, `audio`, MIDI,
+`.pianola`, rendu ou styles). Les commandes de clips sont séparées entre valeurs,
+groupes, concaténation/découpe, hiérarchie et invariants.
 
 Les frontières exécutables couvrent toutes les racines TypeScript courantes,
 interdisent au domaine et au noyau d’éditeur de dépendre de React, du navigateur

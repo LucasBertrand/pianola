@@ -1,4 +1,6 @@
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+import {
+  PROJECT_CONSTANTS,
+} from "../project/project-constants";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
   type ClipGroupId,

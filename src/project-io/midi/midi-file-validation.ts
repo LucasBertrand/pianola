@@ -1,7 +1,7 @@
 import { MidiCodecError } from "./midi-codec-error";
 import {
   MIDI_CONSTANTS,
-} from "../../config/midi-config";
+} from "./midi-constants";
 import type {
   MidiChannel,
   MidiDataByte,

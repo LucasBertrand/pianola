@@ -14,7 +14,7 @@ import {
   assertNoteWithinProject,
   notesOverlapInInstrument,
   replaceInstrumentTrack,
-} from "./active-clip-command-helpers";
+} from "./active-clip-note-invariants";
 import {
   assertNoteEditable,
   assertUniqueNoteIds,

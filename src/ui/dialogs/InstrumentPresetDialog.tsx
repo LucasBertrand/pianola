@@ -3,10 +3,10 @@ import React, {
 } from "react";
 import {
   EDITOR_CONSTANTS,
-} from "../../config/editor-config";
+} from "../../editor/model/editor-constants";
 import {
   INSTRUMENT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../../domain/instruments/instrument-constants";
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,

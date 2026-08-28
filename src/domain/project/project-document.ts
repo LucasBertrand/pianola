@@ -1,6 +1,6 @@
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "./project-constants";
 import type {
   Clip,
 } from "../clips/clip";

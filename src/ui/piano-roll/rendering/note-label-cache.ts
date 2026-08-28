@@ -4,7 +4,7 @@ import {
 } from "../../../editor/geometry/converter";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   getMidiNoteLabel,
   getPitchLabelContextKey,

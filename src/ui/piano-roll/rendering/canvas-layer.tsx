@@ -42,7 +42,7 @@ import type {
 } from "../../../editor/model/render-signal";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import { paintGrid } from "./grid-painter";
 import { paintNotes } from "./note-painter";
 import {

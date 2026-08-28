@@ -14,10 +14,10 @@ import {
 } from "../../../../editor/geometry/converter";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../../../../music/pitch-snap";
+} from "../../../../domain/music-theory/pitch-snap";
 import {
   APPLICATION_COLORS,
-} from "../../../../config/application-colors";
+} from "../../../../styles/application-colors";
 import { paintGrid } from "../grid-painter";
 import { paintNotes } from "../note-painter";
 import { paintRuler } from "../ruler-painter";

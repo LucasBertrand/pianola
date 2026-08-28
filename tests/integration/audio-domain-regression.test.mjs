@@ -90,7 +90,7 @@ import {
 } from "../../src/domain/selection-transformations";
 import {
   VIEWPORT_CONSTANTS,
-} from "../../src/config/editor-config";
+} from "../../src/editor/viewport/viewport-constants";
 import {
   constrainViewportToContent,
   getMaximumHorizontalScroll,
@@ -135,7 +135,7 @@ import {
   getTonalPatternDefinition,
   isPitchAllowedByTonalPattern,
   snapPitchToTonalPattern,
-} from "../../src/music/pitch-snap";
+} from "../../src/domain/music-theory/pitch-snap";
 
 import {
   getMidiNoteLabel,

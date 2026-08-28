@@ -22,7 +22,7 @@ import type {
 } from "../../editor/geometry/spatial-index";
 import type {
   PitchSnapSettings,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 import type {
   GridSettings,
 } from "../../editor/model/grid-settings";

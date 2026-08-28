@@ -26,7 +26,7 @@ import {
 } from "./instruments/ProjectInstrumentControls";
 import {
   useCardReorder,
-} from "../shared/useCardReorder";
+} from "../interactions/card-reorder/useCardReorder";
 import type {
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";

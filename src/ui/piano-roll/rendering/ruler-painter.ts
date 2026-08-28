@@ -1,6 +1,6 @@
 import {
   APPLICATION_COLORS,
-} from "../../../config/application-colors";
+} from "../../../styles/application-colors";
 import {
   type ProjectClock,
 } from "../../../domain/transport/transport";

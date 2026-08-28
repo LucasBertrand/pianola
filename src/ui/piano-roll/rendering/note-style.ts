@@ -12,11 +12,11 @@ import type {
 } from "../../../editor/model/instrument-render-style";
 import {
   APPLICATION_COLORS,
-} from "../../../config/application-colors";
+} from "../../../styles/application-colors";
 import {
   getPitchScaleDegreeColorIndex,
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 
 const DEFAULT_NOTE_COLOR =
   APPLICATION_COLORS.notes.default;

@@ -1,5 +1,7 @@
-import { MIDI_CONSTANTS } from "../../config/midi-config";
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+import { MIDI_CONSTANTS } from "./midi-constants";
+import {
+  PROJECT_CONSTANTS,
+} from "../../domain/project/project-constants";
 import {
   type InstrumentId,
 } from "../../domain/identifiers";

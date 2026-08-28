@@ -1,5 +1,7 @@
 import React from "react";
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+import {
+  PROJECT_CONSTANTS,
+} from "../../domain/project/project-constants";
 import {
   MAXIMUM_CLIP_NAME_LENGTH,
   MAXIMUM_MEASURE_COUNT,

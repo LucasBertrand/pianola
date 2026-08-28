@@ -2,7 +2,7 @@
  * Color policy
  * ------------
  * Do not add hexadecimal, rgb(), or rgba() literals to this stylesheet.
- * All color values live in config/application-colors.ts and are installed on
+ * All color values live in styles/application-colors.ts and are installed on
  * the document root by main.tsx. This stylesheet only consumes semantic CSS
  * custom properties. Keeping the values outside CSS also lets Canvas layers
  * use the exact same palette without querying computed DOM styles.
@@ -59,4 +59,3 @@ input:focus-visible {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
 }
-

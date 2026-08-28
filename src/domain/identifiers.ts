@@ -1,6 +1,6 @@
 import {
   PROJECT_CONSTANTS,
-} from "../config/domain-limits";
+} from "./project/project-constants";
 
 export type NoteId = string;
 export type InstrumentId = string;

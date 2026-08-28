@@ -1,5 +1,5 @@
-import { APPLICATION_CONSTANTS } from "../../../config/product-config";
-import { FILE_CONSTANTS } from "../../../config/pianola-file-config";
+import { APPLICATION_CONSTANTS } from "../../../application/product/product-constants";
+import { FILE_CONSTANTS } from "./pianola-file-constants";
 
 export function createPianolaProjectFileName(
   projectTitle: string,

@@ -4,7 +4,7 @@ import type {
 import type {
   PersistedEditorWorkspace,
 } from "../../../application/ports/project-repository";
-import { FILE_CONSTANTS } from "../../../config/pianola-file-config";
+import { FILE_CONSTANTS } from "./pianola-file-constants";
 
 export const PIANOLA_PROJECT_FORMAT = FILE_CONSTANTS.pianolaProjectFormat;
 export const PIANOLA_PROJECT_SCHEMA_VERSION = FILE_CONSTANTS.pianolaProjectVersion;

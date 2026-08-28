@@ -4,17 +4,17 @@ import React, {
 } from "react";
 import {
   INTERACTION_CONSTANTS,
-} from "../../config/interaction-config";
+} from "../../editor/interactions/interaction-constants";
 import {
   VIEWPORT_CONSTANTS,
-} from "../../config/editor-config";
+} from "../../editor/viewport/viewport-constants";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";
 import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 import type {
   ReadonlyRenderSignal,
 } from "../../editor/model/render-signal";

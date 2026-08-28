@@ -3,15 +3,17 @@ import React, {
 } from "react";
 import {
   EDITOR_CONSTANTS,
+} from "../../editor/model/editor-constants";
+import {
   VIEWPORT_CONSTANTS,
-} from "../../config/editor-config";
+} from "../../editor/viewport/viewport-constants";
 import {
   MAXIMUM_HORIZONTAL_ZOOM,
   MAXIMUM_VERTICAL_ZOOM,
 } from "../../editor/geometry/converter";
 import type {
   PitchSnapSettings,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 import {
   createGridSettings,
   parseGridSubdivision,

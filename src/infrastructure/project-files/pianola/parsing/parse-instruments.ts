@@ -1,4 +1,6 @@
-import { INSTRUMENT_CONSTANTS } from "../../../../config/domain-limits";
+import {
+  INSTRUMENT_CONSTANTS,
+} from "../../../../domain/instruments/instrument-constants";
 import {
   type AdsrEnvelope,
   type EffectDescriptor,

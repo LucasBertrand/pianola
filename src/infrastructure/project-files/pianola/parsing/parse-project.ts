@@ -7,7 +7,9 @@ import {
   getClipPlaybackOrder,
   type ClipHierarchyNode,
 } from "../../../../domain/clips/clip-hierarchy";
-import { PROJECT_CONSTANTS } from "../../../../config/domain-limits";
+import {
+  PROJECT_CONSTANTS,
+} from "../../../../domain/project/project-constants";
 import {
   type ClipId,
 } from "../../../../domain/identifiers";

@@ -23,7 +23,7 @@ import type {
 } from "../../../editor/model/note-color-mode";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   getNoteFillStyle,
   getPitchNoteColor,

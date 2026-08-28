@@ -5,7 +5,7 @@ import {
 } from "vitest";
 import {
   INTERACTION_CONSTANTS,
-} from "../interaction-config";
+} from "../interaction-constants";
 
 describe("interaction constants", () => {
   test("keeps loop drawing and note creation long presses aligned", () => {

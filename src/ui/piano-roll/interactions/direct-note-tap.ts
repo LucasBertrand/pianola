@@ -1,6 +1,6 @@
 import {
   INTERACTION_CONSTANTS,
-} from "../../../config/interaction-config";
+} from "../../../editor/interactions/interaction-constants";
 import type {
   NoteId,
 } from "../../../domain/identifiers";

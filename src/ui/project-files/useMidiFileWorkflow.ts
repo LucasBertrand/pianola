@@ -6,7 +6,7 @@ import {
 } from "react";
 import {
   MIDI_CONSTANTS,
-} from "../../config/midi-config";
+} from "../../project-io/midi/midi-constants";
 import {
   createMidiExport,
   createMidiFileName,

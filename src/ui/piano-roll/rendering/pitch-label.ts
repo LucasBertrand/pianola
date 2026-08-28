@@ -1,14 +1,14 @@
 import {
   PROJECT_CONSTANTS,
-} from "../../../config/domain-limits";
+} from "../../../domain/project/project-constants";
 
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   spellPitchClass,
-} from "../../../music/tonal-spelling";
+} from "../../../domain/music-theory/tonal-spelling";
 import { Note } from "@tonaljs/tonal";
 
 export interface MidiNoteLabelSegment {

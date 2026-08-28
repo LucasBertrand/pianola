@@ -1,6 +1,6 @@
 import {
   FILE_CONSTANTS,
-} from "../../config/pianola-file-config";
+} from "../../infrastructure/project-files/pianola/pianola-file-constants";
 
 /** Starts a browser download and releases its object URL after navigation. */
 export function downloadBrowserFile(

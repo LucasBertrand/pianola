@@ -14,7 +14,7 @@ import {
 } from "../../../domain/transport/transport";
 import {
   RENDERING_CONSTANTS,
-} from "../../../config/rendering-config";
+} from "../../piano-roll/rendering/rendering-constants";
 import {
   createDefaultClipTimeline,
   DEFAULT_CLIP_BYPASS_ENABLED,

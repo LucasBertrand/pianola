@@ -1,7 +1,9 @@
 import {
-  INSTRUMENT_CONSTANTS,
   PROJECT_CONSTANTS,
-} from "../config/domain-limits";
+} from "./project/project-constants";
+import {
+  INSTRUMENT_CONSTANTS,
+} from "./instruments/instrument-constants";
 import {
   type AdsrEnvelope,
   type InstrumentPreset,

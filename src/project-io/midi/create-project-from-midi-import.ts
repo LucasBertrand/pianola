@@ -1,6 +1,8 @@
-import { MIDI_CONSTANTS } from "../../config/midi-config";
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
-import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
+import { MIDI_CONSTANTS } from "./midi-constants";
+import {
+  PROJECT_CONSTANTS,
+} from "../../domain/project/project-constants";
+import { TONAL_SNAP_CONSTANTS } from "../../domain/music-theory/tonal-snap-constants";
 import {
   type Clip,
   type InstrumentTrack,

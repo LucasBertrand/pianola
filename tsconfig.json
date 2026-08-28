@@ -22,7 +22,6 @@
     "noEmit": true
   },
   "include": [
-    "src/config/**/*.ts",
     "src/use-cases/**/*.ts",
     "src/audio/playback-model.ts",
     "src/audio/instrument-preview-policy.ts",
@@ -42,7 +41,6 @@
     "src/audio/worklet/worklet-voice-bank.ts",
     "src/domain/**/*.ts",
     "src/editor/**/*.ts",
-    "src/music/**/*.ts",
     "src/project-io/**/*.ts"
   ],
   "exclude": [

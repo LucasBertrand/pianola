@@ -1,12 +1,9 @@
 import {
-  APPLICATION_CONSTANTS,
-} from "../../config/product-config";
-import {
   MIDI_CONSTANTS,
-} from "../../config/midi-config";
+} from "./midi-constants";
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../../domain/project/project-constants";
 import type {
   MidiEvent,
   MidiFile,
@@ -244,7 +241,7 @@ export function createMidiFileName(projectTitle: string): string {
   const baseName =
     sanitizedTitle.length > 0
       ? sanitizedTitle
-      : APPLICATION_CONSTANTS.defaultProjectTitle;
+      : PROJECT_CONSTANTS.defaultProjectTitle;
 
   return `${baseName}${MIDI_CONSTANTS.fileExtension}`;
 }

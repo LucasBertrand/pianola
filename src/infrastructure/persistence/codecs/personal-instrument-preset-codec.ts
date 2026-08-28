@@ -1,6 +1,6 @@
 import {
   INSTRUMENT_CONSTANTS,
-} from "../../../config/domain-limits";
+} from "../../../domain/instruments/instrument-constants";
 import {
   createDefaultInstrumentPresetLibrary,
 } from "../../../domain/instrument-presets";

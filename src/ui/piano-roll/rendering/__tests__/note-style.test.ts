@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
   APPLICATION_COLORS,
-} from "../../../../config/application-colors";
+} from "../../../../styles/application-colors";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../../../../music/pitch-snap";
+} from "../../../../domain/music-theory/pitch-snap";
 import { getPitchNoteColor } from "../note-style";
 
 describe("note color style", () => {

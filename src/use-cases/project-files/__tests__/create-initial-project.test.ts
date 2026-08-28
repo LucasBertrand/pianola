@@ -5,7 +5,7 @@ import {
 } from "vitest";
 import {
   PROJECT_CONSTANTS,
-} from "../../../config/domain-limits";
+} from "../../../domain/project/project-constants";
 import {
   getActiveClip,
 } from "../../../domain/project/project-document";

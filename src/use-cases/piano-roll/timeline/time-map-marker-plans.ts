@@ -1,6 +1,6 @@
 import {
   PROJECT_CONSTANTS,
-} from "../../../config/domain-limits";
+} from "../../../domain/project/project-constants";
 import type {
   PianoRollCommand,
 } from "../../../domain/commands/command-types";
@@ -21,7 +21,7 @@ import {
   type TimeMap,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
-import type { TonalPatternId, TonalPatternType } from "../../../music/pitch-snap";
+import type { TonalPatternId, TonalPatternType } from "../../../domain/music-theory/pitch-snap";
 import { ChordType } from "@tonaljs/tonal";
 import type {
   TimeMapMarkerCollision,

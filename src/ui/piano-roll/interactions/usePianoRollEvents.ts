@@ -43,7 +43,7 @@ import type {
 } from "../../../editor/selection/editor-selection";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import type {
   EditorCommandPort,
 } from "../../../application/history/editor-command-service";

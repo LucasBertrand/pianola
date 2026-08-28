@@ -4,7 +4,7 @@ import React, {
 } from "react";
 import {
   APPLICATION_COLORS,
-} from "../../config/application-colors";
+} from "../../styles/application-colors";
 
 export interface PianoRollGlobalLassoProps {
   readonly elementRef: RefObject<HTMLDivElement | null>;

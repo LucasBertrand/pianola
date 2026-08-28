@@ -1,6 +1,6 @@
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../project/project-constants";
 import type {
   InstrumentId,
   NoteId,

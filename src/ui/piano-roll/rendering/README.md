@@ -26,6 +26,9 @@ selection, snapping, collision or hit-testing decisions. The note snapshot is a
 pre-culled projection; the editing mask only prevents the stable projection
 from being drawn underneath its DOM draft.
 
+Rendering budgets live in `rendering-constants.ts`; the shared theme data lives
+with the stylesheet owner in `src/styles/application-colors.ts`.
+
 The label-width and locked-note-pattern caches are isolated in their own
 modules. DOM overlays remain responsible for focus, menus, playhead, lasso and
 other accessible interaction feedback.

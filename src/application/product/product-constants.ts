@@ -2,5 +2,4 @@
 export const APPLICATION_CONSTANTS = Object.freeze({
   productName: "Pianola",
   productSlug: "pianola",
-  defaultProjectTitle: "Pianola Project",
 } as const);

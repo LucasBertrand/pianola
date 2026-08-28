@@ -1,6 +1,6 @@
 import {
   APPLICATION_COLORS,
-} from "./application-colors";
+} from "../../../styles/application-colors";
 
 /** Rendering budgets and colors sourced from the application theme. */
 export const RENDERING_CONSTANTS = Object.freeze({

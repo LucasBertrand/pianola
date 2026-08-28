@@ -339,6 +339,59 @@ describe("clip group commands", () => {
       groupId: "group-only",
     }])).toThrow("at least one clip");
   });
+
+  test("rejects concatenating an empty group", () => {
+    let project = createTestProject({ clips: [{ id: "clip-a" }] });
+    project = dispatch(project, [{
+      type: "CreateClipGroup",
+      groupId: "group-empty",
+      name: "Empty",
+      color: "#79a7ff",
+      parentGroupId: null,
+      index: 0,
+    }]);
+
+    expect(() => dispatch(project, [{
+      type: "ConcatenateClipGroup",
+      groupId: "group-empty",
+      clip: { ...project.clipsById["clip-a"]!, id: "clip-concatenated" },
+    }])).toThrow("empty clip group");
+  });
+
+  test("rejects split payloads with too few or duplicate generated clips", () => {
+    const project = createTestProject({ clips: [{ id: "clip-source" }] });
+    const source = project.clipsById["clip-source"]!;
+    const generated = { ...source, id: "clip-generated" };
+
+    expect(() => dispatch(project, [{
+      type: "SplitClipIntoGroup",
+      sourceClipId: source.id,
+      groupId: "group-split",
+      clips: [generated],
+    }])).toThrow("at least two generated clips");
+
+    expect(() => dispatch(project, [{
+      type: "SplitClipIntoGroup",
+      sourceClipId: source.id,
+      groupId: "group-split",
+      clips: [generated, generated],
+    }])).toThrow("already exists or is not unique");
+  });
+
+  test("rejects splitting a clip missing from the hierarchy", () => {
+    const project = createTestProject({ clips: [{ id: "clip-source" }] });
+    const source = project.clipsById["clip-source"]!;
+
+    expect(() => dispatch({ ...project, clipHierarchy: [] }, [{
+      type: "SplitClipIntoGroup",
+      sourceClipId: source.id,
+      groupId: "group-split",
+      clips: [
+        { ...source, id: "clip-left" },
+        { ...source, id: "clip-right" },
+      ],
+    }])).toThrow("does not exist in the hierarchy");
+  });
 });
 
 function dispatch(

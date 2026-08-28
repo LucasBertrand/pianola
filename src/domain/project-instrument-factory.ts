@@ -1,7 +1,9 @@
 import {
   PROJECT_CONSTANTS,
+} from "./project/project-constants";
+import {
   INSTRUMENT_CONSTANTS,
-} from "../config/domain-limits";
+} from "./instruments/instrument-constants";
 import {
   type InstrumentConfig,
   type ProjectInstrument,

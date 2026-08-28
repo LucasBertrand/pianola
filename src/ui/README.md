@@ -13,6 +13,10 @@ adaptateurs de stockage navigateur vivent sous
 `src/infrastructure/persistence/` et implémentent les ports de
 `src/application/ports/`.
 
+Les icônes de commandes appartiennent à `editor-toolbar/` et le
+réordonnancement de cartes à `interactions/card-reorder/`; aucune zone
+`ui/shared` ne sert de propriétaire par défaut.
+
 ## Quel fichier lire en premier ?
 
 Lire `home/ApplicationHome.tsx` pour l'accueil et

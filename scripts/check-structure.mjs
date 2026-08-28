@@ -17,6 +17,11 @@ if (process.exitCode !== undefined && process.exitCode !== 0) {
 }
 
 const forbiddenPaths = [
+  "src/config",
+  "src/music",
+  "src/ui/shared",
+  "src/domain/commands/active-clip-command-helpers.ts",
+  "src/domain/commands/clip-commands.ts",
   "src/domain/model.ts",
   "src/editor/piano-roll",
   "src/use-cases/notes",

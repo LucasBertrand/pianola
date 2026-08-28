@@ -1,6 +1,6 @@
 import {
   INTERACTION_CONSTANTS,
-} from "../../../config/interaction-config";
+} from "../../../editor/interactions/interaction-constants";
 
 /** Timing and movement policy shared by the DOM pointer manager. */
 export const PIANO_ROLL_POINTER_POLICY = Object.freeze({

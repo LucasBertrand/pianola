@@ -7,7 +7,7 @@ import {
 } from "react";
 import {
   VIEWPORT_CONSTANTS,
-} from "../../../config/editor-config";
+} from "../../../editor/viewport/viewport-constants";
 
 export type CanvasRenderMode = "continuous" | "on-demand";
 

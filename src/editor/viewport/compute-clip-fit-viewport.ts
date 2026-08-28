@@ -1,6 +1,6 @@
 import {
   VIEWPORT_CONSTANTS,
-} from "../../config/editor-config";
+} from "./viewport-constants";
 import {
   getClipDurationTicks,
   type Clip,

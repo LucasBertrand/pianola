@@ -58,12 +58,14 @@ import type {
   DeleteSectionMarkerCommand,
 } from "./command-types";
 import {
-  assertMeasureIndex,
   insertTimeIntoTransport,
   removeTimeFromTransport,
+} from "./clip-transport-time-transforms";
+import {
   transformInstrumentTracksForInsertedTime,
   transformInstrumentTracksForRemovedTime,
-} from "./active-clip-command-helpers";
+} from "./active-clip-track-time-transforms";
+import { assertMeasureIndex } from "./measure-command-invariants";
 import {
   assertTransportWithinProjectDuration,
   reject,

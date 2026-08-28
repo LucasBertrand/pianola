@@ -23,7 +23,7 @@ import {
 import {
   type TimeSignature,
 } from "../transport/time-map";
-import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
+import type { TonalPatternId, TonalPatternType } from "../music-theory/pitch-snap";
 import {
   type Note,
 } from "../notes/note";

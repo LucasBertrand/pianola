@@ -36,20 +36,19 @@ project-io                 Standard MIDI File
 Règles exécutables :
 
 1. `src/app/` assemble et n’héberge aucun protocole complet ;
-2. `src/domain/`, `src/editor/` et `src/music/` ne connaissent ni React ni le
-   navigateur ;
+2. `src/domain/` — théorie musicale comprise — et `src/editor/` ne connaissent
+   ni React ni le navigateur ;
 3. `src/editor/` ne dépend ni de `src/application/` ni de `src/use-cases/` ;
 4. `src/use-cases/` ne dépend pas de l’UI ;
 5. `src/infrastructure/` implémente les ports sans dépendre de la composition ;
 6. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
 7. une intention musicale validée produit au plus une transaction.
 
-Le contrôle couvre explicitement les douze racines TypeScript courantes avec une
+Le contrôle couvre explicitement les onze racines TypeScript courantes avec une
 liste fermée de dépendances. Il construit deux graphes distincts pour le code
 produit et les tests, interdit tout import produit vers un test et détecte les
-cycles dans chacun. Le seul cycle accepté dans la baseline courante relie
-`spatial-index.ts` à `spatial-index-search.ts` ; sa suppression est planifiée au
-lot 4 et tout nouveau cycle échoue immédiatement.
+cycles dans chacun. Aucun cycle n'est accepté ; tout nouveau cycle échoue
+immédiatement.
 
 ## Composition
 
@@ -83,7 +82,9 @@ Le domaine est réparti par propriétaire :
 | `src/domain/instruments/instrument.ts` | sons, presets et instruments |
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
 | `src/domain/transport/transport.ts` | horloge (PPQN) et boucle locale au clip |
-| `src/domain/transport/time-map.ts` | marqueurs de tempo, métrique, gamme et section par clip, navigation en mesures |
+| `src/domain/transport/time-map.ts` | surface publique de la time map ; modèle, navigation, normalisation, marqueurs et éditions structurelles sont dans des modules voisins |
+| `src/domain/music-theory/` | snap tonal, orthographe des hauteurs et détection d'accords |
+| `src/domain/commands/clip-*-commands.ts` | commandes de valeurs, groupes, concaténation/découpe et hiérarchie de clips |
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
 | `src/domain/project/project-document.ts` | document, enchaînement global, workspace et accès clip |
 

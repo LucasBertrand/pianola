@@ -19,7 +19,7 @@ import {
 import {
   serializePianolaProject,
 } from "../../infrastructure/project-files/pianola/pianola-project-codec";
-import { FILE_CONSTANTS } from "../../config/pianola-file-config";
+import { FILE_CONSTANTS } from "../../infrastructure/project-files/pianola/pianola-file-constants";
 import type {
   ShowApplicationAlert,
 } from "../../use-cases/dialogs/application-dialog-port";

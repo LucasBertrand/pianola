@@ -17,8 +17,8 @@ Pour MIDI : `midi/standard-midi-file.ts`, puis reader/writer et analyse.
 
 ## Quelles dépendances sont autorisées ?
 
-Cette zone dépend du domaine, de la configuration et des projections neutres.
-React, composants UI et composition `app` sont interdits.
+Cette zone dépend du domaine, de ses constantes MIDI colocalisées et des
+projections neutres. React, composants UI et composition `app` sont interdits.
 
 ## Où sont les tests ?
 

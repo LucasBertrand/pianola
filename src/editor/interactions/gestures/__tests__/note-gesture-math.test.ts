@@ -6,7 +6,7 @@ import {
 } from "../../../../domain/transport/time-map";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../../../../music/pitch-snap";
+} from "../../../../domain/music-theory/pitch-snap";
 import {
   resolvePitchSnapSettings,
 } from "../../../../use-cases/piano-roll/timeline/pitch-snap-resolution";

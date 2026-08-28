@@ -1,5 +1,7 @@
-import { PROJECT_CONSTANTS } from "../../../../config/domain-limits";
-import { TONAL_SNAP_CONSTANTS } from "../../../../config/music-config";
+import {
+  PROJECT_CONSTANTS,
+} from "../../../../domain/project/project-constants";
+import { TONAL_SNAP_CONSTANTS } from "../../../../domain/music-theory/tonal-snap-constants";
 import {
   DEFAULT_CLIP_BYPASS_ENABLED,
   type Clip,

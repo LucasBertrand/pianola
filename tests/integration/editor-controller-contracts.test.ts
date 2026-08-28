@@ -25,7 +25,7 @@ import {
 } from "../../src/editor/viewport/viewport-controller";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../../src/music/pitch-snap";
+} from "../../src/domain/music-theory/pitch-snap";
 import {
   NoteGestureWorkflowAdapter,
 } from "../../src/ui/piano-roll/interactions/note-gesture-workflow-adapter";

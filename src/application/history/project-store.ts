@@ -4,7 +4,7 @@ import {
 import type { Transaction } from "../../domain/commands/transaction";
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../../domain/project/project-constants";
 import {
   type ClipId,
 } from "../../domain/identifiers";

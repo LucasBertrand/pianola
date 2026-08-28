@@ -5,7 +5,7 @@ import {
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 
 export type SelectionMode = "replace" | "add" | "subtract";
 

@@ -6,7 +6,7 @@ import {
 } from "../../../domain/transport/time-map";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 
 export function resolvePitchSnapSettings(
   timeMap: TimeMap,

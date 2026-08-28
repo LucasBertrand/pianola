@@ -1,6 +1,6 @@
 import {
   INTERACTION_CONSTANTS,
-} from "../../../config/interaction-config";
+} from "../../../editor/interactions/interaction-constants";
 import {
   getActiveClip,
 } from "../../../domain/project/project-document";
@@ -32,7 +32,7 @@ import type {
 import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   resolvePitchSnapSettings,
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";

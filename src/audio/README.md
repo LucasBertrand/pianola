@@ -107,8 +107,8 @@ par quantum audio.
 
 ## Quelles dépendances sont autorisées ?
 
-Audio peut dépendre du domaine, de la configuration et des primitives de temps.
-Il ne dépend ni de React, ni de composants UI, ni de `app`.
+Audio peut dépendre du domaine et de ses propres constantes. Il ne dépend ni de
+React, ni de composants UI, ni de `app`.
 
 ## Où sont les tests ?
 

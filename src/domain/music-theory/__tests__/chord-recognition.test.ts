@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { createTestNote } from "../../../tests/support/test-builders";
-import type { TimeMap } from "../../domain/transport/time-map";
+import { createTestNote } from "../../../../tests/support/test-builders";
+import type { TimeMap } from "../../transport/time-map";
 import {
   resolvePitchSnapSettings,
-} from "../../use-cases/piano-roll/timeline/pitch-snap-resolution";
+} from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import { detectChordsFromNotes } from "../chord-recognition";
 import type { PitchSnapSettings } from "../pitch-snap";
 import { spellPitchClass } from "../tonal-spelling";

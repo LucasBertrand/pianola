@@ -62,7 +62,12 @@ test("reports an actionable failure for a forbidden import", () => {
 
 test("rejects a browser API in a protected source zone", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "pianola-boundaries-"));
-  const musicDirectory = path.join(fixtureRoot, "src", "music");
+  const musicDirectory = path.join(
+    fixtureRoot,
+    "src",
+    "domain",
+    "music-theory",
+  );
 
   temporaryDirectories.push(fixtureRoot);
   mkdirSync(musicDirectory, { recursive: true });
@@ -84,12 +89,14 @@ test("rejects a browser API in a protected source zone", () => {
   );
 
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain("src/music/browser-coupling.ts:1");
+  expect(result.stderr).toContain(
+    "src/domain/music-theory/browser-coupling.ts:1",
+  );
   expect(result.stderr).toContain("<browser-global:document>");
   expect(result.stderr).toContain("[core-browser-isolation]");
 });
 
-test("enforces the dependency map for every current production layer", () => {
+test("rejects the retired config root", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "pianola-boundaries-"));
   const configDirectory = path.join(fixtureRoot, "src", "config");
   const domainDirectory = path.join(fixtureRoot, "src", "domain");
@@ -106,8 +113,8 @@ test("enforces the dependency map for every current production layer", () => {
   const result = runBoundaryCheck(fixtureRoot);
 
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain("src/config/invalid-owner.ts:1");
-  expect(result.stderr).toContain("[current-layer-direction]");
+  expect(result.stderr).toContain("src/config/invalid-owner.ts");
+  expect(result.stderr).toContain("[unregistered-source-zone]");
 });
 
 test("rejects an editor dependency on use-case orchestration", () => {

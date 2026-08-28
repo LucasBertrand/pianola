@@ -4,10 +4,10 @@ import {
 } from "react";
 import {
   APPLICATION_COLORS,
-} from "../../../config/application-colors";
+} from "../../../styles/application-colors";
 import {
   RENDERING_CONSTANTS,
-} from "../../../config/rendering-config";
+} from "../../piano-roll/rendering/rendering-constants";
 import type {
   InstrumentId,
   PresetId,

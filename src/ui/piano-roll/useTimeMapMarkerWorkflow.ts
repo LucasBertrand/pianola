@@ -21,7 +21,7 @@ import {
   planMarkerMove,
   type TimeMapMarkerDraft,
 } from "../../use-cases/piano-roll/timeline/time-map-marker-plans";
-import type { TonalPatternId, TonalPatternType } from "../../music/pitch-snap";
+import type { TonalPatternId, TonalPatternType } from "../../domain/music-theory/pitch-snap";
 
 export interface TimeMapMarkerWorkflow {
   readonly draft: TimeMapMarkerDraft | null;

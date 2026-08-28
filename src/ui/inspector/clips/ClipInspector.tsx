@@ -23,7 +23,7 @@ import type { ClipGroupId, ClipId } from "../../../domain/identifiers";
 import type { EditorSessionState } from "../../../domain/project/project-document";
 import type { ReadonlyRenderSignal } from "../../../editor/model/render-signal";
 import type { PlayheadPosition } from "../../../editor/model/playhead-position";
-import { RENDERING_CONSTANTS } from "../../../config/rendering-config";
+import { RENDERING_CONSTANTS } from "../../piano-roll/rendering/rendering-constants";
 import { createDefaultTimeSignature } from "../../../domain/transport/time-map";
 import {
   ClipGroupDeleteDialog,

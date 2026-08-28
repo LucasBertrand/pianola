@@ -1,6 +1,6 @@
 import {
   APPLICATION_COLORS,
-} from "../../../config/application-colors";
+} from "../../../styles/application-colors";
 
 const lockedNotePatterns =
   new WeakMap<CanvasRenderingContext2D, CanvasPattern>();

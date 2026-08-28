@@ -5,10 +5,10 @@ import React, {
 } from "react";
 import {
   EDITOR_CONSTANTS,
-} from "../../config/editor-config";
+} from "../../editor/model/editor-constants";
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../../domain/project/project-constants";
 import {
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,

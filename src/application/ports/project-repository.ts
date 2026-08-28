@@ -10,7 +10,7 @@ import type {
 } from "../../editor/model/grid-settings";
 import type {
   PitchSnapSettings,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 
 /** Navigation state for one clip, expressed without CSS pixel offsets. */
 export interface PersistedClipEditorState {

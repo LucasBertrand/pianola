@@ -1,7 +1,6 @@
 import {
-  APPLICATION_CONSTANTS,
-} from "../../config/product-config";
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
+  PROJECT_CONSTANTS,
+} from "../../domain/project/project-constants";
 import {
   type Clip,
   createDefaultClipTimeline,
@@ -45,7 +44,7 @@ export function createBlankEditorSessionState(): EditorSessionState {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     revision: 0,
-    title: APPLICATION_CONSTANTS.defaultProjectTitle,
+    title: PROJECT_CONSTANTS.defaultProjectTitle,
     clock,
     projectInstrumentsById: {},
     instrumentOrder: [],

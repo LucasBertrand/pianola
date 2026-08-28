@@ -29,7 +29,9 @@ import {
   type Note,
 } from "../../src/domain/notes/note";
 import { createDefaultProjectInstrument } from "../../src/domain/project-instrument-factory";
-import { PROJECT_CONSTANTS } from "../../src/config/domain-limits";
+import {
+  PROJECT_CONSTANTS,
+} from "../../src/domain/project/project-constants";
 
 export const TEST_INSTRUMENT_ID = "instrument-a";
 export const TEST_CLIP_ID = "clip-a";

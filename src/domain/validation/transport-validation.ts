@@ -12,8 +12,10 @@ import {
   type TempoMarker,
   type TimeSignature,
 } from "../transport/time-map";
-import { PROJECT_CONSTANTS } from "../../config/domain-limits";
-import { TONAL_SNAP_CONSTANTS } from "../../config/music-config";
+import {
+  PROJECT_CONSTANTS,
+} from "../project/project-constants";
+import { TONAL_SNAP_CONSTANTS } from "../music-theory/tonal-snap-constants";
 import { isValidTick } from "./note-validation";
 import {
   assertValidationResult,

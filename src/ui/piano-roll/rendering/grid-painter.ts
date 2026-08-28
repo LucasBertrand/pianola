@@ -1,9 +1,9 @@
 import {
   APPLICATION_COLORS,
-} from "../../../config/application-colors";
+} from "../../../styles/application-colors";
 import {
   RENDERING_CONSTANTS,
-} from "../../../config/rendering-config";
+} from "./rendering-constants";
 import {
   type ProjectClock,
 } from "../../../domain/transport/transport";
@@ -26,7 +26,7 @@ import {
   getPitchSnapRootPitchClass,
   isPitchAllowedByTonalPattern,
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   APPLICATION_SURFACE_COLOR,
 } from "./theme";

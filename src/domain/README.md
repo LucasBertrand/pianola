@@ -16,14 +16,16 @@ Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
 `clips/clip-hierarchy.ts`,
 `instruments/instrument.ts` ou `notes/note.ts`. Une mutation commence dans
 `commands/command-types.ts` et aboutit au reducer. La structure temporelle
-d’un clip — marqueurs de tempo, métrique, gamme et section, dérivation des mesures — vit
-dans `transport/time-map.ts` ; ses invariants sont validés dans
+d’un clip — marqueurs de tempo, métrique, gamme et section, dérivation des
+mesures — est exposée par `transport/time-map.ts` et répartie dans les modules
+`time-map-*`, `time-signature.ts` et `*-marker-operations.ts`. La théorie
+musicale pure vit dans `music-theory/`. Les invariants sont validés dans
 `validation/transport-validation.ts`.
 
 ## Quelles dépendances sont autorisées ?
 
-Le domaine peut dépendre de configuration métier et de TypeScript. Il ne dépend
-ni de React, ni du navigateur, ni de `ui` ou `app`.
+Les constantes métier sont colocalisées dans le domaine. Celui-ci ne dépend ni
+de React, ni du navigateur, ni de `ui` ou `app`.
 
 ## Où sont les tests ?
 

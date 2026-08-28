@@ -7,10 +7,10 @@ import {
 } from "./app/App";
 import {
   APPLICATION_CONSTANTS,
-} from "./config/product-config";
+} from "./application/product/product-constants";
 import {
   APPLICATION_CSS_COLOR_VARIABLES,
-} from "./config/application-colors";
+} from "./styles/application-colors";
 import {
   installBrowserErrorCapture,
 } from "./ui/diagnostics/browser-error-reporter";

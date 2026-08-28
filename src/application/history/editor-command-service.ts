@@ -12,7 +12,7 @@ import type {
 } from "./project-store";
 import {
   PROJECT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../../domain/project/project-constants";
 import {
   EditorSelection,
   type SelectedTimeMapMarkerGroup,

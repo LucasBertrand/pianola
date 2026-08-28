@@ -18,7 +18,7 @@ import type {
 } from "./editor-runtime";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 import type {
   PersistedClipEditorState,
   PersistedEditorWorkspace,

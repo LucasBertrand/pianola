@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import {
   APPLICATION_CONSTANTS,
-} from "../../config/product-config";
+} from "../../application/product/product-constants";
 import {
   getActiveClip,
 } from "../../domain/project/project-document";
@@ -75,7 +75,7 @@ import type {
 } from "../../editor/interactions/pointer/pointer-interaction-strategy";
 import {
   type PitchSnapSettings,
-} from "../../music/pitch-snap";
+} from "../../domain/music-theory/pitch-snap";
 import type {
   EditorRuntime,
 } from "../../application/editor-session/editor-runtime";

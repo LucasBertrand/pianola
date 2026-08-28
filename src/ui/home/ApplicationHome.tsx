@@ -4,7 +4,7 @@ import React, {
 } from "react";
 import {
   FILE_CONSTANTS,
-} from "../../config/pianola-file-config";
+} from "../../infrastructure/project-files/pianola/pianola-file-constants";
 import type {
   ProjectSummary,
 } from "../../application/ports/project-repository";

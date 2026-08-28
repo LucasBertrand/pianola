@@ -23,9 +23,10 @@ PointerSample → session → machine de gestes → résultat déterministe
 
 ## Quelles dépendances sont autorisées ?
 
-L’éditeur peut dépendre du domaine, de la musique et de la configuration encore
-présentes dans leurs racines courantes. Il ne dépend plus d'`application` ni de
-`use-cases`. React, DOM, Canvas et Web Audio sont interdits.
+L’éditeur peut dépendre du domaine ; ses constantes de viewport, modèle et
+interaction sont colocalisées dans leurs capacités. Il ne dépend plus
+d'`application` ni de `use-cases`. React, DOM, Canvas et Web Audio sont
+interdits.
 
 ## Où sont les tests ?
 

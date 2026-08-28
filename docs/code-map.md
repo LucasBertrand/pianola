@@ -37,7 +37,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le playhead | `src/editor/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier Undo/Redo ou les transactions | `src/application/history/editor-command-service.ts` | `project-store.ts`, puis reducers sous `src/domain/commands/` |
 | modifier l’indicateur de lecture des clips | `src/ui/inspector/clips/clip-playhead-visual.ts` | `src/ui/inspector/clips/ClipInspector.tsx`, puis `src/styles/inspector.css` |
-| modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-commands.ts` |
+| modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-concatenation-commands.ts` |
 | modifier la découpe d’un clip | `src/ui/dialogs/ClipSplitDialog.tsx` | `src/ui/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
 | modifier la duplication d’un groupe | `src/ui/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
 | modifier zoom/scroll | `src/ui/editor-toolbar/PianoRollViewportControls.tsx` | `usePianoRollTransportViewport.ts`, `useViewportControls.ts`, puis contrôleur viewport |
@@ -48,11 +48,11 @@ restent le garde-fou de parité des flux transversaux.
 | modifier l’inspecteur | `src/ui/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
 | modifier le master bus | `src/ui/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
-| modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | commandes de transport, validation et painters ruler/grid |
+| modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | `meter-marker-operations.ts`, `point-marker-operations.ts`, commandes de transport, validation et painters ruler/grid |
 | modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | workspace codec et parseur de document |
 | modifier autosave ou récupération | `src/ui/project-files/usePianoRollProjectLifecycle.ts` | `src/use-cases/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports puis repository IndexedDB/Worker |
 | modifier le MIDI | `src/project-io/midi/standard-midi-file.ts` | reader/writer et analyse |
-| modifier les couleurs | `src/config/application-colors.ts` | tokens CSS et styles de surface |
+| modifier les couleurs | `src/styles/application-colors.ts` | tokens CSS et styles de surface |
 | modifier le responsive | `src/styles/responsive.css` | styles propriétaires des surfaces impliquées |
 
 ## Flux : geste de note
@@ -175,7 +175,7 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 - `src/ui/piano-roll/PianoRollWorkspace.tsx` reste un coordinateur de surface ;
   le DOM, les protocoles complets et les abonnements sont extraits chez leurs
   propriétaires.
-- `src/config/application-colors.ts` est une table de données de thème sans
+- `src/styles/application-colors.ts` est une table de données de thème sans
   protocole concurrent.
 - `src/domain/note-collision.ts` possède l’algorithme cohérent de résolution ;
   son orchestration de dialogue est ailleurs.

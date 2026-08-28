@@ -1,6 +1,6 @@
 import {
   RENDERING_CONSTANTS,
-} from "../../../config/rendering-config";
+} from "./rendering-constants";
 import {
   type InstrumentId,
   type NoteId,
@@ -19,7 +19,7 @@ import type {
 } from "../../../editor/geometry/converter";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import { getLockedNotePattern } from "./locked-note-pattern";
 import { isNoteEditable } from "../../../domain/notes/note";
 import { getNoteOpacity } from "./note-opacity";

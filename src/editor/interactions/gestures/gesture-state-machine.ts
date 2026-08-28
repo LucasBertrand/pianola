@@ -4,7 +4,7 @@ import {
 } from "../../../domain/identifiers";
 import type {
   PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import {
   type NoteSelectionBounds,
   type ResizeDeltaBounds,

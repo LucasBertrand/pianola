@@ -1,6 +1,6 @@
 import {
   PROJECT_CONSTANTS,
-} from "../config/domain-limits";
+} from "./project/project-constants";
 
 export const DEFAULT_MASTER_GAIN =
   PROJECT_CONSTANTS.defaultMasterGain;

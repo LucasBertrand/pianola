@@ -4,7 +4,7 @@ import {
 import {
   snapPitchToTonalPattern,
   type PitchSnapSettings,
-} from "../../../music/pitch-snap";
+} from "../../../domain/music-theory/pitch-snap";
 import type {
   ResizeEdge,
 } from "./gesture-draft";

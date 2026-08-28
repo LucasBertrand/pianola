@@ -1,6 +1,6 @@
 import {
   EDITOR_CONSTANTS,
-} from "../../../config/editor-config";
+} from "../../../editor/model/editor-constants";
 import {
   isNoteEditable,
   type Note,

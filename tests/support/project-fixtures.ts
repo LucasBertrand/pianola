@@ -17,7 +17,7 @@ import {
 } from "../../src/domain/transport/time-map";
 import {
   PROJECT_CONSTANTS,
-} from "../../src/config/domain-limits";
+} from "../../src/domain/project/project-constants";
 import {
   getActiveClip,
   PROJECT_SCHEMA_VERSION,
@@ -42,7 +42,7 @@ import type {
 } from "../../src/application/ports/project-repository";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-} from "../../src/music/pitch-snap";
+} from "../../src/domain/music-theory/pitch-snap";
 import {
   createTestNote,
   createTestProject,

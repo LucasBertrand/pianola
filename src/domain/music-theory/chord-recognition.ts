@@ -1,5 +1,5 @@
 import { Chord, Midi, Interval } from "@tonaljs/tonal";
-import type { Note } from "../domain/notes/note";
+import type { Note } from "../notes/note";
 
 export type NotePitchClassSpeller = (note: Note) => string;
 

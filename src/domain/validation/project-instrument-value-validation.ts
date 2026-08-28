@@ -15,7 +15,7 @@ import {
 } from "../identifiers";
 import {
   INSTRUMENT_CONSTANTS,
-} from "../../config/domain-limits";
+} from "../instruments/instrument-constants";
 import type {
   ValidationIssue,
 } from "./validation-result";
