@@ -38,7 +38,7 @@ import {
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import type {
   EditorCommandPort,
-} from "../../../use-cases/commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 import {
   compareNotesByInstrumentRenderOrder,
 } from "../rendering/note-style";

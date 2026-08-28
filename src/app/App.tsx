@@ -14,7 +14,7 @@ import {
 } from "../use-cases/project-files/create-initial-project";
 import type {
   EditorRuntime,
-} from "../editor/runtime/editor-runtime";
+} from "../application/editor-session/editor-runtime";
 import {
   PianoRollWorkspace,
 } from "../ui/piano-roll/PianoRollWorkspace";
@@ -37,7 +37,7 @@ import {
   createDefaultPersistedEditorWorkspace,
   createStoredEditorSessionState,
   restorePersistedEditorWorkspace,
-} from "../use-cases/persistence/project-workspace";
+} from "../application/editor-session/workspace-persistence";
 import {
   createDocumentId,
   type ProjectSummary,

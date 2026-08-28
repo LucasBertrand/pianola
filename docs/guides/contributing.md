@@ -29,7 +29,8 @@ Un fichier doit avoir un propriétaire fonctionnel unique :
 | --- | --- | --- |
 | invariants et document musical | `src/domain/` | [`src/domain/README.md`](../../src/domain/README.md) |
 | géométrie et gestes sans DOM | `src/editor/` | [`src/editor/README.md`](../../src/editor/README.md) |
-| intentions et orchestration neutres | `src/use-cases/` | [`src/use-cases/README.md`](../../src/use-cases/README.md) |
+| historique, commandes et session | `src/application/history/`, `src/application/editor-session/` | [`docs/state-ownership.md`](../state-ownership.md) |
+| autres intentions et orchestrations neutres | `src/use-cases/` | [`src/use-cases/README.md`](../../src/use-cases/README.md) |
 | timeline et moteur temps réel | `src/audio/` | [`src/audio/README.md`](../../src/audio/README.md) |
 | formats `.pianola` et MIDI | `src/project-io/` | [`src/project-io/README.md`](../../src/project-io/README.md) |
 | React et adaptateurs d'interface | `src/ui/` | [`src/ui/README.md`](../../src/ui/README.md) |

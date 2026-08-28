@@ -19,7 +19,7 @@ import type {
 } from "../../domain/transport/transport";
 import type {
   ProjectStorePort,
-} from "../../domain/project-store";
+} from "../../application/history/project-store";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";

@@ -6,7 +6,7 @@ import type {
 } from "../../domain/project/project-document";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import type {
   PersistedEditorWorkspace,
 } from "../../application/ports/project-repository";
@@ -27,7 +27,7 @@ import {
   createDefaultPersistedEditorWorkspace,
   createEditorSessionState,
   restorePersistedEditorWorkspace,
-} from "../../use-cases/persistence/project-workspace";
+} from "../../application/editor-session/workspace-persistence";
 import {
   downloadBrowserFile,
 } from "./download-browser-file";

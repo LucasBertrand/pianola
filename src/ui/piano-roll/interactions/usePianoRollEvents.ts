@@ -46,7 +46,7 @@ import type {
 } from "../../../music/pitch-snap";
 import type {
   EditorCommandPort,
-} from "../../../use-cases/commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 import type {
   NoteCollisionResolutionRequest,
 } from "../../../use-cases/piano-roll/notes/note-collision-resolution";
@@ -76,7 +76,7 @@ import {
 } from "../../../use-cases/piano-roll/timeline/pitch-snap-resolution";
 import type {
   ProjectStorePort,
-} from "../../../domain/project-store";
+} from "../../../application/history/project-store";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;

@@ -114,7 +114,7 @@ import type {
 } from "../../editor/model/note-color-mode";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import {
   MutableRenderSignal,
 } from "../../editor/model/render-signal";
@@ -197,7 +197,7 @@ import type {
 } from "../../application/ports/user-settings-repository";
 import {
   capturePersistedEditorWorkspace,
-} from "../../use-cases/persistence/project-workspace";
+} from "../../application/editor-session/workspace-persistence";
 import {
   createPersonalInstrumentPreset,
   createPersonalInstrumentPresetId,

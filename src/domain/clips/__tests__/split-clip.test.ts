@@ -8,7 +8,7 @@ import {
   splitClip,
   type SplitClipOptions,
 } from "../split-clip";
-import { ProjectStore } from "../../project-store";
+import { ProjectStore } from "../../../application/history/project-store";
 import {
   createTestNote,
   createTestProject,

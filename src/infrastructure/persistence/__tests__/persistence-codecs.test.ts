@@ -12,7 +12,7 @@ import {
 } from "../../project-files/pianola/pianola-project-codec";
 import {
   createDefaultPersistedEditorWorkspace,
-} from "../../../use-cases/persistence/project-workspace";
+} from "../../../application/editor-session/workspace-persistence";
 import {
   InMemoryProjectRepository,
 } from "../memory/in-memory-project-repository";

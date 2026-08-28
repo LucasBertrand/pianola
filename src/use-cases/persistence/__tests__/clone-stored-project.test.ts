@@ -8,7 +8,7 @@ import {
 } from "../../../../tests/support/test-builders";
 import {
   createDefaultPersistedEditorWorkspace,
-} from "../project-workspace";
+} from "../../../application/editor-session/workspace-persistence";
 import {
   createStoredProjectClone,
 } from "../clone-stored-project";

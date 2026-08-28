@@ -10,7 +10,7 @@ import {
 } from "../../../domain/clips/clip-hierarchy";
 import type {
   EditorRuntime,
-} from "../../../editor/runtime/editor-runtime";
+} from "../../../application/editor-session/editor-runtime";
 import type {
   ClipWorkflow,
 } from "./useClipWorkflow";

@@ -16,7 +16,7 @@ import type {
 } from "../../../domain/identifiers";
 import type {
   EditorCommandPort,
-} from "../../../use-cases/commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 import type {
   ShowApplicationAlert,
 } from "../../../use-cases/dialogs/application-dialog-port";

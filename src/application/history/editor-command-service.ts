@@ -9,7 +9,7 @@ import {
 import { type EditorSessionState } from "../../domain/project/project-document";
 import type {
   ProjectStorePort,
-} from "../../domain/project-store";
+} from "./project-store";
 import {
   PROJECT_CONSTANTS,
 } from "../../config/domain-limits";

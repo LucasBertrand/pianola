@@ -6,7 +6,7 @@ import {
   TEST_INSTRUMENT_ID,
 } from "../../../../tests/support/test-builders";
 import { compilePlaybackPlan } from "../../../audio/playback-snapshot";
-import { ProjectStore } from "../../project-store";
+import { ProjectStore } from "../../../application/history/project-store";
 import { CommandRejectedError } from "../command-errors";
 
 describe("note mute and lock commands", () => {

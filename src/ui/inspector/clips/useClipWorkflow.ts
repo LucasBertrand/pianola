@@ -8,7 +8,7 @@ import type {
 } from "../../../domain/commands/command-types";
 import type {
   EditorCommandPort,
-} from "../../../use-cases/commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 import {
   createDefaultTransportState,
 } from "../../../domain/transport/transport";

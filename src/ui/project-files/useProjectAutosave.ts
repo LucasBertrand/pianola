@@ -8,7 +8,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import type {
   ProjectRepository,
 } from "../../application/ports/project-repository";
@@ -21,7 +21,7 @@ import {
 } from "../../use-cases/persistence/project-autosave";
 import {
   capturePersistedEditorWorkspace,
-} from "../../use-cases/persistence/project-workspace";
+} from "../../application/editor-session/workspace-persistence";
 
 export interface ProjectAutosaveSession {
   readonly status: ProjectSaveStatus;

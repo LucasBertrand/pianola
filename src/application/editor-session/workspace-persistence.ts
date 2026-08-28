@@ -15,7 +15,7 @@ import {
 import type {
   ClipEditorRuntimeState,
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "./editor-runtime";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../music/pitch-snap";
@@ -23,7 +23,7 @@ import type {
   PersistedClipEditorState,
   PersistedEditorWorkspace,
   StoredProject,
-} from "../../application/ports/project-repository";
+} from "../ports/project-repository";
 
 export function createDefaultPersistedEditorWorkspace(
   document: ProjectDocument,

@@ -110,6 +110,28 @@ test("enforces the dependency map for every current production layer", () => {
   expect(result.stderr).toContain("[current-layer-direction]");
 });
 
+test("rejects an editor dependency on use-case orchestration", () => {
+  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "pianola-boundaries-"));
+  const editorDirectory = path.join(fixtureRoot, "src", "editor");
+  const useCasesDirectory = path.join(fixtureRoot, "src", "use-cases");
+
+  temporaryDirectories.push(fixtureRoot);
+  mkdirSync(editorDirectory, { recursive: true });
+  mkdirSync(useCasesDirectory, { recursive: true });
+  writeFileSync(
+    path.join(editorDirectory, "invalid-runtime.ts"),
+    'import "../use-cases/commands";\n',
+  );
+  writeFileSync(path.join(useCasesDirectory, "commands.ts"), "export {};\n");
+
+  const result = runBoundaryCheck(fixtureRoot);
+
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("src/editor/invalid-runtime.ts:1");
+  expect(result.stderr).toContain("editor must not depend on use-cases");
+  expect(result.stderr).toContain("[current-layer-direction]");
+});
+
 test("detects production import cycles", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "pianola-boundaries-"));
   const domainDirectory = path.join(fixtureRoot, "src", "domain");

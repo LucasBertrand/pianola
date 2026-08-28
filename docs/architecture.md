@@ -21,6 +21,8 @@ d’édition et le moteur audio vivent dans l’onglet du navigateur.
 main.tsx
   → app                    création du runtime
   → ui                     composition React et adaptateurs DOM/Canvas
+  → application/history    historique et transactions d'édition
+  → application/editor-session agrégat et workspace de session
   → use-cases              intentions indépendantes de React
   → application/ports      contrats injectés
   → domain                 document, commandes et invariants
@@ -36,10 +38,11 @@ Règles exécutables :
 1. `src/app/` assemble et n’héberge aucun protocole complet ;
 2. `src/domain/`, `src/editor/` et `src/music/` ne connaissent ni React ni le
    navigateur ;
-3. `src/use-cases/` ne dépend pas de l’UI ;
-4. `src/infrastructure/` implémente les ports sans dépendre de la composition ;
-5. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
-6. une intention musicale validée produit au plus une transaction.
+3. `src/editor/` ne dépend ni de `src/application/` ni de `src/use-cases/` ;
+4. `src/use-cases/` ne dépend pas de l’UI ;
+5. `src/infrastructure/` implémente les ports sans dépendre de la composition ;
+6. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
+7. une intention musicale validée produit au plus une transaction.
 
 Le contrôle couvre explicitement les douze racines TypeScript courantes avec une
 liste fermée de dépendances. Il construit deux graphes distincts pour le code
@@ -50,7 +53,8 @@ lot 4 et tout nouveau cycle échoue immédiatement.
 
 ## Composition
 
-`src/app/App.tsx` crée `EditorRuntime` et monte
+`src/app/App.tsx` crée l'agrégat `EditorRuntime`, dont le contrat appartient à
+`src/application/editor-session/editor-runtime.ts`, et monte
 `src/ui/piano-roll/PianoRollWorkspace.tsx`. Le workspace assemble les surfaces,
 mais délègue les protocoles à des hooks nommés :
 
@@ -95,7 +99,8 @@ sont dérivées de la `TimeMap` ; aucun nombre de mesures ni tempo « courant »
 n’est persisté.
 
 Les mutations durables passent par `EditorCommandPort`, une transaction et les
-reducers de `src/domain/commands/`. `ProjectStore` est le propriétaire de
+reducers de `src/domain/commands/`. `EditorCommandService` et `ProjectStore`
+appartiennent à `src/application/history/`; `ProjectStore` est le propriétaire de
 l’historique musical. La concaténation d’un groupe construit d’abord un clip
 indépendant à partir des descendants non bypassés dans
 `src/domain/clips/concatenate-clips.ts`, puis une commande
@@ -118,15 +123,15 @@ Tout le noyau propre à l’éditeur visible partage la racine
 geometry/       conversions, bornes, région visible et index spatial
 interactions/   draft, machine de gestes, pointeurs et session
 model/          signaux et réglages neutres
-runtime/        services d’un workspace
 selection/      sélection transitoire et requêtes
 viewport/       publication, batching et suivi de lecture
 ```
 
-Les cas d’usage correspondants partagent
+L'agrégat de session qui compose ces mécanismes reste hors du noyau, sous
+`src/application/editor-session/`. Les cas d’usage correspondants partagent
 `src/use-cases/piano-roll/notes/` et
-`src/use-cases/piano-roll/selection/`. Les primitives réellement transversales,
-comme le service de commandes, restent au niveau `src/use-cases/commands/`.
+`src/use-cases/piano-roll/selection/`. Le service de commandes transversal est
+possédé par `src/application/history/`.
 
 ## UI et styles
 

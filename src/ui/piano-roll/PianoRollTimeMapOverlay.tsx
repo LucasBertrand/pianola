@@ -8,7 +8,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   ProjectStorePort,
-} from "../../domain/project-store";
+} from "../../application/history/project-store";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";

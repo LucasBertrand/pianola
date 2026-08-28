@@ -16,7 +16,7 @@ import {
 import {
   createTestProject,
 } from "../../../../tests/support/test-builders";
-import { ProjectStore } from "../../project-store";
+import { ProjectStore } from "../../../application/history/project-store";
 import { duplicateClipValue } from "../../clips/duplicate-clip";
 
 describe("clip group commands", () => {

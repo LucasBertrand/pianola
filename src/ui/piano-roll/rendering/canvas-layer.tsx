@@ -17,7 +17,7 @@ import {
 } from "../../../domain/notes/note";
 import type {
   ProjectStorePort,
-} from "../../../domain/project-store";
+} from "../../../application/history/project-store";
 import {
   CoordinateConverter,
   type ViewportState,

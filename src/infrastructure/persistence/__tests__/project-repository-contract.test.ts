@@ -20,7 +20,7 @@ import {
 } from "../indexed-db/pianola-indexed-db";
 import {
   createDefaultPersistedEditorWorkspace,
-} from "../../../use-cases/persistence/project-workspace";
+} from "../../../application/editor-session/workspace-persistence";
 import {
   createInMemoryProjectStorage,
   InMemoryProjectRepository,

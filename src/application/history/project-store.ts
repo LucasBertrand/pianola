@@ -1,20 +1,20 @@
 import {
   projectReducer,
-} from "./commands/reducer";
-import type { Transaction } from "./commands/transaction";
+} from "../../domain/commands/reducer";
+import type { Transaction } from "../../domain/commands/transaction";
 import {
   PROJECT_CONSTANTS,
-} from "../config/domain-limits";
+} from "../../config/domain-limits";
 import {
   type ClipId,
-} from "./identifiers";
+} from "../../domain/identifiers";
 import {
   getClipPlaybackOrder,
-} from "./clips/clip-hierarchy";
+} from "../../domain/clips/clip-hierarchy";
 import {
   type ProjectDocument,
   type EditorSessionState,
-} from "./project/project-document";
+} from "../../domain/project/project-document";
 
 export type ProjectStoreListener = (
   state: EditorSessionState,

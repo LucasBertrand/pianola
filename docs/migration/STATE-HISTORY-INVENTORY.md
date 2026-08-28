@@ -31,8 +31,8 @@ les modifie.
 Sources principales :
 
 - [`project-document.ts`](../../src/domain/project/project-document.ts) ;
-- [`project-store.ts`](../../src/domain/project-store.ts) ;
-- [`editor-command-service.ts`](../../src/use-cases/commands/editor-command-service.ts).
+- [`project-store.ts`](../../src/application/history/project-store.ts) ;
+- [`editor-command-service.ts`](../../src/application/history/editor-command-service.ts).
 
 ## Contenu du `ProjectDocument` historisé
 

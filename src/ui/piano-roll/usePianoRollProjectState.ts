@@ -12,7 +12,7 @@ import type {
 } from "../../domain/project/project-document";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import type {
   Note,
 } from "../../domain/notes/note";

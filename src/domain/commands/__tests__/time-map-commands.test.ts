@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ProjectStore } from "../../project-store";
+import { ProjectStore } from "../../../application/history/project-store";
 import { CommandRejectedError } from "../command-errors";
 import type { PianoRollCommand } from "../command-types";
 import type { Transaction } from "../transaction";

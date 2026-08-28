@@ -42,7 +42,7 @@ import type {
 } from "../../use-cases/dialogs/application-dialog-port";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import {
   type EditorSessionState,
 } from "../../domain/project/project-document";

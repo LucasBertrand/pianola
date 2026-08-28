@@ -4,7 +4,7 @@ import {
 } from "vitest";
 import {
   EditorCommandService,
-} from "../../src/use-cases/commands/editor-command-service";
+} from "../../src/application/history/editor-command-service";
 import {
   EditorSelectionRequests,
 } from "../../src/editor/selection/editor-selection-requests";
@@ -83,7 +83,7 @@ import {
 } from "../../src/domain/note-collision";
 import {
   ProjectStore,
-} from "../../src/domain/project-store";
+} from "../../src/application/history/project-store";
 import {
   SelectionTransformationError,
   transformNoteSelection,

@@ -16,15 +16,17 @@ import {
   validateIndexableNotes,
   type SpatialIndexBucket,
 } from "./spatial-index-search";
+import type {
+  SpatialTouchEnvelope,
+} from "./spatial-touch-envelope";
+
+export type {
+  SpatialTouchEnvelope,
+} from "./spatial-touch-envelope";
 
 const PITCH_BUCKET_COUNT =
   MAX_MIDI_PITCH - MIN_MIDI_PITCH + 1;
 const TOUCH_QUERY_END_EPSILON_TICKS = 0.000_001;
-
-export interface SpatialTouchEnvelope {
-  readonly tickRadius: number;
-  readonly pitchRadius: number;
-}
 
 export type SpatialNoteEdge = "start" | "end";
 

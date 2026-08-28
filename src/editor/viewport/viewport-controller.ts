@@ -4,6 +4,7 @@ import {
 } from "../../config/editor-config";
 import {
   getActiveClip,
+  type EditorSessionState,
 } from "../../domain/project/project-document";
 import {
   getClipDurationTicks,
@@ -32,8 +33,22 @@ import {
   getPlaybackFollowScrollX,
 } from "../geometry/viewport-bounds";
 import type {
-  EditorRuntime,
-} from "../runtime/editor-runtime";
+  MutableRenderSignal,
+  ReadonlyRenderSignal,
+} from "../model/render-signal";
+
+/** Pure editor capabilities required to coordinate one viewport. */
+export interface ViewportRuntimePort {
+  readonly projectStore: {
+    getState(): EditorSessionState;
+  };
+  readonly viewportWidth: MutableRenderSignal<number>;
+  readonly viewportHeight: MutableRenderSignal<number>;
+  readonly viewport: MutableRenderSignal<ViewportState>;
+  readonly visibleRegion: MutableRenderSignal<Rect>;
+  readonly playheadTick: ReadonlyRenderSignal<number>;
+  readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+}
 
 const VIEW_INPUT_HORIZONTAL_SCROLL = 1;
 const VIEW_INPUT_HORIZONTAL_ZOOM = 2;
@@ -72,7 +87,7 @@ export class ViewportController {
   private pendingVerticalZoom = 1;
 
   public constructor(
-    private readonly runtime: EditorRuntime,
+    private readonly runtime: ViewportRuntimePort,
   ) {}
 
   public setFollowPlayback(followPlayback: boolean): void {

@@ -9,7 +9,7 @@ import {
 } from "../../../../tests/support/test-builders";
 import {
   ProjectStore,
-} from "../../project-store";
+} from "../../../application/history/project-store";
 import type {
   Clip,
 } from "../clip";

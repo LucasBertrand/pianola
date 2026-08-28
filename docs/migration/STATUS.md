@@ -7,10 +7,10 @@ workspace réel, pas seulement l'intention.
 
 - Statut : EN ATTENTE
 - Lot actif : Aucun
-- Dernier lot terminé : 3 — Ports et adaptateurs de persistance
-- Prochaine action : après revue du lot 3, ouvrir le lot 4 en vérifiant sa
-  condition d'entrée ; ne pas déplacer le runtime ou corriger le cycle spatial
-  avant cette ouverture
+- Dernier lot terminé : 4 — Cœur d'édition et session applicative
+- Prochaine action : après revue du lot 4, vérifier la condition d'entrée du
+  lot 5 et commencer uniquement son premier jalon ; ne pas décomposer
+  `PianoRollWorkspace` avant cette ouverture
 - Dernière mise à jour : 2026-08-28
 
 ## Politique de rollback en vigueur
@@ -27,14 +27,13 @@ le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 �
 - arborescence source actuelle : `app`, `application`, `audio`, `config`,
   `domain`, `editor`, `infrastructure`, `music`, `project-io`, `pwa`, `styles`,
   `ui`, `use-cases` ;
-- un cycle d'import typé a été détecté entre `spatial-index.ts` et
-  `spatial-index-search.ts` ;
+- aucun cycle d'import produit ou test n'est accepté ;
 - `PianoRollWorkspace.tsx` est le principal point de concentration ;
 - `time-map.ts` et `clip-commands.ts` dépassent désormais 1 000 lignes ;
 - le format `.pianola` est sous `infrastructure/project-files/pianola` et la
   persistance locale sous `infrastructure/persistence` ;
-- les contrôles analysent séparément 268 fichiers produit et 66 modules de
-  test ; tout nouveau cycle est interdit ;
+- les contrôles analysent séparément 269 fichiers produit et 66 modules de
+  test ; tout cycle est interdit ;
 - la couverture ciblée et les trois mesures de rendu sont consignées dans
   `LOT-0-BASELINES.md`.
 
@@ -60,7 +59,7 @@ D  docs/storage-strategies.md
 | 1 | TERMINÉ | Cinq types explicites adoptés ; alias supprimés ; garde-fous et suite complète verts |
 | 2 | TERMINÉ | Format `.pianola` |
 | 3 | TERMINÉ | Ports applicatifs, adaptateurs infrastructure et reset local validés |
-| 4 | À FAIRE | Cœur d'édition |
+| 4 | TERMINÉ | Historique et session sous `application`, cœur découplé, cycle supprimé |
 | 5 | À FAIRE | `PianoRollWorkspace` |
 | 6 | À FAIRE | Configurations et horizontales |
 | 7 | À FAIRE | Renommage physique des couches |
@@ -74,7 +73,9 @@ supprimés avant sa sortie. Le profiler opt-in `renderBaseline=1` est un
 diagnostic conservé jusqu'à la comparaison du lot 5, pas une façade de
 compatibilité. Le lot 3 n'ajoute aucun alias : les anciens chemins de
 persistance ont été supprimés et les anciennes données locales sont
-réinitialisées, pas converties.
+réinitialisées, pas converties. Le lot 4 n'ajoute aucun alias : les anciens
+chemins du store, du service de commandes, du runtime et de la projection du
+workspace sont supprimés.
 
 ## Écarts et découvertes
 
@@ -82,7 +83,6 @@ réinitialisées, pas converties.
   reste ciblée et la validation complète s'exécute sans instrumentation ;
 - les trois composants React concentrés ont une couverture directe nulle et
   restent interdits de découpage avant leurs tests de caractérisation ;
-- le cycle typé `spatial-index` reste accepté nominativement jusqu'au lot 4 ;
 - le chunk JavaScript principal supérieur à 500 kB reste un avertissement de
   build non bloquant et préexistant ;
 - le premier passage du scénario de rendu est un outlier à froid ; la médiane
@@ -94,9 +94,214 @@ réinitialisées, pas converties.
   leur déplacement de couche n'est pas anticipé et demeure réservé aux lots
   prévus par la feuille de route.
 - les deux fichiers préexistants sous `src/ui/shared` restent réservés au lot 6
-  et n'ont pas été déplacés par le lot 3.
+  et n'ont pas été déplacés par les lots 3 ou 4.
 
 ## Journal
+
+### 2026-08-28 — Lot 4, démarrage
+
+- objectif : séparer l'agrégat applicatif `EditorRuntime` des mécanismes purs
+  d'édition, placer l'historique et l'orchestration des commandes sous
+  `application`, conserver les orchestrations métier hors React, supprimer la
+  dépendance produit `editor → use-cases` et retirer le cycle spatial, sans
+  changement fonctionnel ni décomposition de `PianoRollWorkspace` ;
+- condition d'entrée vérifiée avant toute modification : `STATUS.md` marque le
+  lot 3 `TERMINÉ`, son journal consigne sa validation complète verte, le lot 4
+  est le premier lot `À FAIRE`, et aucune action du lot 5 n'est commencée ;
+- SHA de départ et point de rollback initial :
+  `cd77003d234b2d7ff807c0a89f94acd3b9f88aa6` ; aucun commit dédié au lot 4
+  n'existe, donc un éventuel retour devra être préparé fichier par fichier à
+  partir du diff et de ce journal, sans patch préventif ;
+- état initial du worktree vérifié par `git status --short` : propre ; aucun
+  changement préexistant de l'utilisateur à isoler ;
+- validation de référence avant modification : `npm run verify` réussi —
+  33 fichiers Markdown, 320 fichiers source, frontières vertes sur 268 fichiers
+  produit et 66 modules de test, typecheck et build Vite réussis, smoke
+  AudioWorklet réussi, 62 fichiers de test et 404 tests réussis ; seul
+  l'avertissement préexistant de chunk supérieur à 500 kB subsiste ;
+- audit préalable : `src/domain/project-store.ts` possède l'historique et les
+  notifications de session ;
+  `src/use-cases/commands/editor-command-service.ts` orchestre transactions et
+  checkpoints de sélection ; `src/editor/runtime/editor-runtime.ts` mélange
+  ces services applicatifs avec sélection, index spatial et signaux purs ;
+  `ViewportController` dépend de cet agrégat alors qu'un port étroit suffit ;
+  le seul import produit `editor → use-cases` se trouve dans cet agrégat ; le
+  seul cycle produit reste le cycle typé entre `spatial-index.ts` et
+  `spatial-index-search.ts` ; les orchestrations de capacité neutres déjà sous
+  `use-cases` n'importent pas React, et leurs hooks sous `ui` sont leurs
+  adaptateurs actuels ;
+- périmètre prévu : déplacer le store et le service de commandes sous
+  `src/application/history/`, placer le contrat agrégé de session et la
+  projection du workspace sous `src/application/editor-session/`, introduire
+  sous `src/editor/` les seuls ports étroits nécessaires aux contrôleurs purs,
+  mettre à jour leurs consommateurs sous `src/app`, `src/ui`, `src/use-cases`,
+  `src/infrastructure` et `tests`, extraire le type partagé qui casse le cycle
+  spatial, puis resserrer `scripts/check-import-boundaries.mjs` et son test ;
+- documentation courante prévue : README racine, `docs/architecture.md`,
+  `docs/code-map.md`, `docs/state-ownership.md`,
+  `docs/guides/contributing.md`, `src/editor/README.md` et
+  `src/use-cases/README.md`, selon les chemins effectivement modifiés ;
+- exclusions explicites : aucun découpage ou changement de rendu de
+  `PianoRollWorkspace`, aucun jalon du lot 5, aucune redistribution de
+  configuration ou de `src/music` du lot 6, aucun renommage physique global
+  des couches du lot 7, aucun changement de schéma persistant ;
+- stratégie de sous-étapes : (1) historique et commandes applicatives ;
+  (2) contrat de session, ports/signaux purs et projections de workspace ;
+  (3) cycle spatial et garde-fous ; chaque sous-étape reçoit
+  `npm run typecheck`, `npm run check:boundaries` et ses tests ciblés avant la
+  suivante.
+- sous-étapes historique et session, exécutées ensemble car le déplacement du
+  store rend temporairement invalide l'ancien agrégat : `ProjectStore` et
+  `EditorCommandService` sont sous `src/application/history/` ; le contrat
+  `EditorRuntime` et la projection persistante du workspace sont sous
+  `src/application/editor-session/`. Les services/signaux purs restent chez
+  leurs propriétaires sous `src/editor`, et `ViewportController` dépend
+  désormais d'un `ViewportRuntimePort` étroit, sans connaître l'agrégat
+  applicatif ;
+- séparation React/capacités vérifiée sur ce périmètre : les hooks UI restent
+  des adaptateurs de leurs orchestrations neutres ; aucun import React n'a été
+  introduit sous `application`, `editor` ou `use-cases`, et aucun protocole du
+  lot 5 n'a été déplacé hors de `PianoRollWorkspace` ;
+- fichiers de rollback de cette unité : les trois anciens modules déplacés,
+  les trois nouveaux modules sous `application/history` et
+  `application/editor-session`, `src/editor/viewport/viewport-controller.ts`,
+  et les consommateurs d'import recensés sous `src/app`, `src/domain` (tests),
+  `src/infrastructure` (tests), `src/ui`, `src/use-cases` et `tests/integration` ;
+  revenir en arrière exige de vérifier ce périmètre exact dans le diff depuis
+  le SHA de départ avant toute modification ;
+- validations historique et session : `npm run typecheck` et
+  `npm run check:boundaries` réussis ; 7 fichiers et 76 tests ciblés réussis
+  pour l'historique de sélection, les contrats contrôleur, le comportement
+  critique, l'audio, l'autosave, le clone et le repository. Le contrôle de
+  frontières ne signale plus de dépendance `editor → application` ou
+  `editor → use-cases` ; seul le cycle spatial prévu reste accepté avant la
+  sous-étape suivante.
+- sous-étape cycle spatial et garde-fous : `SpatialTouchEnvelope` est extrait
+  dans `src/editor/geometry/spatial-touch-envelope.ts`, de sorte que
+  `spatial-index-search.ts` n'importe plus `spatial-index.ts`; l'exception
+  `ACCEPTED_PRODUCT_CYCLES` est vide et la matrice interdit désormais tout
+  import produit de `editor` vers `use-cases` ; un test architectural dédié
+  prouve ce refus ;
+- fichiers de rollback cycle et garde-fous : les trois modules
+  `src/editor/geometry/spatial-*`, `scripts/check-import-boundaries.mjs` et
+  `tests/integration/import-boundaries.test.ts`, à comparer au SHA de départ
+  avant un retour ciblé ;
+- validations cycle et garde-fous : `npm run typecheck` et
+  `npm run check:boundaries` réussis sans cycle accepté ; 3 fichiers et 17 tests
+  ciblés réussis pour les frontières, les contrats du contrôleur et les gestes
+  du piano roll ;
+- documentation courante synchronisée : README racine,
+  `docs/architecture.md`, `docs/code-map.md`, `docs/state-ownership.md`,
+  `docs/app-composition.md`, le guide de contribution et les README locaux de
+  l'éditeur et des cas d'usage décrivent les propriétaires réellement présents ;
+  les liens factuels de `STATE-HISTORY-INVENTORY.md` pointent vers les nouveaux
+  propriétaires ;
+- validations documentaires : `npm run check:docs` et
+  `npm run check:structure` réussis — 33 fichiers Markdown et 321 fichiers
+  source.
+- recherches de sortie : aucune occurrence des anciens chemins du store, du
+  service de commandes, du runtime ou de la projection du workspace dans le
+  code, les tests ou la documentation courante ; aucun import produit de
+  `editor` vers `application` ou `use-cases` ; aucun cycle accepté ; la
+  recherche des noms génériques ne retrouve que les deux fichiers préexistants
+  de `src/ui/shared`, réservés au lot 6 ;
+- contrôle du périmètre : `PianoRollWorkspace.tsx` conserve ses 1 427 lignes et
+  ne reçoit que deux mises à jour d'import ; aucun jalon du lot 5 n'est commencé ;
+- validation complète finale : `npm run verify` réussi — 33 fichiers Markdown,
+  321 fichiers source, frontières vertes sur 269 fichiers produit et 66 modules
+  de test sans cycle accepté, typecheck et build Vite réussis, smoke
+  AudioWorklet réussi, 62 fichiers de test et 405 tests réussis ;
+  l'avertissement de chunk supérieur à 500 kB reste inchangé et non bloquant ;
+- statut du lot : `TERMINÉ`. La condition de sortie est satisfaite au stade
+  transitoire autorisé : l'agrégat et les orchestrations de session sont sous
+  `application`, les mécanismes purs restent sous `editor`, `editor` ne dépend
+  plus des cas d'usage, et aucun cycle d'import ne subsiste. Les imports
+  transitoires d'`editor` vers `config` et `music` restent réservés à la
+  redistribution du lot 6, sans anticiper ce lot ;
+- point de rollback final : SHA de départ
+  `cd77003d234b2d7ff807c0a89f94acd3b9f88aa6`, aucun commit dédié et aucun patch
+  créé. Le périmètre exact compte 73 fichiers, journal inclus, listés ci-dessous.
+  Avant tout retour, vérifier chacun contre les changements utilisateur puis
+  préparer un plan ciblé à partir du diff ;
+- prochaine action exacte : après revue du lot 4, ouvrir le lot 5 en vérifiant
+  sa condition d'entrée, puis exécuter uniquement son jalon 1. Ne pas commencer
+  le jalon 2 avant validation séparée du premier.
+
+```text
+README.md
+docs/app-composition.md
+docs/architecture.md
+docs/code-map.md
+docs/guides/contributing.md
+docs/migration/STATE-HISTORY-INVENTORY.md
+docs/migration/STATUS.md
+docs/state-ownership.md
+scripts/check-import-boundaries.mjs
+src/app/App.tsx
+src/app/create-app-runtime.ts
+src/application/editor-session/editor-runtime.ts
+src/application/editor-session/workspace-persistence.ts
+src/application/history/editor-command-service.ts
+src/application/history/project-store.ts
+src/domain/clips/__tests__/concatenate-clips.test.ts
+src/domain/clips/__tests__/split-clip.test.ts
+src/domain/commands/__tests__/clip-group-commands.test.ts
+src/domain/commands/__tests__/command-families.test.ts
+src/domain/commands/__tests__/note-flags-commands.test.ts
+src/domain/commands/__tests__/time-map-commands.test.ts
+src/domain/project-store.ts
+src/editor/README.md
+src/editor/geometry/spatial-index-search.ts
+src/editor/geometry/spatial-index.ts
+src/editor/geometry/spatial-touch-envelope.ts
+src/editor/runtime/editor-runtime.ts
+src/editor/viewport/viewport-controller.ts
+src/infrastructure/persistence/__tests__/persistence-codecs.test.ts
+src/infrastructure/persistence/__tests__/project-repository-contract.test.ts
+src/ui/inspector/clips/useClipDialogWorkflow.ts
+src/ui/inspector/clips/useClipGroupConcatenation.ts
+src/ui/inspector/clips/useClipGroupDuplication.ts
+src/ui/inspector/clips/useClipSplitting.ts
+src/ui/inspector/clips/useClipWorkflow.ts
+src/ui/inspector/instruments/useInstrumentDialogWorkflow.ts
+src/ui/inspector/instruments/useProjectInstrumentWorkflow.ts
+src/ui/piano-roll/PianoRollLoopOverlay.tsx
+src/ui/piano-roll/PianoRollTimeMapOverlay.tsx
+src/ui/piano-roll/PianoRollTimeline.tsx
+src/ui/piano-roll/PianoRollWorkspace.tsx
+src/ui/piano-roll/interactions/begin-piano-roll-long-press-draw.ts
+src/ui/piano-roll/interactions/dom-interaction-visual-controller.ts
+src/ui/piano-roll/interactions/note-gesture-workflow-adapter.ts
+src/ui/piano-roll/interactions/piano-roll-gesture-strategy.ts
+src/ui/piano-roll/interactions/piano-roll-selection-controller.ts
+src/ui/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts
+src/ui/piano-roll/interactions/usePianoRollEvents.ts
+src/ui/piano-roll/piano-roll-runtime-port.ts
+src/ui/piano-roll/rendering/canvas-layer.tsx
+src/ui/piano-roll/usePianoRollClipboard.ts
+src/ui/piano-roll/usePianoRollInstrumentTransfer.ts
+src/ui/piano-roll/usePianoRollLoopGesture.ts
+src/ui/piano-roll/usePianoRollProjectState.ts
+src/ui/piano-roll/usePianoRollSelectionCommands.ts
+src/ui/piano-roll/usePianoRollSelectionWorkflow.ts
+src/ui/piano-roll/useTimeMapMarkerGesture.ts
+src/ui/piano-roll/useTimeMapMarkerWorkflow.ts
+src/ui/piano-roll/useViewportControls.ts
+src/ui/project-files/useMidiFileWorkflow.ts
+src/ui/project-files/useProjectAutosave.ts
+src/ui/project-files/useProjectFileWorkflow.ts
+src/ui/transport/useAudioPlayback.ts
+src/ui/transport/useTransportWorkflow.ts
+src/use-cases/README.md
+src/use-cases/commands/editor-command-service.ts
+src/use-cases/persistence/__tests__/clone-stored-project.test.ts
+src/use-cases/persistence/__tests__/project-autosave.test.ts
+src/use-cases/persistence/project-workspace.ts
+src/use-cases/piano-roll/notes/note-gesture-workflow.ts
+tests/integration/audio-domain-regression.test.mjs
+tests/integration/critical-behavior.test.ts
+tests/integration/import-boundaries.test.ts
+```
 
 ### 2026-08-28 — Lot 3, démarrage
 

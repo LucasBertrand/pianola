@@ -24,7 +24,7 @@ import type {
 } from "./note-collision-resolution";
 import type {
   EditorCommandPort,
-} from "../../commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 import {
   type EditorSelection,
   type SelectedTimeMapMarkerGroup,

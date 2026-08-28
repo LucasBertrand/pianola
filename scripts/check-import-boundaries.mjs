@@ -44,7 +44,6 @@ const CURRENT_SOURCE_ZONE_IMPORTS = new Map([
     "domain",
     "editor",
     "music",
-    "use-cases",
   ])],
   ["music", new Set(["config", "domain", "music", "use-cases"])],
   ["project-io", new Set([
@@ -142,15 +141,7 @@ const MODULE_EXTENSIONS = [
   ".mjs",
   ".cjs",
 ];
-const ACCEPTED_PRODUCT_CYCLES = new Map([
-  [
-    [
-      "src/editor/geometry/spatial-index-search.ts",
-      "src/editor/geometry/spatial-index.ts",
-    ].sort().join("|"),
-    "cycle typé connu, extraction planifiée au lot 4",
-  ],
-]);
+const ACCEPTED_PRODUCT_CYCLES = new Map();
 
 const workspaceRoot = path.resolve(readRootArgument(process.argv.slice(2)));
 const sourceRoot = path.join(workspaceRoot, "src");

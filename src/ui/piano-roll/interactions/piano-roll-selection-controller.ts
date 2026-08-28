@@ -26,7 +26,7 @@ import type {
 } from "../../../editor/selection/editor-selection-requests";
 import type {
   EditorCommandPort,
-} from "../../../use-cases/commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 import type {
   InteractionVisualController,
 } from "./interaction-visual-controller";

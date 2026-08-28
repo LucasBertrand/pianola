@@ -13,7 +13,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   ProjectStorePort,
-} from "../../domain/project-store";
+} from "../../application/history/project-store";
 import {
   snapTickToMeasureGrid,
 } from "../../domain/transport/time-map";

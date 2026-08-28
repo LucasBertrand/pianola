@@ -31,7 +31,7 @@ import {
 } from "../../src/domain/project/project-document";
 import {
   ProjectStore,
-} from "../../src/domain/project-store";
+} from "../../src/application/history/project-store";
 import {
   CRITICAL_BEHAVIOR_EXPECTATION,
   createCriticalBehaviorProject,

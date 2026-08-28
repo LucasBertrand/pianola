@@ -1,6 +1,6 @@
 import type {
   EditorCommandPort,
-} from "../../use-cases/commands/editor-command-service";
+} from "../../application/history/editor-command-service";
 import type {
   EditorSelectionRequests,
 } from "../../editor/selection/editor-selection-requests";
@@ -12,7 +12,7 @@ import {
 } from "../../domain/identifiers";
 import type {
   ProjectStorePort,
-} from "../../domain/project-store";
+} from "../../application/history/project-store";
 import type {
   ViewportState,
 } from "../../editor/geometry/converter";

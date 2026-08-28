@@ -27,7 +27,7 @@ import type {
 } from "../../../domain/identifiers";
 import type {
   EditorCommandPort,
-} from "../../../use-cases/commands/editor-command-service";
+} from "../../../application/history/editor-command-service";
 
 export interface ClipGroupDuplicationOptions {
   readonly commands: EditorCommandPort;

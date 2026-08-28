@@ -79,9 +79,11 @@ Les variantes de tests sont décrites dans le
 ```text
 src/
 ├── app/                         création du runtime et assemblage racine
-├── application/ports/           contrats applicatifs de persistance
-├── domain/                      document musical, invariants et historique
-├── editor/           noyau d’édition indépendant du DOM
+├── application/editor-session/ agrégat de session et workspace persistant
+├── application/history/        store, transactions et sélection Undo/Redo
+├── application/ports/          contrats applicatifs de persistance
+├── domain/                     document musical et invariants
+├── editor/                     noyau d’édition indépendant du DOM
 ├── use-cases/piano-roll/        intentions notes et sélection
 ├── audio/                       timeline et moteur AudioWorklet
 ├── infrastructure/              `.pianola`, codecs et adaptateurs de persistance
@@ -111,7 +113,9 @@ composant visible
   → snapshot dérivé pour Canvas ou Web Audio
 ```
 
-`src/app/App.tsx` crée le runtime et monte `PianoRollWorkspace`. Les protocoles
+`src/app/App.tsx` crée le runtime décrit par
+`src/application/editor-session/editor-runtime.ts` et monte
+`PianoRollWorkspace`. Les protocoles
 de dialogues, instruments, collisions, fichiers, sélection, transport et
 viewport appartiennent aux capacités UI correspondantes.
 

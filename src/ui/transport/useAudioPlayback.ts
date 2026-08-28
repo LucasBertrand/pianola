@@ -21,7 +21,7 @@ import {
 } from "../../domain/transport/transport";
 import type {
   ProjectStorePort,
-} from "../../domain/project-store";
+} from "../../application/history/project-store";
 import type {
   PlaybackStatus,
 } from "../../audio/playback-model";

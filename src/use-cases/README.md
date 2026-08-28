@@ -7,14 +7,16 @@
 
 ## Que possède cette zone ?
 
-Les intentions indépendantes de React : service de commandes, autosave,
-projection du workspace et workflows de notes/sélection du piano roll. Les
-contrats de persistance injectés sont sous `../application/ports/`.
+Les intentions indépendantes de React qui ne sont pas encore déplacées :
+autosave et workflows de notes/sélection du piano roll. L'historique, le service
+de commandes et la projection de session sont désormais sous `../application/`;
+les contrats de persistance injectés sont sous `../application/ports/`.
 
 ## Quel fichier lire en premier ?
 
-Lire `commands/editor-command-service.ts` pour le port de mutation. Pour le
-piano roll, commencer par `piano-roll/notes/note-gesture-workflow.ts` ou
+Lire `../application/history/editor-command-service.ts` pour le port de
+mutation. Pour le piano roll, commencer par
+`piano-roll/notes/note-gesture-workflow.ts` ou
 `piano-roll/selection/selection-edit-plans.ts`. La persistance de session part
 de `persistence/project-autosave.ts`.
 

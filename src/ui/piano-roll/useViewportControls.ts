@@ -10,7 +10,7 @@ import type {
 } from "../../editor/geometry/converter";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import {
   ViewportController,
   type ViewportControlState,

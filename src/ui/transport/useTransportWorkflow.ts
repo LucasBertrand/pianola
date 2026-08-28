@@ -20,7 +20,7 @@ import type {
 } from "../../editor/interactions/piano-roll-controller-port";
 import type {
   EditorRuntime,
-} from "../../editor/runtime/editor-runtime";
+} from "../../application/editor-session/editor-runtime";
 import {
   resolveAdjacentMeasureRange,
   type RelativeMeasurePosition,

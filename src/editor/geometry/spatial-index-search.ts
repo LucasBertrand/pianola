@@ -7,7 +7,7 @@ import {
 } from "./converter";
 import type {
   SpatialTouchEnvelope,
-} from "./spatial-index";
+} from "./spatial-touch-envelope";
 
 export const SPATIAL_SEARCH_BLOCK_SIZE = 32;
 

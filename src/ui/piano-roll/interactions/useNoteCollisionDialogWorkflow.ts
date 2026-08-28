@@ -8,7 +8,7 @@ import {
 } from "../../../domain/note-collision";
 import type {
   EditorRuntime,
-} from "../../../editor/runtime/editor-runtime";
+} from "../../../application/editor-session/editor-runtime";
 import type {
   ApplicationDialogState,
   ShowApplicationAlert,

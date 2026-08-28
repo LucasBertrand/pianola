@@ -13,7 +13,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | Capacité | Point d’entrée | Propriétaire d’état | Tests |
 | --- | --- | --- | --- |
 | composition | `src/app/App.tsx` puis `src/ui/home/ApplicationHome.tsx` ou `src/ui/piano-roll/PianoRollWorkspace.tsx` | accueil sans runtime ou une session `EditorRuntime` active | `tests/integration/critical-behavior.test.ts` |
-| piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | `src/editor/runtime/editor-runtime.ts` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
+| piano roll | `src/ui/piano-roll/PianoRollLayers.tsx` | agrégat `src/application/editor-session/editor-runtime.ts`, mécanismes purs sous `src/editor/` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/ui/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/ui/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips et groupes | `src/ui/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
@@ -35,6 +35,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le ruler ou la boucle | `src/ui/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx` et painter |
 | modifier les marqueurs tempo/métrique/gamme/section | `src/ui/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, puis `use-cases/piano-roll/timeline/time-map-marker-plans.ts` |
 | modifier le playhead | `src/editor/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
+| modifier Undo/Redo ou les transactions | `src/application/history/editor-command-service.ts` | `project-store.ts`, puis reducers sous `src/domain/commands/` |
 | modifier l’indicateur de lecture des clips | `src/ui/inspector/clips/clip-playhead-visual.ts` | `src/ui/inspector/clips/ClipInspector.tsx`, puis `src/styles/inspector.css` |
 | modifier la concaténation d’un groupe | `src/ui/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-commands.ts` |
 | modifier la découpe d’un clip | `src/ui/dialogs/ClipSplitDialog.tsx` | `src/ui/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
@@ -49,7 +50,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le master bus | `src/ui/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | commandes de transport, validation et painters ruler/grid |
 | modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | workspace codec et parseur de document |
-| modifier autosave ou récupération | `src/use-cases/persistence/project-autosave.ts` | ports sous `src/application/ports/`, puis repository IndexedDB et Worker sous `src/infrastructure/persistence/` |
+| modifier autosave ou récupération | `src/use-cases/persistence/project-autosave.ts` | projection sous `src/application/editor-session/workspace-persistence.ts`, ports sous `src/application/ports/`, puis repository IndexedDB et Worker sous `src/infrastructure/persistence/` |
 | modifier le MIDI | `src/project-io/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/config/application-colors.ts` | tokens CSS et styles de surface |
 | modifier le responsive | `src/styles/responsive.css` | styles propriétaires des surfaces impliquées |

@@ -4,7 +4,7 @@ import {
 } from "react";
 import type {
   EditorCommandPort,
-} from "../../use-cases/commands/editor-command-service";
+} from "../../application/history/editor-command-service";
 import {
   buildAddNoteCommands,
   buildDeleteNoteCommands,

@@ -5,7 +5,7 @@ import {
 } from "vitest";
 import {
   ProjectStore,
-} from "../../../domain/project-store";
+} from "../../../application/history/project-store";
 import {
   createTestProject,
 } from "../../../../tests/support/test-builders";
@@ -17,7 +17,7 @@ import {
 } from "../../../infrastructure/persistence/codecs/direct-stored-project-codec";
 import {
   createDefaultPersistedEditorWorkspace,
-} from "../project-workspace";
+} from "../../../application/editor-session/workspace-persistence";
 import {
   ProjectAutosave,
 } from "../project-autosave";

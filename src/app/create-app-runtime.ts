@@ -1,6 +1,6 @@
 import {
   EditorCommandService,
-} from "../use-cases/commands/editor-command-service";
+} from "../application/history/editor-command-service";
 import {
   EditorSelectionRequests,
 } from "../editor/selection/editor-selection-requests";
@@ -27,7 +27,7 @@ import {
 } from "../domain/notes/note";
 import {
   ProjectStore,
-} from "../domain/project-store";
+} from "../application/history/project-store";
 import {
   EditorSelection,
 } from "../editor/selection/editor-selection";
@@ -66,7 +66,7 @@ import {
 import type {
   ClipEditorRuntimeState,
   EditorRuntime,
-} from "../editor/runtime/editor-runtime";
+} from "../application/editor-session/editor-runtime";
 import type {
   ProjectRepository,
 } from "../application/ports/project-repository";

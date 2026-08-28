@@ -11,7 +11,7 @@ héberger les protocoles détaillés.
 
 | Intention | État | Propriétaire actuel | Justification |
 | --- | --- | --- | --- |
-| runtime | services et signaux | `App.tsx` via une ref stable | durée de vie de l’onglet et assemblage racine |
+| runtime | services et signaux décrits par `application/editor-session/EditorRuntime` | `App.tsx` via une ref stable | durée de vie de l’onglet et assemblage racine |
 | projet/clip | snapshot React, instrument sélectionné, sélection disponible | `usePianoRollProjectState` | synchronise le store et annule l’interaction au changement de clip |
 | inspecteur | ouvert, section portrait, hôte toolbar | `PianoRollWorkspace` | état de disposition de la surface |
 | sélection | mode et presse-papier | workflow sélection + `usePianoRollClipboard` | état transitoire du piano roll |
