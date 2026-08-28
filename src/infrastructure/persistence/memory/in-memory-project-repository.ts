@@ -1,11 +1,15 @@
 import {
-  ProjectPersistenceError,
   type ProjectRepository,
   type ProjectSummary,
   type StoredProject,
-  type StoredProjectCodec,
   type StoredRevision,
-} from "./project-persistence-model";
+} from "../../../application/ports/project-repository";
+import type {
+  StoredProjectCodec,
+} from "../../../application/ports/stored-project-codec";
+import {
+  ProjectPersistenceError,
+} from "../codecs/project-persistence-error";
 
 export interface InMemoryProjectGeneration {
   readonly documentId: string;
@@ -39,7 +43,7 @@ export class InMemoryProjectRepository implements ProjectRepository {
     return this.enqueue(() => Promise.resolve(
       [...this.storage.summaries.values()]
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-        .map(normalizeSummary),
+        .map((summary) => ({ ...summary })),
     ));
   }
 
@@ -182,15 +186,5 @@ function createSummary(
     revision: project.revision,
     updatedAt: project.updatedAt,
     byteSize,
-  };
-}
-
-function normalizeSummary(summary: ProjectSummary): ProjectSummary {
-  return {
-    ...summary,
-    // Catalog rows written before schema v2 did not expose this metadata.
-    schemaVersion: Number.isSafeInteger(summary.schemaVersion)
-      ? summary.schemaVersion
-      : 1,
   };
 }

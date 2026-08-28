@@ -9,7 +9,9 @@
 
 Les surfaces React et les hooks de capacité : bibliothèque locale, dialogs,
 diagnostics, toolbar, inspecteur, piano roll, fichiers et transport. Les
-adaptateurs de stockage navigateur vivent sous `src/pwa/persistence/`.
+adaptateurs de stockage navigateur vivent sous
+`src/infrastructure/persistence/` et implémentent les ports de
+`src/application/ports/`.
 
 ## Quel fichier lire en premier ?
 

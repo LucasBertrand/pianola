@@ -11,10 +11,10 @@ import type {
 } from "../../editor/runtime/editor-runtime";
 import type {
   ProjectRepository,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
 import {
   BROWSER_AUTOSAVE_SCHEDULER,
-} from "../../pwa/persistence/browser-autosave-scheduler";
+} from "../../infrastructure/persistence/browser/browser-autosave-scheduler";
 import {
   ProjectAutosave,
   type ProjectSaveStatus,

@@ -33,7 +33,7 @@ Pour cibler un témoin sans redistribuer la suite actuelle :
 
 ```bash
 npm test -- tests/integration/critical-behavior.test.ts
-npm test -- src/persistence/__tests__/project-repository-contract.test.ts
+npm test -- src/infrastructure/persistence/__tests__/project-repository-contract.test.ts
 ```
 
 Avant de découper un des six points de concentration architecturaux, actualiser

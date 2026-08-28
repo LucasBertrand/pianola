@@ -190,11 +190,11 @@ import {
 import type {
   ProjectRepository,
   PersistedEditorWorkspace,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
 import type {
   UserSettings,
   UserSettingsRepository,
-} from "../../persistence/user-settings-model";
+} from "../../application/ports/user-settings-repository";
 import {
   capturePersistedEditorWorkspace,
 } from "../../use-cases/persistence/project-workspace";

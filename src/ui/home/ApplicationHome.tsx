@@ -7,7 +7,7 @@ import {
 } from "../../config/pianola-file-config";
 import type {
   ProjectSummary,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
 import {
   ApplicationDialogOverlay,
 } from "../dialogs/ApplicationDialogOverlay";

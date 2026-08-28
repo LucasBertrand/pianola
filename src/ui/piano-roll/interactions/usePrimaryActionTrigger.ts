@@ -3,7 +3,7 @@ import { useMediaSessionAction } from "./useMediaSessionAction";
 import { useKeyboardShortcut } from "./useKeyboardShortcut";
 import type {
   ShortcutBinding,
-} from "../../../persistence/user-settings-model";
+} from "../../../application/ports/user-settings-repository";
 
 export function usePrimaryActionTrigger(
   onAction: () => void,

@@ -3,7 +3,7 @@ import type {
 } from "../../../domain/project/project-document";
 import type {
   PersistedEditorWorkspace,
-} from "../../../persistence/project-persistence-model";
+} from "../../../application/ports/project-repository";
 import { FILE_CONSTANTS } from "../../../config/pianola-file-config";
 
 export const PIANOLA_PROJECT_FORMAT = FILE_CONSTANTS.pianolaProjectFormat;

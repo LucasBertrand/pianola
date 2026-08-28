@@ -7,8 +7,9 @@
 
 ## Que possède cette zone ?
 
-Les intentions indépendantes de React : service de commandes, ports de dialogue,
-autosave, projection du workspace et workflows de notes/sélection du piano roll.
+Les intentions indépendantes de React : service de commandes, autosave,
+projection du workspace et workflows de notes/sélection du piano roll. Les
+contrats de persistance injectés sont sous `../application/ports/`.
 
 ## Quel fichier lire en premier ?
 

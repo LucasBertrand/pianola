@@ -1,6 +1,6 @@
 import {
   ProjectPersistenceError,
-} from "../../persistence/project-persistence-model";
+} from "../codecs/project-persistence-error";
 
 export async function requestPersistentBrowserStorage(): Promise<boolean> {
   if (navigator.storage?.persist === undefined) {

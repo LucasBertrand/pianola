@@ -1,15 +1,15 @@
 import {
   INSTRUMENT_CONSTANTS,
-} from "../config/domain-limits";
+} from "../../../config/domain-limits";
 import {
   createDefaultInstrumentPresetLibrary,
-} from "../domain/instrument-presets";
+} from "../../../domain/instrument-presets";
 import type {
   PresetId,
-} from "../domain/identifiers";
+} from "../../../domain/identifiers";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
-} from "../domain/identifiers";
+} from "../../../domain/identifiers";
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
@@ -19,13 +19,13 @@ import {
   type InstrumentPreset,
   type OscillatorWaveform,
   type SubtractiveSynthConfig,
-} from "../domain/instruments/instrument";
+} from "../../../domain/instruments/instrument";
 import {
   validateInstrumentPreset,
-} from "../domain/validation/instrument-validation";
+} from "../../../domain/validation/instrument-validation";
 import {
   ProjectPersistenceError,
-} from "./project-persistence-model";
+} from "./project-persistence-error";
 import {
   readPersistenceBoolean,
   readPersistenceInteger,

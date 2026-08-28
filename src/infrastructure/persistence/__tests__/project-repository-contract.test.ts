@@ -6,30 +6,30 @@ import {
 } from "vitest";
 import {
   createTestProject,
-} from "../../../tests/support/test-builders";
+} from "../../../../tests/support/test-builders";
 import {
   DIRECT_STORED_PROJECT_CODEC,
-} from "../../project-io/local/direct-stored-project-codec";
+} from "../codecs/direct-stored-project-codec";
 import {
   IndexedDbProjectRepository,
-} from "../../pwa/persistence/indexed-db-project-repository";
+} from "../indexed-db/indexed-db-project-repository";
 import {
   PianolaIndexedDb,
   PIANOLA_STORES,
   idbTransaction,
-} from "../../pwa/persistence/pianola-indexed-db";
+} from "../indexed-db/pianola-indexed-db";
 import {
   createDefaultPersistedEditorWorkspace,
-} from "../../use-cases/persistence/project-workspace";
+} from "../../../use-cases/persistence/project-workspace";
 import {
   createInMemoryProjectStorage,
   InMemoryProjectRepository,
   type InMemoryProjectStorage,
-} from "../in-memory-project-repository";
+} from "../memory/in-memory-project-repository";
 import {
   type ProjectRepository,
   type StoredProject,
-} from "../project-persistence-model";
+} from "../../../application/ports/project-repository";
 
 interface RepositoryHarness {
   readonly repository: ProjectRepository;

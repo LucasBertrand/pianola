@@ -1,12 +1,14 @@
 import type {
   EncodedStoredProject,
-  StoredProject,
   StoredProjectCodec,
-} from "../../persistence/project-persistence-model";
+} from "../../../application/ports/stored-project-codec";
+import {
+  type StoredProject,
+} from "../../../application/ports/project-repository";
 import {
   ProjectPersistenceError,
   type ProjectPersistenceErrorCode,
-} from "../../persistence/project-persistence-model";
+} from "../codecs/project-persistence-error";
 
 interface PendingWorkerRequest {
   readonly resolve: (value: unknown) => void;

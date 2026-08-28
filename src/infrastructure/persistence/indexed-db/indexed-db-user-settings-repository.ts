@@ -1,16 +1,13 @@
 import {
-  ProjectPersistenceError,
-} from "../../persistence/project-persistence-model";
-import {
   parseUserSettingsEnvelope,
-  recoverDefaultUserSettings,
   serializeUserSettings,
-} from "../../persistence/user-settings-codec";
+} from "../codecs/user-settings-codec";
 import {
   cloneUserSettings,
+  recoverDefaultUserSettings,
   type UserSettings,
   type UserSettingsRepository,
-} from "../../persistence/user-settings-model";
+} from "../../../application/ports/user-settings-repository";
 import {
   idbRequest,
   idbTransaction,
@@ -69,13 +66,6 @@ implements UserSettingsRepository {
         parseUserSettingsEnvelope(record.serialized).settings,
       );
     } catch (error: unknown) {
-      if (
-        error instanceof ProjectPersistenceError
-        && error.code === "FUTURE_VERSION"
-      ) {
-        throw error;
-      }
-
       const defaults = recoverDefaultUserSettings();
       await this.recoverInvalidSettings(record.serialized, defaults);
       return defaults;

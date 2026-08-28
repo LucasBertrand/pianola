@@ -1,11 +1,15 @@
 import {
-  ProjectPersistenceError,
   type ProjectRepository,
   type ProjectSummary,
   type StoredProject,
-  type StoredProjectCodec,
   type StoredRevision,
-} from "../../persistence/project-persistence-model";
+} from "../../../application/ports/project-repository";
+import type {
+  StoredProjectCodec,
+} from "../../../application/ports/stored-project-codec";
+import {
+  ProjectPersistenceError,
+} from "../codecs/project-persistence-error";
 import {
   idbRequest,
   idbTransaction,
@@ -14,7 +18,7 @@ import {
 } from "./pianola-indexed-db";
 import {
   assertStorageCapacity,
-} from "./browser-storage-policy";
+} from "../browser/browser-storage-policy";
 
 interface StoredProjectGenerationRecord {
   readonly documentId: string;
@@ -45,7 +49,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       await done;
       return summaries
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-        .map(normalizeSummary);
+        .map((summary) => ({ ...summary }));
     });
   }
 
@@ -285,16 +289,6 @@ function createSummary(
     revision: project.revision,
     updatedAt: project.updatedAt,
     byteSize,
-  };
-}
-
-function normalizeSummary(summary: ProjectSummary): ProjectSummary {
-  return {
-    ...summary,
-    // IndexedDB catalogs created before schema v2 have no schemaVersion field.
-    schemaVersion: Number.isSafeInteger(summary.schemaVersion)
-      ? summary.schemaVersion
-      : 1,
   };
 }
 

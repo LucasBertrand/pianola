@@ -10,7 +10,7 @@ comportement précis, partir de la [carte du code](code-map.md). Pour décider s
 un état doit persister ou entrer dans Undo/Redo, consulter
 [`state-ownership.md`](state-ownership.md).
 
-Dernière revue complète : 27 août 2026.
+Dernière revue complète : 28 août 2026.
 
 ## Vue d’ensemble
 
@@ -22,11 +22,13 @@ main.tsx
   → app                    création du runtime
   → ui                     composition React et adaptateurs DOM/Canvas
   → use-cases              intentions indépendantes de React
+  → application/ports      contrats injectés
   → domain                 document, commandes et invariants
 
-editor          noyau d’édition sans DOM
+editor                     noyau d’édition sans DOM
 audio                      snapshot, transport, occurrences, voix et bus
-project-io                 format natif et MIDI
+infrastructure             `.pianola`, IndexedDB, Worker et codecs locaux
+project-io                 Standard MIDI File
 ```
 
 Règles exécutables :
@@ -35,10 +37,11 @@ Règles exécutables :
 2. `src/domain/`, `src/editor/` et `src/music/` ne connaissent ni React ni le
    navigateur ;
 3. `src/use-cases/` ne dépend pas de l’UI ;
-4. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
-5. une intention musicale validée produit au plus une transaction.
+4. `src/infrastructure/` implémente les ports sans dépendre de la composition ;
+5. `src/audio/` et `src/project-io/` ne dépendent pas de la composition ;
+6. une intention musicale validée produit au plus une transaction.
 
-Le contrôle couvre explicitement les onze racines TypeScript courantes avec une
+Le contrôle couvre explicitement les douze racines TypeScript courantes avec une
 liste fermée de dépendances. Il construit deux graphes distincts pour le code
 produit et les tests, interdit tout import produit vers un test et détecte les
 cycles dans chacun. Le seul cycle accepté dans la baseline courante relie
@@ -204,6 +207,13 @@ IndexedDB publie atomiquement génération et résumé. Le format portable reste
 pipeline distinct du stockage local. Le MIDI sépare validation, lecture/écriture
 SMF, analyse, avertissements, collisions et construction de projet.
 
+Les contrats `ProjectRepository`, `StoredProjectCodec`,
+`UserSettingsRepository` et `AutosaveScheduler` sont sous
+`src/application/ports/`. Leurs implémentations Worker, IndexedDB, navigateur et
+mémoire sont sous `src/infrastructure/persistence/`. La baseline de snapshot
+local est la version 1 ; une base IndexedDB d'un autre layout est recréée sans
+migration silencieuse.
+
 ```text
 Autosave : document + workspace → Worker → deux générations IndexedDB
 Export   : document + workspace → JSON portable validé → Blob
@@ -217,7 +227,7 @@ MIDI     : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 Le seuil déclenche une revue, pas un échec de CI. Les exceptions restantes ont
 une responsabilité unique documentée dans leur guide local : données de
 palette, composition du workspace, résolution de
-collisions et parseurs MIDI/natif. Le contrôle structurel affiche la liste
+collisions et parseurs MIDI/`.pianola`. Le contrôle structurel affiche la liste
 courante à chaque vérification.
 
 ## Vérification

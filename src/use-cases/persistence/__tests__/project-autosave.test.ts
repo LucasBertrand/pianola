@@ -11,17 +11,19 @@ import {
 } from "../../../../tests/support/test-builders";
 import {
   InMemoryProjectRepository,
-} from "../../../persistence/in-memory-project-repository";
+} from "../../../infrastructure/persistence/memory/in-memory-project-repository";
 import {
   DIRECT_STORED_PROJECT_CODEC,
-} from "../../../project-io/local/direct-stored-project-codec";
+} from "../../../infrastructure/persistence/codecs/direct-stored-project-codec";
 import {
   createDefaultPersistedEditorWorkspace,
 } from "../project-workspace";
 import {
   ProjectAutosave,
-  type AutosaveScheduler,
 } from "../project-autosave";
+import type {
+  AutosaveScheduler,
+} from "../../../application/ports/autosave-scheduler";
 
 describe("project autosave", () => {
   test("saves command, Undo and Redo as successive revisions", async () => {

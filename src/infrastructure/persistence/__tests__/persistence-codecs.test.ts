@@ -5,34 +5,36 @@ import {
 } from "vitest";
 import {
   createTestProject,
-} from "../../../tests/support/test-builders";
+} from "../../../../tests/support/test-builders";
 import {
   parsePianolaProject,
   serializePianolaProject,
-} from "../../infrastructure/project-files/pianola/pianola-project-codec";
+} from "../../project-files/pianola/pianola-project-codec";
 import {
   createDefaultPersistedEditorWorkspace,
-} from "../../use-cases/persistence/project-workspace";
+} from "../../../use-cases/persistence/project-workspace";
 import {
   InMemoryProjectRepository,
-} from "../in-memory-project-repository";
+} from "../memory/in-memory-project-repository";
 import {
   DIRECT_STORED_PROJECT_CODEC,
-} from "../../project-io/local/direct-stored-project-codec";
+} from "../codecs/direct-stored-project-codec";
 import {
   parseUserSettingsEnvelope,
-  recoverDefaultUserSettings,
   serializeUserSettings,
-} from "../user-settings-codec";
+} from "../codecs/user-settings-codec";
+import {
+  recoverDefaultUserSettings,
+} from "../../../application/ports/user-settings-repository";
 import {
   createDefaultInstrumentConfig,
-} from "../../domain/instrument-presets";
+} from "../../../domain/instrument-presets";
 import {
   createPersonalInstrumentPreset,
-} from "../../domain/personal-instrument-presets";
+} from "../../../domain/personal-instrument-presets";
 import {
   getClipPlaybackOrder,
-} from "../../domain/clips/clip-hierarchy";
+} from "../../../domain/clips/clip-hierarchy";
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {

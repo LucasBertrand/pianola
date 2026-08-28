@@ -1,13 +1,13 @@
 import type {
   StoredProjectCodec,
-} from "../../persistence/project-persistence-model";
+} from "../../../application/ports/stored-project-codec";
 import {
   parseStoredProject,
   serializeStoredProject,
-} from "../../persistence/stored-project-codec";
+} from "./stored-project-codec";
 import {
   parseProjectSnapshot,
-} from "../../infrastructure/project-files/pianola/parsing/parse-project";
+} from "../../project-files/pianola/parsing/parse-project";
 
 export const DIRECT_STORED_PROJECT_CODEC: StoredProjectCodec = {
   encode(snapshot) {

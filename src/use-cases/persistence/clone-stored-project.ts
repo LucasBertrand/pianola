@@ -3,7 +3,7 @@ import {
 } from "../../domain/project/project-document";
 import type {
   StoredProject,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
 
 /** Creates a new local aggregate without carrying storage/history identity. */
 export function createStoredProjectClone(

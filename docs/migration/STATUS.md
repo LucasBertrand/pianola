@@ -7,20 +7,24 @@ workspace réel, pas seulement l'intention.
 
 - Statut : EN ATTENTE
 - Lot actif : Aucun
-- Dernier lot terminé : 2 — Format `.pianola`
-- Prochaine action : ouvrir le lot 3 (Persistance) en vérifiant sa condition d'entrée
-- Dernière mise à jour : 2026-08-27
+- Dernier lot terminé : 3 — Ports et adaptateurs de persistance
+- Prochaine action : après revue du lot 3, ouvrir le lot 4 en vérifiant sa
+  condition d'entrée ; ne pas déplacer le runtime ou corriger le cycle spatial
+  avant cette ouverture
+- Dernière mise à jour : 2026-08-28
 
 ## Baseline connue
 
-- arborescence source actuelle : `app`, `audio`, `config`, `domain`, `editor`,
-  `music`, `persistence`, `project-io`, `pwa`, `styles`, `ui`, `use-cases` ;
+- arborescence source actuelle : `app`, `application`, `audio`, `config`,
+  `domain`, `editor`, `infrastructure`, `music`, `project-io`, `pwa`, `styles`,
+  `ui`, `use-cases` ;
 - un cycle d'import typé a été détecté entre `spatial-index.ts` et
   `spatial-index-search.ts` ;
 - `PianoRollWorkspace.tsx` est le principal point de concentration ;
 - `time-map.ts` et `clip-commands.ts` dépassent désormais 1 000 lignes ;
-- le codec portable dépend encore d'un parseur sous `project-io/native`.
-- les contrôles analysent séparément 271 fichiers produit et 67 modules de
+- le format `.pianola` est sous `infrastructure/project-files/pianola` et la
+  persistance locale sous `infrastructure/persistence` ;
+- les contrôles analysent séparément 268 fichiers produit et 66 modules de
   test ; tout nouveau cycle est interdit ;
 - la couverture ciblée et les trois mesures de rendu sont consignées dans
   `LOT-0-BASELINES.md`.
@@ -46,7 +50,7 @@ D  docs/storage-strategies.md
 | 0 | TERMINÉ | Baseline, couverture et scénario de rendu connus ; garde-fous verts |
 | 1 | TERMINÉ | Cinq types explicites adoptés ; alias supprimés ; garde-fous et suite complète verts |
 | 2 | TERMINÉ | Format `.pianola` |
-| 3 | À FAIRE | Persistance |
+| 3 | TERMINÉ | Ports applicatifs, adaptateurs infrastructure et reset local validés |
 | 4 | À FAIRE | Cœur d'édition |
 | 5 | À FAIRE | `PianoRollWorkspace` |
 | 6 | À FAIRE | Configurations et horizontales |
@@ -59,7 +63,9 @@ Aucun alias ni aucune compatibilité de code ou de données ne subsiste des lots
 0 et 1. Les alias de renommage créés pendant les sous-étapes du lot 1 ont été
 supprimés avant sa sortie. Le profiler opt-in `renderBaseline=1` est un
 diagnostic conservé jusqu'à la comparaison du lot 5, pas une façade de
-compatibilité.
+compatibilité. Le lot 3 n'ajoute aucun alias : les anciens chemins de
+persistance ont été supprimés et les anciennes données locales sont
+réinitialisées, pas converties.
 
 ## Écarts et découvertes
 
@@ -78,8 +84,154 @@ compatibilité.
 - les types renommés restent physiquement chez leurs propriétaires courants ;
   leur déplacement de couche n'est pas anticipé et demeure réservé aux lots
   prévus par la feuille de route.
+- les deux fichiers préexistants sous `src/ui/shared` restent réservés au lot 6
+  et n'ont pas été déplacés par le lot 3.
 
 ## Journal
+
+### 2026-08-28 — Lot 3, démarrage
+
+- objectif : placer les contrats de repository et de codec sous
+  `src/application/ports`, regrouper les implémentations de stockage sous
+  `src/infrastructure/persistence`, puis réinitialiser explicitement et tester
+  les données IndexedDB antérieures à la nouvelle baseline locale, sans
+  modifier les contrats applicatifs ;
+- condition d'entrée vérifiée : `STATUS.md` marque le lot 2 `TERMINÉ`, son
+  journal consigne une validation complète verte, et `npm run verify` a été
+  réexécuté avant toute modification du lot 3 avec succès (32 documents,
+  265 fichiers produit, 65 modules de test, build et smoke AudioWorklet verts,
+  61 fichiers de test et 402 tests réussis) ;
+- SHA de départ et point de rollback initial :
+  `cd4e8cdd9c90ec538bee6de76ab69d70baabdcbf`, commit du lot 2
+  `cd4e8cd` ;
+- état initial du worktree vérifié par `git status --short` : propre ; aucun
+  changement préexistant de l'utilisateur à isoler au démarrage du lot 3 ;
+- audit préalable : les ports `ProjectRepository`, `StoredProjectCodec` et
+  `UserSettingsRepository` sont mêlés aux modèles/codecs sous
+  `src/persistence`; les adaptateurs IndexedDB, Worker, scheduler et politique
+  navigateur sont sous `src/pwa/persistence`; les repositories mémoire
+  implémentent les mêmes contrats et servent aux tests de contrat ;
+- décision sur les adaptateurs mémoire : ils restent des adaptateurs de
+  référence et de test, donc appartiennent à
+  `src/infrastructure/persistence/memory`, pas à l'application ;
+- périmètre et fichiers prévus : création de `src/application/ports`,
+  redistribution de `src/persistence`, `src/project-io/local` et
+  `src/pwa/persistence` sous `src/infrastructure/persistence`, mise à jour des
+  imports, des garde-fous architecturaux, des tests colocalisés et de la
+  documentation courante directement affectée ;
+- stratégie de sous-étapes : (1) extraire les ports et modèles de contrat,
+  déplacer les codecs et adaptateurs mémoire ; (2) déplacer IndexedDB, Worker
+  et politiques navigateur ; (3) définir la baseline IndexedDB et tester la
+  réinitialisation ; chaque sous-étape reçoit `npm run typecheck`,
+  `npm run check:boundaries`, ses tests ciblés et un patch de rollback hors du
+  worktree avant la suivante ;
+- aucune action du lot 4 (runtime, signaux, dépendance `editor → use-cases` ou
+  cycle spatial) n'entre dans ce périmètre.
+- sous-étape ports et mémoire : `ProjectRepository`, `StoredProjectCodec` et
+  `UserSettingsRepository`, avec les modèles nécessaires à leurs signatures,
+  sont déclarés sous `src/application/ports`; les codecs locaux et les deux
+  repositories mémoire sont sous `src/infrastructure/persistence`. Les
+  adaptateurs mémoire restent les doubles de référence des tests de contrat et
+  ne deviennent pas des services applicatifs ;
+- validations ports et mémoire : `npm run typecheck` et
+  `npm run check:boundaries` réussis ; 4 fichiers et 26 tests ciblés réussis
+  pour les codecs, les contrats de repositories, les réglages utilisateur et
+  l'autosave ;
+- rollback ports et mémoire : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot3-ports-memory.patch`,
+  SHA-256
+  `FCE2AF4299C886A3C769845C7ADD0BF852319CF3C31090BF5426C1136DB8CE55`,
+  contenant les 38 fichiers de code, tests et garde-fous de cette sous-étape,
+  hors journal ; commande verte associée : la séquence de validation ci-dessus.
+- sous-étape adaptateurs navigateur : IndexedDB, le codec Worker, le Worker de
+  persistance, la politique de quota/persistance et le scheduler navigateur
+  sont regroupés sous `src/infrastructure/persistence`; le contrat
+  `AutosaveScheduler`, révélé par le déplacement, est désormais un port
+  applicatif et l'infrastructure n'importe plus `use-cases` ;
+- validations adaptateurs navigateur : `npm run typecheck`,
+  `npm run check:boundaries` et `npm run build` réussis, y compris la production
+  du chunk Worker ; 3 fichiers et 18 tests ciblés réussis pour IndexedDB,
+  réglages utilisateur et autosave ;
+- rollback adaptateurs navigateur : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot3-browser-adapters.patch`,
+  SHA-256
+  `72DC8827154A48BD001EB2E45961341475B922AB2D4C98B7C041FEDB666B1AE2`,
+  contenant uniquement les 15 fichiers de cette sous-étape ; commande verte
+  associée : la séquence de validation ci-dessus.
+- sous-étape baseline locale : le format de snapshot local repart de la
+  baseline 1 (`app.pianola.stored-project.v1`), les réglages utilisent le format
+  `app.pianola.user-settings.v1`, et IndexedDB passe à la version de layout 2 ;
+  toute base plus ancienne est recréée pendant l'upgrade, tandis qu'une base de
+  version plus récente et incompatible est supprimée puis recréée. La raison
+  de réinitialisation est observable par `PianolaIndexedDb.resetReason` ;
+- compatibilité locale : les fallbacks de catalogues antérieurs ont été
+  supprimés ; des réglages incompatibles sont conservés en diagnostic puis
+  remplacés par les valeurs par défaut. Aucun lecteur ou convertisseur de
+  snapshot local antérieur n'est ajouté ;
+- validations baseline locale : `npm run typecheck` et
+  `npm run check:boundaries` réussis ; 4 fichiers et 26 tests ciblés réussis,
+  dont deux nouveaux scénarios qui prouvent la purge d'une base IndexedDB plus
+  ancienne et d'une base plus récente ;
+- rollback baseline locale : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot3-local-reset.patch`,
+  SHA-256
+  `CD15ABC1BB3101057AC8DE88C2A471169EC7151933BBFD444A1E18ABF07F1150`,
+  contenant uniquement les 11 fichiers de cette sous-étape ; commande verte
+  associée : la séquence de validation ci-dessus.
+- documentation courante synchronisée : README racine,
+  `docs/architecture.md`, `docs/code-map.md`, `docs/state-ownership.md`, les
+  guides de développement et de fichiers projet, ainsi que les README locaux
+  de l'UI, des cas d'usage et du MIDI décrivent les propriétaires réellement
+  présents ; `src/infrastructure/persistence/README.md` documente les
+  adaptateurs et la politique de reset ;
+- validations documentaires : `npm run check:docs` et
+  `npm run check:structure` réussis (33 fichiers Markdown et 319 fichiers
+  source) ;
+- rollback documentation courante : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot3-current-docs.patch`,
+  SHA-256
+  `1ACD25F43E40A89C7F287270342A7BBFE3B0E4BBB3C9B36E1BD12572771655E8`,
+  contenant uniquement les 10 documents courants affectés.
+- revue de propriété finale : `ProjectPersistenceError` reste un détail des
+  codecs et adaptateurs sous `infrastructure/persistence/codecs`, conformément
+  au mapping ; les ports applicatifs n'exposent que leurs contrats et modèles
+  d'échange. L'ancienne racine produit `src/persistence` a été retirée de la
+  matrice de frontières afin d'empêcher sa réintroduction ;
+- validations de cette revue : `npm run typecheck`,
+  `npm run check:boundaries` et 28 tests ciblés réussis ; aucune dépendance
+  produit de `application` ou `use-cases` vers IndexedDB, Worker ou
+  `infrastructure` ;
+- rollback revue de propriété : patch ciblé
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot3-ownership-cleanup.patch`,
+  SHA-256
+  `4209C9921F6C12B1D638A8D4AF2E4A3A38ECCB606C304470A0DE1F4FD778F4FF`,
+  contenant uniquement les 16 fichiers de cette revue.
+- recherches de sortie : aucune occurrence des anciens chemins produit
+  `src/persistence`, `src/pwa/persistence` ou `src/project-io/local` hors du
+  journal de migration ; aucune dépendance produit de `application` ou
+  `use-cases` vers `infrastructure`, IndexedDB, Worker ou une API navigateur ;
+  les seules zones génériques relevées sont les deux fichiers préexistants de
+  `src/ui/shared`, dont la suppression reste planifiée au lot 6 ;
+- validation complète finale : `npm run verify` réussi — 33 fichiers Markdown,
+  320 fichiers source, frontières vertes sur 268 fichiers produit et 66 modules
+  de test, typecheck et build Vite réussis, smoke AudioWorklet réussi,
+  62 fichiers de test et 404 tests réussis ; l'avertissement de chunk supérieur
+  à 500 kB reste inchangé et non bloquant ;
+- statut du lot : `TERMINÉ`. La condition de sortie est satisfaite : les cas
+  d'usage dépendent des ports applicatifs, les implémentations IndexedDB et
+  Worker sont en infrastructure, les repositories mémoire ont un statut
+  explicite d'adaptateurs de référence, et la réinitialisation des versions
+  locales incompatibles est testée ;
+- point de rollback final : SHA de départ
+  `cd4e8cdd9c90ec538bee6de76ab69d70baabdcbf` et patch complet code/tests/docs
+  `C:\Users\Bebou\AppData\Local\Temp\pianola-lot3-complete.patch`, SHA-256
+  `2BA13685E7AEBEFBBBF95ABA6D15C634A72A20B3F4D2AE58DF55AB0FE792E177`,
+  contenant les 53 fichiers du lot hors ce journal mutable ; appliquer son
+  inverse uniquement après vérification qu'aucun de ces fichiers n'a reçu de
+  changement utilisateur ;
+- prochaine action exacte : après revue du lot 3, ouvrir le lot 4 et vérifier sa
+  condition d'entrée avant de séparer les ports/signaux du runtime et de traiter
+  le cycle spatial. Aucun travail du lot 4 n'est commencé dans ce worktree.
 
 ### 2026-08-27 — Lot 2, démarrage
 

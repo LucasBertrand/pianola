@@ -1,16 +1,13 @@
 import {
-  ProjectPersistenceError,
-} from "./project-persistence-model";
-import {
   parseUserSettingsEnvelope,
-  recoverDefaultUserSettings,
   serializeUserSettings,
-} from "./user-settings-codec";
+} from "../codecs/user-settings-codec";
 import {
   cloneUserSettings,
+  recoverDefaultUserSettings,
   type UserSettings,
   type UserSettingsRepository,
-} from "./user-settings-model";
+} from "../../../application/ports/user-settings-repository";
 
 export interface InMemoryUserSettingsStorage {
   serialized: string | null;
@@ -57,13 +54,6 @@ implements UserSettingsRepository {
         parseUserSettingsEnvelope(this.storage.serialized).settings,
       );
     } catch (error: unknown) {
-      if (
-        error instanceof ProjectPersistenceError
-        && error.code === "FUTURE_VERSION"
-      ) {
-        throw error;
-      }
-
       this.storage.diagnostic = this.storage.serialized;
       const defaults = recoverDefaultUserSettings();
       this.storage.serialized = serializeUserSettings(

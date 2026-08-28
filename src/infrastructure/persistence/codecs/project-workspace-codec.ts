@@ -1,34 +1,34 @@
 import {
   EDITOR_CONSTANTS,
   VIEWPORT_CONSTANTS,
-} from "../config/editor-config";
+} from "../../../config/editor-config";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
   type ClipId,
-} from "../domain/identifiers";
+} from "../../../domain/identifiers";
 import type {
   ProjectDocument,
-} from "../domain/project/project-document";
+} from "../../../domain/project/project-document";
 import {
   getClipPlaybackOrder,
-} from "../domain/clips/clip-hierarchy";
+} from "../../../domain/clips/clip-hierarchy";
 import {
   createGridSettings,
   parseGridSubdivision,
-} from "../editor/model/grid-settings";
+} from "../../../editor/model/grid-settings";
 import type {
   TonalPatternType,
-} from "../music/pitch-snap";
+} from "../../../music/pitch-snap";
 import {
   isTonalPatternId,
-} from "../music/pitch-snap";
-import type {
-  PersistedClipEditorState,
-  PersistedEditorWorkspace,
-} from "./project-persistence-model";
+} from "../../../music/pitch-snap";
+import {
+  type PersistedClipEditorState,
+  type PersistedEditorWorkspace,
+} from "../../../application/ports/project-repository";
 import {
   ProjectPersistenceError,
-} from "./project-persistence-model";
+} from "./project-persistence-error";
 import {
   readPersistenceBoolean,
   readPersistenceInteger,

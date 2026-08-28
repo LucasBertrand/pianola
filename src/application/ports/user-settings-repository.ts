@@ -1,24 +1,22 @@
 import {
   EDITOR_CONSTANTS,
-} from "../config/editor-config";
-import type {
-  SelectionMode,
-} from "../editor/interactions/gestures/gesture-draft";
-import type {
-  NoteColorMode,
-} from "../editor/model/note-color-mode";
+} from "../../config/editor-config";
 import type {
   PresetId,
-} from "../domain/identifiers";
+} from "../../domain/identifiers";
 import type {
   InstrumentPreset,
-} from "../domain/instruments/instrument";
+} from "../../domain/instruments/instrument";
 import {
   cloneInstrumentPreset,
-} from "../domain/personal-instrument-presets";
+} from "../../domain/personal-instrument-presets";
+import type {
+  SelectionMode,
+} from "../../editor/interactions/gestures/gesture-draft";
+import type {
+  NoteColorMode,
+} from "../../editor/model/note-color-mode";
 
-export const USER_SETTINGS_FORMAT =
-  "app.pianola.user-settings";
 export const USER_SETTINGS_SCHEMA_VERSION = 1;
 
 export type ShortcutActionId =
@@ -106,4 +104,8 @@ export function cloneUserSettings(
       ),
     ) as unknown as UserSettings["shortcuts"],
   };
+}
+
+export function recoverDefaultUserSettings(): UserSettings {
+  return cloneUserSettings(DEFAULT_USER_SETTINGS);
 }

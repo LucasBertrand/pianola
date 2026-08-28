@@ -42,20 +42,18 @@ import {
   createDocumentId,
   type ProjectSummary,
   type StoredProject,
-} from "../persistence/project-persistence-model";
+} from "../application/ports/project-repository";
 import {
   recoverDefaultUserSettings,
-} from "../persistence/user-settings-codec";
-import type {
-  UserSettings,
-} from "../persistence/user-settings-model";
+  type UserSettings,
+} from "../application/ports/user-settings-repository";
 import {
   parsePianolaProject,
 } from "../infrastructure/project-files/pianola/pianola-project-codec";
 import { FILE_CONSTANTS } from "../config/pianola-file-config";
 import {
   requestPersistentBrowserStorage,
-} from "../pwa/persistence/browser-storage-policy";
+} from "../infrastructure/persistence/browser/browser-storage-policy";
 import {
   createStoredProjectClone,
 } from "../use-cases/persistence/clone-stored-project";

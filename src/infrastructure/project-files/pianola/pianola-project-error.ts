@@ -1,6 +1,6 @@
 import {
   ProjectPersistenceError,
-} from "../../../persistence/project-persistence-model";
+} from "../../persistence/codecs/project-persistence-error";
 
 export type PianolaProjectFileErrorCode =
   | "INVALID_JSON"

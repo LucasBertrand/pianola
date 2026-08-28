@@ -5,18 +5,16 @@ import type {
   ProjectRepository,
   PersistedEditorWorkspace,
   StoredProject,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
+import type {
+  AutosaveScheduler,
+} from "../../application/ports/autosave-scheduler";
 
 export type ProjectSaveStatus =
   | { readonly state: "saved"; readonly savedAt: string }
   | { readonly state: "saving" }
   | { readonly state: "unsaved" }
   | { readonly state: "error"; readonly error: Error };
-
-export interface AutosaveScheduler {
-  schedule(callback: () => void, delayMilliseconds: number): unknown;
-  cancel(handle: unknown): void;
-}
 
 export interface ProjectAutosaveSnapshot {
   readonly document: ProjectDocument;

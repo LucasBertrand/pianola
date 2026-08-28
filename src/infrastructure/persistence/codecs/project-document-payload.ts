@@ -1,6 +1,6 @@
 import type {
   ProjectDocument,
-} from "../domain/project/project-document";
+} from "../../../domain/project/project-document";
 
 /** Runtime-only revision counters never enter a persistent document. */
 export function createProjectDocumentPayload(

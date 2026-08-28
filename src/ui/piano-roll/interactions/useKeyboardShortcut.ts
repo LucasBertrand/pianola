@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type {
   ShortcutBinding,
-} from "../../../persistence/user-settings-model";
+} from "../../../application/ports/user-settings-repository";
 
 export function useKeyboardShortcut(
   bindings: readonly ShortcutBinding[],

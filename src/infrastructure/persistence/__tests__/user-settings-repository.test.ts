@@ -6,22 +6,22 @@ import {
 } from "vitest";
 import {
   InMemoryUserSettingsRepository,
-} from "../in-memory-user-settings-repository";
+} from "../memory/in-memory-user-settings-repository";
 import {
   IndexedDbUserSettingsRepository,
-} from "../../pwa/persistence/indexed-db-user-settings-repository";
+} from "../indexed-db/indexed-db-user-settings-repository";
 import {
   idbRequest,
   idbTransaction,
   PianolaIndexedDb,
   PIANOLA_STORES,
-} from "../../pwa/persistence/pianola-indexed-db";
+} from "../indexed-db/pianola-indexed-db";
 import {
   createDefaultInstrumentConfig,
-} from "../../domain/instrument-presets";
+} from "../../../domain/instrument-presets";
 import {
   createPersonalInstrumentPreset,
-} from "../../domain/personal-instrument-presets";
+} from "../../../domain/personal-instrument-presets";
 
 describe("user settings repository", () => {
   test("serializes atomic updates", async () => {

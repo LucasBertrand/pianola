@@ -62,7 +62,9 @@ musicales indépendantes de l'écran.
 `StoredProject` associe document et workspace pour une écriture atomique, sans
 faire entrer le workspace dans l'historique. `UserSettings` est écrit par un
 repository distinct ; importer un projet ne peut donc pas remplacer les
-préférences du destinataire.
+préférences du destinataire. Ces contrats appartiennent à
+`src/application/ports/`; leurs adaptateurs de stockage appartiennent à
+`src/infrastructure/persistence/`.
 
 Le modèle courant de workspace ne conserve pas le viewport : les anciens
 champs `firstVisibleTick`, `highestVisiblePitch`, `horizontalZoom` et
@@ -74,8 +76,7 @@ persistées dans le workspace courant sont `pitchSnapSettings` et
 Pour le classement détaillé ayant guidé le lot 1, consulter
 [`migration/STATE-HISTORY-INVENTORY.md`](migration/STATE-HISTORY-INVENTORY.md).
 
-À l'état courant, les codecs acceptent encore certaines variantes historiques,
-notamment celles contenant `anchorTick` ou `playheadTick`, puis les normalisent
-vers le modèle actuel. La migration réinitialisera le versionnement selon D-009 :
-après le lot 2, seule la nouvelle baseline sera acceptée et une version non
-supportée sera rejetée sans conversion silencieuse.
+Le snapshot local accepte uniquement la baseline 1. IndexedDB utilise le layout
+2 et réinitialise toute base dont la version est plus ancienne ou plus récente,
+sans conversion silencieuse. Les réglages incompatibles sont conservés comme
+diagnostic puis remplacés par les valeurs par défaut.

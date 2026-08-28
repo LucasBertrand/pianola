@@ -23,7 +23,7 @@ import type {
   PersistedClipEditorState,
   PersistedEditorWorkspace,
   StoredProject,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
 
 export function createDefaultPersistedEditorWorkspace(
   document: ProjectDocument,

@@ -69,22 +69,22 @@ import type {
 } from "../editor/runtime/editor-runtime";
 import type {
   ProjectRepository,
-} from "../persistence/project-persistence-model";
+} from "../application/ports/project-repository";
 import type {
   UserSettingsRepository,
-} from "../persistence/user-settings-model";
+} from "../application/ports/user-settings-repository";
 import {
   IndexedDbProjectRepository,
-} from "../pwa/persistence/indexed-db-project-repository";
+} from "../infrastructure/persistence/indexed-db/indexed-db-project-repository";
 import {
   IndexedDbUserSettingsRepository,
-} from "../pwa/persistence/indexed-db-user-settings-repository";
+} from "../infrastructure/persistence/indexed-db/indexed-db-user-settings-repository";
 import {
   PianolaIndexedDb,
-} from "../pwa/persistence/pianola-indexed-db";
+} from "../infrastructure/persistence/indexed-db/pianola-indexed-db";
 import {
   WorkerStoredProjectCodec,
-} from "../pwa/persistence/worker-stored-project-codec";
+} from "../infrastructure/persistence/worker/worker-stored-project-codec";
 
 /** Creates the runtime for one project. A future tab system can own one per tab. */
 export function createEditorRuntime(

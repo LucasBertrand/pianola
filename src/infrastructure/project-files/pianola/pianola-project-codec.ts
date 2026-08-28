@@ -1,20 +1,20 @@
 import { MAXIMUM_ENTITY_ID_LENGTH } from "../../../domain/identifiers";
 import {
   createProjectDocumentPayload,
-} from "../../../persistence/project-document-payload";
+} from "../../persistence/codecs/project-document-payload";
 import {
   ProjectPersistenceError,
-} from "../../../persistence/project-persistence-model";
+} from "../../persistence/codecs/project-persistence-error";
 import {
   parsePersistenceJson,
   readPersistenceInteger,
   readPersistenceIsoDate,
   readPersistenceRecord,
   readPersistenceString,
-} from "../../../persistence/persistence-codec-readers";
+} from "../../persistence/codecs/persistence-codec-readers";
 import {
   parsePersistedEditorWorkspace,
-} from "../../../persistence/project-workspace-codec";
+} from "../../persistence/codecs/project-workspace-codec";
 import {
   parseProjectSnapshot,
 } from "./parsing/parse-project";

@@ -1,20 +1,16 @@
 import type {
   ClipId,
   InstrumentId,
-} from "../domain/identifiers";
+} from "../../domain/identifiers";
 import type {
   ProjectDocument,
-} from "../domain/project/project-document";
+} from "../../domain/project/project-document";
 import type {
   GridSettings,
-} from "../editor/model/grid-settings";
+} from "../../editor/model/grid-settings";
 import type {
   PitchSnapSettings,
-} from "../music/pitch-snap";
-
-export const STORED_PROJECT_FORMAT =
-  "app.pianola.stored-project";
-export const STORED_PROJECT_SCHEMA_VERSION = 2;
+} from "../../music/pitch-snap";
 
 /** Navigation state for one clip, expressed without CSS pixel offsets. */
 export interface PersistedClipEditorState {
@@ -63,35 +59,6 @@ export interface ProjectRepository {
     expectedRevision: number | null,
   ): Promise<StoredRevision>;
   remove(documentId: string): Promise<void>;
-}
-
-export interface EncodedStoredProject {
-  readonly serialized: string;
-  readonly byteSize: number;
-}
-
-export interface StoredProjectCodec {
-  encode(snapshot: StoredProject): Promise<EncodedStoredProject>;
-  decode(serialized: string): Promise<StoredProject>;
-}
-
-export type ProjectPersistenceErrorCode =
-  | "CONFLICT"
-  | "CORRUPT_DATA"
-  | "FUTURE_VERSION"
-  | "INVALID_DATA"
-  | "QUOTA_EXCEEDED"
-  | "STORAGE_UNAVAILABLE";
-
-export class ProjectPersistenceError extends Error {
-  public constructor(
-    public readonly code: ProjectPersistenceErrorCode,
-    message: string,
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-    this.name = "ProjectPersistenceError";
-  }
 }
 
 export function createDocumentId(): string {

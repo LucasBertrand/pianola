@@ -7,7 +7,7 @@ navigateur sans serveur applicatif, base distante ni compte utilisateur.
 Ce README est un portail. Les détails vivent dans les guides de `docs/` et dans
 les README placés près du code qu’ils décrivent.
 
-> **Migration architecturale en préparation.** Pour préparer, exécuter ou
+> **Migration architecturale en cours.** Pour préparer, exécuter ou
 > reprendre un lot, commencer par
 > [`docs/migration/README.md`](docs/migration/README.md). Les chemins présentés
 > dans ce README décrivent le code courant tant que `STATUS.md` n'indique pas
@@ -79,13 +79,14 @@ Les variantes de tests sont décrites dans le
 ```text
 src/
 ├── app/                         création du runtime et assemblage racine
+├── application/ports/           contrats applicatifs de persistance
 ├── domain/                      document musical, invariants et historique
 ├── editor/           noyau d’édition indépendant du DOM
 ├── use-cases/piano-roll/        intentions notes et sélection
 ├── audio/                       timeline et moteur AudioWorklet
-├── project-io/                  format natif et MIDI
-├── persistence/                 modèles, codecs et ports de stockage
-├── pwa/                         IndexedDB, Worker, StorageManager et service worker
+├── infrastructure/              `.pianola`, codecs et adaptateurs de persistance
+├── project-io/                  Standard MIDI File
+├── pwa/                         enregistrement du service worker
 ├── ui/                          React, Canvas et adaptateurs navigateur
 ├── styles/                      CSS par surface propriétaire
 ├── music/                       vocabulaire tonal déterministe
@@ -179,7 +180,8 @@ d’inspecteur ne gardent que le protocole d’interaction.
 ### Fichiers projet
 
 Le menu du projet est dans `src/ui/project-files/ProjectMenu.tsx`. Le
-format natif et le MIDI ont des pipelines indépendants sous `src/project-io/`.
+format `.pianola` vit sous `src/infrastructure/project-files/pianola/` et le
+MIDI sous `src/project-io/midi/`.
 Consultez le [guide des fichiers](docs/guides/project-files.md) avant de modifier
 un schéma, un parseur ou un export.
 
@@ -202,12 +204,10 @@ Tous les gestes et contrôles sont détaillés dans
 
 ## Fichiers et données
 
-Le format `.pianola` stocke le document musical et le workspace projet,
+Le format `.pianola` version 1 stocke le document musical et le workspace projet,
 jamais les préférences utilisateur. Le parseur traite le JSON comme inconnu,
 vérifie identité, version et limites, puis crée une entrée distincte dans la
-bibliothèque IndexedDB. Les données v1 restent lisibles : leurs anciennes
-positions de playhead sont validées puis ignorées, car le playhead v2 est un
-état de session non persistant.
+bibliothèque IndexedDB. Toute autre version de fichier est refusée.
 
 L’import MIDI analyse d’abord le SMF, présente les avertissements et collisions,
 puis construit un nouveau projet. L’export reçoit une projection musicale
@@ -215,7 +215,9 @@ neutre ; le codec ne connaît ni React, ni le store, ni le clip affiché.
 
 Les données restent locales. L'autosave conserve deux générations validées et
 publie leur résumé dans le catalogue ; l'export `.pianola` reste la sauvegarde
-portable appartenant à l'utilisateur.
+portable appartenant à l'utilisateur. La baseline locale repart du snapshot
+version 1. Une base IndexedDB dont la version de layout ne correspond pas à la
+version courante est explicitement recréée, sans conversion de données.
 
 ## Tests et validation
 

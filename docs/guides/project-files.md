@@ -1,9 +1,8 @@
 # Fichiers projet
 
-> **État courant.** Ce guide décrit les codecs présents avant le lot 2. La cible
-> incompatible avec les anciens formats est définie par D-009 dans
-> [`../migration/DECISIONS.md`](../migration/DECISIONS.md), et son avancement par
-> [`../migration/STATUS.md`](../migration/STATUS.md).
+> **État courant.** Ce guide décrit les codecs et adaptateurs présents dans le
+> worktree après les lots 2 et 3. La séquence de migration reste définie dans
+> [`../migration/README.md`](../migration/README.md).
 
 ## Format natif `.pianola`
 
@@ -19,9 +18,12 @@ réécrite. L'import crée un nouveau `documentId` local même si le fichier vie
 d'un projet déjà présent dans la bibliothèque.
 
 Le format local est différent du format portable. L'enveloppe
-`app.pianola.stored-project` ajoute `documentId`, révision et `updatedAt`; elle
-est sérialisée dans le Web Worker puis conservée en deux générations par
+`app.pianola.stored-project.v1` ajoute `documentId`, révision et `updatedAt` ;
+elle est sérialisée dans le Web Worker puis conservée en deux générations par
 IndexedDB. Le catalogue ne contient que les résumés nécessaires à l'accueil.
+Les ports sont sous `src/application/ports/` et les codecs, Worker,
+repositories IndexedDB/mémoire et politiques navigateur sous
+`src/infrastructure/persistence/`.
 
 Le pipeline portable :
 
@@ -30,18 +32,18 @@ Le pipeline portable :
 3. construit le document et le workspace ;
 4. crée une entrée locale distincte sans modifier `UserSettings`.
 
-Les enveloppes v1 locale, portable et native restent lisibles. Les champs
-`anchorTick` et `playheadTick` sont validés puis retirés pendant la construction
-du modèle v2 ; les exports et autosaves suivants ne les écrivent plus.
-
-Cette compatibilité décrit uniquement le code courant. Elle doit être supprimée
-au lot 2 : elle ne constitue pas une exigence de la cible.
+Les fichiers `.pianola` et snapshots locaux n'acceptent que leur baseline 1.
+Une autre version est rejetée sans conversion. IndexedDB utilise le layout 2 :
+à l'ouverture, une base d'un layout plus ancien ou plus récent est supprimée et
+recréée explicitement. Les projets locaux incompatibles ne sont pas convertis ;
+un export `.pianola` est nécessaire pour conserver une sauvegarde portable.
 
 Tests ciblés :
 
 ```bash
-npm test -- src/persistence/__tests__/persistence-codecs.test.ts
-npm test -- src/persistence/__tests__/project-repository-contract.test.ts
+npm test -- src/infrastructure/persistence/__tests__/persistence-codecs.test.ts
+npm test -- src/infrastructure/persistence/__tests__/project-repository-contract.test.ts
+npm test -- src/infrastructure/persistence/__tests__/indexed-db-reset.test.ts
 ```
 
 ## MIDI

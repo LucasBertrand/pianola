@@ -9,10 +9,10 @@ import type {
 } from "../../editor/runtime/editor-runtime";
 import type {
   PersistedEditorWorkspace,
-} from "../../persistence/project-persistence-model";
+} from "../../application/ports/project-repository";
 import {
   ProjectPersistenceError,
-} from "../../persistence/project-persistence-model";
+} from "../../infrastructure/persistence/codecs/project-persistence-error";
 import {
   createPianolaProjectFileName,
 } from "../../infrastructure/project-files/pianola/pianola-project-metadata";

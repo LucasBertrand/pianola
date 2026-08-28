@@ -1,5 +1,9 @@
 export const PIANOLA_DATABASE_NAME = "pianola";
-export const PIANOLA_DATABASE_VERSION = 1;
+export const PIANOLA_DATABASE_VERSION = 2;
+
+export type PianolaLocalDataResetReason =
+  | "database-version-newer"
+  | "schema-version-upgrade";
 
 export const PIANOLA_STORES = Object.freeze({
   projectCatalog: "project-catalog",
@@ -10,11 +14,16 @@ export const PIANOLA_STORES = Object.freeze({
 
 export class PianolaIndexedDb {
   private databasePromise: Promise<IDBDatabase> | null = null;
+  private resetReasonValue: PianolaLocalDataResetReason | null = null;
 
   public constructor(
     private readonly factory: IDBFactory = globalThis.indexedDB,
     private readonly databaseName = PIANOLA_DATABASE_NAME,
   ) {}
+
+  public get resetReason(): PianolaLocalDataResetReason | null {
+    return this.resetReasonValue;
+  }
 
   public open(): Promise<IDBDatabase> {
     if (this.databasePromise === null) {
@@ -32,50 +41,30 @@ export class PianolaIndexedDb {
   }
 
   private openDatabase(): Promise<IDBDatabase> {
+    return this.openVersionedDatabase(true);
+  }
+
+  private openVersionedDatabase(
+    allowNewerVersionReset: boolean,
+  ): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = this.factory.open(
         this.databaseName,
         PIANOLA_DATABASE_VERSION,
       );
 
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const database = request.result;
 
-        if (!database.objectStoreNames.contains(
-          PIANOLA_STORES.projectCatalog,
-        )) {
-          database.createObjectStore(
-            PIANOLA_STORES.projectCatalog,
-            { keyPath: "documentId" },
-          );
+        if ((event as IDBVersionChangeEvent).oldVersion !== 0) {
+          this.resetReasonValue = "schema-version-upgrade";
+
+          for (const storeName of Array.from(database.objectStoreNames)) {
+            database.deleteObjectStore(storeName);
+          }
         }
 
-        if (!database.objectStoreNames.contains(
-          PIANOLA_STORES.projectGenerations,
-        )) {
-          database.createObjectStore(
-            PIANOLA_STORES.projectGenerations,
-            { keyPath: ["documentId", "revision"] },
-          );
-        }
-
-        if (!database.objectStoreNames.contains(
-          PIANOLA_STORES.userSettings,
-        )) {
-          database.createObjectStore(
-            PIANOLA_STORES.userSettings,
-            { keyPath: "key" },
-          );
-        }
-
-        if (!database.objectStoreNames.contains(
-          PIANOLA_STORES.diagnostics,
-        )) {
-          database.createObjectStore(
-            PIANOLA_STORES.diagnostics,
-            { keyPath: "id", autoIncrement: true },
-          );
-        }
+        createCurrentObjectStores(database);
       };
 
       request.onsuccess = () => {
@@ -83,13 +72,70 @@ export class PianolaIndexedDb {
         database.onversionchange = () => database.close();
         resolve(database);
       };
-      request.onerror = () => reject(
-        request.error ?? new Error("Unable to open IndexedDB."),
-      );
+      request.onerror = () => {
+        const error = request.error ?? new Error("Unable to open IndexedDB.");
+
+        if (
+          allowNewerVersionReset
+          && error instanceof DOMException
+          && error.name === "VersionError"
+        ) {
+          this.resetReasonValue = "database-version-newer";
+          void this.deleteDatabase()
+            .then(() => this.openVersionedDatabase(false))
+            .then(resolve, reject);
+          return;
+        }
+
+        reject(error);
+      };
       request.onblocked = () => reject(
         new Error("IndexedDB upgrade is blocked by another window."),
       );
     });
+  }
+
+  private deleteDatabase(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = this.factory.deleteDatabase(this.databaseName);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(
+        request.error ?? new Error("Unable to reset IndexedDB."),
+      );
+      request.onblocked = () => reject(
+        new Error("IndexedDB reset is blocked by another window."),
+      );
+    });
+  }
+}
+
+function createCurrentObjectStores(database: IDBDatabase): void {
+  if (!database.objectStoreNames.contains(PIANOLA_STORES.projectCatalog)) {
+    database.createObjectStore(
+      PIANOLA_STORES.projectCatalog,
+      { keyPath: "documentId" },
+    );
+  }
+
+  if (!database.objectStoreNames.contains(PIANOLA_STORES.projectGenerations)) {
+    database.createObjectStore(
+      PIANOLA_STORES.projectGenerations,
+      { keyPath: ["documentId", "revision"] },
+    );
+  }
+
+  if (!database.objectStoreNames.contains(PIANOLA_STORES.userSettings)) {
+    database.createObjectStore(
+      PIANOLA_STORES.userSettings,
+      { keyPath: "key" },
+    );
+  }
+
+  if (!database.objectStoreNames.contains(PIANOLA_STORES.diagnostics)) {
+    database.createObjectStore(
+      PIANOLA_STORES.diagnostics,
+      { keyPath: "id", autoIncrement: true },
+    );
   }
 }
 

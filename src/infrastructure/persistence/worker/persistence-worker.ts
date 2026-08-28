@@ -2,17 +2,17 @@
 
 import type {
   StoredProject,
-} from "../../persistence/project-persistence-model";
+} from "../../../application/ports/project-repository";
 import {
   ProjectPersistenceError,
-} from "../../persistence/project-persistence-model";
+} from "../codecs/project-persistence-error";
 import {
   parseStoredProject,
   serializeStoredProject,
-} from "../../persistence/stored-project-codec";
+} from "../codecs/stored-project-codec";
 import {
   parseProjectSnapshot,
-} from "../../infrastructure/project-files/pianola/parsing/parse-project";
+} from "../../project-files/pianola/parsing/parse-project";
 
 type WorkerRequest =
   | {

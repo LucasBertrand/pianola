@@ -1,19 +1,21 @@
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
-} from "../domain/identifiers";
+} from "../../../domain/identifiers";
 import type {
   ProjectDocument,
-} from "../domain/project/project-document";
+} from "../../../domain/project/project-document";
 import {
   createProjectDocumentPayload,
 } from "./project-document-payload";
 import {
-  ProjectPersistenceError,
-  STORED_PROJECT_FORMAT,
-  STORED_PROJECT_SCHEMA_VERSION,
-  type EncodedStoredProject,
   type StoredProject,
-} from "./project-persistence-model";
+} from "../../../application/ports/project-repository";
+import type {
+  EncodedStoredProject,
+} from "../../../application/ports/stored-project-codec";
+import {
+  ProjectPersistenceError,
+} from "./project-persistence-error";
 import {
   parsePersistenceJson,
   readPersistenceInteger,
@@ -24,6 +26,9 @@ import {
 import {
   parsePersistedEditorWorkspace,
 } from "./project-workspace-codec";
+
+export const STORED_PROJECT_FORMAT = "app.pianola.stored-project.v1";
+export const STORED_PROJECT_SCHEMA_VERSION = 1;
 
 export type ParseProjectDocument = (
   source: unknown,
@@ -84,17 +89,13 @@ export function parseStoredProject(
     1,
   );
 
-  if (schemaVersion > STORED_PROJECT_SCHEMA_VERSION) {
+  if (schemaVersion !== STORED_PROJECT_SCHEMA_VERSION) {
     throw new ProjectPersistenceError(
-      "FUTURE_VERSION",
-      `Stored project version ${schemaVersion} is newer than this application.`,
-    );
-  }
-
-  if (schemaVersion < 1) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      `Stored project version ${schemaVersion} is not supported.`,
+      schemaVersion > STORED_PROJECT_SCHEMA_VERSION
+        ? "FUTURE_VERSION"
+        : "INVALID_DATA",
+      `Stored project version ${schemaVersion} does not match `
+        + `the supported local baseline ${STORED_PROJECT_SCHEMA_VERSION}.`,
     );
   }
 

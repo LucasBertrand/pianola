@@ -39,7 +39,7 @@ import {
 } from "../../src/domain/instruments/instrument";
 import type {
   PersistedEditorWorkspace,
-} from "../../src/persistence/project-persistence-model";
+} from "../../src/application/ports/project-repository";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
 } from "../../src/music/pitch-snap";

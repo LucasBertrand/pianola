@@ -1,6 +1,6 @@
 import type {
   AutosaveScheduler,
-} from "../../use-cases/persistence/project-autosave";
+} from "../../../application/ports/autosave-scheduler";
 
 export const BROWSER_AUTOSAVE_SCHEDULER: AutosaveScheduler = {
   schedule(callback, delayMilliseconds) {

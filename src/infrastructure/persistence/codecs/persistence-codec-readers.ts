@@ -1,6 +1,6 @@
 import {
   ProjectPersistenceError,
-} from "./project-persistence-model";
+} from "./project-persistence-error";
 
 export function readPersistenceRecord(
   source: unknown,

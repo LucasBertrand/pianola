@@ -1,14 +1,13 @@
 import {
   DEFAULT_USER_SETTINGS,
-  USER_SETTINGS_FORMAT,
   USER_SETTINGS_SCHEMA_VERSION,
   type ShortcutActionId,
   type ShortcutBinding,
   type UserSettings,
-} from "./user-settings-model";
+} from "../../../application/ports/user-settings-repository";
 import {
   ProjectPersistenceError,
-} from "./project-persistence-model";
+} from "./project-persistence-error";
 import {
   parsePersistenceJson,
   readPersistenceBoolean,
@@ -20,6 +19,8 @@ import {
 import {
   parsePersonalInstrumentPresetLibrary,
 } from "./personal-instrument-preset-codec";
+
+export const USER_SETTINGS_FORMAT = "app.pianola.user-settings.v1";
 
 const ACTION_IDS = [
   "editor.redo",
@@ -233,17 +234,6 @@ export function parseUserSettings(
     personalInstrumentPresetsById: personalPresetLibrary.presetsById,
     personalInstrumentPresetOrder: personalPresetLibrary.presetOrder,
     shortcuts,
-  };
-}
-
-export function recoverDefaultUserSettings(): UserSettings {
-  return {
-    ...DEFAULT_USER_SETTINGS,
-    shortcuts: Object.fromEntries(
-      Object.entries(DEFAULT_USER_SETTINGS.shortcuts).map(
-        ([key, value]) => [key, { ...value }],
-      ),
-    ) as unknown as UserSettings["shortcuts"],
   };
 }
 
