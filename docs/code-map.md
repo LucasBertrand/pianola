@@ -7,7 +7,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 
 | Capacité | Point d’entrée | Propriétaire d’état | Tests |
 | --- | --- | --- | --- |
-| composition | `src/bootstrap/App.tsx` puis `src/presentation/home/ApplicationHome.tsx` ou `src/presentation/piano-roll/PianoRollWorkspace.tsx` ; DOM dans `PianoRollWorkspaceLayout.tsx` | accueil sans runtime ou une session `EditorRuntime` active | test de layout colocalisé, smoke de rendu et `tests/integration/critical-behavior.test.ts` |
+| composition | `src/bootstrap/App.tsx` puis `src/presentation/home/ApplicationHome.tsx` ou `src/presentation/piano-roll/PianoRollWorkspace.tsx` ; DOM dans `PianoRollWorkspaceLayout.tsx` ; câblage dans les hooks compositeurs `use*Workspace.ts` | accueil sans runtime ou une session `EditorRuntime` active | test de layout colocalisé, smoke de rendu et `tests/integration/critical-behavior.test.ts` |
 | piano roll | `src/presentation/piano-roll/PianoRollLayers.tsx` | agrégat `src/application/editor-session/editor-runtime.ts`, mécanismes purs sous `src/editor-core/` | `tests/integration/editor-controller-contracts.test.ts` et suite centrale |
 | sélection | `src/presentation/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/presentation/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
@@ -172,7 +172,12 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 
 - `src/presentation/piano-roll/PianoRollWorkspace.tsx` reste un coordinateur de surface ;
   le DOM, les protocoles complets et les abonnements sont extraits chez leurs
-  propriétaires.
+  propriétaires. Quatre hooks compositeurs (`useInspectorWorkspace.ts`,
+  `useInstrumentsWorkspace.ts`, `useClipsWorkspace.ts`,
+  `useSelectionWorkspace.ts`) encapsulent le câblage interne des capacités.
+  Un hook compositeur se distingue d'un hook de capacité par le suffixe
+  `Workspace` ; il câble des capacités pour le compte du composant, sans
+  posséder de domaine fonctionnel.
 - `src/presentation/styles/application-colors.ts` est une table de données de thème sans
   protocole concurrent.
 - `src/domain/note-collision.ts` possède l’algorithme cohérent de résolution ;

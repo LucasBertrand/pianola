@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import {
   APPLICATION_CONSTANTS,
@@ -17,7 +16,6 @@ import {
 import {
   getMeasureSpans,
 } from "../../domain/transport/time-map";
-import { isNoteEditable } from "../../domain/notes/note";
 import type {
   LoopRegion,
 } from "../../domain/transport/transport";
@@ -86,39 +84,14 @@ import type {
   TimelineDragPreview,
 } from "../../editor-core/model/timeline-drag-preview";
 import {
-  useClipWorkflow,
-} from "../inspector/clips/useClipWorkflow";
-import {
-  useClipDialogWorkflow,
-} from "../inspector/clips/useClipDialogWorkflow";
-import {
-  useProjectInstrumentWorkflow,
-} from "../inspector/instruments/useProjectInstrumentWorkflow";
-import {
-  usePianoRollSelectionWorkflow,
-} from "./usePianoRollSelectionWorkflow";
-import {
-  usePianoRollProjectLifecycle,
-} from "../project-files/usePianoRollProjectLifecycle";
-import {
-  usePianoRollTransportViewport,
-  usePlaybackFollowSelection,
-} from "../transport/usePianoRollTransportViewport";
+  usePianoRollProjectState,
+} from "./usePianoRollProjectState";
 import {
   usePrimaryActionTrigger,
 } from "./interactions/usePrimaryActionTrigger";
 import {
-  useStylusAction,
-} from "./interactions/useStylusAction";
-import {
   FloatingRadialMenu,
 } from "../radial-menu/FloatingRadialMenu";
-import {
-  useFloatingRadialMenu,
-} from "../radial-menu/useFloatingRadialMenu";
-import {
-  usePianoRollRadialMenuCommands,
-} from "../radial-menu/usePianoRollRadialMenuCommands";
 import {
   useKeyboardShortcut,
 } from "./interactions/useKeyboardShortcut";
@@ -126,20 +99,17 @@ import {
   useRenderSignalValue,
 } from "./useRenderSignalValue";
 import {
-  useInstrumentDialogWorkflow,
-} from "../inspector/instruments/useInstrumentDialogWorkflow";
-import {
-  usePianoRollUserPreferences,
-} from "../inspector/instruments/usePianoRollUserPreferences";
-import {
   useNoteCollisionDialogWorkflow,
 } from "./interactions/useNoteCollisionDialogWorkflow";
 import {
   useMarkerCollisionDialogWorkflow,
 } from "./interactions/useMarkerCollisionDialogWorkflow";
 import {
-  usePianoRollProjectState,
-} from "./usePianoRollProjectState";
+  usePianoRollProjectLifecycle,
+} from "../project-files/usePianoRollProjectLifecycle";
+import {
+  usePianoRollTransportViewport,
+} from "../transport/usePianoRollTransportViewport";
 import type {
   ProjectRepository,
   PersistedEditorWorkspace,
@@ -148,6 +118,10 @@ import type {
   UserSettings,
   UserSettingsRepository,
 } from "../../application/ports/user-settings-repository";
+import { useInspectorWorkspace } from "./useInspectorWorkspace";
+import { useInstrumentsWorkspace } from "./useInstrumentsWorkspace";
+import { useClipsWorkspace } from "./useClipsWorkspace";
+import { useSelectionWorkspace } from "./useSelectionWorkspace";
 
 export interface PianoRollWorkspaceProps {
   readonly runtime: EditorRuntime;
@@ -196,11 +170,8 @@ export function PianoRollWorkspace({
     handleSelectionChange,
     clearInteractionSelection,
   } = usePianoRollProjectState(runtime, pianoRollControllerRef);
-  const [projectInspectorOpen, setGeneralInspectorOpen] =
-    useState(false);
+  const inspector = useInspectorWorkspace();
   const dialogState = usePianoRollDialogState();
-  const [projectInspectorSection, setGeneralInspectorSection] =
-    useState<"instruments" | "clips">("instruments");
   const pitchSnapSettings = useRenderSignalValue(runtime.pitchSnapSettings);
   const gridResolutionTicks = useRenderSignalValue(
     runtime.gridResolutionTicks,
@@ -250,7 +221,7 @@ export function PianoRollWorkspace({
   const transportViewport = usePianoRollTransportViewport({
     runtime,
     activeClip,
-    inspectorOpen: projectInspectorOpen,
+    inspectorOpen: inspector.open,
     autoScrollEnabled,
     selectedInstrumentId,
     getController: getPianoRollController,
@@ -288,115 +259,50 @@ export function PianoRollWorkspace({
     togglePlayback,
     initialUserSettings.shortcuts["transport.toggle"],
   );
-  const radialMenu = useFloatingRadialMenu();
-
-  useStylusAction(radialMenu.toggleAt);
 
   const handleNoteCollision = useNoteCollisionDialogWorkflow({
     runtime,
     showDialog: setApplicationDialog,
     alert: showApplicationAlert,
   });
+
   const {
-    select: handleInstrumentSelect,
-    add: addProjectInstrument,
-    reorder: handleReorderInstrument,
-    remove: handleDeleteProjectInstrument,
-    update: handleUpdateProjectInstrument,
-    savePreset: saveProjectInstrumentPreset,
-    removePreset: removeProjectInstrumentPreset,
-    selectNotes: handleSelectInstrumentNotes,
-  } = useProjectInstrumentWorkflow({
-    commands: runtime.editorCommands,
+    preferences,
+    instrumentDialog,
+    instruments,
+  } = useInstrumentsWorkspace({
+    runtime,
     selectedInstrumentId,
     selectInstrument: setSelectedInstrumentId,
-    toggleInstrumentSelection(instrumentId) {
-      runtime.selectionRequests.toggleInstrument(instrumentId);
-    },
-    removeInstrumentFromSelection(instrumentId) {
-      pianoRollControllerRef.current
-        ?.removeInstrumentFromSelection(instrumentId);
-    },
-    confirm: showApplicationConfirmation,
-  });
-  const preferences = usePianoRollUserPreferences({
-    runtime,
-    settings: initialUserSettings,
-    projectPresetsById: projectState.instrumentPresetsById,
-    projectPresetOrder: projectState.instrumentPresetOrder,
-    repository: userSettingsRepository,
-    onSettingsChange: onUserSettingsChange,
-    onPersistenceError(error) {
-      showApplicationAlert(
-        "Settings not saved",
-        error instanceof Error ? error.message : "Unable to save settings.",
-        "danger",
-      );
-    },
-    saveProjectPreset: saveProjectInstrumentPreset,
-    removeProjectPreset: removeProjectInstrumentPreset,
-  });
-  const instrumentDialog = useInstrumentDialogWorkflow({
-    runtime,
-    addInstrument: addProjectInstrument,
-    updateInstrument: handleUpdateProjectInstrument,
-    removeInstrument: handleDeleteProjectInstrument,
-    previewInstrumentSettings,
-    presetsById: preferences.presetsById,
-    personalPresetIds: preferences.personalPresetIds,
-    createPersonalPreset: preferences.createPersonalPreset,
-    updatePersonalPreset: preferences.updatePersonalPreset,
-    renamePersonalPreset: preferences.renamePersonalPreset,
-    deletePersonalPreset: preferences.deletePersonalPreset,
-    dismissApplicationDialog(): void {
-      setApplicationDialog(null);
-    },
-  });
-  const beginClipChange = useCallback((): void => {
-    clearInteractionSelection();
-  }, [clearInteractionSelection]);
-  const {
-    select: handleClipSelect,
-    toggleBypass: handleToggleClipBypass,
-    add: handleAddClip,
-    duplicate: handleDuplicateClip,
-    duplicateGroup: handleDuplicateClipGroup,
-    split: handleSplitClip,
-    createGroup: handleCreateClipGroup,
-    updateGroup: handleUpdateClipGroup,
-    toggleGroupBypass: handleToggleClipGroupBypass,
-    concatenateGroup: handleConcatenateClipGroup,
-    ungroup: handleUngroupClips,
-    deleteGroup: handleDeleteClipGroup,
-    moveNode: handleMoveClipNode,
-    remove: handleDeleteClip,
-    update: handleUpdateClip,
-  } = useClipWorkflow({
-    commands: runtime.editorCommands,
-    beginClipChange,
-    duplicateEditorState: runtime.duplicateClipEditorState,
+    pianoRollControllerRef,
     confirm: showApplicationConfirmation,
     alert: showApplicationAlert,
+    showDialog: setApplicationDialog,
+    initialUserSettings,
+    projectPresetsById: projectState.instrumentPresetsById,
+    projectPresetOrder: projectState.instrumentPresetOrder,
+    userSettingsRepository,
+    onUserSettingsChange,
+    previewInstrumentSettings,
   });
-  const clipDialog = useClipDialogWorkflow({
+
+  const {
+    clips,
+    clipDialog,
+    selectClipForPlayback,
+    selectClipNotes,
+  } = useClipsWorkspace({
     runtime,
-    updateClip: handleUpdateClip,
-    removeClip: handleDeleteClip,
-    dismissApplicationDialog(): void {
-      setApplicationDialog(null);
-    },
-  });
-  const handleClipSelectionRequest = usePlaybackFollowSelection({
+    clearInteractionSelection,
+    confirm: showApplicationConfirmation,
+    alert: showApplicationAlert,
+    showDialog: setApplicationDialog,
     autoScrollEnabled,
     playbackStatus,
     activeClipId: activeClip.id,
     playingClipId,
-    selectClip: handleClipSelect,
   });
-  const handleSelectClipNotes = useCallback((clipId: string): void => {
-    handleClipSelectionRequest(clipId);
-    runtime.selectionRequests.selectAllNotes();
-  }, [handleClipSelectionRequest, runtime]);
+
   const {
     insertMeasuresAtPlayhead: handleInsertMeasuresAtPlayhead,
     removeMeasuresAtPlayhead: handleRemoveMeasuresAtPlayhead,
@@ -419,71 +325,21 @@ export function PianoRollWorkspace({
     resolveCollision: handleNoteCollision,
     resolveMarkerCollision: handleMarkerCollision,
   });
-  const {
-    clipboardAvailable,
-    clearClipboard: clearSelectionClipboard,
-    undo: handleUndo,
-    redo: handleRedo,
-    copy: handleCopy,
-    cut: handleCut,
-    remove: handleDeleteSelection,
-    toggleMute: handleToggleSelectionMute,
-    transform: handleTransformSelection,
-    sliceAtPlayhead: handleSliceSelectionAtPlayhead,
-    sliceAtLoopAnchors: handleSliceSelectionAtLoopAnchors,
-    paste: handlePaste,
-    transferToInstrument: handleTransferSelectionToInstrument,
-  } = usePianoRollSelectionWorkflow({
-    commands: runtime.editorCommands,
-    selection: runtime.selection,
+
+  const selectionWk = useSelectionWorkspace({
+    runtime,
     getController: getPianoRollController,
-    getPlayheadTick() {
-      return runtime.playheadTick.get();
-    },
-    getGridResolutionTicks() {
-      return runtime.gridResolutionTicks.get();
-    },
     resolveCollision: handleNoteCollision,
     resolveMarkerCollision: handleMarkerCollision,
     alert: showApplicationAlert,
-  });
-  const handleOpenSliceSelection = useCallback((): void => {
-    setApplicationDialog({
-      title: "Slice selected notes",
-      message: "Choose where to split the selected notes.",
-      confirmLabel: "At playhead",
-      alternateLabel: "At loop anchors",
-      cancelLabel: "Cancel",
-      tone: "default",
-      onConfirm: handleSliceSelectionAtPlayhead,
-      onAlternate: handleSliceSelectionAtLoopAnchors,
-    });
-  }, [
-    handleSliceSelectionAtLoopAnchors,
-    handleSliceSelectionAtPlayhead,
-    setApplicationDialog,
-  ]);
-  const editableNoteSelectionAvailable = selectedNotes.some(isNoteEditable);
-  const editableTimelineSelectionAvailable =
-    editableNoteSelectionAvailable || selectedMarkerCount > 0;
-  const selectionWillBeMuted = selectedNotes.some(
-    (note) => !note.muted,
-  );
-  const radialMenuCommands = usePianoRollRadialMenuCommands({
-    editableNoteSelectionAvailable,
-    editableTimelineSelectionAvailable,
-    selectedNoteCount: selectedNotes.length,
-    selectionWillBeMuted,
-    clipboardAvailable,
-  }, {
-    copy: handleCopy,
-    cut: handleCut,
-    paste: handlePaste,
-    slice: handleOpenSliceSelection,
-    toggleMute: handleToggleSelectionMute,
-    addMarker: timeMapMarkers.openMarkerAtPlayhead,
+    showDialog: setApplicationDialog,
+    selectedNotes,
+    selectedMarkerCount,
+    playbackStatus,
     togglePlayback,
-  }, playbackStatus === "playing");
+    openMarkerAtPlayhead: timeMapMarkers.openMarkerAtPlayhead,
+  });
+
   const projectLifecycle = usePianoRollProjectLifecycle({
     runtime,
     documentId,
@@ -492,7 +348,7 @@ export function PianoRollWorkspace({
     selectedInstrumentId,
     controllerRef: pianoRollControllerRef,
     stopPlayback,
-    clearClipboard: clearSelectionClipboard,
+    clearClipboard: selectionWk.selection.clearClipboard,
     onSelectionCleared() {
       setSelectionAvailable(false);
     },
@@ -505,11 +361,11 @@ export function PianoRollWorkspace({
   });
   useKeyboardShortcut(
     [initialUserSettings.shortcuts["editor.undo"]],
-    handleUndo,
+    selectionWk.selection.undo,
   );
   useKeyboardShortcut(
     [initialUserSettings.shortcuts["editor.redo"]],
-    handleRedo,
+    selectionWk.selection.redo,
   );
   const handleApplicationDialogCancellation = useCallback((): void => {
     projectLifecycle.clearPendingMidiImport();
@@ -520,8 +376,8 @@ export function PianoRollWorkspace({
       appShellRef={appShellRef}
       stageRef={stageRef}
       productName={APPLICATION_CONSTANTS.productName}
-      inspectorOpen={projectInspectorOpen}
-      inspectorSection={projectInspectorSection}
+      inspectorOpen={inspector.open}
+      inspectorSection={inspector.section}
       header={(
         <EditorHeader
           projectControls={{
@@ -567,45 +423,34 @@ export function PianoRollWorkspace({
       )}
       renderToolbar={() => (
           <EditorToolbar
-            inspectorOpen={projectInspectorOpen}
-            inspectorSection={projectInspectorSection}
+            inspectorOpen={inspector.open}
+            inspectorSection={inspector.section}
             canUndo={runtime.editorCommands.canUndo()}
             canRedo={runtime.editorCommands.canRedo()}
             measureCount={measureCount}
-            selectionAvailable={editableTimelineSelectionAvailable}
+            selectionAvailable={selectionWk.editableTimelineSelectionAvailable}
             noteSelectionAvailable={selectedNotes.length > 0}
-            editableNoteSelectionAvailable={editableNoteSelectionAvailable}
-            selectionWillBeMuted={selectionWillBeMuted}
-            clipboardSelectionAvailable={editableTimelineSelectionAvailable}
-            clipboardAvailable={clipboardAvailable}
+            editableNoteSelectionAvailable={selectionWk.editableNoteSelectionAvailable}
+            selectionWillBeMuted={selectionWk.selectionWillBeMuted}
+            clipboardSelectionAvailable={selectionWk.editableTimelineSelectionAvailable}
+            clipboardAvailable={selectionWk.selection.clipboardAvailable}
             selectionMode={preferences.selectionMode}
             noteColorMode={preferences.noteColorMode}
-            onToggleInspector={(section) => {
-              if (
-                projectInspectorOpen
-                && projectInspectorSection === section
-              ) {
-                setGeneralInspectorOpen(false);
-                return;
-              }
-
-              setGeneralInspectorSection(section);
-              setGeneralInspectorOpen(true);
-            }}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
+            onToggleInspector={inspector.toggle}
+            onUndo={selectionWk.selection.undo}
+            onRedo={selectionWk.selection.redo}
             onAddMeasures={() => dialogState.openMeasure("insert")}
             onRemoveMeasures={() => dialogState.openMeasure("remove")}
-            onDeleteSelection={handleDeleteSelection}
-            onToggleSelectionMute={handleToggleSelectionMute}
-            onCopy={handleCopy}
-            onCut={handleCut}
-            onPaste={handlePaste}
+            onDeleteSelection={selectionWk.selection.remove}
+            onToggleSelectionMute={selectionWk.selection.toggleMute}
+            onCopy={selectionWk.selection.copy}
+            onCut={selectionWk.selection.cut}
+            onPaste={selectionWk.selection.paste}
             onSelectionModeChange={preferences.changeSelectionMode}
             onNoteColorModeToggle={preferences.toggleNoteColorMode}
-            onOpenSliceSelection={handleOpenSliceSelection}
+            onOpenSliceSelection={selectionWk.openSliceSelection}
             onAddMarkerAtPlayhead={timeMapMarkers.openMarkerAtPlayhead}
-            onTransformSelection={handleTransformSelection}
+            onTransformSelection={selectionWk.selection.transform}
           />
       )}
       pianoKeyboard={(
@@ -654,12 +499,12 @@ export function PianoRollWorkspace({
           onHorizontalViewportInteractionEnd={
             endHorizontalViewportInteraction
           }
-          onTwoFingerDoubleTap={handleUndo}
+          onTwoFingerDoubleTap={selectionWk.selection.undo}
           controllerRef={pianoRollControllerRef}
           interactionStrategyRef={interactionStrategyRef}
           onSelectionChange={handleSelectionChange}
           onGridSeek={seekPlayback}
-          onOpenContextMenu={radialMenu.openAt}
+          onOpenContextMenu={selectionWk.radialMenu.openAt}
           onNoteCollision={handleNoteCollision}
           onMarkerCollision={handleMarkerCollision}
           globalLassoRef={globalLassoRef}
@@ -689,12 +534,12 @@ export function PianoRollWorkspace({
         />
       )}
       inspectorResizeHandle={(
-        <ProjectInspectorResizeHandle inspectorOpen={projectInspectorOpen} />
+        <ProjectInspectorResizeHandle inspectorOpen={inspector.open} />
       )}
       renderInspector={(setToolbarHost) => (
         <ProjectInspector
-          open={projectInspectorOpen}
-          portraitSection={projectInspectorSection}
+          open={inspector.open}
+          portraitSection={inspector.section}
           projectState={projectState}
           playingClipId={
             playbackStatus === "playing" ? playingClipId : null
@@ -704,44 +549,44 @@ export function PianoRollWorkspace({
             autoScrollEnabled && playbackStatus === "playing"
           }
           selectedInstrumentId={selectedInstrumentId}
-          selectionAvailable={editableNoteSelectionAvailable}
+          selectionAvailable={selectionWk.editableNoteSelectionAvailable}
           setToolbarHost={setToolbarHost}
-          onClipSelect={handleClipSelectionRequest}
-          onToggleClipBypass={handleToggleClipBypass}
+          onClipSelect={selectClipForPlayback}
+          onToggleClipBypass={clips.toggleBypass}
           onToggleClipPlayback={toggleClipPlayback}
-          onAddClip={handleAddClip}
-          onDuplicateClip={handleDuplicateClip}
-          onDuplicateClipGroup={handleDuplicateClipGroup}
-          onToggleClipGroupBypass={handleToggleClipGroupBypass}
-          onCreateClipGroup={handleCreateClipGroup}
-          onUpdateClipGroup={handleUpdateClipGroup}
-          onConcatenateClipGroup={handleConcatenateClipGroup}
-          onUngroupClips={handleUngroupClips}
-          onDeleteClipGroup={handleDeleteClipGroup}
-          onMoveClipNode={handleMoveClipNode}
-          onSelectClipNotes={handleSelectClipNotes}
+          onAddClip={clips.add}
+          onDuplicateClip={clips.duplicate}
+          onDuplicateClipGroup={clips.duplicateGroup}
+          onToggleClipGroupBypass={clips.toggleGroupBypass}
+          onCreateClipGroup={clips.createGroup}
+          onUpdateClipGroup={clips.updateGroup}
+          onConcatenateClipGroup={clips.concatenateGroup}
+          onUngroupClips={clips.ungroup}
+          onDeleteClipGroup={clips.deleteGroup}
+          onMoveClipNode={clips.moveNode}
+          onSelectClipNotes={selectClipNotes}
           onEditClip={clipDialog.openEdit}
-          onReorderInstrument={handleReorderInstrument}
+          onReorderInstrument={instruments.reorder}
           onAddProjectInstrument={instrumentDialog.openCreate}
-          onInstrumentSelect={handleInstrumentSelect}
+          onInstrumentSelect={instruments.select}
           onEditProjectInstrument={instrumentDialog.openEdit}
-          onUpdateProjectInstrument={handleUpdateProjectInstrument}
+          onUpdateProjectInstrument={instruments.update}
           onInstrumentGainPreview={previewInstrumentGain}
-          onSelectInstrumentNotes={handleSelectInstrumentNotes}
-          onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
-          onDeleteProjectInstrument={handleDeleteProjectInstrument}
+          onSelectInstrumentNotes={instruments.selectNotes}
+          onTransferSelectionToInstrument={selectionWk.selection.transferToInstrument}
+          onDeleteProjectInstrument={instruments.remove}
         />
       )}
       overlays={(
         <>
-          {radialMenu.state === null ? null : (
+          {selectionWk.radialMenu.state === null ? null : (
             <FloatingRadialMenu
-              position={radialMenu.state.position}
-              revision={radialMenu.state.revision}
-              closing={radialMenu.state.closing}
-              items={radialMenuCommands.items}
-              centerButton={radialMenuCommands.centerButton}
-              onClose={radialMenu.close}
+              position={selectionWk.radialMenu.state.position}
+              revision={selectionWk.radialMenu.state.revision}
+              closing={selectionWk.radialMenu.state.closing}
+              items={selectionWk.radialMenuCommands.items}
+              centerButton={selectionWk.radialMenuCommands.centerButton}
+              onClose={selectionWk.radialMenu.close}
             />
           )}
           <PianoRollWorkspaceDialogs
@@ -751,7 +596,7 @@ export function PianoRollWorkspace({
             application={applicationDialogs}
             state={dialogState}
             clip={clipDialog}
-            splitClip={handleSplitClip}
+            splitClip={clips.split}
             instrument={instrumentDialog}
             preferences={preferences}
             timeMapMarkers={timeMapMarkers}

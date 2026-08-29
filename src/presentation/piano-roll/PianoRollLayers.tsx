@@ -34,7 +34,7 @@ import type {
 import {
   GridCanvas,
   NotesCanvas,
-} from "./rendering/canvas-layer";
+} from "./rendering/CanvasLayer";
 import type {
   TimelineDragPreview,
 } from "../../editor-core/model/timeline-drag-preview";
