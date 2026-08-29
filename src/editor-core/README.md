@@ -1,8 +1,5 @@
 # Éditeur
 
-> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
-> sont archivées dans [`docs/migration/`](../../docs/migration/README.md).
-
 ## Que possède cette zone ?
 
 Le noyau indépendant du DOM du piano roll : géométrie, interactions, sélection,

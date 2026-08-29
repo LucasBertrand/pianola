@@ -1,9 +1,5 @@
 # Architecture de Pianola
 
-> **Architecture courante.** La migration est matérialisée dans le worktree.
-> Ses décisions, sa séquence et son bilan sont archivés dans
-> [`migration/`](migration/README.md).
-
 Ce document décrit les frontières et les principaux pipelines. Pour chercher un
 comportement précis, partir de la [carte du code](code-map.md). Pour décider si
 un état doit persister ou entrer dans Undo/Redo, consulter
@@ -226,7 +222,7 @@ Les contrats `ProjectRepository`, `StoredProjectCodec`,
 `src/application/ports/`. Leurs implémentations Worker, IndexedDB, navigateur et
 mémoire sont sous `src/infrastructure/persistence/`. La baseline de snapshot
 local est la version 1 ; une base IndexedDB d'un autre layout est recréée sans
-migration silencieuse.
+conversion silencieuse.
 
 ```text
 Autosave : document + workspace → Worker → deux générations IndexedDB
@@ -250,10 +246,6 @@ courante à chaque vérification.
 build, smoke test du module worklet produit et la suite de tests. Les règles
 structurelles sont dans
 `scripts/check-structure.mjs`; les frontières techniques restent dans
-`scripts/check-import-boundaries.mjs`. La couverture ciblée des modules à
-découper s'exécute avec `npm run test:coverage:hotspots`. Le scénario Edge
-headless conservant la baseline de rendu de `PianoRollWorkspace` s'exécute avec
-`node scripts/measure-render-baseline.mjs` ; il n'est actif dans l'application
-qu'avec le paramètre `renderBaseline=1`.
+`scripts/check-import-boundaries.mjs`.
 
 La documentation de référence est indexée dans [`README.md`](README.md).

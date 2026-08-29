@@ -1,8 +1,5 @@
 # Persistance
 
-> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
-> sont archivées dans [`docs/migration/`](../../../docs/migration/README.md).
-
 ## Propriétaires
 
 - `codecs/` sérialise et valide snapshots locaux et réglages ;
@@ -20,7 +17,7 @@ L'infrastructure ne possède aucune intention applicative.
 ## Baseline locale
 
 Le snapshot local emploie `app.pianola.stored-project.v1`. IndexedDB emploie le
-layout 2. Une base d'une autre version est recréée sans migration ; la raison
+layout 2. Une base d'une autre version est recréée sans conversion ; la raison
 est exposée par `PianolaIndexedDb.resetReason`. Les réglages illisibles sont
 copiés dans le store de diagnostics avant restauration des valeurs par défaut.
 

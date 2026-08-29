@@ -7,10 +7,6 @@ navigateur sans serveur applicatif, base distante ni compte utilisateur.
 Ce README est un portail. Les détails vivent dans les guides de `docs/` et dans
 les README placés près du code qu’ils décrivent.
 
-> **Architecture migrée.** Les chemins présentés ici sont les propriétaires
-> courants. Les décisions, preuves et bilans de la migration restent consultables
-> dans [`docs/migration/`](docs/migration/README.md).
-
 ## Démarrage rapide
 
 Prérequis :
@@ -44,7 +40,6 @@ npm run verify
 | `npm run dev` | lancer Vite sur le port 5173 |
 | `npm run build` | vérifier TypeScript puis produire `dist/` |
 | `npm test` | exécuter la suite Vitest |
-| `npm run test:coverage:hotspots` | mesurer les six points de concentration avant découpage |
 | `npm run test:worklet-build` | charger et faire rendre le module AudioWorklet produit |
 | `npm run typecheck` | vérifier les trois configurations TypeScript |
 | `npm run check:docs` | vérifier liens locaux et chemins documentés |
@@ -62,7 +57,6 @@ Les variantes de tests sont décrites dans le
 | --- | --- |
 | découvrir la documentation | [`docs/README.md`](docs/README.md) |
 | commencer une modification | [`docs/guides/contributing.md`](docs/guides/contributing.md) |
-| consulter la migration architecturale | [`docs/migration/README.md`](docs/migration/README.md) |
 | trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
 | comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
 | savoir quel état persiste | [`docs/state-ownership.md`](docs/state-ownership.md) |

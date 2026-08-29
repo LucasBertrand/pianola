@@ -1,8 +1,5 @@
 # Présentation
 
-> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
-> sont archivées dans [`docs/migration/`](../../docs/migration/README.md).
-
 ## Que possède cette zone ?
 
 Les surfaces React et les hooks de capacité : bibliothèque locale, dialogs,

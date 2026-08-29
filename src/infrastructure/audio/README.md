@@ -1,8 +1,5 @@
 # Audio
 
-> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
-> sont archivées dans [`docs/migration/`](../../../docs/migration/README.md).
-
 ## Que possède cette zone ?
 
 La compilation de la timeline transférable, le transport à l’échantillon, les

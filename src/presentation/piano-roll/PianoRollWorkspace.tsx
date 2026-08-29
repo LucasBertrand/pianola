@@ -101,9 +101,6 @@ import {
   usePianoRollProjectLifecycle,
 } from "../project-files/usePianoRollProjectLifecycle";
 import {
-  RenderBaselineProfiler,
-} from "../diagnostics/RenderBaselineProfiler";
-import {
   usePianoRollTransportViewport,
   usePlaybackFollowSelection,
 } from "../transport/usePianoRollTransportViewport";
@@ -526,7 +523,6 @@ export function PianoRollWorkspace({
       inspectorOpen={projectInspectorOpen}
       inspectorSection={projectInspectorSection}
       header={(
-        <RenderBaselineProfiler id="EditorHeader">
         <EditorHeader
           projectControls={{
             projectTitle: projectState.title,
@@ -568,7 +564,6 @@ export function PianoRollWorkspace({
             onTuningCommit: handleMasterTuningCommit,
           }}
         />
-        </RenderBaselineProfiler>
       )}
       renderToolbar={() => (
           <EditorToolbar
@@ -647,33 +642,29 @@ export function PianoRollWorkspace({
         />
       )}
       layers={(
-        <RenderBaselineProfiler id="PianoRollLayers">
-          <PianoRollLayers
-                  runtime={runtime}
-                  selectionMode={preferences.selectionMode}
-                  activeInstrumentId={selectedInstrumentId ?? ""}
-                  totalTicks={totalTicks}
-                  setViewport={publishViewport}
-                  onHorizontalViewportInteractionStart={
-                    beginHorizontalViewportInteraction
-                  }
-                  onHorizontalViewportInteractionEnd={
-                    endHorizontalViewportInteraction
-                  }
-                  onTwoFingerDoubleTap={handleUndo}
-                  controllerRef={
-                    pianoRollControllerRef
-                  }
-                  interactionStrategyRef={interactionStrategyRef}
-                  onSelectionChange={handleSelectionChange}
-                  onGridSeek={seekPlayback}
-                  onOpenContextMenu={radialMenu.openAt}
-                  onNoteCollision={handleNoteCollision}
-                  onMarkerCollision={handleMarkerCollision}
-                  globalLassoRef={globalLassoRef}
-                  timelineDragPreview={timelineDragPreview}
-          />
-        </RenderBaselineProfiler>
+        <PianoRollLayers
+          runtime={runtime}
+          selectionMode={preferences.selectionMode}
+          activeInstrumentId={selectedInstrumentId ?? ""}
+          totalTicks={totalTicks}
+          setViewport={publishViewport}
+          onHorizontalViewportInteractionStart={
+            beginHorizontalViewportInteraction
+          }
+          onHorizontalViewportInteractionEnd={
+            endHorizontalViewportInteraction
+          }
+          onTwoFingerDoubleTap={handleUndo}
+          controllerRef={pianoRollControllerRef}
+          interactionStrategyRef={interactionStrategyRef}
+          onSelectionChange={handleSelectionChange}
+          onGridSeek={seekPlayback}
+          onOpenContextMenu={radialMenu.openAt}
+          onNoteCollision={handleNoteCollision}
+          onMarkerCollision={handleMarkerCollision}
+          globalLassoRef={globalLassoRef}
+          timelineDragPreview={timelineDragPreview}
+        />
       )}
       globalLasso={<PianoRollGlobalLasso elementRef={globalLassoRef} />}
       playhead={(
@@ -684,27 +675,24 @@ export function PianoRollWorkspace({
         />
       )}
       viewportControls={(
-        <RenderBaselineProfiler id="PianoRollViewportControls">
-          <PianoRollViewportControls
-            timelinePositionRef={barLabelRef}
-            timelineTimeRef={timelineTimeRef}
-            horizontalScrollRef={scrollInputRef}
-            horizontalZoomRef={zoomInputRef}
-            verticalScrollRef={pitchScrollInputRef}
-            verticalZoomRef={pitchZoomInputRef}
-            gridSettings={runtime.gridSettings}
-            pitchSnapSettings={pitchSnapSettings}
-            onPitchSnapSettingsChange={updatePitchSnapSettings}
-            onAutoFit={handleAutoFit}
-          />
-        </RenderBaselineProfiler>
+        <PianoRollViewportControls
+          timelinePositionRef={barLabelRef}
+          timelineTimeRef={timelineTimeRef}
+          horizontalScrollRef={scrollInputRef}
+          horizontalZoomRef={zoomInputRef}
+          verticalScrollRef={pitchScrollInputRef}
+          verticalZoomRef={pitchZoomInputRef}
+          gridSettings={runtime.gridSettings}
+          pitchSnapSettings={pitchSnapSettings}
+          onPitchSnapSettingsChange={updatePitchSnapSettings}
+          onAutoFit={handleAutoFit}
+        />
       )}
       inspectorResizeHandle={(
         <ProjectInspectorResizeHandle inspectorOpen={projectInspectorOpen} />
       )}
       renderInspector={(setToolbarHost) => (
-        <RenderBaselineProfiler id="ProjectInspector">
-          <ProjectInspector
+        <ProjectInspector
           open={projectInspectorOpen}
           portraitSection={projectInspectorSection}
           projectState={projectState}
@@ -742,8 +730,7 @@ export function PianoRollWorkspace({
           onSelectInstrumentNotes={handleSelectInstrumentNotes}
           onTransferSelectionToInstrument={handleTransferSelectionToInstrument}
           onDeleteProjectInstrument={handleDeleteProjectInstrument}
-          />
-        </RenderBaselineProfiler>
+        />
       )}
       overlays={(
         <>

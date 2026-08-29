@@ -1,8 +1,5 @@
 # Application
 
-> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
-> sont archivées dans [`docs/migration/`](../../docs/migration/README.md).
-
 ## Que possède cette zone ?
 
 Les intentions indépendantes de React : autosave, workflows de notes/sélection

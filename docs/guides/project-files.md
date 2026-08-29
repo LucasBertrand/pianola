@@ -1,9 +1,5 @@
 # Fichiers projet
 
-> **État courant.** Ce guide décrit les codecs et adaptateurs définitifs. Les
-> décisions et preuves de leur migration sont archivées dans
-> [`../migration/`](../migration/README.md).
-
 ## Format `.pianola`
 
 Le point d’entrée unique du format portable est

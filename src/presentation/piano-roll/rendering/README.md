@@ -1,8 +1,5 @@
 # Rendering Pipeline
 
-> **Current owner.** Migration decisions and evidence for this area are archived
-> in [`docs/migration/`](../../../../docs/migration/README.md).
-
 React owns only the stable layer tree and lifecycle subscriptions. It never owns note rectangles, playhead positions, lasso geometry, or animation-frame state.
 
 ## Invalidation model

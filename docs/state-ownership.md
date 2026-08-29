@@ -1,9 +1,5 @@
 # Propriété et durée de vie des états
 
-> **État courant.** Ce document décrit les propriétaires matérialisés par la
-> migration achevée. Les décisions et preuves historiques sont sous
-> [`migration/`](migration/README.md).
-
 Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert de
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
@@ -73,9 +69,6 @@ Le modèle courant de workspace ne conserve ni viewport ni playhead. Le codec
 refuse les champs qui ne font pas partie de la baseline courante au lieu de les
 convertir ou de les abandonner silencieusement. Les seules données par clip
 persistées sont `pitchSnapSettings` et `gridSettings`.
-
-Pour le classement détaillé ayant guidé le lot 1, consulter
-[`migration/STATE-HISTORY-INVENTORY.md`](migration/STATE-HISTORY-INVENTORY.md).
 
 Le snapshot local accepte uniquement la baseline 1. IndexedDB utilise le layout
 2 et réinitialise toute base dont la version est plus ancienne ou plus récente,
