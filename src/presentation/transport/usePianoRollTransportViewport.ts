@@ -51,6 +51,7 @@ export interface PianoRollTransportViewport {
 export interface UsePianoRollTransportViewportOptions {
   readonly runtime: EditorRuntime;
   readonly activeClip: Clip;
+  readonly inspectorOpen: boolean;
   readonly autoScrollEnabled: boolean;
   readonly selectedInstrumentId: InstrumentId | null;
   readonly getController: () => PianoRollControllerPort | null;
@@ -61,6 +62,7 @@ export interface UsePianoRollTransportViewportOptions {
 export function usePianoRollTransportViewport({
   runtime,
   activeClip,
+  inspectorOpen,
   autoScrollEnabled,
   selectedInstrumentId,
   getController,
@@ -88,6 +90,7 @@ export function usePianoRollTransportViewport({
   }, [activeClip, runtime]);
   const viewport = useViewportControls(
     runtime,
+    inspectorOpen,
     autoScrollEnabled
       && playback.status === "playing"
       && playback.playingClipId === activeClip.id,
