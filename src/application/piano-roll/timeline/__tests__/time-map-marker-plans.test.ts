@@ -112,6 +112,25 @@ describe("createTimeMapMarkerFlags", () => {
     expect(isIsolatedMeterMarkerFlag(flags[1]!)).toBe(true);
     expect(isIsolatedMeterMarkerFlag(flags[2]!)).toBe(false);
   });
+
+  test("uses Tonal's rooted chord symbol for marker labels", () => {
+    const flags = createTimeMapMarkerFlags({
+      meterMarkers: [{
+        startTick: 0,
+        timeSignature: { numerator: 4, denominator: 4 },
+      }],
+      tempoMarkers: [{ startTick: 0, bpm: 120 }],
+      scaleMarkers: [{
+        startTick: 0,
+        rootNote: "C",
+        patternType: "chord",
+        patternId: "mM7",
+      }],
+      sectionMarkers: [],
+    });
+
+    expect(formatMarkerFlagLabel(flags[0]!)).toBe("120 · 4/4 · CmM7");
+  });
 });
 
 describe("createMarkerDraft", () => {

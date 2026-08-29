@@ -235,6 +235,7 @@ export function createAudioTestEditorState(
           enabled: true,
           visualGuideEnabled: true,
           rootNote: "D",
+          patternId: "ionian",
         },
         gridSettings: {
           baseResolutionTicks: 480,

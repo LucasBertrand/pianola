@@ -11,7 +11,7 @@ React owns only the stable layer tree and lifecycle subscriptions. It never owns
 
 ## Rendering ports
 
-`canvas-layer.tsx` is the React/store adapter. It samples the render signals,
+`CanvasLayer.tsx` is the React/store adapter. It samples the render signals,
 updates the coordinate converter and queries `SpatialIndex` before invoking the
 painters.
 

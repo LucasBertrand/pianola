@@ -22,7 +22,9 @@ import {
   type TimeSignature,
 } from "../../../domain/transport/time-map";
 import type { TonalPatternId, TonalPatternType } from "../../../domain/music-theory/pitch-snap";
-import { ChordType } from "@tonaljs/tonal";
+import {
+  formatTonalChordSymbol,
+} from "../../../domain/music-theory/tonal-pattern-catalog";
 import type {
   TimeMapMarkerCollision,
 } from "./marker-collision-resolution";
@@ -598,9 +600,7 @@ export function formatMarkerFlagLabel(flag: TimeMapMarkerFlag): string {
       const rootLabel = flag.rootNote;
       let scaleLabel = "";
       if (flag.patternType === "chord") {
-        const chord = ChordType.get(flag.patternId);
-        const symbol = chord.aliases[0] ?? flag.patternId;
-        scaleLabel = `${rootLabel}${symbol}`;
+        scaleLabel = formatTonalChordSymbol(rootLabel, flag.patternId);
       } else {
         scaleLabel = `${rootLabel} ${flag.patternId}`;
       }

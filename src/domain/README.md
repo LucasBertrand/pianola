@@ -14,7 +14,9 @@ Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
 d’un clip — marqueurs de tempo, métrique, gamme et section, dérivation des
 mesures — est exposée par `transport/time-map.ts` et répartie dans les modules
 `time-map-*`, `time-signature.ts` et `*-marker-operations.ts`. La théorie
-musicale pure vit dans `music-theory/`. Les invariants sont validés dans
+musicale pure vit dans `music-theory/` ; `tonal-pattern-catalog.ts` possède le
+catalogue catégorisé des gammes et accords ainsi que leur symbolisation Tonal.
+Les invariants sont validés dans
 `validation/transport-validation.ts`.
 
 ## Quelles dépendances sont autorisées ?

@@ -2,6 +2,7 @@ import {
   PROJECT_CONSTANTS,
 } from "../project/project-constants";
 import { TONAL_SNAP_CONSTANTS } from "./tonal-snap-constants";
+import { isSupportedTonalPatternId } from "./tonal-pattern-catalog";
 import { ScaleType, ChordType, Interval, Note } from "@tonaljs/tonal";
 
 export type TonalPatternType = "scale" | "chord";
@@ -108,11 +109,35 @@ export function snapPitchToTonalPattern(
 }
 
 export function isTonalPatternId(
-  _value: string,
-): _value is TonalPatternId {
-  // It's a bit harder to strictly validate now since we accept any Tonal ID.
-  // We'll assume the dialog only provides valid ones.
-  return true; 
+  patternType: TonalPatternType,
+  value: string,
+): value is TonalPatternId {
+  return (
+    patternType === "scale"
+    && value === TONAL_SNAP_CONSTANTS.defaultPatternId
+  ) || isSupportedTonalPatternId(patternType, value);
+}
+
+export function isTonalRootNote(value: string): boolean {
+  return (TONAL_SNAP_CONSTANTS.rootOptions as readonly string[])
+    .includes(value);
+}
+
+export function isSupportedTonalSelection(
+  rootNote: string,
+  patternType: TonalPatternType,
+  patternId: string,
+): boolean {
+  if (!isTonalRootNote(rootNote)) {
+    return false;
+  }
+
+  if (rootNote === TONAL_SNAP_CONSTANTS.defaultRootNote) {
+    return patternType === "scale"
+      && patternId === TONAL_SNAP_CONSTANTS.defaultPatternId;
+  }
+
+  return isSupportedTonalPatternId(patternType, patternId);
 }
 
 export function isPitchAllowedByTonalPattern(

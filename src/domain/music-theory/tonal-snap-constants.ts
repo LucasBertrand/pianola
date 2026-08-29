@@ -1,44 +1,19 @@
-/** Tonal pitch-snap vocabulary and defaults. */
+import {
+  TONAL_CHORD_IDS,
+  TONAL_SCALE_IDS,
+} from "./tonal-pattern-catalog";
+
+/** Tonal pitch-snap roots, supported vocabulary and defaults. */
 export const TONAL_SNAP_CONSTANTS = Object.freeze({
   defaultEnabled: false,
   defaultVisualGuideEnabled: false,
   defaultRootNote: "none",
   defaultPatternId: "chromatic",
+  defaultScalePatternId: "ionian",
+  defaultChordPatternId: "M",
   rootOptions: Object.freeze([
     "none", "Cb", "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
   ] as const),
-  supportedScales: Object.freeze([
-    "ionian",
-    "dorian",
-    "phrygian",
-    "lydian",
-    "mixolydian",
-    "aeolian",
-    "locrian",
-    "harmonic minor",
-    "melodic minor",
-    "phrygian dominant",
-    "double harmonic major",
-    "hungarian minor",
-    "major pentatonic",
-    "minor pentatonic",
-    "blues",
-    "hirajoshi",
-    "in-sen",
-    "whole tone",
-    "diminished",
-  ] as const),
-  supportedChords: Object.freeze([
-    "M",
-    "m",
-    "dim", // °
-    "aug", // +
-    "maj7", // Δ
-    "7",
-    "mM7", // mΔ
-    "m7",
-    "m7b5", // ∅
-    "dim7", // °7
-  ] as const),
+  supportedScales: TONAL_SCALE_IDS,
+  supportedChords: TONAL_CHORD_IDS,
 } as const);
-

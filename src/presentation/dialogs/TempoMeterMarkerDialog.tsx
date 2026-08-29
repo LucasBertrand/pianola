@@ -1,10 +1,14 @@
 import React from "react";
-import { ChordType } from "@tonaljs/tonal";
 
 import {
   PROJECT_CONSTANTS,
 } from "../../domain/project/project-constants";
 import { TONAL_SNAP_CONSTANTS } from "../../domain/music-theory/tonal-snap-constants";
+import {
+  TONAL_CHORD_GROUPS,
+  TONAL_SCALE_GROUPS,
+  type TonalPatternGroup,
+} from "../../domain/music-theory/tonal-pattern-catalog";
 import type {
   TimeSignature,
 } from "../../domain/transport/time-map";
@@ -242,7 +246,9 @@ export function TempoMeterMarkerDialog({
                         onPatternIdChange("chromatic");
                       } else if (oldRoot === "none") {
                         onPatternTypeChange("scale");
-                        onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedScales[0]);
+                        onPatternIdChange(
+                          TONAL_SNAP_CONSTANTS.defaultScalePatternId,
+                        );
                       }
                     }}
                   >
@@ -265,9 +271,13 @@ export function TempoMeterMarkerDialog({
                           const newType = event.currentTarget.value as TonalPatternType;
                           onPatternTypeChange(newType);
                           if (newType === "scale") {
-                            onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedScales[0]);
+                            onPatternIdChange(
+                              TONAL_SNAP_CONSTANTS.defaultScalePatternId,
+                            );
                           } else {
-                            onPatternIdChange(TONAL_SNAP_CONSTANTS.supportedChords[0]);
+                            onPatternIdChange(
+                              TONAL_SNAP_CONSTANTS.defaultChordPatternId,
+                            );
                           }
                         }}
                       >
@@ -285,21 +295,11 @@ export function TempoMeterMarkerDialog({
                           onPatternIdChange(event.currentTarget.value);
                         }}
                       >
-                        {patternType === "scale"
-                          ? TONAL_SNAP_CONSTANTS.supportedScales.map((scaleId) => (
-                            <option key={scaleId} value={scaleId}>
-                              {scaleId}
-                            </option>
-                          ))
-                          : TONAL_SNAP_CONSTANTS.supportedChords.map((chordId) => {
-                            const chord = ChordType.get(chordId);
-
-                            return (
-                              <option key={chordId} value={chordId}>
-                                {chord.aliases[0] ?? chordId} ({chord.name})
-                              </option>
-                            );
-                          })}
+                        <TonalPatternOptions
+                          groups={patternType === "scale"
+                            ? TONAL_SCALE_GROUPS
+                            : TONAL_CHORD_GROUPS}
+                        />
                       </select>
                     </label>
                   </>
@@ -365,5 +365,25 @@ export function TempoMeterMarkerDialog({
         </div>
       </form>
     </div>
+  );
+}
+
+function TonalPatternOptions({
+  groups,
+}: {
+  readonly groups: readonly TonalPatternGroup[];
+}): React.JSX.Element {
+  return (
+    <>
+      {groups.map((group) => (
+        <optgroup key={group.label} label={group.label}>
+          {group.options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </>
   );
 }

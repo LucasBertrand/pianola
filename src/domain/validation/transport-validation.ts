@@ -15,7 +15,9 @@ import {
 import {
   PROJECT_CONSTANTS,
 } from "../project/project-constants";
-import { TONAL_SNAP_CONSTANTS } from "../music-theory/tonal-snap-constants";
+import {
+  isSupportedTonalSelection,
+} from "../music-theory/pitch-snap";
 import { isValidTick } from "./note-validation";
 import {
   assertValidationResult,
@@ -336,21 +338,11 @@ function validateScaleMarkers(
 }
 
 function isValidScaleMarker(marker: ScaleMarker): boolean {
-  if (!(TONAL_SNAP_CONSTANTS.rootOptions as readonly string[])
-    .includes(marker.rootNote)) {
-    return false;
-  }
-
-  if (marker.rootNote === "none") {
-    return marker.patternType === "scale" && marker.patternId === "chromatic";
-  }
-
-  return marker.patternType === "scale"
-    ? (TONAL_SNAP_CONSTANTS.supportedScales as readonly string[])
-      .includes(marker.patternId)
-    : marker.patternType === "chord"
-      && (TONAL_SNAP_CONSTANTS.supportedChords as readonly string[])
-        .includes(marker.patternId);
+  return isSupportedTonalSelection(
+    marker.rootNote,
+    marker.patternType,
+    marker.patternId,
+  );
 }
 
 function validateSectionMarkers(

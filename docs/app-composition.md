@@ -24,29 +24,12 @@ héberger les protocoles détaillés.
 | transport | statut, commandes et suivi de clip | `usePianoRollTransportViewport`, composé de `useAudioPlayback` et `useTransportWorkflow` | pont explicite vers l’audio, le domaine et la politique de suivi |
 | viewport | refs DOM et interactions de scroll/zoom | `usePianoRollTransportViewport` via `useViewportControls` | synchronisation DOM/signaux à haute fréquence |
 
-## Hooks compositeurs du workspace
-
-Le câblage interne des capacités est réparti dans quatre hooks compositeurs
-suffixés `Workspace`. Chacun compose des hooks de capacité et encapsule leur
-routage mutuel sans posséder de domaine fonctionnel :
-
-| Hook | Hooks de capacité composés | Câblage interne encapsulé |
-| --- | --- | --- |
-| `useInspectorWorkspace` | aucun (état de disposition pur) | ouverture/fermeture et section active de l'inspecteur |
-| `useInstrumentsWorkspace` | `useProjectInstrumentWorkflow`, `usePianoRollUserPreferences`, `useInstrumentDialogWorkflow` | preset save/remove, dismiss dialog, personal presets |
-| `useClipsWorkspace` | `useClipWorkflow`, `useClipDialogWorkflow`, `usePlaybackFollowSelection` | beginClipChange, dismiss dialog, selectClipNotes |
-| `useSelectionWorkspace` | `usePianoRollSelectionWorkflow`, `useFloatingRadialMenu`, `usePianoRollRadialMenuCommands`, `useStylusAction` | drapeaux de sélection dérivés, slice dialog, radial menu commands |
-
-Convention de nommage : un hook de capacité se nomme `use[Sujet][Workflow|Lifecycle|Dialog...]` ;
-un hook compositeur se nomme `use[Sujet]Workspace`.
-
 ## État React restant dans le workspace
 
-Le composant racine ne conserve plus l'état de l'inspecteur (extrait dans
-`useInspectorWorkspace`). Le layout possède l'hôte du portal ; les préférences,
-imports, dialogues, transport et viewport sont possédés par leurs hooks ou
-composants de surface. Aucun état à fréquence frame n'est copié dans le
-workspace.
+Le composant racine conserve uniquement l'ouverture et la section visible de
+l'inspecteur. Le layout possède l'hôte du portal ; les préférences, imports,
+dialogues, transport et viewport sont possédés par leurs hooks ou composants de
+surface. Aucun état à fréquence frame n'est copié dans le workspace.
 
 ## Surface racine
 
@@ -54,6 +37,6 @@ workspace.
 rend ces deux limites exécutables. La création du runtime reste volontairement
 dans cette couche ; `src/presentation/piano-roll/PianoRollWorkspace.tsx` coordonne les
 contrats, tandis que `PianoRollWorkspaceLayout.tsx` possède la structure DOM.
-La frontière d'erreur et la modale de
+La frontière d’erreur et la modale de
 diagnostic entourent cette surface afin de rester disponibles après une erreur
 de rendu React.

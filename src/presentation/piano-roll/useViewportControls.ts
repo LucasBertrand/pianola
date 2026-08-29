@@ -37,6 +37,7 @@ export interface ViewportControls {
 /** Binds the testable viewport controller to DOM refs and browser events. */
 export function useViewportControls(
   runtime: EditorRuntime,
+  inspectorOpen: boolean,
   followPlayback: boolean,
   seekPlayback: (tick: number) => void,
   onDimensionsInitialized?: () => void,
@@ -147,7 +148,7 @@ export function useViewportControls(
     return (): void => {
       resizeObserver.disconnect();
     };
-  }, [controller, synchronizeInputs]);
+  }, [controller, inspectorOpen, synchronizeInputs]);
 
   useEffect(() => {
     const updateProjectStatus = (): void => {

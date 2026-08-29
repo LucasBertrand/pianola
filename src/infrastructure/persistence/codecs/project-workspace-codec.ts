@@ -20,6 +20,7 @@ import type {
 } from "../../../domain/music-theory/pitch-snap";
 import {
   isTonalPatternId,
+  isSupportedTonalSelection,
 } from "../../../domain/music-theory/pitch-snap";
 import {
   type PersistedClipEditorState,
@@ -140,12 +141,22 @@ function parsePitchSnapSettings(source: unknown, path: string) {
     16,
   );
 
-  if (!isTonalPatternId(patternId)) {
+  if (patternType !== "scale" && patternType !== "chord") {
+    return invalid(`${path}.patternType`, "Unsupported tonal pattern type.");
+  }
+
+  if (!isTonalPatternId(patternType, patternId)) {
     return invalid(`${path}.patternId`, "Unsupported tonal pattern.");
   }
 
-  if (patternType !== "scale" && patternType !== "chord") {
-    return invalid(`${path}.patternType`, "Unsupported tonal pattern type.");
+  const rootNote = readPersistenceString(
+    settings["rootNote"],
+    `${path}.rootNote`,
+    10,
+  );
+
+  if (!isSupportedTonalSelection(rootNote, patternType, patternId)) {
+    return invalid(path, "Unsupported tonal selection.");
   }
 
   return {
@@ -157,11 +168,7 @@ function parsePitchSnapSettings(source: unknown, path: string) {
       settings["visualGuideEnabled"],
       `${path}.visualGuideEnabled`,
     ),
-    rootNote: readPersistenceString(
-      settings["rootNote"],
-      `${path}.rootNote`,
-      10,
-    ),
+    rootNote,
     patternType: patternType as TonalPatternType,
     patternId,
   };

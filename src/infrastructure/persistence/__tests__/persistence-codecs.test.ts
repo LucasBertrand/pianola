@@ -55,11 +55,30 @@ describe("persistence codecs", () => {
         },
       },
     };
+    const defaultWorkspace = createDefaultPersistedEditorWorkspace(document);
+    const activeClipState = defaultWorkspace.clipStatesById[activeClipId]!;
+    const workspace = {
+      ...defaultWorkspace,
+      clipStatesById: {
+        ...defaultWorkspace.clipStatesById,
+        [activeClipId]: {
+          ...activeClipState,
+          pitchSnapSettings: {
+            ...activeClipState.pitchSnapSettings,
+            enabled: true,
+            visualGuideEnabled: true,
+            rootNote: "C",
+            patternType: "chord" as const,
+            patternId: "m13",
+          },
+        },
+      },
+    };
     const serialized = serializePianolaProject({
       sourceDocumentId: "pianola-project",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
-      workspace: createDefaultPersistedEditorWorkspace(document),
+      workspace,
     });
 
     expect(parsePianolaProject(serialized)).toMatchObject({
@@ -68,7 +87,18 @@ describe("persistence codecs", () => {
         title: document.title,
         autoScrollEnabled: true,
       },
-      workspace: { activeClipId: document.workspace.activeClipId },
+      workspace: {
+        activeClipId: document.workspace.activeClipId,
+        clipStatesById: {
+          [activeClipId]: {
+            pitchSnapSettings: {
+              rootNote: "C",
+              patternType: "chord",
+              patternId: "m13",
+            },
+          },
+        },
+      },
     });
     expect(serialized).not.toContain("selectionMode");
     expect(serialized).not.toContain("pitchPreviewEnabled");
@@ -76,6 +106,31 @@ describe("persistence codecs", () => {
     expect(parsePianolaProject(serialized).document
       .clipsById[activeClipId]?.timeline.timeMap.sectionMarkers)
       .toEqual([{ startTick: 960, comment: "Verse" }]);
+  });
+
+  test("rejects unsupported tonal patterns in a persisted workspace", () => {
+    const document = createTestProject();
+    const activeClipId = document.workspace.activeClipId;
+    const serialized = serializePianolaProject({
+      sourceDocumentId: "invalid-tonal-pattern",
+      exportedAt: "2026-08-22T12:00:00.000Z",
+      document,
+      workspace: createDefaultPersistedEditorWorkspace(document),
+    });
+    const source = JSON.parse(serialized) as {
+      workspace: {
+        clipStatesById: Record<string, {
+          pitchSnapSettings: { patternType: string; patternId: string };
+        }>;
+      };
+    };
+    source.workspace.clipStatesById[activeClipId]!.pitchSnapSettings = {
+      patternType: "chord",
+      patternId: "not-a-chord",
+    };
+
+    expect(() => parsePianolaProject(JSON.stringify(source)))
+      .toThrow("Unsupported tonal pattern");
   });
 
   test("keeps an embedded personal preset in portable project exports", () => {

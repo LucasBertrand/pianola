@@ -216,6 +216,29 @@ describe("validateClipTimeline", () => {
     expect(result.issues.some((issue) => issue.code === "INVALID_SCALE"))
       .toBe(true);
   });
+
+  test("accepts extended chords and rejects uncurated Tonal patterns", () => {
+    const createChordTimeline = (patternId: string): ClipTimeline =>
+      createTimeline({
+        meterMarkers: [{
+          startTick: 0,
+          timeSignature: { numerator: 4, denominator: 4 },
+        }],
+        tempoMarkers: [{ startTick: 0, bpm: 120 }],
+        scaleMarkers: [{
+          startTick: 0,
+          rootNote: "C",
+          patternType: "chord",
+          patternId,
+        }],
+        sectionMarkers: [],
+      });
+
+    expect(validateClipTimeline(createChordTimeline("m13"), CLOCK))
+      .toEqual({ valid: true, issues: [] });
+    expect(validateClipTimeline(createChordTimeline("7alt"), CLOCK).valid)
+      .toBe(false);
+  });
 });
 
 describe("validateProjectClock", () => {
