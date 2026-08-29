@@ -16,6 +16,7 @@ import {
 import {
   PianolaIndexedDb,
   PIANOLA_STORES,
+  idbRequest,
   idbTransaction,
 } from "../indexed-db/pianola-indexed-db";
 import {
@@ -85,8 +86,10 @@ describe("project repository contract", () => {
     await expect(done).rejects.toThrow();
 
     await expect(repository.load(snapshot.documentId)).resolves.toMatchObject({
-      revision: 1,
-      document: { title: snapshot.document.title },
+      project: {
+        revision: 1,
+        document: { title: snapshot.document.title },
+      },
     });
   });
 
@@ -127,9 +130,11 @@ function runRepositoryContract(
 
       expect(saved.revision).toBe(1);
       await expect(restarted.load(snapshot.documentId)).resolves.toMatchObject({
-        documentId: snapshot.documentId,
-        revision: 1,
-        document: { title: snapshot.document.title },
+        project: {
+          documentId: snapshot.documentId,
+          revision: 1,
+          document: { title: snapshot.document.title },
+        },
       });
       await expect(restarted.list()).resolves.toMatchObject([{
         schemaVersion: snapshot.document.schemaVersion,
@@ -152,8 +157,10 @@ function runRepositoryContract(
       await expect(second).rejects.toMatchObject({ code: "CONFLICT" });
       await expect(harness.repository.load(snapshot.documentId))
         .resolves.toMatchObject({
-          revision: 2,
-          document: { title: "Changed" },
+          project: {
+            revision: 2,
+            document: { title: "Changed" },
+          },
         });
     });
 
@@ -170,12 +177,30 @@ function runRepositoryContract(
 
       await expect(harness.repository.load(snapshot.documentId))
         .resolves.toMatchObject({
-          revision: 1,
-          document: { title: snapshot.document.title },
+          project: {
+            revision: 1,
+            document: { title: snapshot.document.title },
+          },
         });
       await expect(harness.repository.list()).resolves.toMatchObject([
         { revision: 1 },
       ]);
+    });
+
+    test("exports original generations and diagnostics after complete failure", async () => {
+      const harness = createHarness();
+      const snapshot = createSnapshot();
+      await harness.repository.save(snapshot, null);
+      await harness.corruptCurrent(snapshot.documentId);
+
+      await expect(harness.repository.load(snapshot.documentId))
+        .rejects.toThrow("json-corrupt");
+      const recovery = await harness.repository.exportRecovery(
+        snapshot.documentId,
+      );
+
+      expect(recovery?.archive).toContain("{not-json");
+      expect(recovery?.diagnostic).toContain("Cause: json-corrupt");
     });
 
     test("removes both catalog and payload generations", async () => {
@@ -249,13 +274,16 @@ function createIndexedDbHarness(): RepositoryHarness {
     async corruptCurrent(documentId) {
       const connection = await database.open();
       const transaction = connection.transaction(
-        PIANOLA_STORES.projectGenerations,
+        [PIANOLA_STORES.projectCatalog, PIANOLA_STORES.projectGenerations],
         "readwrite",
       );
       const done = idbTransaction(transaction);
+      const summary = await idbRequest(
+        transaction.objectStore(PIANOLA_STORES.projectCatalog).get(documentId),
+      ) as { revision: number };
       transaction.objectStore(PIANOLA_STORES.projectGenerations).put({
         documentId,
-        revision: 2,
+        revision: summary.revision,
         serialized: "{not-json",
         byteSize: 9,
       });

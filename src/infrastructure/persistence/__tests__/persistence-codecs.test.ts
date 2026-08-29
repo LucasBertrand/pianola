@@ -82,19 +82,22 @@ describe("persistence codecs", () => {
     });
 
     expect(parsePianolaProject(serialized)).toMatchObject({
-      sourceDocumentId: "pianola-project",
-      document: {
-        title: document.title,
-        autoScrollEnabled: true,
-      },
-      workspace: {
-        activeClipId: document.workspace.activeClipId,
-        clipStatesById: {
-          [activeClipId]: {
-            pitchSnapSettings: {
-              rootNote: "C",
-              patternType: "chord",
-              patternId: "m13",
+      migration: { sourceVersion: 1, targetVersion: 1, changes: [] },
+      project: {
+        sourceDocumentId: "pianola-project",
+        document: {
+          title: document.title,
+          autoScrollEnabled: true,
+        },
+        workspace: {
+          activeClipId: document.workspace.activeClipId,
+          clipStatesById: {
+            [activeClipId]: {
+              pitchSnapSettings: {
+                rootNote: "C",
+                patternType: "chord",
+                patternId: "m13",
+              },
             },
           },
         },
@@ -103,7 +106,7 @@ describe("persistence codecs", () => {
     expect(serialized).not.toContain("selectionMode");
     expect(serialized).not.toContain("pitchPreviewEnabled");
     expect(serialized).not.toContain("playheadTick");
-    expect(parsePianolaProject(serialized).document
+    expect(parsePianolaProject(serialized).project.document
       .clipsById[activeClipId]?.timeline.timeMap.sectionMarkers)
       .toEqual([{ startTick: 960, comment: "Verse" }]);
   });
@@ -125,6 +128,7 @@ describe("persistence codecs", () => {
       };
     };
     source.workspace.clipStatesById[activeClipId]!.pitchSnapSettings = {
+      ...source.workspace.clipStatesById[activeClipId]!.pitchSnapSettings,
       patternType: "chord",
       patternId: "not-a-chord",
     };
@@ -156,7 +160,7 @@ describe("persistence codecs", () => {
     });
 
     expect(parsePianolaProject(serialized)
-      .document.instrumentPresetsById[preset.id]).toEqual(preset);
+      .project.document.instrumentPresetsById[preset.id]).toEqual(preset);
   });
 
   test("refuses a future portable version", () => {
@@ -172,6 +176,20 @@ describe("persistence codecs", () => {
 
     expect(() => parsePianolaProject(JSON.stringify(source)))
       .toThrow("Project file version 999 is not supported");
+  });
+
+  test("rejects unknown portable fields", () => {
+    const document = createTestProject();
+    const source = JSON.parse(serializePianolaProject({
+      sourceDocumentId: "unknown-field",
+      exportedAt: "2026-08-22T12:00:00.000Z",
+      document,
+      workspace: createDefaultPersistedEditorWorkspace(document),
+    })) as Record<string, unknown>;
+    source["unexpected"] = true;
+
+    expect(() => parsePianolaProject(JSON.stringify(source)))
+      .toThrow("unknown fields");
   });
 
   test("rejects the pre-baseline document schema", () => {

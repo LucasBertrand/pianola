@@ -12,6 +12,7 @@ import {
 } from "../../../application/ports/project-repository";
 import type {
   EncodedStoredProject,
+  DecodedStoredProject,
 } from "../../../application/ports/stored-project-codec";
 import {
   ProjectPersistenceError,
@@ -20,15 +21,23 @@ import {
   parsePersistenceJson,
   readPersistenceInteger,
   readPersistenceIsoDate,
-  readPersistenceRecord,
   readPersistenceString,
 } from "./persistence-codec-readers";
 import {
   parsePersistedEditorWorkspace,
 } from "./project-workspace-codec";
+import {
+  migrateStoredProject,
+} from "./migrations/migrate-stored-project";
+import {
+  STORED_PROJECT_FORMAT,
+  STORED_PROJECT_SCHEMA_VERSION,
+} from "./stored-project-constants";
 
-export const STORED_PROJECT_FORMAT = "app.pianola.stored-project.v1";
-export const STORED_PROJECT_SCHEMA_VERSION = 1;
+export {
+  STORED_PROJECT_FORMAT,
+  STORED_PROJECT_SCHEMA_VERSION,
+} from "./stored-project-constants";
 
 export type ParseProjectDocument = (
   source: unknown,
@@ -51,8 +60,8 @@ export function serializeStoredProject(
   const decoded = parseStoredProject(serialized, parseDocument);
 
   if (
-    decoded.documentId !== snapshot.documentId
-    || decoded.revision !== snapshot.revision
+    decoded.project.documentId !== snapshot.documentId
+    || decoded.project.revision !== snapshot.revision
   ) {
     throw new ProjectPersistenceError(
       "INVALID_DATA",
@@ -69,11 +78,18 @@ export function serializeStoredProject(
 export function parseStoredProject(
   serialized: string,
   parseDocument: ParseProjectDocument,
-): StoredProject {
-  const source = readPersistenceRecord(
-    parsePersistenceJson(serialized),
-    "$",
-  );
+): DecodedStoredProject {
+  const migrated = migrateStoredProject(parsePersistenceJson(serialized));
+  const source = migrated.source;
+  assertExactKeys(source, [
+    "format",
+    "schemaVersion",
+    "documentId",
+    "revision",
+    "updatedAt",
+    "document",
+    "workspace",
+  ], "$");
   const format = readPersistenceString(source["format"], "$.format", 64);
 
   if (format !== STORED_PROJECT_FORMAT) {
@@ -91,35 +107,54 @@ export function parseStoredProject(
 
   if (schemaVersion !== STORED_PROJECT_SCHEMA_VERSION) {
     throw new ProjectPersistenceError(
-      schemaVersion > STORED_PROJECT_SCHEMA_VERSION
-        ? "FUTURE_VERSION"
-        : "INVALID_DATA",
-      `Stored project version ${schemaVersion} does not match `
-        + `the supported local baseline ${STORED_PROJECT_SCHEMA_VERSION}.`,
+      "INVALID_DATA",
+      "Migration did not reach the current stored-project version.",
     );
   }
 
   const document = parseDocument(source["document"], "$.document");
 
   return {
-    documentId: readPersistenceString(
-      source["documentId"],
-      "$.documentId",
-      MAXIMUM_ENTITY_ID_LENGTH,
-    ),
-    revision: readPersistenceInteger(
-      source["revision"],
-      "$.revision",
-    ),
-    updatedAt: readPersistenceIsoDate(
-      source["updatedAt"],
-      "$.updatedAt",
-    ),
-    document,
-    workspace: parsePersistedEditorWorkspace(
-      source["workspace"],
+    project: {
+      documentId: readPersistenceString(
+        source["documentId"],
+        "$.documentId",
+        MAXIMUM_ENTITY_ID_LENGTH,
+      ),
+      revision: readPersistenceInteger(
+        source["revision"],
+        "$.revision",
+      ),
+      updatedAt: readPersistenceIsoDate(
+        source["updatedAt"],
+        "$.updatedAt",
+      ),
       document,
-      "$.workspace",
-    ),
+      workspace: parsePersistedEditorWorkspace(
+        source["workspace"],
+        document,
+        "$.workspace",
+      ),
+    },
+    migration: migrated.report,
   };
+}
+
+function assertExactKeys(
+  source: Readonly<Record<string, unknown>>,
+  expectedKeys: readonly string[],
+  path: string,
+): void {
+  const actual = Object.keys(source).sort();
+  const expected = [...expectedKeys].sort();
+
+  if (
+    actual.length !== expected.length
+    || actual.some((key, index) => key !== expected[index])
+  ) {
+    throw new ProjectPersistenceError(
+      "INVALID_DATA",
+      `Record contains missing or unknown fields. Location: ${path}.`,
+    );
+  }
 }

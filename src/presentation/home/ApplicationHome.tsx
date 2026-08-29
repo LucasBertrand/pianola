@@ -23,6 +23,7 @@ export interface ApplicationHomeProps {
   readonly onOpenProject: (documentId: string) => void | Promise<void>;
   readonly onCloneProject: (documentId: string) => void | Promise<void>;
   readonly onImportProject: (file: File) => void | Promise<void>;
+  readonly onExportRecovery: (documentId: string) => void | Promise<void>;
   readonly onRemoveProject: (documentId: string) => void | Promise<void>;
 }
 
@@ -35,6 +36,7 @@ export function ApplicationHome({
   onOpenProject,
   onCloneProject,
   onImportProject,
+  onExportRecovery,
   onRemoveProject,
 }: ApplicationHomeProps): React.JSX.Element {
   const {
@@ -81,6 +83,7 @@ export function ApplicationHome({
           onOpen={onOpenProject}
           onClone={onCloneProject}
           onImport={onImportProject}
+          onExportRecovery={onExportRecovery}
           onRemove={requestProjectRemoval}
         />
       </main>
@@ -101,6 +104,7 @@ interface LocalProjectCollectionProps {
   readonly onOpen: (documentId: string) => void | Promise<void>;
   readonly onClone: (documentId: string) => void | Promise<void>;
   readonly onImport: (file: File) => void | Promise<void>;
+  readonly onExportRecovery: (documentId: string) => void | Promise<void>;
   readonly onRemove: (project: ProjectSummary) => void;
 }
 
@@ -111,6 +115,7 @@ function LocalProjectCollection({
   onOpen,
   onClone,
   onImport,
+  onExportRecovery,
   onRemove,
 }: LocalProjectCollectionProps): React.JSX.Element {
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -200,6 +205,15 @@ function LocalProjectCollection({
                   onClick={() => void onClone(project.documentId)}
                 >
                   Clone
+                </button>
+                <button
+                  type="button"
+                  className="application-home-project-recovery"
+                  aria-label={`Export recovery data for ${project.title}`}
+                  disabled={busy}
+                  onClick={() => void onExportRecovery(project.documentId)}
+                >
+                  Recovery
                 </button>
                 <button
                   type="button"

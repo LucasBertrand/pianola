@@ -130,6 +130,13 @@ export function parsePersistedEditorWorkspace(
 
 function parsePitchSnapSettings(source: unknown, path: string) {
   const settings = readPersistenceRecord(source, path);
+  assertExactKeys(settings, [
+    "enabled",
+    "visualGuideEnabled",
+    "rootNote",
+    "patternType",
+    "patternId",
+  ], path);
   const patternId = readPersistenceString(
     settings["patternId"],
     `${path}.patternId`,
@@ -176,6 +183,11 @@ function parsePitchSnapSettings(source: unknown, path: string) {
 
 function parseStoredGridSettings(source: unknown, path: string) {
   const settings = readPersistenceRecord(source, path);
+  assertExactKeys(settings, [
+    "baseResolutionTicks",
+    "subdivision",
+    "resolutionTicks",
+  ], path);
   const baseResolutionTicks = readPersistenceInteger(
     settings["baseResolutionTicks"],
     `${path}.baseResolutionTicks`,

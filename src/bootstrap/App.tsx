@@ -54,6 +54,12 @@ import {
 import {
   createStoredProjectClone,
 } from "../application/persistence/clone-stored-project";
+import {
+  downloadBrowserFile,
+} from "../presentation/project-files/download-browser-file";
+import {
+  useProjectMigrationDialog,
+} from "../presentation/project-files/useProjectMigrationDialog";
 
 /** Creates the application runtime and exposes the top-level product surface. */
 export function App(): React.JSX.Element {
@@ -69,6 +75,10 @@ export function App(): React.JSX.Element {
 
 function EditorApplication(): React.JSX.Element {
   const persistence = getPersistenceRuntime();
+  const {
+    migrationDialog,
+    showMigrationReport,
+  } = useProjectMigrationDialog();
   const [projects, setProjects] = useState<readonly ProjectSummary[]>([]);
   const [settings, setSettings] = useState<UserSettings>(
     recoverDefaultUserSettings,
@@ -146,25 +156,29 @@ function EditorApplication(): React.JSX.Element {
 
   const handleOpen = useCallback((documentId: string) =>
     runLibraryAction(async () => {
-      const stored = await persistence.projects.load(documentId);
+      const loaded = await persistence.projects.load(documentId);
 
-      if (stored === null) {
+      if (loaded === null) {
         throw new Error("This local project no longer exists.");
       }
 
-      setActiveProject(stored);
-    }), [persistence, runLibraryAction]);
+      showMigrationReport(
+        loaded.migration,
+        "Local project updated",
+      );
+      setActiveProject(loaded.project);
+    }), [persistence, runLibraryAction, showMigrationReport]);
 
   const handleClone = useCallback((documentId: string) =>
     runLibraryAction(async () => {
-      const source = await persistence.projects.load(documentId);
+      const loaded = await persistence.projects.load(documentId);
 
-      if (source === null) {
+      if (loaded === null) {
         throw new Error("This local project no longer exists.");
       }
 
       const candidate = createStoredProjectClone(
-        source,
+        loaded.project,
         createDocumentId(),
         new Date().toISOString(),
       );
@@ -179,19 +193,29 @@ function EditorApplication(): React.JSX.Element {
         throw new Error("The selected project file is too large.");
       }
 
-      const imported = parsePianolaProject(await file.text());
+      const source = await file.text();
+      const imported = parsePianolaProject(source);
       const candidate: StoredProject = {
         documentId: createDocumentId(),
         revision: 0,
         updatedAt: new Date().toISOString(),
-        document: imported.document,
-        workspace: imported.workspace,
+        document: imported.project.document,
+        workspace: imported.project.workspace,
       };
       const revision = await persistence.projects.save(candidate, null);
       void requestPersistentBrowserStorage();
       await refreshLibrary();
+      showMigrationReport(
+        imported.migration,
+        "Imported project updated",
+      );
       setActiveProject({ ...candidate, revision: revision.revision });
-    }), [persistence, refreshLibrary, runLibraryAction]);
+    }), [
+      persistence,
+      refreshLibrary,
+      runLibraryAction,
+      showMigrationReport,
+    ]);
 
   const handleRemove = useCallback((documentId: string) =>
     runLibraryAction(async () => {
@@ -199,33 +223,58 @@ function EditorApplication(): React.JSX.Element {
       await refreshLibrary();
     }), [persistence, refreshLibrary, runLibraryAction]);
 
+  const handleExportRecovery = useCallback((documentId: string) =>
+    runLibraryAction(async () => {
+      const recovery = await persistence.projects.exportRecovery(documentId);
+
+      if (recovery === null) {
+        throw new Error("No original project generation is available.");
+      }
+
+      downloadBrowserFile(
+        new Blob([recovery.archive], { type: "application/json;charset=utf-8" }),
+        recovery.archiveFileName,
+      );
+      downloadBrowserFile(
+        new Blob([recovery.diagnostic], { type: "text/plain;charset=utf-8" }),
+        recovery.diagnosticFileName,
+      );
+    }), [persistence, runLibraryAction]);
+
   if (activeProject !== null) {
     return (
-      <ActiveProjectEditor
-        key={activeProject.documentId}
-        storedProject={activeProject}
-        settings={settings}
-        persistence={persistence}
-        onSettingsChange={setSettings}
-        onClose={async () => {
-          setActiveProject(null);
-          await refreshLibrary();
-        }}
-      />
+      <>
+        <ActiveProjectEditor
+          key={activeProject.documentId}
+          storedProject={activeProject}
+          settings={settings}
+          persistence={persistence}
+          onSettingsChange={setSettings}
+          onClose={async () => {
+            setActiveProject(null);
+            await refreshLibrary();
+          }}
+        />
+        {migrationDialog}
+      </>
     );
   }
 
   return (
-    <ApplicationHome
-      projects={projects}
-      busy={busy}
-      error={error}
-      onCreateProject={handleCreate}
-      onOpenProject={handleOpen}
-      onCloneProject={handleClone}
-      onImportProject={handleImport}
-      onRemoveProject={handleRemove}
-    />
+    <>
+      <ApplicationHome
+        projects={projects}
+        busy={busy}
+        error={error}
+        onCreateProject={handleCreate}
+        onOpenProject={handleOpen}
+        onCloneProject={handleClone}
+        onImportProject={handleImport}
+        onExportRecovery={handleExportRecovery}
+        onRemoveProject={handleRemove}
+      />
+      {migrationDialog}
+    </>
   );
 }
 

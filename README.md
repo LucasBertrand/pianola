@@ -221,9 +221,10 @@ neutre ; le codec ne connaît ni React, ni le store, ni le clip affiché.
 
 Les données restent locales. L'autosave conserve deux générations validées et
 publie leur résumé dans le catalogue ; l'export `.pianola` reste la sauvegarde
-portable appartenant à l'utilisateur. La baseline locale repart du snapshot
-version 1. Une base IndexedDB dont la version de layout ne correspond pas à la
-version courante est explicitement recréée, sans conversion de données.
+portable appartenant à l'utilisateur. Fichiers, snapshots et layout IndexedDB
+partent tous de leur première baseline. Il n'existe encore aucune version
+historique à migrer. Les enveloppes projet futures sont refusées intactes ; un
+layout IndexedDB supérieur incompatible est recréé pendant ce reset initial.
 
 ## Tests et validation
 

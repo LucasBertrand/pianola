@@ -6,12 +6,13 @@ import {
   ProjectPersistenceError,
 } from "../../persistence/codecs/project-persistence-error";
 import {
-  parsePersistenceJson,
   readPersistenceInteger,
   readPersistenceIsoDate,
-  readPersistenceRecord,
   readPersistenceString,
 } from "../../persistence/codecs/persistence-codec-readers";
+import type {
+  ProjectMigrationResult,
+} from "../../../application/project-files/project-migration";
 import {
   parsePersistedEditorWorkspace,
 } from "../../persistence/codecs/project-workspace-codec";
@@ -23,6 +24,9 @@ import {
   PIANOLA_PROJECT_SCHEMA_VERSION,
   type PianolaProject,
 } from "./pianola-project-schema";
+import {
+  migratePortableProject,
+} from "./migrations/migrate-portable-project";
 
 export function serializePianolaProject(
   project: PianolaProject,
@@ -40,11 +44,23 @@ export function serializePianolaProject(
   return serialized;
 }
 
-export function parsePianolaProject(serialized: string): PianolaProject {
-  const source = readPersistenceRecord(
-    parsePersistenceJson(serialized),
-    "$",
-  );
+export function parsePianolaProject(
+  serialized: string,
+): ProjectMigrationResult<PianolaProject> {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(serialized) as unknown;
+  } catch (error: unknown) {
+    throw new ProjectPersistenceError(
+      "CORRUPT_DATA",
+      "Stored data does not contain valid JSON.",
+      { cause: error },
+    );
+  }
+
+  const migrated = migratePortableProject(parsed);
+  const source = migrated.source;
   const format = readPersistenceString(source["format"], "$.format", 64);
 
   if (format !== PIANOLA_PROJECT_FORMAT) {
@@ -67,23 +83,53 @@ export function parsePianolaProject(serialized: string): PianolaProject {
     );
   }
 
+  assertExactKeys(source, [
+    "format",
+    "schemaVersion",
+    "sourceDocumentId",
+    "exportedAt",
+    "document",
+    "workspace",
+  ], "$");
   const document = parseProjectSnapshot(source["document"], "$.document");
 
   return {
-    sourceDocumentId: readPersistenceString(
-      source["sourceDocumentId"],
-      "$.sourceDocumentId",
-      MAXIMUM_ENTITY_ID_LENGTH,
-    ),
-    exportedAt: readPersistenceIsoDate(
-      source["exportedAt"],
-      "$.exportedAt",
-    ),
-    document,
-    workspace: parsePersistedEditorWorkspace(
-      source["workspace"],
+    project: {
+      sourceDocumentId: readPersistenceString(
+        source["sourceDocumentId"],
+        "$.sourceDocumentId",
+        MAXIMUM_ENTITY_ID_LENGTH,
+      ),
+      exportedAt: readPersistenceIsoDate(
+        source["exportedAt"],
+        "$.exportedAt",
+      ),
       document,
-      "$.workspace",
-    ),
+      workspace: parsePersistedEditorWorkspace(
+        source["workspace"],
+        document,
+        "$.workspace",
+      ),
+    },
+    migration: migrated.report,
   };
+}
+
+function assertExactKeys(
+  source: Readonly<Record<string, unknown>>,
+  expectedKeys: readonly string[],
+  path: string,
+): void {
+  const actual = Object.keys(source).sort();
+  const expected = [...expectedKeys].sort();
+
+  if (
+    actual.length !== expected.length
+    || actual.some((key, index) => key !== expected[index])
+  ) {
+    throw new ProjectPersistenceError(
+      "INVALID_DATA",
+      `Record contains missing or unknown fields. Location: ${path}`,
+    );
+  }
 }

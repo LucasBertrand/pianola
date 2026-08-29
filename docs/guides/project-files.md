@@ -8,10 +8,14 @@ Le point d’entrée unique du format portable est
 et un `PersistedEditorWorkspace` séparé. Il ne contient aucune préférence
 utilisateur.
 
-Le lecteur traite toujours le JSON comme inconnu, reconnaît format et version,
-valide le document puis le workspace. Une version future est refusée sans être
-réécrite. L'import crée un nouveau `documentId` local même si le fichier vient
-d'un projet déjà présent dans la bibliothèque.
+Le writer courant produit la première version portable, version 1. Le lecteur
+traite toujours le JSON comme inconnu, reconnaît format et version, puis valide
+strictement le document et le workspace. Il n'existe encore aucune version
+historique ni migration. Une version future, un champ inconnu ou une migration
+absente est refusé sans réécriture du fichier source. L'import crée un nouveau
+`documentId` local même si le fichier vient d'un projet déjà présent dans la
+bibliothèque. Lorsqu'une future migration existera, son rapport sera affiché
+une seule fois dans la modale stylisée `application-dialog`.
 
 Le format local est différent du format portable. L'enveloppe
 `app.pianola.stored-project.v1` ajoute `documentId`, révision et `updatedAt` ;
@@ -24,16 +28,27 @@ repositories IndexedDB/mémoire et politiques navigateur sous
 Le pipeline portable :
 
 1. reçoit une valeur JSON inconnue ;
-2. vérifie identité, version, limites et sections ;
-3. construit le document et le workspace ;
-4. crée une entrée locale distincte sans modifier `UserSettings`.
+2. vérifie identité et version avant la validation courante ;
+3. applique les migrations fermées nécessaires ;
+4. valide strictement les limites et sections courantes ;
+5. crée une entrée locale distincte sans modifier `UserSettings`.
 
-Les fichiers `.pianola`, leurs documents et les snapshots locaux n'acceptent
-que leur baseline 1.
-Une autre version est rejetée sans conversion. IndexedDB utilise le layout 2 :
-à l'ouverture, une base d'un layout plus ancien ou plus récent est supprimée et
-recréée explicitement. Les projets locaux incompatibles ne sont pas convertis ;
-un export `.pianola` est nécessaire pour conserver une sauvegarde portable.
+La fenêtre supportée contient uniquement la première baseline : fichiers
+`.pianola` 1, snapshots locaux 1 et documents musicaux de schéma 1.
+Les writers n'émettent que la version 1. Toute modification future de
+structure ou de vocabulaire persistant augmente la version de son enveloppe et
+ajoute une migration avant/après couverte par test.
+
+Une version future n'est jamais remplacée. Si aucune des deux générations ne
+s'ouvre, les diagnostics distinguent JSON corrompu, donnée invalide,
+métadonnées incohérentes, version future et migration absente. Le bouton
+`Recovery` de l'accueil exporte une archive JSON contenant les payloads intacts
+et un diagnostic texte ; la suppression reste soumise à confirmation.
+
+IndexedDB utilise son premier layout, version 1. Dans ce reset initial, tout
+layout local supérieur incompatible est supprimé puis la baseline 1 est
+recréée. Les futurs upgrades de layout devront créer uniquement les stores
+manquants via `onupgradeneeded` et préserver les enregistrements existants.
 
 Tests ciblés :
 

@@ -1,4 +1,5 @@
 import type {
+  DecodedStoredProject,
   EncodedStoredProject,
   StoredProjectCodec,
 } from "../../../application/ports/stored-project-codec";
@@ -78,8 +79,8 @@ export class WorkerStoredProjectCodec implements StoredProjectCodec {
     });
   }
 
-  public decode(serialized: string): Promise<StoredProject> {
-    return this.request<StoredProject>({
+  public decode(serialized: string): Promise<DecodedStoredProject> {
+    return this.request<DecodedStoredProject>({
       operation: "decode",
       serialized,
     });

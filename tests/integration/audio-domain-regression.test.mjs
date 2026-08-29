@@ -1286,7 +1286,7 @@ function getActiveTestMeasureCount(state) {
       document: state,
       workspace: editorState,
     });
-    const loaded = parsePianolaProject(serialized);
+    const { project: loaded } = parsePianolaProject(serialized);
     const nativeDocument = JSON.parse(serialized);
 
     assert.equal(nativeDocument.schemaVersion, 1);
@@ -1374,7 +1374,7 @@ function getActiveTestMeasureCount(state) {
       createdAt: "2026-08-10T10:00:00.000Z",
       savedAt: "2026-08-10T10:01:00.000Z",
     };
-    const loaded = parsePianolaProject(
+    const { project: loaded } = parsePianolaProject(
       serializePianolaProject({
         sourceDocumentId: metadata.documentId,
         exportedAt: metadata.savedAt,

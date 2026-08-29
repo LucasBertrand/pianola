@@ -1,5 +1,9 @@
 import {
   type ProjectRepository,
+  type ProjectGenerationDiagnostic,
+  type ProjectLoadResult,
+  type ProjectRecoveryCause,
+  type ProjectRecoveryExport,
   type ProjectSummary,
   type StoredProject,
   type StoredRevision,
@@ -21,12 +25,14 @@ export interface InMemoryProjectGeneration {
 export interface InMemoryProjectStorage {
   readonly summaries: Map<string, ProjectSummary>;
   readonly generations: Map<string, InMemoryProjectGeneration[]>;
+  readonly diagnostics: Map<string, readonly ProjectGenerationDiagnostic[]>;
 }
 
 export function createInMemoryProjectStorage(): InMemoryProjectStorage {
   return {
     summaries: new Map(),
     generations: new Map(),
+    diagnostics: new Map(),
   };
 }
 
@@ -47,7 +53,7 @@ export class InMemoryProjectRepository implements ProjectRepository {
     ));
   }
 
-  public load(documentId: string): Promise<StoredProject | null> {
+  public load(documentId: string): Promise<ProjectLoadResult | null> {
     return this.enqueue(async () => {
       const generations = this.storage.generations.get(documentId);
 
@@ -56,14 +62,16 @@ export class InMemoryProjectRepository implements ProjectRepository {
       }
 
       let failure: unknown = null;
+      const diagnostics: ProjectGenerationDiagnostic[] = [];
 
       for (const generation of [...generations].reverse()) {
         try {
           const decoded = await this.codec.decode(generation.serialized);
+          const project = decoded.project;
 
           if (
-            decoded.documentId !== documentId
-            || decoded.revision !== generation.revision
+            project.documentId !== documentId
+            || project.revision !== generation.revision
           ) {
             throw new ProjectPersistenceError(
               "CORRUPT_DATA",
@@ -74,28 +82,68 @@ export class InMemoryProjectRepository implements ProjectRepository {
           if (generation !== generations[generations.length - 1]) {
             this.storage.summaries.set(
               documentId,
-              createSummary(decoded, generation.byteSize),
+              createSummary(project, generation.byteSize),
             );
           }
 
-          return decoded;
+          this.storage.diagnostics.delete(documentId);
+
+          if (
+            decoded.migration.sourceVersion
+            !== decoded.migration.targetVersion
+          ) {
+            return this.publishMigration(
+              project,
+              generation,
+              decoded.migration,
+            );
+          }
+
+          return { project, migration: decoded.migration };
         } catch (error: unknown) {
+          diagnostics.push(createGenerationDiagnostic(generation, error));
+
           if (
             error instanceof ProjectPersistenceError
             && error.code === "FUTURE_VERSION"
           ) {
-            throw error;
+            this.storage.diagnostics.set(documentId, diagnostics);
+            throw new ProjectPersistenceError(
+              "FUTURE_VERSION",
+              formatRecoveryFailure(documentId, diagnostics),
+              { cause: error },
+            );
           }
 
           failure = error;
         }
       }
 
+      this.storage.diagnostics.set(documentId, diagnostics);
+
       throw new ProjectPersistenceError(
         "CORRUPT_DATA",
-        `No valid recovery generation exists for project ${documentId}.`,
+        formatRecoveryFailure(documentId, diagnostics),
         { cause: failure },
       );
+    });
+  }
+
+  public exportRecovery(
+    documentId: string,
+  ): Promise<ProjectRecoveryExport | null> {
+    return this.enqueue(() => {
+      const generations = this.storage.generations.get(documentId);
+
+      if (generations === undefined || generations.length === 0) {
+        return Promise.resolve(null);
+      }
+
+      return Promise.resolve(createRecoveryExport(
+        documentId,
+        generations,
+        this.storage.diagnostics.get(documentId) ?? [],
+      ));
     });
   }
 
@@ -161,6 +209,7 @@ export class InMemoryProjectRepository implements ProjectRepository {
     return this.enqueue(() => {
       this.storage.summaries.delete(documentId);
       this.storage.generations.delete(documentId);
+      this.storage.diagnostics.delete(documentId);
       return Promise.resolve();
     });
   }
@@ -172,6 +221,35 @@ export class InMemoryProjectRepository implements ProjectRepository {
       () => undefined,
     );
     return result;
+  }
+
+  private async publishMigration(
+    project: StoredProject,
+    sourceGeneration: InMemoryProjectGeneration,
+    migration: ProjectLoadResult["migration"],
+  ): Promise<ProjectLoadResult> {
+    const canonical: StoredProject = {
+      ...project,
+      revision: sourceGeneration.revision + 1,
+    };
+    const encoded = await this.codec.encode(canonical);
+    const nextGenerations = [
+      sourceGeneration,
+      {
+        documentId: canonical.documentId,
+        revision: canonical.revision,
+        serialized: encoded.serialized,
+        byteSize: encoded.byteSize,
+      },
+    ];
+
+    this.storage.generations.set(project.documentId, nextGenerations);
+    this.storage.summaries.set(
+      project.documentId,
+      createSummary(canonical, encoded.byteSize),
+    );
+
+    return { project: canonical, migration };
   }
 }
 
@@ -186,5 +264,68 @@ function createSummary(
     revision: project.revision,
     updatedAt: project.updatedAt,
     byteSize,
+  };
+}
+
+function createGenerationDiagnostic(
+  generation: InMemoryProjectGeneration,
+  error: unknown,
+): ProjectGenerationDiagnostic {
+  return {
+    revision: generation.revision,
+    cause: classifyRecoveryCause(error),
+    message: error instanceof Error ? error.message : "Unknown decode failure.",
+  };
+}
+
+function classifyRecoveryCause(error: unknown): ProjectRecoveryCause {
+  if (!(error instanceof ProjectPersistenceError)) {
+    return "invalid-data";
+  }
+
+  if (error.message.includes("metadata is inconsistent")) {
+    return "metadata-inconsistent";
+  }
+  if (error.code === "FUTURE_VERSION") return "future-version";
+  if (error.code === "MIGRATION_MISSING") return "migration-missing";
+  if (error.code === "CORRUPT_DATA") return "json-corrupt";
+  return "invalid-data";
+}
+
+function formatRecoveryFailure(
+  documentId: string,
+  diagnostics: readonly ProjectGenerationDiagnostic[],
+): string {
+  const details = diagnostics.map((entry) => (
+    `revision ${entry.revision}: ${entry.cause} — ${entry.message}`
+  )).join("; ");
+  return `No valid recovery generation exists for project ${documentId}. ${details}`;
+}
+
+function createRecoveryExport(
+  documentId: string,
+  generations: readonly InMemoryProjectGeneration[],
+  diagnostics: readonly ProjectGenerationDiagnostic[],
+): ProjectRecoveryExport {
+  const baseName = `pianola-recovery-${documentId}`;
+  const diagnostic = diagnostics.length === 0
+    ? "No failed opening attempt has been recorded."
+    : diagnostics.map((entry) => (
+        `Revision ${entry.revision}\nCause: ${entry.cause}\n${entry.message}`
+      )).join("\n\n");
+
+  return {
+    archiveFileName: `${baseName}.json`,
+    archive: JSON.stringify({
+      format: "app.pianola.recovery.v1",
+      documentId,
+      generations: generations.map((generation) => ({
+        revision: generation.revision,
+        byteSize: generation.byteSize,
+        serialized: generation.serialized,
+      })),
+    }, null, 2),
+    diagnosticFileName: `${baseName}.txt`,
+    diagnostic,
   };
 }

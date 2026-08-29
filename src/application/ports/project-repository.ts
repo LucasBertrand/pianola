@@ -11,6 +11,9 @@ import type {
 import type {
   PitchSnapSettings,
 } from "../../domain/music-theory/pitch-snap";
+import type {
+  ProjectMigrationReport,
+} from "../project-files/project-migration";
 
 /** Navigation state for one clip, expressed without CSS pixel offsets. */
 export interface PersistedClipEditorState {
@@ -51,13 +54,39 @@ export interface StoredRevision {
   readonly updatedAt: string;
 }
 
+export interface ProjectLoadResult {
+  readonly project: StoredProject;
+  readonly migration: ProjectMigrationReport;
+}
+
+export type ProjectRecoveryCause =
+  | "future-version"
+  | "migration-missing"
+  | "invalid-data"
+  | "metadata-inconsistent"
+  | "json-corrupt";
+
+export interface ProjectGenerationDiagnostic {
+  readonly revision: number;
+  readonly cause: ProjectRecoveryCause;
+  readonly message: string;
+}
+
+export interface ProjectRecoveryExport {
+  readonly archiveFileName: string;
+  readonly archive: string;
+  readonly diagnosticFileName: string;
+  readonly diagnostic: string;
+}
+
 export interface ProjectRepository {
   list(): Promise<readonly ProjectSummary[]>;
-  load(documentId: string): Promise<StoredProject | null>;
+  load(documentId: string): Promise<ProjectLoadResult | null>;
   save(
     snapshot: StoredProject,
     expectedRevision: number | null,
   ): Promise<StoredRevision>;
+  exportRecovery(documentId: string): Promise<ProjectRecoveryExport | null>;
   remove(documentId: string): Promise<void>;
 }
 

@@ -3,6 +3,7 @@ export type ProjectPersistenceErrorCode =
   | "CORRUPT_DATA"
   | "FUTURE_VERSION"
   | "INVALID_DATA"
+  | "MIGRATION_MISSING"
   | "QUOTA_EXCEEDED"
   | "STORAGE_UNAVAILABLE";
 

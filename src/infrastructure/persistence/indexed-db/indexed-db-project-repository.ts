@@ -1,5 +1,8 @@
 import {
   type ProjectRepository,
+  type ProjectGenerationDiagnostic,
+  type ProjectLoadResult,
+  type ProjectRecoveryExport,
   type ProjectSummary,
   type StoredProject,
   type StoredRevision,
@@ -19,13 +22,17 @@ import {
 import {
   assertStorageCapacity,
 } from "../browser/browser-storage-policy";
-
-interface StoredProjectGenerationRecord {
-  readonly documentId: string;
-  readonly revision: number;
-  readonly serialized: string;
-  readonly byteSize: number;
-}
+import {
+  createGenerationDiagnostic,
+  createRecoveryExport,
+  deleteProjectDiagnostics,
+  deleteProjectGenerations,
+  deleteProjectGenerationsExcept,
+  formatRecoveryFailure,
+  getProjectGenerations,
+  type ProjectRecoveryDiagnosticRecord,
+  type StoredProjectGenerationRecord,
+} from "./indexed-db-project-recovery";
 
 export class IndexedDbProjectRepository implements ProjectRepository {
   private operation = Promise.resolve();
@@ -53,13 +60,14 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     });
   }
 
-  public load(documentId: string): Promise<StoredProject | null> {
+  public load(documentId: string): Promise<ProjectLoadResult | null> {
     return this.enqueue(async () => {
       const database = await this.database.open();
       const transaction = database.transaction(
         [
           PIANOLA_STORES.projectCatalog,
           PIANOLA_STORES.projectGenerations,
+          PIANOLA_STORES.diagnostics,
         ],
         "readonly",
       );
@@ -93,33 +101,86 @@ export class IndexedDbProjectRepository implements ProjectRepository {
           entry !== undefined,
       );
       let failure: unknown = null;
+      const diagnostics: ProjectGenerationDiagnostic[] = [];
 
       for (const candidate of candidates) {
         try {
-          const project = await this.codec.decode(candidate.serialized);
+          const decoded = await this.codec.decode(candidate.serialized);
+          const project = decoded.project;
           assertGenerationMatches(project, candidate);
+
+          if (
+            decoded.migration.sourceVersion
+            !== decoded.migration.targetVersion
+          ) {
+            return this.publishMigration(project, candidate, decoded.migration);
+          }
 
           if (candidate.revision !== summary.revision) {
             await this.publishRecovery(project, candidate.byteSize);
           }
 
-          return project;
+          await this.clearRecoveryDiagnostics(documentId);
+          return { project, migration: decoded.migration };
         } catch (error: unknown) {
+          diagnostics.push(createGenerationDiagnostic(candidate, error));
+
           if (
             error instanceof ProjectPersistenceError
             && error.code === "FUTURE_VERSION"
           ) {
-            throw error;
+            await this.recordRecoveryDiagnostics(documentId, diagnostics);
+            throw new ProjectPersistenceError(
+              "FUTURE_VERSION",
+              formatRecoveryFailure(documentId, diagnostics),
+              { cause: error },
+            );
           }
 
           failure = error;
         }
       }
 
+      await this.recordRecoveryDiagnostics(documentId, diagnostics);
+
       throw new ProjectPersistenceError(
         "CORRUPT_DATA",
-        `No valid recovery generation exists for project ${documentId}.`,
+        formatRecoveryFailure(documentId, diagnostics),
         { cause: failure },
+      );
+    });
+  }
+
+  public exportRecovery(
+    documentId: string,
+  ): Promise<ProjectRecoveryExport | null> {
+    return this.enqueue(async () => {
+      const database = await this.database.open();
+      const transaction = database.transaction(
+        [PIANOLA_STORES.projectGenerations, PIANOLA_STORES.diagnostics],
+        "readonly",
+      );
+      const done = idbTransaction(transaction);
+      const generations = await getProjectGenerations(
+        transaction.objectStore(PIANOLA_STORES.projectGenerations),
+        documentId,
+      );
+      const diagnosticRecords = await idbRequest(
+        transaction.objectStore(PIANOLA_STORES.diagnostics).getAll(),
+      ) as ProjectRecoveryDiagnosticRecord[];
+      await done;
+
+      if (generations.length === 0) {
+        return null;
+      }
+
+      return createRecoveryExport(
+        documentId,
+        generations,
+        diagnosticRecords.filter((entry) => (
+          entry.kind === "project-recovery"
+          && entry.documentId === documentId
+        )),
       );
     });
   }
@@ -141,6 +202,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         [
           PIANOLA_STORES.projectCatalog,
           PIANOLA_STORES.projectGenerations,
+          PIANOLA_STORES.diagnostics,
         ],
         "readwrite",
       );
@@ -206,6 +268,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         [
           PIANOLA_STORES.projectCatalog,
           PIANOLA_STORES.projectGenerations,
+          PIANOLA_STORES.diagnostics,
         ],
         "readwrite",
       );
@@ -216,6 +279,10 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       catalog.delete(documentId);
       await deleteProjectGenerations(
         transaction.objectStore(PIANOLA_STORES.projectGenerations),
+        documentId,
+      );
+      await deleteProjectDiagnostics(
+        transaction.objectStore(PIANOLA_STORES.diagnostics),
         documentId,
       );
 
@@ -239,6 +306,93 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     await done;
   }
 
+  private async publishMigration(
+    project: StoredProject,
+    sourceGeneration: StoredProjectGenerationRecord,
+    migration: ProjectLoadResult["migration"],
+  ): Promise<ProjectLoadResult> {
+    const canonical: StoredProject = {
+      ...project,
+      revision: sourceGeneration.revision + 1,
+    };
+    const encoded = await this.codec.encode(canonical);
+    await assertStorageCapacity(encoded.byteSize);
+    const database = await this.database.open();
+    const transaction = database.transaction(
+      [
+        PIANOLA_STORES.projectCatalog,
+        PIANOLA_STORES.projectGenerations,
+        PIANOLA_STORES.diagnostics,
+      ],
+      "readwrite",
+    );
+    const done = idbTransaction(transaction);
+    const generations = transaction.objectStore(
+      PIANOLA_STORES.projectGenerations,
+    );
+
+    generations.put({
+      documentId: canonical.documentId,
+      revision: canonical.revision,
+      serialized: encoded.serialized,
+      byteSize: encoded.byteSize,
+    } satisfies StoredProjectGenerationRecord);
+    transaction.objectStore(PIANOLA_STORES.projectCatalog).put(
+      createSummary(canonical, encoded.byteSize),
+    );
+    await deleteProjectGenerationsExcept(
+      generations,
+      canonical.documentId,
+      new Set([sourceGeneration.revision, canonical.revision]),
+    );
+    await deleteProjectDiagnostics(
+      transaction.objectStore(PIANOLA_STORES.diagnostics),
+      canonical.documentId,
+    );
+    await done;
+
+    return { project: canonical, migration };
+  }
+
+  private async recordRecoveryDiagnostics(
+    documentId: string,
+    diagnostics: readonly ProjectGenerationDiagnostic[],
+  ): Promise<void> {
+    const database = await this.database.open();
+    const transaction = database.transaction(
+      PIANOLA_STORES.diagnostics,
+      "readwrite",
+    );
+    const done = idbTransaction(transaction);
+    const store = transaction.objectStore(PIANOLA_STORES.diagnostics);
+    await deleteProjectDiagnostics(store, documentId);
+
+    for (const diagnostic of diagnostics) {
+      store.add({
+        ...diagnostic,
+        kind: "project-recovery",
+        documentId,
+        recordedAt: new Date().toISOString(),
+      } satisfies ProjectRecoveryDiagnosticRecord);
+    }
+
+    await done;
+  }
+
+  private async clearRecoveryDiagnostics(documentId: string): Promise<void> {
+    const database = await this.database.open();
+    const transaction = database.transaction(
+      PIANOLA_STORES.diagnostics,
+      "readwrite",
+    );
+    const done = idbTransaction(transaction);
+    await deleteProjectDiagnostics(
+      transaction.objectStore(PIANOLA_STORES.diagnostics),
+      documentId,
+    );
+    await done;
+  }
+
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.operation.then(operation, operation);
     this.operation = result.then(
@@ -247,35 +401,6 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     );
     return result;
   }
-}
-
-function deleteProjectGenerations(
-  store: IDBObjectStore,
-  documentId: string,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = store.openCursor();
-
-    request.onerror = () => reject(
-      request.error ?? new Error("Unable to enumerate project generations."),
-    );
-    request.onsuccess = () => {
-      const cursor = request.result;
-
-      if (cursor === null) {
-        resolve();
-        return;
-      }
-
-      const record = cursor.value as StoredProjectGenerationRecord;
-
-      if (record.documentId === documentId) {
-        cursor.delete();
-      }
-
-      cursor.continue();
-    };
-  });
 }
 
 function createSummary(

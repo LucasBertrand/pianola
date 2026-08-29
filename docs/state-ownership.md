@@ -70,7 +70,11 @@ refuse les champs qui ne font pas partie de la baseline courante au lieu de les
 convertir ou de les abandonner silencieusement. Les seules données par clip
 persistées sont `pitchSnapSettings` et `gridSettings`.
 
-Le snapshot local accepte uniquement la baseline 1. IndexedDB utilise le layout
-2 et réinitialise toute base dont la version est plus ancienne ou plus récente,
-sans conversion silencieuse. Les réglages incompatibles sont conservés comme
-diagnostic puis remplacés par les valeurs par défaut.
+Le snapshot local courant est la première baseline, version 1. Il n'existe
+encore aucune version historique ni migration à exécuter. Un futur rapport de
+migration restera transitoire et n'entrera pas dans Undo/Redo. IndexedDB utilise
+également son premier layout, version 1 ; un layout local supérieur incompatible
+est supprimé et recréé pendant ce reset initial.
+Les diagnostics de projets et les payloads de quarantaine
+restent propriétaires de l'infrastructure ; les réglages incompatibles sont
+eux aussi conservés comme diagnostic puis remplacés par les valeurs par défaut.

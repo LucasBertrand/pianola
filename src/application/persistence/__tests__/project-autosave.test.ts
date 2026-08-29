@@ -59,19 +59,21 @@ describe("project autosave", () => {
       commands: [{ type: "UpdateProjectTitle", title: "Renamed" }],
     });
     await autosave.flush();
-    expect((await repository.load("autosave-project"))?.document.title)
+    expect((await repository.load("autosave-project"))?.project.document.title)
       .toBe("Renamed");
 
     store.undo();
     await autosave.flush();
-    expect((await repository.load("autosave-project"))?.document.title)
+    expect((await repository.load("autosave-project"))?.project.document.title)
       .toBe(initial.title);
 
     store.redo();
     await autosave.flush();
     await expect(repository.load("autosave-project")).resolves.toMatchObject({
-      revision: 4,
-      document: { title: "Renamed" },
+      project: {
+        revision: 4,
+        document: { title: "Renamed" },
+      },
     });
   });
 
@@ -108,8 +110,10 @@ describe("project autosave", () => {
     await autosave.flush();
 
     await expect(repository.load("queued-autosave")).resolves.toMatchObject({
-      revision: 3,
-      document: { title: "Second" },
+      project: {
+        revision: 3,
+        document: { title: "Second" },
+      },
     });
   });
 });

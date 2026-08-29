@@ -13,8 +13,8 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | instruments | `src/presentation/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips et groupes | `src/presentation/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
 | transport | `src/presentation/transport/TransportControls.tsx` puis `usePianoRollTransportViewport.ts` | `TimeMap` et boucle du clip, enchaînement global et auto-scroll du document, worklet pour statut et horloge audio | politiques transport/viewport, tests AudioWorklet et suite centrale |
-| persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` | `StoredProject`, `ProjectRepository` et `UserSettingsRepository` | `src/infrastructure/persistence/__tests__/project-repository-contract.test.ts` |
-| fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | document + `PersistedEditorWorkspace` | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
+| persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` | `StoredProject`, rapport transitoire, générations et quarantaine de `ProjectRepository` ; réglages dans `UserSettingsRepository` | `src/infrastructure/persistence/__tests__/project-repository-contract.test.ts` et `indexed-db-reset.test.ts` |
+| fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` puis `migrations/migrate-portable-project.ts` | document + `PersistedEditorWorkspace`, avec rapport de migration transitoire | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` puis `useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | styles | `src/presentation/styles/index.css` | fichier CSS de la surface | build Vite et vérification humaine |
 
@@ -44,8 +44,8 @@ restent le garde-fou de parité des flux transversaux.
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
 | modifier le master bus | `src/presentation/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | `meter-marker-operations.ts`, `point-marker-operations.ts`, commandes de transport, validation et painters ruler/grid |
-| modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | workspace codec et parseur de document |
-| modifier autosave ou récupération | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` | `src/application/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports puis repository IndexedDB/Worker |
+| modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | pipeline `pianola/migrations/`, workspace codec, parseur de document puis `presentation/project-files/useProjectMigrationDialog.tsx` pour un futur rapport |
+| modifier autosave ou récupération | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` | `src/application/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports, migrations de codec puis repository IndexedDB/Worker |
 | modifier le MIDI | `src/infrastructure/project-files/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/presentation/styles/application-colors.ts` | tokens CSS et styles de surface |
 | modifier le responsive | `src/presentation/styles/responsive.css` | styles propriétaires des surfaces impliquées |
@@ -91,6 +91,10 @@ ProjectStore / signaux workspace
   → WorkerStoredProjectCodec
   → IndexedDbProjectRepository
   → génération + résumé publiés atomiquement
+
+Ouverture courante : génération v1 → validation stricte
+Future ouverture historique : version → migrations pures → validation courante
+Échec complet : diagnostics par génération → archive brute + rapport texte
 
 Export : useProjectFileWorkflow → portable-project-codec → Blob
 Import : ApplicationHome → portable-project-codec → nouvelle entrée locale

@@ -55,6 +55,8 @@ et les protocoles sont délégués à des hooks nommés :
   stables du projet, du clip, de l’instrument et de la sélection ;
 - `usePianoRollUserPreferences` pour préférences et presets personnels ;
 - `usePianoRollProjectLifecycle` pour autosave, fermeture et fichiers ;
+- `useProjectMigrationDialog` pour les futurs rapports de migration dans la
+  modale applicative commune ;
 - `usePianoRollTransportViewport` pour audio, commandes, suivi et viewport ;
 - les workflows de clips, sélection et marqueurs.
 
@@ -220,14 +222,24 @@ SMF, analyse, avertissements, collisions et construction de projet.
 Les contrats `ProjectRepository`, `StoredProjectCodec`,
 `UserSettingsRepository` et `AutosaveScheduler` sont sous
 `src/application/ports/`. Leurs implémentations Worker, IndexedDB, navigateur et
-mémoire sont sous `src/infrastructure/persistence/`. La baseline de snapshot
-local est la version 1 ; une base IndexedDB d'un autre layout est recréée sans
-conversion silencieuse.
+mémoire sont sous `src/infrastructure/persistence/`. Les codecs routent d'abord
+l'identité et la version inconnues, puis valident strictement le modèle courant.
+Le fichier portable, le snapshot local, le document musical et le layout
+IndexedDB partent tous de leur version 1. Aucune version historique ni migration
+n'est encore déclarée.
+
+Les échecs complets alimentent les diagnostics de quarantaine et restent
+exportables sans mutation. IndexedDB crée son premier layout avec
+`onupgradeneeded` et recrée tout layout supérieur incompatible pendant ce reset
+initial. Les futurs
+changements ajouteront des migrations pures successives avant la validation
+courante.
 
 ```text
 Autosave : document + workspace → Worker → deux générations IndexedDB
-Export   : document + workspace → JSON portable validé → Blob
-Import   : File → JSON inconnu → parse borné → nouvelle entrée locale
+Ouverture: génération v1 → validation stricte
+Export   : document + workspace → JSON portable v1 validé → Blob
+Import   : File → version v1 → validation → nouvelle entrée locale
 Settings : mise à jour atomique → document IndexedDB séparé
 MIDI     : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ```
