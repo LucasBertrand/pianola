@@ -1,0 +1,53 @@
+.app-header {
+  position: relative;
+  z-index: 15;
+  display: grid;
+  overflow-x: auto;
+  overflow-y: visible;
+  min-height: 72px;
+  padding: 0 15px;
+  background: var(--color-surface-app);
+  box-shadow: none;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  grid-template-areas: "left right";
+  align-items: center;
+  gap: 22px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  white-space: nowrap;
+}
+
+.app-header::-webkit-scrollbar {
+  display: none;
+}
+
+/* Let the project popover escape the scrolling rail while it is open. */
+.app-header:has(.project-menu-trigger[aria-expanded="true"]) {
+  overflow: visible;
+}
+
+.app-header > section {
+  min-width: 0;
+}
+
+.app-header > .left {
+  display: flex;
+  min-width: max-content;
+  align-items: center;
+  gap: 8px;
+  grid-area: left;
+  justify-self: start;
+}
+
+.app-header > .right {
+  display: flex;
+  min-width: max-content;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  grid-area: right;
+  justify-self: end;
+}

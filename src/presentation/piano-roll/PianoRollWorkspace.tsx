@@ -44,7 +44,7 @@ import {
 } from "./PianoRollWorkspaceLayout";
 import {
   PianoRollViewportControls,
-} from "../editor-toolbar/PianoRollViewportControls";
+} from "./viewport/PianoRollViewportControls";
 import {
   PianoRollRuler,
   PianoRollPlayhead,
@@ -66,7 +66,7 @@ import {
 } from "../inspector/ProjectInspectorResizeHandle";
 import {
   EditorHeader,
-} from "../editor-toolbar/EditorHeader";
+} from "../editor-header/EditorHeader";
 import type {
   PianoRollControllerPort,
 } from "../../editor-core/interactions/piano-roll-controller-port";
@@ -115,13 +115,13 @@ import {
 } from "./interactions/useStylusAction";
 import {
   FloatingRadialMenu,
-} from "./context-menu/FloatingRadialMenu";
+} from "../radial-menu/FloatingRadialMenu";
 import {
   useFloatingRadialMenu,
-} from "./context-menu/useFloatingRadialMenu";
+} from "../radial-menu/useFloatingRadialMenu";
 import {
   usePianoRollRadialMenuCommands,
-} from "./context-menu/usePianoRollRadialMenuCommands";
+} from "../radial-menu/usePianoRollRadialMenuCommands";
 import {
   useKeyboardShortcut,
 } from "./interactions/useKeyboardShortcut";
@@ -528,31 +528,45 @@ export function PianoRollWorkspace({
       header={(
         <RenderBaselineProfiler id="EditorHeader">
         <EditorHeader
-          projectState={projectState}
-          loopDragPreview={loopDragPreview}
-          selectedNotes={selectedNotes}
-          selectedMarkerCount={selectedMarkerCount}
-          gridResolutionTicks={gridResolutionTicks}
-          pitchSnapSettings={pitchSnapSettings}
-          playbackStatus={playbackStatus}
-          autoScrollEnabled={autoScrollEnabled}
-          midiInputRef={projectLifecycle.midiInputRef}
-          saveStatus={projectLifecycle.saveStatus}
-          onCloseProject={projectLifecycle.closeProject}
-          onExportProject={projectLifecycle.exportProject}
-          onOpenMidiImport={projectLifecycle.openMidiImport}
-          onExportMidi={projectLifecycle.exportMidi}
-          onMidiFileChange={projectLifecycle.importMidiFile}
-          onProjectTitleCommit={handleProjectTitleCommit}
-          onReturnToStart={handleReturnToStart}
-          onTogglePlayback={togglePlayback}
-          onToggleLoop={handleToggleLoop}
-          onToggleAutoAdvance={handleToggleAutoAdvance}
-          onToggleAutoScroll={handleAutoScrollToggle}
-          onPreviewMasterGain={previewMasterGain}
-          onMasterGainCommit={handleMasterGainCommit}
-          onMasterMuteToggle={handleMasterMuteToggle}
-          onMasterTuningCommit={handleMasterTuningCommit}
+          projectControls={{
+            projectTitle: projectState.title,
+            midiInputRef: projectLifecycle.midiInputRef,
+            onCloseProject: projectLifecycle.closeProject,
+            onExportProject: projectLifecycle.exportProject,
+            onOpenMidiImport: projectLifecycle.openMidiImport,
+            onExportMidi: projectLifecycle.exportMidi,
+            onMidiFileChange: projectLifecycle.importMidiFile,
+            onProjectTitleCommit: handleProjectTitleCommit,
+          }}
+          transportControls={{
+            status: playbackStatus,
+            loopEnabled: activeClip.transportSettings.loopEnabled,
+            autoAdvanceEnabled: projectState.autoAdvanceEnabled,
+            autoScrollEnabled,
+            onReturnToStart: handleReturnToStart,
+            onTogglePlayback: togglePlayback,
+            onToggleLoop: handleToggleLoop,
+            onToggleAutoAdvance: handleToggleAutoAdvance,
+            onToggleAutoScroll: handleAutoScrollToggle,
+          }}
+          context={{
+            projectState,
+            loopDragPreview,
+            selectedNotes,
+            selectedMarkerCount,
+            gridResolutionTicks,
+            pitchSnapSettings,
+            saveStatus: projectLifecycle.saveStatus,
+          }}
+          masterBus={{
+            gain: projectState.masterBus.gain,
+            muted: projectState.masterBus.muted,
+            tuningFrequencyHz: projectState.masterBus.tuningFrequencyHz,
+            onPreview: previewMasterGain,
+            onCommit: handleMasterGainCommit,
+            onMuteToggle: handleMasterMuteToggle,
+            onTuningCommit: handleMasterTuningCommit,
+          }}
         />
         </RenderBaselineProfiler>
       )}

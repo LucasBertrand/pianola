@@ -39,10 +39,10 @@ restent le garde-fou de parité des flux transversaux.
 | modifier la concaténation d’un groupe | `src/presentation/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-concatenation-commands.ts` |
 | modifier la découpe d’un clip | `src/presentation/dialogs/ClipSplitDialog.tsx` | `src/presentation/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
 | modifier la duplication d’un groupe | `src/presentation/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
-| modifier zoom/scroll | `src/presentation/editor-toolbar/PianoRollViewportControls.tsx` | `usePianoRollTransportViewport.ts`, `useViewportControls.ts`, puis contrôleur viewport |
+| modifier zoom/scroll | `src/presentation/piano-roll/viewport/PianoRollViewportControls.tsx` | `ViewportNavigationControls.tsx`, `usePianoRollTransportViewport.ts`, `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/presentation/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
 | modifier Copy/Cut/Paste | `src/presentation/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
-| modifier le menu radial ou le bouton du stylet | `src/presentation/piano-roll/context-menu/piano-roll-radial-command-model.ts` | `usePianoRollRadialMenuCommands.ts`, `InteractionOverlay.tsx`, puis `interactions/useStylusAction.ts` |
+| modifier le menu radial ou le bouton du stylet | `src/presentation/radial-menu/piano-roll-radial-command-model.ts` | `usePianoRollRadialMenuCommands.ts`, `piano-roll/InteractionOverlay.tsx`, puis `piano-roll/interactions/useStylusAction.ts` |
 | modifier les collisions | `src/presentation/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts` | `src/domain/note-collision.ts` |
 | modifier l’inspecteur | `src/presentation/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
@@ -159,11 +159,14 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 | Surface | Fichier |
 | --- | --- |
 | shell/workspace | `src/presentation/styles/shell.css` |
-| en-tête | `src/presentation/styles/application-header.css` |
+| entrées de type range | `src/presentation/styles/range-input.css` |
+| en-tête | `src/presentation/styles/editor-header.css` |
+| contexte de l'en-tête | `src/presentation/styles/editor-context-panel.css` |
 | toolbar | `src/presentation/styles/editor-toolbar.css` |
 | transport | `src/presentation/styles/transport.css` |
 | fichiers | `src/presentation/styles/project-files.css` |
 | piano roll | `src/presentation/styles/piano-roll.css` |
+| contrôles du viewport | `src/presentation/styles/piano-roll-viewport-controls.css` |
 | menu radial flottant | `src/presentation/styles/radial-menu.css` |
 | inspecteur | `src/presentation/styles/inspector.css` |
 | dialogues | `src/presentation/styles/dialogs.css` |

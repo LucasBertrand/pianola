@@ -8,6 +8,8 @@ import {
 } from "../../../domain/transport/time-map";
 import {
   formatLoopDuration,
+  formatSaveStatus,
+  formatSelectionLabel,
 } from "../editor-context-format";
 
 describe("editor context formatting", () => {
@@ -88,5 +90,23 @@ describe("editor context formatting", () => {
       { startTick: 3_840, endTick: 6_720 },
       240,
     ).musical).toBe("1.0.0");
+  });
+
+  test("formats the selected note and marker counts", () => {
+    expect(formatSelectionLabel(1, 0)).toBe("1 note • 0 markers");
+    expect(formatSelectionLabel(2, 1)).toBe("2 notes • 1 marker");
+  });
+
+  test("formats every autosave state", () => {
+    expect(formatSaveStatus({ state: "saving" })).toBe("Saving…");
+    expect(formatSaveStatus({ state: "unsaved" })).toBe("Unsaved changes");
+    expect(formatSaveStatus({
+      state: "saved",
+      savedAt: "2026-08-29T12:00:00.000Z",
+    })).toBe("Saved locally");
+    expect(formatSaveStatus({
+      state: "error",
+      error: new Error("storage unavailable"),
+    })).toBe("Autosave failed");
   });
 });

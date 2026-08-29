@@ -4,7 +4,7 @@ import {
 } from "react";
 import {
   CommandIcon,
-} from "../../editor-toolbar/CommandIcon";
+} from "../command-icons/CommandIcon";
 import type {
   FloatingRadialMenuItem,
   FloatingRadialMenuProps,

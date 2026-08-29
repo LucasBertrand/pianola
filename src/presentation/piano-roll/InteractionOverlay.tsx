@@ -49,7 +49,7 @@ import type {
 } from "../../editor-core/model/render-signal";
 import type {
   ViewportPoint,
-} from "./context-menu/floating-radial-menu-model";
+} from "../radial-menu/floating-radial-menu-model";
 
 export interface InteractionOverlayProps {
   readonly runtime: PianoRollRuntimePort;

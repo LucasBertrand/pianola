@@ -46,7 +46,7 @@ import {
 } from "./InteractionOverlay";
 import type {
   ViewportPoint,
-} from "./context-menu/floating-radial-menu-model";
+} from "../radial-menu/floating-radial-menu-model";
 
 export interface PianoRollLayersProps {
   readonly runtime: PianoRollRuntimePort;

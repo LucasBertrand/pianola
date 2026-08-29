@@ -1,7 +1,10 @@
 @import "./tokens-reset.css";
+@import "./range-input.css";
 @import "./shell.css";
-@import "./application-header.css";
+@import "./editor-header.css";
+@import "./editor-context-panel.css";
 @import "./editor-toolbar.css";
+@import "./piano-roll-viewport-controls.css";
 @import "./transport.css";
 @import "./project-files.css";
 @import "./application-home.css";

@@ -4,6 +4,9 @@ import type {
 import type {
   LoopRegion,
 } from "../../domain/transport/transport";
+import type {
+  ProjectSaveStatus,
+} from "../../application/persistence/project-autosave";
 import {
   getBeatTicks,
   getMeasureSpans,
@@ -85,6 +88,30 @@ export function formatLoopDuration(
       + `.${String(subdivisionCount)}`,
     absolute: formatAbsoluteDuration(elapsedSeconds),
   };
+}
+
+export function formatSelectionLabel(
+  noteCount: number,
+  markerCount: number,
+): string {
+  const notes = `${String(noteCount)} note${noteCount === 1 ? "" : "s"}`;
+  const markers =
+    `${String(markerCount)} marker${markerCount === 1 ? "" : "s"}`;
+
+  return `${notes} • ${markers}`;
+}
+
+export function formatSaveStatus(status: ProjectSaveStatus): string {
+  switch (status.state) {
+    case "saving":
+      return "Saving…";
+    case "unsaved":
+      return "Unsaved changes";
+    case "error":
+      return "Autosave failed";
+    case "saved":
+      return "Saved locally";
+  }
 }
 
 function formatAbsoluteDuration(totalSeconds: number): string {

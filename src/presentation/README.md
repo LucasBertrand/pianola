@@ -11,16 +11,20 @@ adaptateurs de stockage navigateur vivent sous
 `src/infrastructure/persistence/` et implémentent les ports de
 `src/application/ports/`.
 
-Les icônes de commandes appartiennent à `editor-toolbar/` et le
-réordonnancement de cartes à `interactions/card-reorder/`; aucune zone
-`presentation/shared` ne sert de propriétaire par défaut.
+L'en-tête et la toolbar appartiennent respectivement à `editor-header/` et
+`editor-toolbar/`, les icônes de commandes à `command-icons/`, le menu radial à
+`radial-menu/` et le réordonnancement de cartes à
+`inspector/card-reorder/` ; aucune zone `presentation/shared` ne sert de
+propriétaire par défaut.
 
 ## Quel fichier lire en premier ?
 
 Lire `home/ApplicationHome.tsx` pour l'accueil et
 `piano-roll/PianoRollWorkspace.tsx` pour l’assemblage de l'éditeur, puis
 `piano-roll/PianoRollWorkspaceLayout.tsx` pour sa structure DOM. Les fichiers,
-préférences, dialogues et transport/viewport ont chacun un hook propriétaire.
+préférences et dialogues ont chacun un hook propriétaire. Les contrôles de
+navigation, grille et snap tonal sont sous `piano-roll/viewport/`, tandis que
+les signaux et contrôleurs restent possédés par le piano roll et le noyau.
 Pour le Canvas, utiliser
 [`piano-roll/rendering/README.md`](piano-roll/rendering/README.md).
 
@@ -33,6 +37,7 @@ dépendre de la présentation.
 ## Où sont les tests ?
 
 Les peintres ont leurs contrats près de `piano-roll/rendering/__tests__/`. Les
-modèles de layout, menu radial, dialogues, presets et sélecteurs ont leurs tests
-colocalisés. Les flux UI traversants sont couverts par `tests/integration/` et
-le smoke navigateur du scénario de rendu.
+modèles de layout, dialogues, presets et sélecteurs ont leurs tests colocalisés ;
+ceux du menu radial sont sous `radial-menu/__tests__/`. Les flux UI traversants
+sont couverts par `tests/integration/` et le smoke navigateur du scénario de
+rendu.

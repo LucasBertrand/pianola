@@ -135,8 +135,10 @@ possédé par `src/application/history/`.
 
 ## Présentation et styles
 
-Les composants sont rangés par surface : dialogs, editor-toolbar, inspector,
-piano-roll, project-files et transport. Le piano roll garde ses adaptateurs DOM
+Les composants sont rangés par surface : dialogs, editor-header,
+editor-toolbar, inspector, piano-roll, project-files, radial-menu et transport.
+Les icônes de commandes ont le propriétaire nommé `command-icons`, et le
+réordonnancement de cartes appartient à `inspector/card-reorder`. Le piano roll garde ses adaptateurs DOM
 dans `src/presentation/piano-roll/interactions/` et ses peintres Canvas dans
 `src/presentation/piano-roll/rendering/`.
 
@@ -147,10 +149,10 @@ projection ne change pas et ne notifie pas React pour une mutation sans rapport.
 Le viewport, le playhead, les survols et les previews de geste restent des
 signaux à invalidation DOM/Canvas directe.
 
-`src/presentation/styles/index.css` importe des propriétaires symétriques : shell, application
-header, editor toolbar, transport, project files, piano roll, inspector,
-dialogs et responsive. Le fichier responsive ne coordonne que plusieurs
-surfaces.
+`src/presentation/styles/index.css` importe des propriétaires symétriques :
+primitives de range, shell, editor header et contexte, editor toolbar, contrôles du viewport,
+transport, project files, piano roll, menu radial, inspector, dialogs et
+responsive. Le fichier responsive ne coordonne que plusieurs surfaces.
 
 ## Pipeline d’un geste
 

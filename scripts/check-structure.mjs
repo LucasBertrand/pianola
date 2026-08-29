@@ -36,10 +36,16 @@ const forbiddenPaths = [
   "src/application/notes",
   "src/application/selection",
   "src/presentation/piano-roll/Timeline.tsx",
-  "src/presentation/editor-toolbar/ViewControls.tsx",
+  "src/presentation/editor-toolbar/EditorHeader.tsx",
+  "src/presentation/editor-toolbar/editor-context-format.ts",
+  "src/presentation/editor-toolbar/PianoRollViewportControls.tsx",
+  "src/presentation/editor-toolbar/CommandIcon.tsx",
+  "src/presentation/piano-roll/context-menu",
+  "src/presentation/interactions/card-reorder",
   "src/presentation/inspector/GeneralInspector.tsx",
   "src/presentation/piano-roll/useSelectionWorkflow.ts",
   "src/presentation/styles/header-transport.css",
+  "src/presentation/styles/application-header.css",
 ];
 const requiredGuides = [
   "src/domain/README.md",
@@ -51,16 +57,27 @@ const requiredGuides = [
 ];
 const requiredStyles = [
   "src/presentation/styles/index.css",
-  "src/presentation/styles/application-header.css",
+  "src/presentation/styles/editor-header.css",
+  "src/presentation/styles/editor-context-panel.css",
   "src/presentation/styles/dialogs.css",
   "src/presentation/styles/editor-toolbar.css",
   "src/presentation/styles/inspector.css",
   "src/presentation/styles/piano-roll.css",
+  "src/presentation/styles/piano-roll-viewport-controls.css",
   "src/presentation/styles/project-files.css",
+  "src/presentation/styles/range-input.css",
   "src/presentation/styles/responsive.css",
   "src/presentation/styles/shell.css",
   "src/presentation/styles/tokens-reset.css",
   "src/presentation/styles/transport.css",
+];
+const requiredPresentationOwners = [
+  "src/presentation/command-icons/CommandIcon.tsx",
+  "src/presentation/editor-header/EditorHeader.tsx",
+  "src/presentation/editor-toolbar/EditorToolbar.tsx",
+  "src/presentation/inspector/card-reorder/useCardReorder.ts",
+  "src/presentation/piano-roll/viewport/PianoRollViewportControls.tsx",
+  "src/presentation/radial-menu/FloatingRadialMenu.tsx",
 ];
 const forbiddenGenericFileNames = new Set([
   "common.ts",
@@ -100,7 +117,11 @@ for (const relativePath of forbiddenPaths) {
   }
 }
 
-for (const relativePath of [...requiredGuides, ...requiredStyles]) {
+for (const relativePath of [
+  ...requiredGuides,
+  ...requiredStyles,
+  ...requiredPresentationOwners,
+]) {
   if (!await pathExists(path.join(workspaceRoot, relativePath))) {
     violations.push(`${relativePath} is required.`);
   }

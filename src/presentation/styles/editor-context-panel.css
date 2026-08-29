@@ -1,0 +1,96 @@
+.editor-context-panel {
+  display: flex;
+  height: 36px;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 9px;
+  background: var(--color-surface-panel);
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.project-save-status {
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: 0 9px 0 2px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--color-accent-success);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 5px var(--color-accent-success);
+}
+
+.editor-context-item {
+  display: grid;
+  min-width: 0;
+  height: 24px;
+  padding: 0 9px;
+  border-left: 1px solid var(--color-border-control);
+  place-items: center start;
+  align-content: center;
+  gap: 1px;
+}
+
+.editor-context-item.is-detection {
+  width: clamp(150px, 16vw, 250px);
+}
+
+.editor-context-item.is-loop {
+  width: 76px;
+}
+
+.editor-context-item.is-selection {
+  width: 126px;
+  padding-right: 2px;
+}
+
+.editor-context-item output,
+.editor-context-item small {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-context-item output {
+  color: var(--color-accent-primary-bright);
+  font-size: 9px;
+}
+
+.editor-context-item small,
+.editor-context-item .editor-context-secondary {
+  color: var(--color-text-muted);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-context-item.is-inactive output {
+  color: var(--color-text-muted);
+}
+
+.project-save-status.is-saving {
+  background: var(--color-accent-primary-bright);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 5px var(--color-accent-primary-bright);
+}
+
+.project-save-status.is-unsaved {
+  background: var(--color-accent-warm);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 5px var(--color-accent-warm);
+}
+
+.project-save-status.is-error {
+  background: var(--color-accent-danger);
+  box-shadow:
+    0 0 0 1px var(--color-surface-control),
+    0 0 6px var(--color-accent-danger);
+}
