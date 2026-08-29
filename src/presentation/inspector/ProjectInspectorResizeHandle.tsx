@@ -37,7 +37,9 @@ export function ProjectInspectorResizeHandle({
     useState<ProjectInspectorResizeOrientation>(readOrientation);
   const [compactLayout, setCompactLayout] =
     useState(readCompactLayout);
-  const available = !compactLayout || inspectorOpen;
+  const available = !compactLayout
+    || orientation === "landscape"
+    || inspectorOpen;
 
   useEffect(() => {
     const portraitQuery = window.matchMedia(PORTRAIT_LAYOUT_QUERY);

@@ -221,7 +221,6 @@ export function PianoRollWorkspace({
   const transportViewport = usePianoRollTransportViewport({
     runtime,
     activeClip,
-    inspectorOpen: inspector.open,
     autoScrollEnabled,
     selectedInstrumentId,
     getController: getPianoRollController,

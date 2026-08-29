@@ -205,43 +205,20 @@
   }
 
   .workspace {
-    position: relative;
     overflow: hidden;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .project-inspector-resize-handle {
-    position: absolute;
-    z-index: 13;
-    top: 0;
-    right: var(--project-inspector-panel-width);
-    bottom: 0;
-    display: none;
-    width: var(--project-inspector-resize-handle-size);
-  }
-
-  .workspace.is-project-inspector-open
-    .project-inspector-resize-handle {
-    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr)
+      var(--project-inspector-resize-handle-size)
+      minmax(0, var(--project-inspector-panel-width));
   }
 
   /* Responsive general inspector */
 
   .project-inspector {
-    position: absolute;
-    z-index: 12;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    display: grid;
-    width: var(--project-inspector-panel-width);
+    width: 100%;
+    min-width: 0;
     padding: 0 16px 18px;
     box-shadow: none;
-    transform: translate3d(100%, 0, 0);
-  }
-
-  .project-inspector.is-open {
-    transform: translate3d(0, 0, 0);
   }
 
   .project-inspector-toggle-button {
@@ -273,7 +250,12 @@
   }
 
   .workspace {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .project-inspector-resize-handle {
+    display: none;
   }
 
   .workspace.is-project-inspector-open {
@@ -301,6 +283,7 @@
 
   .workspace.is-project-inspector-open
     .project-inspector-resize-handle {
+    display: grid;
     position: relative;
     top: auto;
     right: auto;
