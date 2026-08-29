@@ -1,9 +1,8 @@
 # Carte du code
 
-> **État courant.** Les chemins de cette carte doivent rester synchronisés avec
-> le worktree à la fin de chaque lot. Pour une tâche de migration, consulter
-> d'abord [`migration/README.md`](migration/README.md) et
-> `migration/STATUS.md` ; la carte ne définit pas la cible.
+> **État courant.** Les chemins de cette carte sont synchronisés avec le
+> worktree après la migration. Les décisions et preuves historiques sont sous
+> [`migration/`](migration/README.md).
 
 Cette carte répond à « je veux modifier X ». Chaque entrée donne le point de
 départ visible, le propriétaire d’état et les témoins actuels.

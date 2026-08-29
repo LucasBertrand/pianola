@@ -7,11 +7,9 @@ navigateur sans serveur applicatif, base distante ni compte utilisateur.
 Ce README est un portail. Les détails vivent dans les guides de `docs/` et dans
 les README placés près du code qu’ils décrivent.
 
-> **Migration architecturale en cours.** Pour préparer, exécuter ou
-> reprendre un lot, commencer par
-> [`docs/migration/README.md`](docs/migration/README.md). Les chemins présentés
-> dans ce README décrivent le code courant tant que `STATUS.md` n'indique pas
-> leur migration.
+> **Architecture migrée.** Les chemins présentés ici sont les propriétaires
+> courants. Les décisions, preuves et bilans de la migration restent consultables
+> dans [`docs/migration/`](docs/migration/README.md).
 
 ## Démarrage rapide
 
@@ -64,7 +62,7 @@ Les variantes de tests sont décrites dans le
 | --- | --- |
 | découvrir la documentation | [`docs/README.md`](docs/README.md) |
 | commencer une modification | [`docs/guides/contributing.md`](docs/guides/contributing.md) |
-| travailler sur la migration architecturale | [`docs/migration/README.md`](docs/migration/README.md) |
+| consulter la migration architecturale | [`docs/migration/README.md`](docs/migration/README.md) |
 | trouver le code d’une capacité | [`docs/code-map.md`](docs/code-map.md) |
 | comprendre les couches | [`docs/architecture.md`](docs/architecture.md) |
 | savoir quel état persiste | [`docs/state-ownership.md`](docs/state-ownership.md) |
@@ -218,7 +216,7 @@ Tous les gestes et contrôles sont détaillés dans
 
 ## Fichiers et données
 
-Le format `.pianola` version 1 stocke le document musical et le workspace projet,
+Le format `.pianola` version 1 stocke un document musical de schéma 1 et le workspace projet,
 jamais les préférences utilisateur. Le parseur traite le JSON comme inconnu,
 vérifie identité, version et limites, puis crée une entrée distincte dans la
 bibliothèque IndexedDB. Toute autre version de fichier est refusée.
@@ -272,7 +270,7 @@ Les étapes de première connexion, de vérification et de retour arrière sont 
 Avant une modification structurelle, identifiez :
 
 - le propriétaire de la capacité ;
-- l’ancien et le nouveau chemin de navigation ;
+- le chemin d’entrée et les dépendances concernées ;
 - les tests, styles et documents concernés ;
 - le point d’entrée à mettre à jour dans `docs/code-map.md`.
 

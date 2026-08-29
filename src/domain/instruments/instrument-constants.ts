@@ -36,7 +36,6 @@ export const INSTRUMENT_CONSTANTS = Object.freeze({
   filterSustainLevel: 0.28,
   filterReleaseSeconds: 0.36,
   envelopeCurve: 0.35,
-  legacyEnvelopeCurve: 0,
   minimumEnvelopeCurve: -1,
   maximumEnvelopeCurve: 1,
   maximumEnvelopeTimeSeconds: 2,

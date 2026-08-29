@@ -514,25 +514,6 @@ export function planMarkerMove(
   };
 }
 
-/** Compatibility planner for callers that require a collision-free move. */
-export function planMarkerMoveCommands(
-  state: EditorSessionState,
-  clipId: ClipId,
-  fromTick: Tick,
-  toTick: Tick,
-): PianoRollCommand[] {
-  const plan = planMarkerMove(state, clipId, fromTick, toTick);
-  const collision = plan.collisions[0];
-
-  if (collision !== undefined) {
-    throw new Error(
-      `A ${collision.kind} marker already exists at this position.`,
-    );
-  }
-
-  return plan.commands.slice();
-}
-
 /** Clamps and rounds a draft tempo to the editor limits and step. */
 export function normalizeDraftBpm(bpm: number): number {
   if (!Number.isFinite(bpm)) {

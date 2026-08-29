@@ -13,7 +13,7 @@ export interface PlayheadPosition {
 }
 
 /**
- * Compatibility view for clip-local editor code. Setting it relocates the
+ * Clip-local view for editor code. Setting it relocates the
  * unique playhead into the clip currently displayed by the editor.
  */
 export class ActiveClipPlayheadTickSignal

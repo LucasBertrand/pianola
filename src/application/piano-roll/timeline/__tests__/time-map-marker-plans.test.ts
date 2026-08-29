@@ -8,7 +8,7 @@ import {
   normalizeDraftTimeSignature,
   planMarkerDeletionCommands,
   planMarkerDraftCommands,
-  planMarkerMoveCommands,
+  planMarkerMove,
 } from "../time-map-marker-plans";
 import {
   createTestProject,
@@ -400,7 +400,7 @@ describe("planMarkerDeletionCommands", () => {
   });
 });
 
-describe("planMarkerMoveCommands", () => {
+describe("planMarkerMove", () => {
   test("moves only the optional section from the initial flag", () => {
     const base = createProjectWithMarkers();
     const clip = base.clipsById[TEST_CLIP_ID]!;
@@ -421,35 +421,41 @@ describe("planMarkerMoveCommands", () => {
       },
     };
 
-    expect(planMarkerMoveCommands(
+    expect(planMarkerMove(
       state,
       TEST_CLIP_ID,
       0,
       960,
-    )).toEqual([{
-      type: "MoveSectionMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: 0,
-      targetTick: 960,
-    }]);
+    )).toEqual({
+      commands: [{
+        type: "MoveSectionMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 0,
+        targetTick: 960,
+      }],
+      collisions: [],
+    });
   });
 
   test("moves grouped point markers without moving their meter", () => {
     const state = createProjectWithMarkers();
 
     expect(
-      planMarkerMoveCommands(
+      planMarkerMove(
         state,
         TEST_CLIP_ID,
         2 * MEASURE_TICKS,
         MEASURE_TICKS,
       ),
-    ).toEqual([{
-      type: "MoveTempoMarker",
-      clipId: TEST_CLIP_ID,
-      startTick: 2 * MEASURE_TICKS,
-      targetTick: MEASURE_TICKS,
-    }]);
+    ).toEqual({
+      commands: [{
+        type: "MoveTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 2 * MEASURE_TICKS,
+        targetTick: MEASURE_TICKS,
+      }],
+      collisions: [],
+    });
   });
 
   test("moves point markers and reports their collisions", () => {
@@ -487,13 +493,14 @@ describe("planMarkerMoveCommands", () => {
       },
     };
 
-    expect(() =>
-      planMarkerMoveCommands(
-        state,
-        TEST_CLIP_ID,
-        MEASURE_TICKS + 960,
-        MEASURE_TICKS,
-      ),
-    ).toThrowError("A tempo marker already exists at this position.");
+    expect(planMarkerMove(
+      state,
+      TEST_CLIP_ID,
+      MEASURE_TICKS + 960,
+      MEASURE_TICKS,
+    )).toEqual({
+      commands: [],
+      collisions: [{ kind: "tempo", targetTick: MEASURE_TICKS }],
+    });
   });
 });

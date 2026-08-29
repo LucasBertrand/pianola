@@ -1,5 +1,4 @@
 import {
-  DEFAULT_USER_SETTINGS,
   USER_SETTINGS_SCHEMA_VERSION,
   type ShortcutActionId,
   type ShortcutBinding,
@@ -209,19 +208,11 @@ export function parseUserSettings(
     shortcuts[actionId] = binding;
   }
 
-  const personalPresetLibrary = (
-    settings["personalInstrumentPresetsById"] === undefined
-    && settings["personalInstrumentPresetOrder"] === undefined
-  )
-    ? {
-        presetsById: DEFAULT_USER_SETTINGS.personalInstrumentPresetsById,
-        presetOrder: DEFAULT_USER_SETTINGS.personalInstrumentPresetOrder,
-      }
-    : parsePersonalInstrumentPresetLibrary(
-        settings["personalInstrumentPresetsById"],
-        settings["personalInstrumentPresetOrder"],
-        `${path}.personalInstrumentPresets`,
-      );
+  const personalPresetLibrary = parsePersonalInstrumentPresetLibrary(
+    settings["personalInstrumentPresetsById"],
+    settings["personalInstrumentPresetOrder"],
+    `${path}.personalInstrumentPresets`,
+  );
 
   return {
     schemaVersion: USER_SETTINGS_SCHEMA_VERSION,

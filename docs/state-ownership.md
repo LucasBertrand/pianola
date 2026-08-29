@@ -1,15 +1,14 @@
 # Propriété et durée de vie des états
 
-> **État courant.** Ce document décrit les propriétaires actuellement
-> matérialisés. Les renommages et propriétaires cibles de la migration sont dans
-> [`migration/README.md`](migration/README.md) ; `migration/STATUS.md` indique
-> lesquels sont déjà effectifs.
+> **État courant.** Ce document décrit les propriétaires matérialisés par la
+> migration achevée. Les décisions et preuves historiques sont sous
+> [`migration/`](migration/README.md).
 
 Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert de
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 28 août 2026.
+Dernière mise à jour : 29 août 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -70,12 +69,10 @@ préférences du destinataire. Ces contrats appartiennent à
 `src/application/ports/`; leurs adaptateurs de stockage appartiennent à
 `src/infrastructure/persistence/`.
 
-Le modèle courant de workspace ne conserve pas le viewport : les anciens
-champs `firstVisibleTick`, `highestVisiblePitch`, `horizontalZoom` et
-`verticalZoom` sont seulement validés à la lecture puis abandonnés au profit de
-l'auto-fit. Le playhead est lui aussi transitoire. Les seules données par clip
-persistées dans le workspace courant sont `pitchSnapSettings` et
-`gridSettings`.
+Le modèle courant de workspace ne conserve ni viewport ni playhead. Le codec
+refuse les champs qui ne font pas partie de la baseline courante au lieu de les
+convertir ou de les abandonner silencieusement. Les seules données par clip
+persistées sont `pitchSnapSettings` et `gridSettings`.
 
 Pour le classement détaillé ayant guidé le lot 1, consulter
 [`migration/STATE-HISTORY-INVENTORY.md`](migration/STATE-HISTORY-INVENTORY.md).

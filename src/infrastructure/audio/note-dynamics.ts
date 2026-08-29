@@ -4,7 +4,7 @@ import {
 
 /**
  * Resolves the audible note level while velocity-sensitive playback is
- * intentionally disabled. The stored velocity remains available for native
+ * intentionally disabled. The stored velocity remains available for Pianola
  * project and MIDI round-trips.
  */
 export function resolveNoteEnvelopePeakLevel(

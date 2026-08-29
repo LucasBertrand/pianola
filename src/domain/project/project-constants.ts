@@ -2,7 +2,7 @@
 export const PROJECT_CONSTANTS = Object.freeze({
   defaultProjectTitle: "Pianola Project",
   ppqn: 960,
-  schemaVersion: 12,
+  schemaVersion: 1,
   defaultMeasureCount: 4,
   defaultTempoBpm: 120,
   minimumTempoBpm: 30,
@@ -27,7 +27,7 @@ export const PROJECT_CONSTANTS = Object.freeze({
   maximumSubtractiveSynthPolyphony: 16,
   maximumEntityIdLength: 160,
   maximumProjectTitleLength: 200,
-  // Clip limits protect native-file parsing and inspector usability.
+  // Clip limits protect Pianola project parsing and inspector usability.
   maximumClipNameLength: 128,
   maximumSectionCommentLength: 1_000,
   maximumClipCount: 256,

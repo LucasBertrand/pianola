@@ -1263,7 +1263,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("round-trips the current Pianola native document", () => {
+  test("round-trips the current Pianola project document", () => {
     const state = createProject({
       masterGain: 0.41,
       masterTuningFrequencyHz: 442,
@@ -1325,8 +1325,8 @@ function getActiveTestMeasureCount(state) {
     const withSecondClip = dispatch(createProject(), {
       type: "AddClip",
       clip: {
-        id: "clip-native-second",
-        name: "Native Second",
+        id: "clip-pianola-second",
+        name: "Pianola Second",
         color: "#79a7ff",
         bypassEnabled: false,
         timeline: createTestTimeline(2),
@@ -1351,15 +1351,15 @@ function getActiveTestMeasureCount(state) {
     });
     const state = {
       ...tempoState,
-      workspace: { activeClipId: "clip-native-second" },
+      workspace: { activeClipId: "clip-pianola-second" },
     };
     const firstEditorState = createEditorState();
     const editorState = {
       ...firstEditorState,
-      activeClipId: "clip-native-second",
+      activeClipId: "clip-pianola-second",
       clipStatesById: {
         ...firstEditorState.clipStatesById,
-        "clip-native-second": {
+        "clip-pianola-second": {
           pitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
           gridSettings: {
             baseResolutionTicks: 240,
@@ -1385,11 +1385,11 @@ function getActiveTestMeasureCount(state) {
 
     assert.deepEqual(
       getClipPlaybackOrder(loaded.document.clipHierarchy),
-      ["clip-test", "clip-native-second"],
+      ["clip-test", "clip-pianola-second"],
     );
     assert.equal(
       loaded.workspace.activeClipId,
-      "clip-native-second",
+      "clip-pianola-second",
     );
     assert.equal(
       loaded.document.clipsById["clip-test"]
@@ -1397,7 +1397,7 @@ function getActiveTestMeasureCount(state) {
       84,
     );
     assert.equal(
-      loaded.document.clipsById["clip-native-second"]
+      loaded.document.clipsById["clip-pianola-second"]
         .tracksByInstrumentId["voice-a"].notesById.second.locked,
       true,
     );

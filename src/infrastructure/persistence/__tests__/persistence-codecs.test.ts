@@ -32,9 +32,6 @@ import {
 import {
   createPersonalInstrumentPreset,
 } from "../../../domain/personal-instrument-presets";
-import {
-  getClipPlaybackOrder,
-} from "../../../domain/clips/clip-hierarchy";
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {
@@ -122,7 +119,7 @@ describe("persistence codecs", () => {
       .toThrow("Project file version 999 is not supported");
   });
 
-  test("migrates v1 portable playhead fields to transient state", () => {
+  test("rejects the pre-baseline document schema", () => {
     const document = createTestProject();
     const serialized = serializePianolaProject({
       sourceDocumentId: "pianola-project",
@@ -130,40 +127,13 @@ describe("persistence codecs", () => {
       document,
       workspace: createDefaultPersistedEditorWorkspace(document),
     });
-    const legacy = JSON.parse(serialized) as {
-      schemaVersion: number;
-      document: {
-        schemaVersion: number;
-        clipsById: Record<string, {
-          transportSettings: Record<string, unknown>;
-        }>;
-      };
-      workspace: {
-        clipStatesById: Record<string, Record<string, unknown>>;
-      };
+    const previous = JSON.parse(serialized) as {
+      document: { schemaVersion: number };
     };
+    previous.document.schemaVersion = 12;
 
-    legacy.schemaVersion = 1;
-    legacy.document.schemaVersion = 1;
-    const legacyDocument = legacy.document as unknown as Record<string, unknown>;
-    legacyDocument["clipOrder"] = getClipPlaybackOrder(document.clipHierarchy);
-    delete legacyDocument["clipHierarchy"];
-
-    for (const clipId of getClipPlaybackOrder(document.clipHierarchy)) {
-      legacy.document.clipsById[clipId]!
-        .transportSettings["anchorTick"] = 480;
-      legacy.workspace.clipStatesById[clipId]!["playheadTick"] = 480;
-    }
-
-    const migrated = parsePianolaProject(JSON.stringify(legacy));
-    const clipId = getClipPlaybackOrder(document.clipHierarchy)[0]!;
-
-    expect(migrated.document.schemaVersion).toBe(12);
-    expect("anchorTick" in migrated.document.clipsById[clipId]!
-      .transportSettings).toBe(false);
-    expect("playheadTick" in migrated.workspace.clipStatesById[clipId]!)
-      .toBe(false);
-    expect(serializePianolaProject(migrated)).not.toContain("playheadTick");
+    expect(() => parsePianolaProject(JSON.stringify(previous)))
+      .toThrow("Project schema version 12 is not supported");
   });
 
   test("validates user settings and rejects duplicate shortcuts", () => {
@@ -186,7 +156,7 @@ describe("persistence codecs", () => {
     )).settings).toEqual(settings);
   });
 
-  test("round-trips personal presets and migrates settings saved before them", () => {
+  test("round-trips personal presets and rejects incomplete settings", () => {
     const settings = recoverDefaultUserSettings();
     const preset = createPersonalInstrumentPreset(
       "personal-preset-test",
@@ -210,20 +180,17 @@ describe("persistence codecs", () => {
     expect(roundTrip.personalInstrumentPresetsById[preset.id])
       .toEqual(preset);
 
-    const legacyEnvelope = JSON.parse(serializeUserSettings(
+    const incompleteEnvelope = JSON.parse(serializeUserSettings(
       settings,
       "2026-08-24T12:00:00.000Z",
     )) as { settings: Record<string, unknown> };
 
-    delete legacyEnvelope.settings["personalInstrumentPresetsById"];
-    delete legacyEnvelope.settings["personalInstrumentPresetOrder"];
+    delete incompleteEnvelope.settings["personalInstrumentPresetsById"];
+    delete incompleteEnvelope.settings["personalInstrumentPresetOrder"];
 
-    const migrated = parseUserSettingsEnvelope(
-      JSON.stringify(legacyEnvelope),
-    ).settings;
-
-    expect(migrated.personalInstrumentPresetOrder).toEqual([]);
-    expect(migrated.personalInstrumentPresetsById).toEqual({});
+    expect(() => parseUserSettingsEnvelope(
+      JSON.stringify(incompleteEnvelope),
+    )).toThrow("Expected an array");
   });
 
   test("rejects browser-reserved shortcut bindings", () => {

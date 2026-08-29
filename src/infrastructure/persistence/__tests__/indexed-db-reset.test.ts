@@ -14,7 +14,7 @@ import {
 test("resets local data from an older IndexedDB baseline", async () => {
   const factory = new IDBFactory();
   const databaseName = `pianola-reset-older-${crypto.randomUUID()}`;
-  const legacy = await openDatabase(
+  const olderDatabase = await openDatabase(
     factory,
     databaseName,
     PIANOLA_DATABASE_VERSION - 1,
@@ -29,20 +29,20 @@ test("resets local data from an older IndexedDB baseline", async () => {
       );
     },
   );
-  const seed = legacy.transaction(
+  const seed = olderDatabase.transaction(
     [PIANOLA_STORES.projectCatalog, PIANOLA_STORES.userSettings],
     "readwrite",
   );
   const seedDone = idbTransaction(seed);
   seed.objectStore(PIANOLA_STORES.projectCatalog).put({
-    documentId: "legacy-project",
+    documentId: "unsupported-project",
   });
   seed.objectStore(PIANOLA_STORES.userSettings).put({
     key: "current",
-    serialized: "legacy-settings",
+    serialized: "unsupported-settings",
   });
   await seedDone;
-  legacy.close();
+  olderDatabase.close();
 
   const database = new PianolaIndexedDb(factory, databaseName);
   const current = await database.open();

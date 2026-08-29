@@ -3,16 +3,15 @@
 Commencer par le document correspondant à l’intention, puis suivre les liens
 vers les guides locaux placés dans `src/`.
 
-Les documents de ce répertoire décrivent le code courant. Pour une tâche de
-migration, les décisions, la cible, l'ordre des lots et l'état réel sont sous
-[`migration/`](migration/README.md) et prennent l'autorité définie dans son
-README.
+Les documents de ce répertoire décrivent le code courant. Les décisions, la
+cible, l'ordre des lots et le bilan de la migration achevée sont conservés sous
+[`migration/`](migration/README.md).
 
 | Je veux… | Lire |
 | --- | --- |
 | commencer une modification | [`guides/contributing.md`](guides/contributing.md) |
 | installer ou tester | [`guides/development.md`](guides/development.md) |
-| préparer, exécuter ou reprendre la migration | [`migration/README.md`](migration/README.md) |
+| consulter les décisions et preuves de migration | [`migration/README.md`](migration/README.md) |
 | apprendre les contrôles | [`guides/usage.md`](guides/usage.md) |
 | modifier `.pianola` ou MIDI | [`guides/project-files.md`](guides/project-files.md) |
 | déployer | [`guides/deployment.md`](guides/deployment.md) |

@@ -1,9 +1,7 @@
 # Présentation
 
-> **État courant.** Ce guide décrit la zone présente dans le worktree. Pour une
-> tâche de migration, commencer par
-> [`../../docs/migration/README.md`](../../docs/migration/README.md) et vérifier
-> `STATUS.md` avant d'utiliser un propriétaire cible.
+> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
+> sont archivées dans [`docs/migration/`](../../docs/migration/README.md).
 
 ## Que possède cette zone ?
 

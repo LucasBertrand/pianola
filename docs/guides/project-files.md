@@ -1,10 +1,10 @@
 # Fichiers projet
 
-> **État courant.** Ce guide décrit les codecs et adaptateurs présents dans le
-> worktree après les lots 2 et 3. La séquence de migration reste définie dans
-> [`../migration/README.md`](../migration/README.md).
+> **État courant.** Ce guide décrit les codecs et adaptateurs définitifs. Les
+> décisions et preuves de leur migration sont archivées dans
+> [`../migration/`](../migration/README.md).
 
-## Format natif `.pianola`
+## Format `.pianola`
 
 Le point d’entrée unique du format portable est
 `src/infrastructure/project-files/pianola/pianola-project-codec.ts`. Le fichier porte
@@ -32,7 +32,8 @@ Le pipeline portable :
 3. construit le document et le workspace ;
 4. crée une entrée locale distincte sans modifier `UserSettings`.
 
-Les fichiers `.pianola` et snapshots locaux n'acceptent que leur baseline 1.
+Les fichiers `.pianola`, leurs documents et les snapshots locaux n'acceptent
+que leur baseline 1.
 Une autre version est rejetée sans conversion. IndexedDB utilise le layout 2 :
 à l'ouverture, une base d'un layout plus ancien ou plus récent est supprimée et
 recréée explicitement. Les projets locaux incompatibles ne sont pas convertis ;

@@ -14,12 +14,12 @@ reconstruire les conventions du dépôt. Il complète le
 4. Consulter l'[`architecture`](../architecture.md) pour un changement
    transversal, et la [propriété des états](../state-ownership.md) si une donnée
    est créée, déplacée ou persistée.
-5. Pour toute tâche liée à la migration architecturale, arrêter ce parcours et
-   suivre l'ordre obligatoire de [`docs/migration/README.md`](../migration/README.md).
+5. Pour auditer ou reprendre la migration architecturale, arrêter ce parcours
+   et suivre l'ordre obligatoire de
+   [`docs/migration/README.md`](../migration/README.md).
 
-Ne pas déduire la structure actuelle depuis un nom ou un chemin cible de la
-migration. Le worktree, les guides produit et `docs/migration/STATUS.md` indiquent
-ce qui existe réellement.
+La structure actuelle est celle du worktree et des guides produit. Le dossier
+`docs/migration/` conserve la cible, le séquencement et les preuves historiques.
 
 ## Choisir le bon propriétaire
 

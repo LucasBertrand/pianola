@@ -3,13 +3,9 @@ import {
 } from "../../../../domain/clips/clip";
 import {
   assertValidClipHierarchy,
-  createFlatClipHierarchy,
   getClipPlaybackOrder,
   type ClipHierarchyNode,
 } from "../../../../domain/clips/clip-hierarchy";
-import {
-  PROJECT_CONSTANTS,
-} from "../../../../domain/project/project-constants";
 import {
   type ClipId,
 } from "../../../../domain/identifiers";
@@ -50,7 +46,6 @@ import {
 import {
   parseClip,
   parseClipHierarchy,
-  parseClipOrder,
 } from "./parse-clips";
 import {
   parseInstrumentOrder,
@@ -64,12 +59,26 @@ export function parseProjectSnapshot(
   path: string,
 ): ProjectDocument {
   const project = readRecord(source, path);
+  assertExactRecordKeys(project, [
+    "schemaVersion",
+    "title",
+    "clock",
+    "projectInstrumentsById",
+    "instrumentOrder",
+    "instrumentPresetsById",
+    "instrumentPresetOrder",
+    "clipsById",
+    "clipHierarchy",
+    "autoAdvanceEnabled",
+    "autoScrollEnabled",
+    "masterBus",
+  ], path);
   const schemaVersion = readSafeInteger(
     project["schemaVersion"],
     `${path}.schemaVersion`,
   );
 
-  if (schemaVersion < 1 || schemaVersion > PROJECT_SCHEMA_VERSION) {
+  if (schemaVersion !== PROJECT_SCHEMA_VERSION) {
     fail(
       "INVALID_DATA",
       `${path}.schemaVersion`,
@@ -106,32 +115,22 @@ export function parseProjectSnapshot(
     project["masterBus"],
     `${path}.masterBus`,
   );
-  const clipHierarchy: readonly ClipHierarchyNode[] = schemaVersion >= 4
-    ? parseClipHierarchy(
-        project["clipHierarchy"],
-        `${path}.clipHierarchy`,
-        schemaVersion,
-      )
-    : createFlatClipHierarchy(parseClipOrder(
-        project["clipOrder"],
-        `${path}.clipOrder`,
-      ));
+  const clipHierarchy: readonly ClipHierarchyNode[] = parseClipHierarchy(
+    project["clipHierarchy"],
+    `${path}.clipHierarchy`,
+  );
   const clipOrder = getClipPlaybackOrder(clipHierarchy);
   const sourceClips = readRecord(
     project["clipsById"],
     `${path}.clipsById`,
   );
-  const autoAdvanceEnabled = parseAutoAdvanceEnabled(
-    project,
-    sourceClips,
-    clipOrder,
-    schemaVersion,
-    path,
+  const autoAdvanceEnabled = readBoolean(
+    project["autoAdvanceEnabled"],
+    `${path}.autoAdvanceEnabled`,
   );
-  const autoScrollEnabled = parseAutoScrollEnabled(
-    project,
-    schemaVersion,
-    path,
+  const autoScrollEnabled = readBoolean(
+    project["autoScrollEnabled"],
+    `${path}.autoScrollEnabled`,
   );
   assertExactRecordKeys(sourceClips, clipOrder, `${path}.clipsById`);
   const clipsById: Record<ClipId, Clip> = {};
@@ -142,7 +141,6 @@ export function parseProjectSnapshot(
       clipId,
       instrumentOrder,
       clock,
-      schemaVersion,
       `${path}.clipsById.${clipId}`,
     );
   }
@@ -175,64 +173,6 @@ export function parseProjectSnapshot(
   return projectState;
 }
 
-function parseAutoScrollEnabled(
-  project: Readonly<Record<string, unknown>>,
-  schemaVersion: number,
-  path: string,
-): boolean {
-  if ("autoScrollEnabled" in project) {
-    return readBoolean(
-      project["autoScrollEnabled"],
-      `${path}.autoScrollEnabled`,
-    );
-  }
-
-  return schemaVersion >= 11
-    ? readBoolean(undefined, `${path}.autoScrollEnabled`)
-    : PROJECT_CONSTANTS.defaultAutoScrollEnabled;
-}
-
-function parseAutoAdvanceEnabled(
-  project: Readonly<Record<string, unknown>>,
-  sourceClips: Readonly<Record<string, unknown>>,
-  clipOrder: readonly ClipId[],
-  schemaVersion: number,
-  path: string,
-): boolean {
-  if ("autoAdvanceEnabled" in project) {
-    return readBoolean(
-      project["autoAdvanceEnabled"],
-      `${path}.autoAdvanceEnabled`,
-    );
-  }
-
-  if (schemaVersion >= 3) {
-    return readBoolean(undefined, `${path}.autoAdvanceEnabled`);
-  }
-
-  const firstClipId = clipOrder[0];
-  const firstClip = firstClipId === undefined
-    ? undefined
-    : readRecord(
-        sourceClips[firstClipId],
-        `${path}.clipsById.${String(firstClipId)}`,
-      );
-  const legacyTransport = firstClip === undefined
-    ? undefined
-    : readRecord(
-        firstClip["transportSettings"],
-        `${path}.clipsById.${String(firstClipId)}.transportSettings`,
-      );
-
-  return legacyTransport !== undefined
-    && "autoAdvanceEnabled" in legacyTransport
-    ? readBoolean(
-        legacyTransport["autoAdvanceEnabled"],
-        `${path}.clipsById.${String(firstClipId)}.transportSettings.autoAdvanceEnabled`,
-      )
-    : PROJECT_CONSTANTS.defaultAutoAdvanceEnabled;
-}
-
 function parseProjectClock(source: unknown, path: string): ProjectClock {
   const stored = readRecord(source, path);
   assertExactRecordKeys(stored, ["ppqn", "launchGridTicks"], path);
@@ -262,6 +202,11 @@ function parseMasterBus(
   path: string,
 ): MasterBusState {
   const masterBus = readRecord(source, path);
+  assertExactRecordKeys(
+    masterBus,
+    ["gain", "muted", "tuningFrequencyHz"],
+    path,
+  );
 
   return {
     gain: readNumberInRange(

@@ -1,17 +1,12 @@
 import {
   PROJECT_CONSTANTS,
 } from "../../../../domain/project/project-constants";
-import { TONAL_SNAP_CONSTANTS } from "../../../../domain/music-theory/tonal-snap-constants";
 import {
-  DEFAULT_CLIP_BYPASS_ENABLED,
   type Clip,
   type ClipTimeline,
   type InstrumentTrack,
-  DEFAULT_CLIP_COLOR,
 } from "../../../../domain/clips/clip";
 import {
-  DEFAULT_CLIP_GROUP_COLOR,
-  DEFAULT_CLIP_GROUP_BYPASS_ENABLED,
   MAXIMUM_CLIP_GROUP_DEPTH,
   MAXIMUM_CLIP_GROUP_NAME_LENGTH,
   type ClipHierarchyNode,
@@ -48,7 +43,6 @@ import {
 import { fail } from "../pianola-project-error";
 import {
   assertExactRecordKeys,
-  readArray,
   readBoolean,
   readBoundedArray,
   readNonEmptyString,
@@ -63,52 +57,9 @@ import {
 const MAXIMUM_ID_LENGTH = MAXIMUM_ENTITY_ID_LENGTH;
 const MAXIMUM_NOTE_COUNT = MAXIMUM_CLIP_NOTE_COUNT;
 
-export function parseClipOrder(
-  source: unknown,
-  path: string,
-): readonly ClipId[] {
-  const values = readArray(source, path);
-
-  if (
-    values.length < 1
-    || values.length > PROJECT_CONSTANTS.maximumClipCount
-  ) {
-    fail(
-      "INVALID_DATA",
-      path,
-      `A project must contain between 1 and ${PROJECT_CONSTANTS.maximumClipCount} clips.`,
-    );
-  }
-
-  const clipOrder: ClipId[] = [];
-  const uniqueIds = new Set<ClipId>();
-
-  for (let index = 0; index < values.length; index += 1) {
-    const clipId = readNonEmptyString(
-      values[index],
-      `${path}[${index}]`,
-      MAXIMUM_ID_LENGTH,
-    );
-
-    if (uniqueIds.has(clipId)) {
-      fail(
-        "INVALID_DATA",
-        `${path}[${index}]`,
-        "Clip IDs must be unique.",
-      );
-    }
-
-    uniqueIds.add(clipId);
-    clipOrder.push(clipId);
-  }
-
-  return clipOrder;
-}
-
 export function parseClipHierarchy(
   source: unknown,
   path: string,
-  schemaVersion: number,
 ): readonly ClipHierarchyNode[] {
   return readBoundedArray(
     source,
@@ -118,7 +69,6 @@ export function parseClipHierarchy(
     node,
     `${path}[${String(index)}]`,
     1,
-    schemaVersion,
   ));
 }
 
@@ -126,7 +76,6 @@ function parseClipHierarchyNode(
   source: unknown,
   path: string,
   depth: number,
-  schemaVersion: number,
 ): ClipHierarchyNode {
   const node = readRecord(source, path);
   const kind = readString(node["kind"], `${path}.kind`, 16);
@@ -151,12 +100,11 @@ function parseClipHierarchyNode(
     fail("INVALID_DATA", path, "Clip hierarchy exceeds the maximum group depth.");
   }
 
-  const groupKeys = schemaVersion >= 7
-    ? ["kind", "id", "name", "color", "bypassEnabled", "children"]
-    : schemaVersion >= 5
-      ? ["kind", "id", "name", "color", "children"]
-    : ["kind", "id", "name", "children"];
-  assertExactRecordKeys(node, groupKeys, path);
+  assertExactRecordKeys(
+    node,
+    ["kind", "id", "name", "color", "bypassEnabled", "children"],
+    path,
+  );
   const children = readBoundedArray(
     node["children"],
     `${path}.children`,
@@ -165,7 +113,6 @@ function parseClipHierarchyNode(
     child,
     `${path}.children[${String(index)}]`,
     depth + 1,
-    schemaVersion,
   ));
 
   return {
@@ -176,12 +123,11 @@ function parseClipHierarchyNode(
       `${path}.name`,
       MAXIMUM_CLIP_GROUP_NAME_LENGTH,
     ),
-    color: schemaVersion >= 5
-      ? parseGroupColor(node["color"], `${path}.color`)
-      : DEFAULT_CLIP_GROUP_COLOR,
-    bypassEnabled: schemaVersion >= 7
-      ? readBoolean(node["bypassEnabled"], `${path}.bypassEnabled`)
-      : DEFAULT_CLIP_GROUP_BYPASS_ENABLED,
+    color: parseGroupColor(node["color"], `${path}.color`),
+    bypassEnabled: readBoolean(
+      node["bypassEnabled"],
+      `${path}.bypassEnabled`,
+    ),
     children,
   };
 }
@@ -205,10 +151,18 @@ export function parseClip(
   clipId: ClipId,
   instrumentOrder: readonly InstrumentId[],
   clock: ProjectClock,
-  schemaVersion: number,
   path: string,
 ): Clip {
   const clip = readRecord(source, path);
+  assertExactRecordKeys(clip, [
+    "id",
+    "name",
+    "color",
+    "bypassEnabled",
+    "timeline",
+    "tracksByInstrumentId",
+    "transportSettings",
+  ], path);
   const storedId = readNonEmptyString(
     clip["id"],
     `${path}.id`,
@@ -224,9 +178,7 @@ export function parseClip(
     `${path}.name`,
     PROJECT_CONSTANTS.maximumClipNameLength,
   );
-  const color = "color" in clip
-    ? readString(clip["color"], `${path}.color`, 32)
-    : DEFAULT_CLIP_COLOR;
+  const color = readString(clip["color"], `${path}.color`, 32);
 
   if (!/^#[0-9a-f]{6}$/i.test(color)) {
     fail(
@@ -235,28 +187,20 @@ export function parseClip(
       "Clip color must use the #RRGGBB format.",
     );
   }
-  const bypassEnabled = schemaVersion >= 6 || "bypassEnabled" in clip
-    ? readBoolean(clip["bypassEnabled"], `${path}.bypassEnabled`)
-    : DEFAULT_CLIP_BYPASS_ENABLED;
+  const bypassEnabled = readBoolean(
+    clip["bypassEnabled"],
+    `${path}.bypassEnabled`,
+  );
   const timeline = parseClipTimeline(clip["timeline"], clock, `${path}.timeline`);
   const transportSettings = parseTransport(
     clip["transportSettings"],
     `${path}.transportSettings`,
   );
   const durationTicks = timeline.durationTicks;
-  const legacyLockedInstrumentIds = schemaVersion < 8
-    ? parseLegacyLockedInstrumentIds(
-        clip["instrumentStatesById"],
-        instrumentOrder,
-        `${path}.instrumentStatesById`,
-      )
-    : new Set<InstrumentId>();
   const tracksByInstrumentId = parseTracks(
     clip["tracksByInstrumentId"],
     instrumentOrder,
     durationTicks,
-    schemaVersion,
-    legacyLockedInstrumentIds,
     `${path}.tracksByInstrumentId`,
   );
   const parsedClip: Clip = {
@@ -278,25 +222,7 @@ function parseTransport(
   path: string,
 ): TransportState {
   const transport = readRecord(source, path);
-  const transportKeys = ["loop", "loopEnabled"];
-
-  if ("autoAdvanceEnabled" in transport) {
-    transportKeys.push("autoAdvanceEnabled");
-    readBoolean(
-      transport["autoAdvanceEnabled"],
-      `${path}.autoAdvanceEnabled`,
-    );
-  }
-
-  if ("anchorTick" in transport) {
-    transportKeys.push("anchorTick");
-    readNonNegativeSafeInteger(
-      transport["anchorTick"],
-      `${path}.anchorTick`,
-    );
-  }
-
-  assertExactRecordKeys(transport, transportKeys, path);
+  assertExactRecordKeys(transport, ["loop", "loopEnabled"], path);
   const loop = parseLoop(transport["loop"], `${path}.loop`);
   const loopEnabled = readBoolean(
     transport["loopEnabled"],
@@ -329,14 +255,9 @@ function parseClipTimeline(
   const stored = readRecord(source, path);
   assertExactRecordKeys(stored, ["durationTicks", "timeMap"], path);
   const timeMap = readRecord(stored["timeMap"], `${path}.timeMap`);
-  const timeMapKeys = "sectionMarkers" in timeMap
-    ? ["meterMarkers", "tempoMarkers", "scaleMarkers", "sectionMarkers"]
-    : "scaleMarkers" in timeMap
-      ? ["meterMarkers", "tempoMarkers", "scaleMarkers"]
-      : ["meterMarkers", "tempoMarkers"];
   assertExactRecordKeys(
     timeMap,
-    timeMapKeys,
+    ["meterMarkers", "tempoMarkers", "scaleMarkers", "sectionMarkers"],
     `${path}.timeMap`,
   );
   const meterMarkers = parseMeterMarkers(
@@ -438,15 +359,6 @@ function parseScaleMarkers(
   source: unknown,
   path: string,
 ): ScaleMarker[] {
-  if (source === undefined) {
-    return [{
-      startTick: 0,
-      rootNote: TONAL_SNAP_CONSTANTS.defaultRootNote,
-      patternType: "scale",
-      patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
-    }];
-  }
-
   const sourceMarkers = readBoundedArray(
     source,
     path,
@@ -456,21 +368,16 @@ function parseScaleMarkers(
   return sourceMarkers.map((sourceMarker, index) => {
     const markerPath = `${path}[${String(index)}]`;
     const marker = readRecord(sourceMarker, markerPath);
-    const hasPatternType = "patternType" in marker;
     assertExactRecordKeys(
       marker,
-      hasPatternType
-        ? ["startTick", "rootNote", "patternType", "patternId"]
-        : ["startTick", "rootNote", "patternId"],
+      ["startTick", "rootNote", "patternType", "patternId"],
       markerPath,
     );
-    const patternType = hasPatternType
-      ? readNonEmptyString(
-          marker["patternType"],
-          `${markerPath}.patternType`,
-          16,
-        )
-      : "scale";
+    const patternType = readNonEmptyString(
+      marker["patternType"],
+      `${markerPath}.patternType`,
+      16,
+    );
 
     if (patternType !== "scale" && patternType !== "chord") {
       fail(
@@ -486,7 +393,7 @@ function parseScaleMarkers(
         `${markerPath}.startTick`,
       ),
       rootNote: readNonEmptyString(
-        marker["rootNote"] ?? "C",
+        marker["rootNote"],
         `${markerPath}.rootNote`,
         10,
       ),
@@ -546,6 +453,7 @@ function parseLoop(
   path: string,
 ): LoopRegion {
   const loop = readRecord(source, path);
+  assertExactRecordKeys(loop, ["startTick", "endTick"], path);
 
   return {
     startTick: readNonNegativeSafeInteger(
@@ -563,8 +471,6 @@ function parseTracks(
   source: unknown,
   instrumentOrder: readonly InstrumentId[],
   projectDurationTicks: number,
-  schemaVersion: number,
-  legacyLockedInstrumentIds: ReadonlySet<InstrumentId>,
   path: string,
 ): Readonly<Record<InstrumentId, InstrumentTrack>> {
   const sourceTracks = readRecord(source, path);
@@ -588,6 +494,7 @@ function parseTracks(
 
     const trackPath = `${path}.${instrumentId}`;
     const track = readRecord(sourceTracks[instrumentId], trackPath);
+    assertExactRecordKeys(track, ["instrumentId", "notesById"], trackPath);
     const trackInstrumentId = readNonEmptyString(
       track["instrumentId"],
       `${trackPath}.instrumentId`,
@@ -607,8 +514,6 @@ function parseTracks(
       instrumentId,
       projectDurationTicks,
       globalNoteIds,
-      schemaVersion,
-      legacyLockedInstrumentIds.has(instrumentId),
       trackPath,
     );
 
@@ -636,8 +541,6 @@ function parseNotes(
   instrumentId: InstrumentId,
   projectDurationTicks: number,
   globalNoteIds: Set<NoteId>,
-  schemaVersion: number,
-  legacyLocked: boolean,
   trackPath: string,
 ): Readonly<Record<NoteId, Note>> {
   const sourceNotes = readRecord(
@@ -649,6 +552,16 @@ function parseNotes(
   for (const [noteKey, sourceNote] of Object.entries(sourceNotes)) {
     const notePath = `${trackPath}.notesById.${noteKey}`;
     const noteRecord = readRecord(sourceNote, notePath);
+    assertExactRecordKeys(noteRecord, [
+      "id",
+      "pitch",
+      "startTick",
+      "durationTicks",
+      "velocity",
+      "muted",
+      "locked",
+      "instrumentId",
+    ], notePath);
     const note: Note = {
       id: readNonEmptyString(
         noteRecord["id"],
@@ -671,7 +584,8 @@ function parseNotes(
         noteRecord["velocity"],
         `${notePath}.velocity`,
       ),
-      ...parseNoteFlags(noteRecord, notePath, schemaVersion, legacyLocked),
+      muted: readBoolean(noteRecord["muted"], `${notePath}.muted`),
+      locked: readBoolean(noteRecord["locked"], `${notePath}.locked`),
       instrumentId: readNonEmptyString(
         noteRecord["instrumentId"],
         `${notePath}.instrumentId`,
@@ -729,10 +643,6 @@ function parseSectionMarkers(
   source: unknown,
   path: string,
 ): SectionMarker[] {
-  if (source === undefined) {
-    return [];
-  }
-
   return readBoundedArray(
     source,
     path,
@@ -754,76 +664,6 @@ function parseSectionMarkers(
       ),
     };
   });
-}
-
-function parseLegacyLockedInstrumentIds(
-  source: unknown,
-  instrumentOrder: readonly InstrumentId[],
-  path: string,
-): ReadonlySet<InstrumentId> {
-  if (source === undefined) {
-    return new Set();
-  }
-
-  const sourceStates = readRecord(source, path);
-
-  assertExactRecordKeys(sourceStates, instrumentOrder, path);
-  const lockedIds = new Set<InstrumentId>();
-
-  for (const instrumentId of instrumentOrder) {
-    const statePath = `${path}.${instrumentId}`;
-    const state = readRecord(sourceStates[instrumentId], statePath);
-
-    if (readBoolean(state["locked"], `${statePath}.locked`)) {
-      lockedIds.add(instrumentId);
-    }
-  }
-
-  return lockedIds;
-}
-
-function parseNoteFlags(
-  note: Readonly<Record<string, unknown>>,
-  path: string,
-  schemaVersion: number,
-  legacyLocked: boolean,
-): Pick<Note, "muted" | "locked"> {
-  if (schemaVersion >= 10) {
-    return {
-      muted: readBoolean(note["muted"], `${path}.muted`),
-      locked: readBoolean(note["locked"], `${path}.locked`),
-    };
-  }
-
-  if (schemaVersion >= 8) {
-    const status = readString(note["status"], `${path}.status`, 16);
-
-    switch (status) {
-      case "active":
-        return { muted: false, locked: false };
-      case "muted":
-        return { muted: true, locked: false };
-      case "locked":
-        return { muted: false, locked: true };
-      case "disabled":
-        return { muted: true, locked: true };
-      case "frozen":
-        if (schemaVersion === 8) {
-          return { muted: true, locked: true };
-        }
-        break;
-    }
-
-    fail(
-      "INVALID_DATA",
-      `${path}.status`,
-      "Legacy note status must be active, muted, locked, or disabled.",
-    );
-  }
-
-  const enabled = readBoolean(note["enabled"], `${path}.enabled`);
-
-  return { muted: !enabled, locked: legacyLocked };
 }
 
 function assertTransportWithinClip(

@@ -1,8 +1,7 @@
 # Persistance
 
-> **État courant.** Cette zone a été matérialisée au lot 3. Pour poursuivre la
-> migration, lire [`../../../docs/migration/README.md`](../../../docs/migration/README.md)
-> et vérifier `STATUS.md`.
+> **Propriétaire courant.** Les décisions et preuves de migration de cette zone
+> sont archivées dans [`docs/migration/`](../../../docs/migration/README.md).
 
 ## Propriétaires
 

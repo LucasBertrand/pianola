@@ -1,9 +1,7 @@
 # Rendering Pipeline
 
-> **État courant.** Ce guide décrit la zone présente dans le worktree. Pour une
-> tâche de migration, commencer par
-> [`../../../../docs/migration/README.md`](../../../../docs/migration/README.md)
-> et vérifier `STATUS.md` avant d'utiliser un propriétaire cible.
+> **Current owner.** Migration decisions and evidence for this area are archived
+> in [`docs/migration/`](../../../../docs/migration/README.md).
 
 React owns only the stable layer tree and lifecycle subscriptions. It never owns note rectangles, playhead positions, lasso geometry, or animation-frame state.
 

@@ -5,11 +5,11 @@ workspace réel, pas seulement l'intention.
 
 ## État global
 
-- Statut : EN ATTENTE
+- Statut : TERMINÉE
 - Lot actif : aucun
-- Dernier lot terminé : 7 — Renommage physique des couches
-- Prochaine action : faire relire le lot 7, puis vérifier les prérequis du lot 8
-  avant tout nettoyage final
+- Dernier lot terminé : 8 — Nettoyage final
+- Prochaine action : revue puis commit dédié du lot 8 ; aucune action de
+  migration architecturale ne reste planifiée
 - Dernière mise à jour : 2026-08-29
 
 ## Politique de rollback en vigueur
@@ -35,14 +35,14 @@ le journal ci-dessous décrivent uniquement l'exécution historique des lots 0 �
   famille ou invariant sous `domain/commands` et `domain/transport` ;
 - le format `.pianola` est sous `infrastructure/project-files/pianola` et la
   persistance locale sous `infrastructure/persistence` ;
-- les contrôles de sortie du lot 7 analysent 357 fichiers structurels et,
+- les contrôles de sortie finaux analysent 357 fichiers structurels et,
   séparément, 300 fichiers produit et 71 modules de test ; tout cycle est
   interdit ;
 - la couverture ciblée et les trois mesures de rendu sont consignées dans
   `LOT-0-BASELINES.md`.
 
-Cette baseline doit être revérifiée au début du lot 0 : elle peut devenir
-obsolète si le projet évolue.
+Cette baseline est le bilan final de la migration au 2026-08-29 ; elle devra être
+actualisée par les évolutions produit ultérieures.
 
 ## Changements préexistants observés le 2026-08-26
 
@@ -67,7 +67,7 @@ D  docs/storage-strategies.md
 | 5 | TERMINÉ | Six jalons caractérisés et validés ; rendu sans régression |
 | 6 | TERMINÉ | Horizontales supprimées, concentrations métier découpées et garde-fous synchronisés |
 | 7 | TERMINÉ | Six racines cibles matérialisées, anciennes racines interdites |
-| 8 | À FAIRE | Nettoyage final |
+| 8 | TERMINÉ | Documentation réconciliée, compatibilités supprimées, validation complète verte |
 
 ## Compatibilités temporaires
 
@@ -87,6 +87,9 @@ reste une façade de capacité publique aux exports explicites, pas un alias ver
 un ancien propriétaire.
 Le lot 7 n'ajoute aucun alias ni compatibilité : les couches et leurs importeurs
 emploient directement les six racines cibles.
+Le lot 8 supprime le lecteur des schémas documentaires antérieurs, les fallbacks
+de champs persistés et la dernière façade applicative sans consommateur produit.
+Aucun alias ni aucune compatibilité temporaire ne subsiste à la clôture.
 
 ## Écarts et découvertes
 
@@ -115,6 +118,141 @@ emploient directement les six racines cibles.
   demeure interdit tant qu'une caractérisation directe n'existe pas.
 
 ## Journal
+
+### 2026-08-29 — Lot 8, démarrage
+
+- objectif : effectuer uniquement la réconciliation finale prévue par le lot 8,
+  déplacer les assets restés à la racine, supprimer les derniers lecteurs,
+  alias ou façades de compatibilité temporaires, puis exécuter la validation
+  complète et consigner le bilan final ;
+- condition d'entrée vérifiée dans ce journal et dans le worktree avant toute
+  modification du lot : le lot 7 est `TERMINÉ`, sa validation complète est
+  verte, le lot 8 est le premier lot `À FAIRE`, aucun lot n'était actif et les
+  six racines cibles sont présentes tandis que les huit anciennes racines sont
+  absentes et interdites ; les prérequis sont donc satisfaits ;
+- commit de sauvegarde demandé avant le lot : `204e89c`
+  (`chore(migration): checkpoint before lot 8`) fige les 298 chemins
+  préexistants du lot 7 ; le worktree est propre après ce commit ;
+- SHA de départ et point de rollback initial :
+  `204e89c338fdf141e5f17a3f15e505c5b264c7ee`. Aucun commit dédié au lot 8
+  n'existe encore et aucun patch préventif ne sera créé ; tout retour sera
+  préparé à partir du diff et du périmètre consigné sans annuler le commit de
+  sauvegarde ;
+- validation de référence fournie par l'utilisateur et déjà verte : 33
+  documents, 339 fichiers structurels, frontières sur 282 fichiers produit et
+  71 tests, build Vite, smoke AudioWorklet, 67 fichiers de test et 420 tests.
+  Le résultat plus récent consigné à la sortie du lot 7 est également vert :
+  33 documents, 357 fichiers structurels, frontières sur 300 fichiers produit
+  et 71 tests, 67 fichiers de test et 430 tests. Conformément à la demande,
+  aucune validation intégrale n'est rejouée au démarrage ;
+- audit préalable : le seul asset suivi à la racine sans propriétaire est
+  `ruler-sub.png`, non référencé ; aucune note ou audit courant ne reste hors de
+  `docs/`. Les documents courants emploient les six chemins cibles. En revanche,
+  le parseur du document `.pianola` accepte encore les schémas documentaires 1
+  à 12, plusieurs champs historiques et un test de migration v1, contrairement
+  à D-009. Une façade de planification sans consommateur produit et deux
+  commentaires qualifiant des adaptateurs courants de « compatibility » ont
+  aussi été relevés ;
+- sous-étapes et périmètre prévus : (1) ramener le schéma documentaire courant
+  à la nouvelle baseline 1, exiger uniquement sa forme courante dans les
+  parseurs sous `src/infrastructure/project-files/pianola/parsing`, remplacer
+  les tests de migration par des rejets explicites et synchroniser les tests de
+  codec ; (2) supprimer la façade de planification sans consommateur produit et
+  reformuler les contrats courants qui ne sont pas des compatibilités ; (3)
+  déplacer `ruler-sub.png` sous `docs/assets/` et réconcilier README,
+  architecture, code map et guides locaux selon l'audit final ; (4) exécuter
+  les recherches obligatoires et la validation complète ;
+- fichiers prévus : `docs/migration/STATUS.md`, les constantes et types de
+  projet sous `src/domain/project`, les parseurs `.pianola`, les tests de codecs
+  et régressions directement affectés, le planner de marqueurs et son test,
+  l'adaptateur de playhead si seule sa documentation est à corriger,
+  `ruler-sub.png` vers `docs/assets/ruler-sub.png`, ainsi que les seuls documents
+  courants dont la réconciliation révèle un écart réel ;
+- exclusions explicites : aucun nouveau déplacement architectural, aucun
+  changement métier, d'Undo/Redo, de MIDI, d'audio, de persistance locale ou de
+  rendu, aucun découpage des concentrations UI encore non caractérisées, et
+  aucune réécriture des preuves historiques sous `docs/migration/` hors ce
+  journal mutable.
+- sous-étape format et persistance : `PROJECT_SCHEMA_VERSION` repart de la
+  baseline 1 ; les parseurs du document, des clips, notes, groupes, timelines,
+  instruments et workspaces exigent désormais les champs de la forme courante.
+  Les branches pour schémas documentaires 1 à 12, `clipOrder`, états
+  d'instruments, flags de note historiques, anciennes positions de playhead et
+  viewport, champs de transport retirés, marqueurs absents et courbe d'enveloppe
+  implicite sont supprimées. Les réglages utilisateur incomplets ne reçoivent
+  plus de bibliothèque de presets par défaut ;
+- tests de compatibilité remplacés : le test de migration d'un document v1
+  prouve maintenant le rejet explicite du schéma 12 antérieur à la nouvelle
+  baseline, et le test des réglages prouve le rejet des champs de presets
+  manquants. Les libellés et fixtures courants n'emploient plus le vocabulaire
+  `native` ou `legacy` pour décrire le format ;
+- point de rollback format et persistance : SHA `204e89c`, périmètre limité aux
+  constantes de projet/instrument, aux trois parseurs `.pianola`, aux codecs de
+  workspace et réglages, aux deux tests de persistance, au test de régression
+  audio/domaine, à la documentation locale de dynamique des notes et à ce
+  journal. Revenir uniquement sur ces fichiers après comparaison du diff ;
+- validations format et persistance : `npm run typecheck` réussi ;
+  `npm run check:boundaries` réussi sur 300 fichiers produit et 71 tests ; trois
+  fichiers et 57 tests ciblés du codec, du reset IndexedDB et de la régression
+  audio/domaine réussis après correction d'une attente de message trop précise.
+  Statut de la sous-étape : vert.
+- sous-étape façades : `planMarkerMoveCommands`, façade sans consommateur
+  produit, est supprimée ; ses trois témoins couvrent désormais directement le
+  plan explicite `planMarkerMove`, commandes et collisions comprises.
+  `ActiveClipPlayheadTickSignal` reste l'adaptateur courant réellement injecté
+  par le bootstrap ; sa documentation décrit donc une vue locale du playhead et
+  non une compatibilité temporaire ;
+- point de rollback façades : SHA `204e89c`, périmètre limité au planner de
+  marqueurs, à son test, à la documentation du signal de playhead et à ce
+  journal ;
+- validations façades : `npm run typecheck` et `npm run check:boundaries`
+  réussis sur 300 fichiers produit et 71 tests ; trois fichiers et 31 tests
+  ciblés du planner, du comportement critique et du contrôleur éditeur réussis.
+  Statut de la sous-étape : vert.
+- sous-étape documentation et asset : `ruler-sub.png`, seul asset suivi sans
+  propriétaire à la racine, est déplacé vers `docs/assets/ruler-sub.png` en
+  conservant son historique. Aucun autre audit, note ou asset courant n'était à
+  déplacer. Le README racine, l'index documentaire, l'architecture, la carte du
+  code, la propriété des états, les guides de contribution et de fichiers
+  projet, ainsi que les huit README locaux décrivent désormais l'architecture
+  achevée plutôt qu'un état de migration transitoire ;
+- réconciliation du format dans les guides : le vocabulaire `format natif` est
+  supprimé, les documents et workspaces courants indiquent leur baseline 1
+  unique et le rejet des champs inconnus, sans conversion silencieuse ;
+- point de rollback documentation et asset : SHA `204e89c`, périmètre limité à
+  `ruler-sub.png`, sa destination sous `docs/assets`, aux quinze documents
+  courants réconciliés et à ce journal ;
+- validations documentation et asset : `npm run check:docs` réussi sur 33
+  documents et `npm run check:structure` réussi sur 357 fichiers source. Les
+  recherches ne trouvent plus de formulation transitoire, d'ancien chemin
+  courant ou d'asset image suivi à la racine. Statut de la sous-étape : vert.
+- recherches de sortie : aucune ancienne racine ni aucun ancien symbole ne
+  subsiste dans le code, les tests ou la documentation courante. Les seules
+  mentions d'anciens chemins sont les preuves sous `docs/migration/` et les
+  règles exécutables de `check:structure` qui interdisent leur réintroduction ;
+  `Track` ne reste que dans le vocabulaire MIDI, et `native` seulement pour les
+  API ou événements propres au navigateur. Aucun marqueur d'alias, de façade ou
+  de migration de données, aucun dossier générique exact et aucune note, audit
+  ou image suivie à la racine n'ont été trouvés. `git diff --check` est vert ;
+- validation complète finale : `npm run verify` réussi depuis le début — 33
+  documents, 357 fichiers source, frontières vertes sur 300 fichiers produit
+  et 71 modules de test, trois typechecks et build Vite réussis avec 326 modules
+  transformés, smoke AudioWorklet réussi sur 128 frames stéréo, 67 fichiers de
+  test et 430 tests réussis. L'avertissement préexistant du chunk principal
+  supérieur à 500 kB reste inchangé et non bloquant ;
+- point de rollback final : SHA de départ
+  `204e89c338fdf141e5f17a3f15e505c5b264c7ee`. Le worktree était propre à ce
+  SHA ; `git diff --name-only 204e89c` constitue donc le périmètre exact du lot
+  8, soit 31 chemins : seize documents courants ou de journal, l'asset déplacé,
+  dix modules produit et quatre fichiers de test. Aucun patch de rollback n'est
+  créé ;
+- statut de sortie : lot 8 `TERMINÉ`, aucun lot actif. La migration
+  architecturale est achevée : l'architecture cible est matérialisée, les
+  compatibilités temporaires et lecteurs historiques sont supprimés, la
+  documentation courante décrit l'état final et la validation complète est
+  verte ;
+- prochaine action exacte : faire relire le lot 8 puis créer, si souhaité, son
+  commit dédié. Aucune autre action de migration n'est requise.
 
 ### 2026-08-29 — Lot 7, démarrage
 

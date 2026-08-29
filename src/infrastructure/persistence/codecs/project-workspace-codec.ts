@@ -2,9 +2,6 @@ import {
   EDITOR_CONSTANTS,
 } from "../../../editor-core/model/editor-constants";
 import {
-  VIEWPORT_CONSTANTS,
-} from "../../../editor-core/viewport/viewport-constants";
-import {
   MAXIMUM_ENTITY_ID_LENGTH,
   type ClipId,
 } from "../../../domain/identifiers";
@@ -34,7 +31,6 @@ import {
 import {
   readPersistenceBoolean,
   readPersistenceInteger,
-  readPersistenceNumber,
   readPersistenceRecord,
   readPersistenceString,
 } from "./persistence-codec-readers";
@@ -45,6 +41,11 @@ export function parsePersistedEditorWorkspace(
   path: string,
 ): PersistedEditorWorkspace {
   const workspace = readPersistenceRecord(source, path);
+  assertExactKeys(
+    workspace,
+    ["activeClipId", "selectedInstrumentId", "clipStatesById"],
+    path,
+  );
   const activeClipId = readPersistenceString(
     workspace["activeClipId"],
     `${path}.activeClipId`,
@@ -101,57 +102,10 @@ export function parsePersistedEditorWorkspace(
       storedClipStates[clipId],
       clipPath,
     );
+    assertExactKeys(stored, ["pitchSnapSettings", "gridSettings"], clipPath);
 
     if (clip === undefined) {
       return invalid(clipPath, "Clip does not exist.");
-    }
-
-    if ("playheadTick" in stored) {
-      // v1 persisted a clip-local playhead. It is validated for corruption,
-      // then deliberately discarded because playback position is transient.
-      readPersistenceNumber(
-        stored["playheadTick"],
-        `${clipPath}.playheadTick`,
-        0,
-        clip.timeline.durationTicks,
-      );
-    }
-
-    if ("firstVisibleTick" in stored) {
-      // v1/v2 persisted viewport info. Discarded in favor of auto-fit.
-      readPersistenceNumber(
-        stored["firstVisibleTick"],
-        `${clipPath}.firstVisibleTick`,
-        0,
-        clip.timeline.durationTicks,
-      );
-    }
-    
-    if ("highestVisiblePitch" in stored) {
-      readPersistenceNumber(
-        stored["highestVisiblePitch"],
-        `${clipPath}.highestVisiblePitch`,
-        0,
-        VIEWPORT_CONSTANTS.maximumMidiPitch,
-      );
-    }
-
-    if ("horizontalZoom" in stored) {
-      readPersistenceNumber(
-        stored["horizontalZoom"],
-        `${clipPath}.horizontalZoom`,
-        VIEWPORT_CONSTANTS.minimumStoredZoom,
-        VIEWPORT_CONSTANTS.maximumHorizontalZoom,
-      );
-    }
-
-    if ("verticalZoom" in stored) {
-      readPersistenceNumber(
-        stored["verticalZoom"],
-        `${clipPath}.verticalZoom`,
-        VIEWPORT_CONSTANTS.minimumStoredZoom,
-        VIEWPORT_CONSTANTS.maximumVerticalZoom,
-      );
     }
 
     clipStatesById[clipId] = {
@@ -255,4 +209,20 @@ function invalid(path: string, message: string): never {
     "INVALID_DATA",
     `${message} Location: ${path}.`,
   );
+}
+
+function assertExactKeys(
+  source: Readonly<Record<string, unknown>>,
+  expectedKeys: readonly string[],
+  path: string,
+): void {
+  const actual = Object.keys(source).sort();
+  const expected = [...expectedKeys].sort();
+
+  if (
+    actual.length !== expected.length
+    || actual.some((key, index) => key !== expected[index])
+  ) {
+    invalid(path, "Record contains missing or unknown fields.");
+  }
 }
