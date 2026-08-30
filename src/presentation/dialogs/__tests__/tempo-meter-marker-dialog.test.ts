@@ -40,11 +40,12 @@ describe("TempoMeterMarkerDialog", () => {
       BASE_PROPS,
     ));
 
-    expect(markup).toContain('<optgroup label="Triads">');
-    expect(markup).toContain('<optgroup label="Suspended chords">');
-    expect(markup).toContain('<optgroup label="Ninth chords">');
-    expect(markup).toContain('<optgroup label="Eleventh chords">');
-    expect(markup).toContain('<optgroup label="Thirteenth chords">');
+    expect(markup).toContain('<optgroup label="Major">');
+    expect(markup).toContain('<optgroup label="Minor">');
+    expect(markup).toContain('<optgroup label="Dominant">');
+    expect(markup).toContain('<optgroup label="Suspended">');
+    expect(markup).toContain('<optgroup label="Diminished">');
+    expect(markup).toContain('<optgroup label="Augmented">');
     expect(markup).toContain('value="mM7" selected="">mM7 (minor/major seventh)');
     expect(markup).toContain('value="sus2">sus2 (suspended second)');
     expect(markup).toContain('value="sus4">sus4 (suspended fourth)');

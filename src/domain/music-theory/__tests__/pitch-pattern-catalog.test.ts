@@ -24,14 +24,16 @@ describe("pitch pattern catalog", () => {
 
   test("groups suspended and extended chords", () => {
     expect(CHORD_PATTERN_GROUPS.map((group) => group.label)).toEqual([
-      "Triads",
-      "Suspended chords",
-      "Seventh chords",
-      "Ninth chords",
-      "Eleventh chords",
-      "Thirteenth chords",
+      "Major",
+      "Minor",
+      "Dominant",
+      "Suspended",
+      "Diminished",
+      "Augmented",
     ]);
     expect(SUPPORTED_CHORD_PATTERN_IDS).toEqual(expect.arrayContaining([
+      "6",
+      "m6",
       "sus2",
       "sus4",
       "7sus4",
