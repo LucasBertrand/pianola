@@ -8,7 +8,7 @@ import {
   SCALE_PATTERN_GROUPS,
   SUPPORTED_SCALE_PATTERN_IDS,
 } from "../pitch-pattern-catalog";
-import { formatMusicAccidentals } from "../music-notation";
+import { formatAccidentals } from "../pitch-notation";
 
 describe("pitch pattern catalog", () => {
   test("groups every supported scale without changing the existing vocabulary", () => {
@@ -60,7 +60,7 @@ describe("pitch pattern catalog", () => {
     expect(formatChordSymbol("C#", "sus24")).toBe("C♯sus24");
     expect(formatChordSymbol("C#", "13sus4")).toBe("C♯13sus4");
     expect(formatChordSymbol("Db", "m7")).toBe("D♭m7");
-    expect(formatMusicAccidentals("C# / Db")).toBe("C♯ / D♭");
+    expect(formatAccidentals("C# / Db")).toBe("C♯ / D♭");
 
     for (const chordId of SUPPORTED_CHORD_PATTERN_IDS) {
       expect(Chord.getChord(chordId).empty).toBe(false);

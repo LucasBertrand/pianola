@@ -1,5 +1,5 @@
 import { Chord } from "@tonaljs/tonal";
-import { formatMusicAccidentals } from "./music-notation";
+import { formatAccidentals } from "./pitch-notation";
 
 export interface PitchPatternOption {
   readonly id: string;
@@ -158,5 +158,5 @@ export function formatChordSymbol(
     );
   }
 
-  return formatMusicAccidentals(chord.symbol);
+  return formatAccidentals(chord.symbol);
 }

@@ -10,7 +10,7 @@ import {
   SCALE_PATTERN_GROUPS,
   type PitchPatternGroup,
 } from "../../domain/music-theory/pitch-pattern-catalog";
-import { formatMusicAccidentals } from "../../domain/music-theory/music-notation";
+import { formatAccidentals } from "../../domain/music-theory/pitch-notation";
 import type {
   TimeSignature,
 } from "../../domain/transport/time-map";
@@ -256,7 +256,7 @@ export function TempoMeterMarkerDialog({
                   >
                     {PITCH_SNAP_CONSTANTS.rootOptions.map((option) => (
                       <option key={option} value={option}>
-                        {formatMusicAccidentals(option)}
+                        {formatAccidentals(option)}
                       </option>
                     ))}
                   </select>
