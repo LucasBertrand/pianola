@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  DEFAULT_PITCH_SNAP_SETTINGS,
   isPitchAllowedByTonalPattern,
   isSupportedTonalSelection,
   isTonalPatternId,
@@ -17,6 +18,10 @@ function chordSettings(patternId: string): PitchSnapSettings {
 }
 
 describe("extended chord pitch snap", () => {
+  test("shows the tonal guide by default", () => {
+    expect(DEFAULT_PITCH_SNAP_SETTINGS.visualGuideEnabled).toBe(true);
+  });
+
   test.each([
     ["maj9", [60, 62, 64, 67, 71], [61, 65]],
     ["m11", [60, 62, 63, 65, 67, 70], [61, 64]],

@@ -89,25 +89,6 @@
   stroke: none;
 }
 
-.note-color-toggle svg {
-  stroke-width: 1.5;
-}
-
-.edit-tool-group .note-color-brush-icon {
-  fill: currentColor;
-  stroke: none;
-}
-
-.note-color-toggle.is-instrument-mode {
-  border-color: var(--color-primary-medium);
-  background:
-    linear-gradient(110deg,
-      var(--color-primary-soft),
-      var(--color-purple-soft),
-      var(--color-orange-soft));
-  color: var(--color-text-strong);
-}
-
 .edit-tool-group .delete-notes-button:not(:disabled) {
   color: var(--color-accent-danger);
 }

@@ -2,9 +2,14 @@ import React from "react";
 import type {
   PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
+import type {
+  NoteColorMode,
+} from "../../../editor-core/model/note-color-mode";
 
 export interface PitchSnapControlsProps {
   readonly settings: PitchSnapSettings;
+  readonly noteColorMode: NoteColorMode;
+  readonly onNoteColorModeToggle: () => void;
   readonly onSettingsChange: (
     changes: Partial<PitchSnapSettings>,
   ) => void;
@@ -12,6 +17,8 @@ export interface PitchSnapControlsProps {
 
 export function PitchSnapControls({
   settings,
+  noteColorMode,
+  onNoteColorModeToggle,
   onSettingsChange,
 }: PitchSnapControlsProps): React.JSX.Element {
   return (
@@ -39,6 +46,27 @@ export function PitchSnapControls({
           <circle cx="6" cy="7" r="1" />
           <circle cx="9.5" cy="5" r="1" />
           <circle cx="13" cy="6.5" r="1" />
+        </svg>
+      </button>
+      <button
+        className={`pitch-snap-toggle note-color-toggle${noteColorMode === "pitch" ? " is-active" : ""}`}
+        type="button"
+        title={
+          noteColorMode === "pitch"
+            ? "Use instrument colors"
+            : "Use pitch colors"
+        }
+        aria-label="Color notes by pitch"
+        aria-pressed={noteColorMode === "pitch"}
+        onClick={onNoteColorModeToggle}
+      >
+        <svg
+          className="note-color-brush-icon"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+        >
+          <path d="M9.44444 4.44444L12.3917 0.760432C12.7762 0.279794 13.3583 0 13.9738 0C15.0929 0 16 0.907148 16 2.02617C16 2.64169 15.7202 3.22383 15.2396 3.60835L11.5556 6.55556L12.2454 7.24538C12.7286 7.72855 13 8.38388 13 9.0672C13 9.66992 12.7887 10.2536 12.4028 10.7166L11.8246 11.4104L4.58957 4.17536L5.2834 3.59717C5.74643 3.21131 6.33008 3 6.9328 3C7.61612 3 8.27145 3.27145 8.75462 3.75462L9.44444 4.44444Z" />
+          <path d="M0 8L3.04679 5.46101L10.539 12.9532L8 16L0 8Z" />
         </svg>
       </button>
       <button

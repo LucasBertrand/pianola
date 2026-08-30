@@ -9,9 +9,6 @@ import type {
 import type {
   SelectionMode,
 } from "../../editor-core/interactions/gestures/gesture-draft";
-import type {
-  NoteColorMode,
-} from "../../editor-core/model/note-color-mode";
 import {
   CommandIcon,
 } from "../command-icons/CommandIcon";
@@ -29,7 +26,6 @@ export interface EditorToolbarProps {
   readonly clipboardSelectionAvailable: boolean;
   readonly clipboardAvailable: boolean;
   readonly selectionMode: SelectionMode;
-  readonly noteColorMode: NoteColorMode;
   readonly onToggleInspector: (section: "instruments" | "clips") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
@@ -41,7 +37,6 @@ export interface EditorToolbarProps {
   readonly onCut: () => void;
   readonly onPaste: () => void;
   readonly onSelectionModeChange: (mode: SelectionMode) => void;
-  readonly onNoteColorModeToggle: () => void;
   readonly onOpenSliceSelection: () => void;
   readonly onAddMarkerAtPlayhead: () => void;
   readonly onTransformSelection: (
@@ -63,7 +58,6 @@ export function EditorToolbar({
   clipboardSelectionAvailable,
   clipboardAvailable,
   selectionMode,
-  noteColorMode,
   onToggleInspector,
   onUndo,
   onRedo,
@@ -75,7 +69,6 @@ export function EditorToolbar({
   onCut,
   onPaste,
   onSelectionModeChange,
-  onNoteColorModeToggle,
   onOpenSliceSelection,
   onAddMarkerAtPlayhead,
   onTransformSelection,
@@ -453,31 +446,6 @@ export function EditorToolbar({
               ry="2.2"
               transform="rotate(-20 11.8 16)"
             />
-          </svg>
-        </button>
-        <button
-          className={
-            `note-color-toggle${
-              noteColorMode === "instrument" ? " is-instrument-mode" : ""
-            }`
-          }
-          type="button"
-          title={
-            noteColorMode === "instrument"
-              ? "Use pitch colors"
-              : "Use instrument colors"
-          }
-          aria-label="Color notes by instrument"
-          aria-pressed={noteColorMode === "instrument"}
-          onClick={onNoteColorModeToggle}
-        >
-          <svg
-            className="note-color-brush-icon"
-            viewBox="0 0 16 16"
-            aria-hidden="true"
-          >
-            <path d="M9.44444 4.44444L12.3917 0.760432C12.7762 0.279794 13.3583 0 13.9738 0C15.0929 0 16 0.907148 16 2.02617C16 2.64169 15.7202 3.22383 15.2396 3.60835L11.5556 6.55556L12.2454 7.24538C12.7286 7.72855 13 8.38388 13 9.0672C13 9.66992 12.7887 10.2536 12.4028 10.7166L11.8246 11.4104L4.58957 4.17536L5.2834 3.59717C5.74643 3.21131 6.33008 3 6.9328 3C7.61612 3 8.27145 3.27145 8.75462 3.75462L9.44444 4.44444Z" />
-            <path d="M0 8L3.04679 5.46101L10.539 12.9532L8 16L0 8Z" />
           </svg>
         </button>
       </div>

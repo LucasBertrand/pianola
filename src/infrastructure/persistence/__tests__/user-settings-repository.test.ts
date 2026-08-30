@@ -22,6 +22,9 @@ import {
 import {
   createPersonalInstrumentPreset,
 } from "../../../domain/personal-instrument-presets";
+import {
+  DEFAULT_USER_SETTINGS,
+} from "../../../application/ports/user-settings-repository";
 
 describe("user settings repository", () => {
   test("serializes atomic updates", async () => {
@@ -112,7 +115,7 @@ describe("user settings repository", () => {
 
     await expect(repository.load()).resolves.toMatchObject({
       selectionMode: "replace",
-      noteColorMode: "instrument",
+      noteColorMode: DEFAULT_USER_SETTINGS.noteColorMode,
     });
     expect(repository.storage.diagnostic).toBe("{broken");
   });
@@ -137,7 +140,7 @@ describe("user settings repository", () => {
 
     await expect(repository.load()).resolves.toMatchObject({
       selectionMode: "replace",
-      noteColorMode: "instrument",
+      noteColorMode: DEFAULT_USER_SETTINGS.noteColorMode,
     });
 
     const read = connection.transaction(

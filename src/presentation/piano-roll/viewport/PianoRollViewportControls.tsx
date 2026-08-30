@@ -10,6 +10,9 @@ import type {
 import type {
   MutableRenderSignal,
 } from "../../../editor-core/model/render-signal";
+import type {
+  NoteColorMode,
+} from "../../../editor-core/model/note-color-mode";
 import {
   AutoFitViewportButton,
 } from "./AutoFitViewportButton";
@@ -32,6 +35,8 @@ export interface PianoRollViewportControlsProps {
   readonly verticalZoomRef: RefObject<HTMLInputElement | null>;
   readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly pitchSnapSettings: PitchSnapSettings;
+  readonly noteColorMode: NoteColorMode;
+  readonly onNoteColorModeToggle: () => void;
   readonly onPitchSnapSettingsChange: (
     changes: Partial<PitchSnapSettings>,
   ) => void;
@@ -48,6 +53,8 @@ export function PianoRollViewportControls({
   verticalZoomRef,
   gridSettings,
   pitchSnapSettings,
+  noteColorMode,
+  onNoteColorModeToggle,
   onPitchSnapSettingsChange,
   onAutoFit,
 }: PianoRollViewportControlsProps): React.JSX.Element {
@@ -65,6 +72,8 @@ export function PianoRollViewportControls({
         <GridControls gridSettings={gridSettings} />
         <PitchSnapControls
           settings={pitchSnapSettings}
+          noteColorMode={noteColorMode}
+          onNoteColorModeToggle={onNoteColorModeToggle}
           onSettingsChange={onPitchSnapSettingsChange}
         />
         <AutoFitViewportButton onAutoFit={onAutoFit} />

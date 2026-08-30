@@ -6,7 +6,7 @@ import {
 /** Tonal pitch-snap roots, supported vocabulary and defaults. */
 export const TONAL_SNAP_CONSTANTS = Object.freeze({
   defaultEnabled: false,
-  defaultVisualGuideEnabled: false,
+  defaultVisualGuideEnabled: true,
   defaultRootNote: "none",
   defaultPatternId: "chromatic",
   defaultScalePatternId: "ionian",

@@ -579,7 +579,6 @@ export function PianoRollWorkspace({
           clipboardSelectionAvailable={editableTimelineSelectionAvailable}
           clipboardAvailable={clipboardAvailable}
           selectionMode={preferences.selectionMode}
-          noteColorMode={preferences.noteColorMode}
           onToggleInspector={(section) => {
             if (
               projectInspectorOpen
@@ -602,7 +601,6 @@ export function PianoRollWorkspace({
           onCut={handleCut}
           onPaste={handlePaste}
           onSelectionModeChange={preferences.changeSelectionMode}
-          onNoteColorModeToggle={preferences.toggleNoteColorMode}
           onOpenSliceSelection={handleOpenSliceSelection}
           onAddMarkerAtPlayhead={timeMapMarkers.openMarkerAtPlayhead}
           onTransformSelection={handleTransformSelection}
@@ -684,6 +682,8 @@ export function PianoRollWorkspace({
           verticalZoomRef={pitchZoomInputRef}
           gridSettings={runtime.gridSettings}
           pitchSnapSettings={pitchSnapSettings}
+          noteColorMode={preferences.noteColorMode}
+          onNoteColorModeToggle={preferences.toggleNoteColorMode}
           onPitchSnapSettingsChange={updatePitchSnapSettings}
           onAutoFit={handleAutoFit}
         />
