@@ -10,6 +10,7 @@ import {
 import {
   CHORD_PATTERN_GROUPS,
   SCALE_PATTERN_GROUPS,
+  formatMusicTheoryChordSymbol,
   type PitchPatternGroup,
 } from "../../domain/music-theory/pitch-pattern-catalog";
 import type {
@@ -302,6 +303,14 @@ export function TempoMeterMarkerDialog({
                           groups={patternType === "scale"
                             ? SCALE_PATTERN_GROUPS
                             : CHORD_PATTERN_GROUPS}
+                          formatOptionLabel={patternType === "chord"
+                            ? (patternOptionId) =>
+                              formatMusicTheoryChordSymbol(
+                                rootNote,
+                                patternOptionId,
+                              )
+                            : (_patternOptionId, patternOptionLabel) =>
+                              patternOptionLabel}
                         />
                       </select>
                     </label>
@@ -373,8 +382,13 @@ export function TempoMeterMarkerDialog({
 
 function PitchPatternOptions({
   groups,
+  formatOptionLabel,
 }: {
   readonly groups: readonly PitchPatternGroup[];
+  readonly formatOptionLabel: (
+    optionId: string,
+    optionLabel: string,
+  ) => string;
 }): React.JSX.Element {
   return (
     <>
@@ -382,7 +396,7 @@ function PitchPatternOptions({
         <optgroup key={group.label} label={group.label}>
           {group.options.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.label}
+              {formatOptionLabel(option.id, option.label)}
             </option>
           ))}
         </optgroup>

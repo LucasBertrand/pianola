@@ -55,6 +55,20 @@ describe("TempoMeterMarkerDialog", () => {
     expect(markup).toContain('value="F#">F♯');
   });
 
+  test("renders chord choices from the selected root note", () => {
+    const markup = renderToStaticMarkup(createElement(
+      TempoMeterMarkerDialog,
+      {
+        ...BASE_PROPS,
+        rootNote: "F#",
+      },
+    ));
+
+    expect(markup).toContain('value="mM7" selected="">F#mMaj7');
+    expect(markup).toContain('value="6/9">F#6/9');
+    expect(markup).not.toContain('value="mM7" selected="">CmMaj7');
+  });
+
   test("categorizes scale choices", () => {
     const markup = renderToStaticMarkup(createElement(
       TempoMeterMarkerDialog,
