@@ -122,14 +122,14 @@ describe("createTimeMapMarkerFlags", () => {
       tempoMarkers: [{ startTick: 0, bpm: 120 }],
       scaleMarkers: [{
         startTick: 0,
-        rootNote: "C",
+        rootNote: "C#",
         patternType: "chord",
         patternId: "mM7",
       }],
       sectionMarkers: [],
     });
 
-    expect(formatMarkerFlagLabel(flags[0]!)).toBe("120 · 4/4 · CmM7");
+    expect(formatMarkerFlagLabel(flags[0]!)).toBe("120 · 4/4 · C♯mM7");
   });
 });
 

@@ -6,9 +6,11 @@ import {
 import { PITCH_SNAP_CONSTANTS } from "../../domain/music-theory/pitch-snap-constants";
 import {
   CHORD_PATTERN_GROUPS,
+  formatChordSymbol,
   SCALE_PATTERN_GROUPS,
   type PitchPatternGroup,
 } from "../../domain/music-theory/pitch-pattern-catalog";
+import { formatMusicAccidentals } from "../../domain/music-theory/music-notation";
 import type {
   TimeSignature,
 } from "../../domain/transport/time-map";
@@ -254,7 +256,7 @@ export function TempoMeterMarkerDialog({
                   >
                     {PITCH_SNAP_CONSTANTS.rootOptions.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {formatMusicAccidentals(option)}
                       </option>
                     ))}
                   </select>
@@ -299,6 +301,9 @@ export function TempoMeterMarkerDialog({
                           groups={patternType === "scale"
                             ? SCALE_PATTERN_GROUPS
                             : CHORD_PATTERN_GROUPS}
+                          chordRootNote={patternType === "chord"
+                            ? rootNote
+                            : null}
                         />
                       </select>
                     </label>
@@ -370,8 +375,10 @@ export function TempoMeterMarkerDialog({
 
 function PitchPatternOptions({
   groups,
+  chordRootNote,
 }: {
   readonly groups: readonly PitchPatternGroup[];
+  readonly chordRootNote: string | null;
 }): React.JSX.Element {
   return (
     <>
@@ -379,7 +386,9 @@ function PitchPatternOptions({
         <optgroup key={group.label} label={group.label}>
           {group.options.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.label}
+              {chordRootNote === null
+                ? option.label
+                : formatChordSymbol(chordRootNote, option.id)}
             </option>
           ))}
         </optgroup>

@@ -30,11 +30,14 @@ ancres. Le déplacement et le redimensionnement obéissent au système de
 magnétisme actif. Lorsqu'une sélection franchit un marqueur de gamme, chaque
 note est ajustée avec la gamme active à sa nouvelle position.
 
-Le sélecteur de motif de hauteurs regroupe les gammes par famille et les accords par extension.
-Les accords proposés comprennent les triades, les accords suspendus `sus2`,
-`sus4` et `7sus4`, ainsi que les septièmes, neuvièmes, onzièmes et treizièmes
-usuelles. Leurs symboles sont ceux produits par Tonal, aussi bien
-dans le dialogue que sur les drapeaux de la timeline.
+Le sélecteur de motif de hauteurs regroupe les gammes par famille et les accords
+par couleur harmonique : majeurs, mineurs, sixtes, dominantes, suspendus,
+diminués et augmentés. Le catalogue comprend notamment les sixtes `69` et
+`m69`, les dominantes altérées `7b9` et `7#9`, ainsi que les suspendus `sus24`,
+`9sus4` et `13sus4`. Dans le dialogue, chaque accord est affiché avec la
+fondamentale choisie. Les altérations visibles emploient les glyphes musicaux
+`♭` et `♯`, sans modifier les valeurs internes. Les symboles d'accord, comme
+ceux des drapeaux de la timeline, sont produits par Tonal.
 
 ## Instruments
 

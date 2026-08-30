@@ -15,7 +15,7 @@ const BASE_PROPS: TempoMeterMarkerDialogProps = {
   canChangeMarkerTypes: true,
   bpm: 120,
   timeSignature: { numerator: 4, denominator: 4 },
-  rootNote: "C",
+  rootNote: "C#",
   patternType: "chord",
   patternId: "mM7",
   sectionComment: "",
@@ -34,22 +34,30 @@ const BASE_PROPS: TempoMeterMarkerDialogProps = {
 };
 
 describe("TempoMeterMarkerDialog", () => {
-  test("categorizes chord choices and displays Tonal symbols", () => {
+  test("categorizes the complete chord catalog and displays rooted Tonal symbols", () => {
     const markup = renderToStaticMarkup(createElement(
       TempoMeterMarkerDialog,
       BASE_PROPS,
     ));
 
-    expect(markup).toContain('<optgroup label="Triads">');
-    expect(markup).toContain('<optgroup label="Suspended chords">');
-    expect(markup).toContain('<optgroup label="Ninth chords">');
-    expect(markup).toContain('<optgroup label="Eleventh chords">');
-    expect(markup).toContain('<optgroup label="Thirteenth chords">');
-    expect(markup).toContain('value="mM7" selected="">mM7 (minor/major seventh)');
-    expect(markup).toContain('value="sus2">sus2 (suspended second)');
-    expect(markup).toContain('value="sus4">sus4 (suspended fourth)');
-    expect(markup).toContain('value="7sus4">7sus4 (suspended fourth seventh)');
-    expect(markup).toContain('value="m13">m13 (minor thirteenth)');
+    expect(markup).toContain('<optgroup label="Major">');
+    expect(markup).toContain('<optgroup label="Minor">');
+    expect(markup).toContain('<optgroup label="Sixths">');
+    expect(markup).toContain('<optgroup label="Dominant">');
+    expect(markup).toContain('<optgroup label="Suspended">');
+    expect(markup).toContain('<optgroup label="Diminished">');
+    expect(markup).toContain('<optgroup label="Augmented">');
+    expect(markup).toContain('<option value="C#" selected="">C♯</option>');
+    expect(markup).toContain('<option value="Db">D♭</option>');
+    expect(markup).toContain('value="M">C♯M');
+    expect(markup).toContain('value="mM7" selected="">C♯mM7');
+    expect(markup).toContain('value="69">C♯69');
+    expect(markup).toContain('value="7b9">C♯7♭9');
+    expect(markup).toContain('value="7#9">C♯7♯9');
+    expect(markup).toContain('value="sus24">C♯sus24');
+    expect(markup).toContain('value="9sus4">C♯9sus4');
+    expect(markup).toContain('value="13sus4">C♯13sus4');
+    expect(markup).toContain('value="m13">C♯m13');
   });
 
   test("categorizes scale choices", () => {

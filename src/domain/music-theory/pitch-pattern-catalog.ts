@@ -1,4 +1,5 @@
 import { Chord } from "@tonaljs/tonal";
+import { formatMusicAccidentals } from "./music-notation";
 
 export interface PitchPatternOption {
   readonly id: string;
@@ -75,14 +76,12 @@ export const SCALE_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze(
 export const CHORD_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze([
   createGroup("Major", [
     "M",
-    "6",
     "maj7",
     "maj9",
     "maj13",
   ], createChordOption),
   createGroup("Minor", [
     "m",
-    "m6",
     "m7",
     "mM7",
     "m9",
@@ -90,16 +89,27 @@ export const CHORD_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze(
     "m11",
     "m13",
   ], createChordOption),
+  createGroup("Sixths", [
+    "6",
+    "m6",
+    "69",
+    "m69",
+  ], createChordOption),
   createGroup("Dominant", [
     "7",
     "9",
+    "7b9",
+    "7#9",
     "11",
     "13",
   ], createChordOption),
   createGroup("Suspended", [
     "sus2",
     "sus4",
+    "sus24",
     "7sus4",
+    "9sus4",
+    "13sus4",
   ], createChordOption),
   createGroup("Diminished", [
     "dim",
@@ -136,7 +146,7 @@ export function isSupportedPitchPatternId(
 }
 
 /** Formats a rooted chord with Tonal's own symbol instead of an alias guess. */
-export function formatTonalChordSymbol(
+export function formatChordSymbol(
   rootNote: string,
   chordId: string,
 ): string {
@@ -148,5 +158,5 @@ export function formatTonalChordSymbol(
     );
   }
 
-  return chord.symbol;
+  return formatMusicAccidentals(chord.symbol);
 }

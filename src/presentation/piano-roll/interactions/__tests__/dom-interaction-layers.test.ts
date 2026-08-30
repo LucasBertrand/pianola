@@ -35,12 +35,12 @@ describe("drag note label layout", () => {
       getSnapSettingsAtTick,
     )).toEqual([
       {
-        label: "C#4",
+        label: "C♯4",
         leftCssPixels: 0,
         widthCssPixels: 60,
       },
       {
-        label: "Db4",
+        label: "D♭4",
         leftCssPixels: 60,
         widthCssPixels: 60,
       },
@@ -58,7 +58,7 @@ describe("drag note label layout", () => {
       getSnapSettingsAtTick,
     )).toEqual([
       {
-        label: "C#4",
+        label: "C♯4",
         leftCssPixels: 40,
         widthCssPixels: 80,
       },

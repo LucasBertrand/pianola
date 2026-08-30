@@ -9,6 +9,7 @@ import {
 import {
   spellPitchClass,
 } from "../../../domain/music-theory/tonal-spelling";
+import { formatMusicAccidentals } from "../../../domain/music-theory/music-notation";
 import { Note } from "@tonaljs/tonal";
 
 export interface MidiNoteLabelSegment {
@@ -52,11 +53,11 @@ export function getMidiNoteLabel(
       }
     }
 
-    return `${matchedNote}${noteOctave}`;
+    return formatMusicAccidentals(`${matchedNote}${noteOctave}`);
   }
 
   // Fallback
-  return Note.fromMidi(pitch) || "";
+  return formatMusicAccidentals(Note.fromMidi(pitch) || "");
 }
 
 export function getPitchLabelContextKey(

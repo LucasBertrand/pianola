@@ -5,6 +5,26 @@ import { PITCH_SNAP_CONSTANTS } from "./pitch-snap-constants";
 import { isSupportedPitchPatternId } from "./pitch-pattern-catalog";
 import { ScaleType, ChordType, Interval, Note } from "@tonaljs/tonal";
 
+function getPatternIntervals(
+  patternType: PitchPatternType,
+  patternId: string,
+): readonly string[] {
+  return patternType === "scale"
+    ? ScaleType.get(patternId).intervals
+    : ChordType.get(patternId).intervals;
+}
+
+function getRootChroma(rootNote: string): number {
+  return Note.chroma(rootNote) || 0;
+}
+
+function getRelativePitchClass(
+  pitch: number,
+  rootNote: string,
+): number {
+  return (pitch - getRootChroma(rootNote) + 12) % 12;
+}
+
 export type PitchPatternType = "scale" | "chord";
 export type PitchPatternId = string;
 
@@ -27,38 +47,44 @@ export const DEFAULT_PITCH_SNAP_SETTINGS: PitchSnapSettings =
     patternId: PITCH_SNAP_CONSTANTS.defaultPatternId,
   });
 
-function getMaskForPattern(patternType: PitchPatternType, patternId: string): number {
-  let mask = 0;
-  let intervals: readonly string[] = [];
+interface CachedPatternData {
+  readonly mask: number;
+  readonly semitones: readonly number[];
+}
 
-  if (patternType === "scale") {
-    const scale = ScaleType.get(patternId);
-    intervals = scale.intervals;
-  } else {
-    const chord = ChordType.get(patternId);
-    intervals = chord.intervals;
-  }
+function buildPatternData(
+  patternType: PitchPatternType,
+  patternId: string,
+): CachedPatternData {
+  const intervals = getPatternIntervals(patternType, patternId);
+  let mask = 0;
+  const semitones: number[] = [];
 
   for (const interval of intervals) {
-    const semitones = Interval.semitones(interval);
-    if (semitones !== undefined) {
-      mask |= 1 << (semitones % 12);
+    const s = Interval.semitones(interval);
+    if (s !== undefined) {
+      const pitchClass = s % 12;
+      mask |= 1 << pitchClass;
+      semitones.push(pitchClass);
     }
   }
 
-  return mask;
+  return { mask, semitones };
 }
 
-const PATTERN_MASKS = new Map<string, number>();
+const PATTERN_CACHE = new Map<string, CachedPatternData>();
 
-function getCachedMask(patternType: PitchPatternType, patternId: string): number {
+function getCachedPatternData(
+  patternType: PitchPatternType,
+  patternId: string,
+): CachedPatternData {
   const key = `${patternType}:${patternId}`;
-  let mask = PATTERN_MASKS.get(key);
-  if (mask === undefined) {
-    mask = getMaskForPattern(patternType, patternId);
-    PATTERN_MASKS.set(key, mask);
+  let data = PATTERN_CACHE.get(key);
+  if (data === undefined) {
+    data = buildPatternData(patternType, patternId);
+    PATTERN_CACHE.set(key, data);
   }
-  return mask;
+  return data;
 }
 
 export function snapPitchToPattern(
@@ -144,20 +170,15 @@ export function isPitchIncludedInPattern(
   pitch: number,
   settings: PitchSnapSettings,
 ): boolean {
-  const relativePitchClass =
-    (
-      pitch
-      - (Note.chroma(settings.rootNote) || 0)
-      + 12
-    ) % 12;
-  const mask = getCachedMask(settings.patternType, settings.patternId);
-  return (mask & (1 << relativePitchClass)) !== 0;
+  const rpc = getRelativePitchClass(pitch, settings.rootNote);
+  const { mask } = getCachedPatternData(settings.patternType, settings.patternId);
+  return (mask & (1 << rpc)) !== 0;
 }
 
 export function getPitchSnapRootPitchClass(
   settings: PitchSnapSettings,
 ): number {
-  return Note.chroma(settings.rootNote) || 0;
+  return getRootChroma(settings.rootNote);
 }
 
 /** Finds the index (0-N) of a MIDI pitch in the selected mode/chord for coloring. */
@@ -169,24 +190,11 @@ export function getPitchScaleDegreeColorIndex(
     return null;
   }
 
-  const relativePitchClass = (
-    pitch
-    - (Note.chroma(settings.rootNote) || 0)
-    + 12
-  ) % 12;
+  const rpc = getRelativePitchClass(pitch, settings.rootNote);
+  const { semitones } = getCachedPatternData(settings.patternType, settings.patternId);
 
-  let intervals: readonly string[] = [];
-  if (settings.patternType === "scale") {
-    intervals = ScaleType.get(settings.patternId).intervals;
-  } else {
-    intervals = ChordType.get(settings.patternId).intervals;
-  }
-
-  for (let i = 0; i < intervals.length; i++) {
-    const interval = intervals[i];
-    if (interval === undefined) continue;
-    const semitones = Interval.semitones(interval);
-    if (semitones !== undefined && (semitones % 12) === relativePitchClass) {
+  for (let i = 0; i < semitones.length; i++) {
+    if (semitones[i] === rpc) {
       return i;
     }
   }
