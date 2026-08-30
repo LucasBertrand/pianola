@@ -34,7 +34,7 @@ const BASE_PROPS: TempoMeterMarkerDialogProps = {
 };
 
 describe("TempoMeterMarkerDialog", () => {
-  test("categorizes chord choices and displays Tonal symbols", () => {
+  test("categorizes chord choices and displays MusicTheoryJS symbols", () => {
     const markup = renderToStaticMarkup(createElement(
       TempoMeterMarkerDialog,
       BASE_PROPS,
@@ -46,11 +46,13 @@ describe("TempoMeterMarkerDialog", () => {
     expect(markup).toContain('<optgroup label="Suspended">');
     expect(markup).toContain('<optgroup label="Diminished">');
     expect(markup).toContain('<optgroup label="Augmented">');
-    expect(markup).toContain('value="mM7" selected="">mM7 (minor/major seventh)');
-    expect(markup).toContain('value="sus2">sus2 (suspended second)');
-    expect(markup).toContain('value="sus4">sus4 (suspended fourth)');
-    expect(markup).toContain('value="7sus4">7sus4 (suspended fourth seventh)');
-    expect(markup).toContain('value="m13">m13 (minor thirteenth)');
+    expect(markup).toContain('value="mM7" selected="">CmMaj7');
+    expect(markup).toContain('value="sus2">Csus2');
+    expect(markup).toContain('value="sus4">Csus4');
+    expect(markup).toContain('value="7sus4">C7sus4');
+    expect(markup).toContain('value="m13">Cm13');
+    expect(markup).toContain('value="Bb">B♭');
+    expect(markup).toContain('value="F#">F♯');
   });
 
   test("categorizes scale choices", () => {

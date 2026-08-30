@@ -252,7 +252,7 @@ describe("P3 Canvas painter contracts", () => {
       },
     });
 
-    expect(recorder.labels).toEqual(["C#4", "Db4"]);
+    expect(recorder.labels).toEqual(["C♯4", "D♭4"]);
     const padding =
       RENDERING_CONSTANTS.noteLabelHorizontalPaddingCssPixels;
 

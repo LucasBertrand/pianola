@@ -5,6 +5,9 @@ import {
 } from "../../domain/project/project-constants";
 import { PITCH_SNAP_CONSTANTS } from "../../domain/music-theory/pitch-snap-constants";
 import {
+  formatPitchClass,
+} from "../../domain/music-theory/pitch-spelling";
+import {
   CHORD_PATTERN_GROUPS,
   SCALE_PATTERN_GROUPS,
   type PitchPatternGroup,
@@ -254,7 +257,7 @@ export function TempoMeterMarkerDialog({
                   >
                     {PITCH_SNAP_CONSTANTS.rootOptions.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {formatPitchClass(option)}
                       </option>
                     ))}
                   </select>

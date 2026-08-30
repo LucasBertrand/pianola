@@ -25,7 +25,7 @@
     "verify": "npm run check:docs && npm run check:structure && npm run check:boundaries && npm run build && npm run test:worklet-build && npm test"
   },
   "dependencies": {
-    "@tonaljs/tonal": "^4.10.0",
+    "musictheoryjs": "^3.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.2.8"
   },

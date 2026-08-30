@@ -1629,7 +1629,7 @@ function getActiveTestMeasureCount(state) {
       patternId: "blues",
     };
 
-    assert.equal(getMidiNoteLabel(61, cPhrygian), "Db4");
+    assert.equal(getMidiNoteLabel(61, cPhrygian), "D♭4");
 
     assert.equal(
       getMidiNoteLabel(61, {
@@ -1638,7 +1638,7 @@ function getActiveTestMeasureCount(state) {
         patternType: "scale",
         patternId: "ionian",
       }),
-      "C#4",
+      "C♯4",
     );
   });
 

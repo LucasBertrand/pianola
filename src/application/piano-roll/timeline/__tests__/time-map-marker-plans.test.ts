@@ -113,7 +113,7 @@ describe("createTimeMapMarkerFlags", () => {
     expect(isIsolatedMeterMarkerFlag(flags[2]!)).toBe(false);
   });
 
-  test("uses Tonal's rooted chord symbol for marker labels", () => {
+  test("uses MusicTheoryJS's rooted chord symbol for marker labels", () => {
     const flags = createTimeMapMarkerFlags({
       meterMarkers: [{
         startTick: 0,
@@ -129,7 +129,7 @@ describe("createTimeMapMarkerFlags", () => {
       sectionMarkers: [],
     });
 
-    expect(formatMarkerFlagLabel(flags[0]!)).toBe("120 · 4/4 · CmM7");
+    expect(formatMarkerFlagLabel(flags[0]!)).toBe("120 · 4/4 · CmMaj7");
   });
 });
 

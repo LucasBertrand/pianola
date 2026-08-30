@@ -33,7 +33,7 @@ note est ajustée avec la gamme active à sa nouvelle position.
 Le sélecteur de motif de hauteurs regroupe les gammes par famille et les accords par extension.
 Les accords proposés comprennent les triades, les accords suspendus `sus2`,
 `sus4` et `7sus4`, ainsi que les septièmes, neuvièmes, onzièmes et treizièmes
-usuelles. Leurs symboles sont ceux produits par Tonal, aussi bien
+usuelles. Leurs symboles canoniques sont ceux produits par MusicTheoryJS, aussi bien
 dans le dialogue que sur les drapeaux de la timeline.
 
 ## Instruments

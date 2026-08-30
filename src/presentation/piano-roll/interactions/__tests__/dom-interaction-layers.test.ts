@@ -9,7 +9,7 @@ import {
 } from "../dom-interaction-layers";
 import { createTestNote } from "../../../../../tests/support/test-builders";
 
-const TONAL_BOUNDARIES = [
+const PITCH_CONTEXT_BOUNDARIES = [
   { startTick: 0 },
   { startTick: 480 },
 ] as const;
@@ -31,16 +31,16 @@ describe("drag note label layout", () => {
       480,
       20,
       120,
-      TONAL_BOUNDARIES,
+      PITCH_CONTEXT_BOUNDARIES,
       getSnapSettingsAtTick,
     )).toEqual([
       {
-        label: "C#4",
+        label: "C♯4",
         leftCssPixels: 0,
         widthCssPixels: 60,
       },
       {
-        label: "Db4",
+        label: "D♭4",
         leftCssPixels: 60,
         widthCssPixels: 60,
       },
@@ -54,11 +54,11 @@ describe("drag note label layout", () => {
       480,
       -40,
       120,
-      TONAL_BOUNDARIES,
+      PITCH_CONTEXT_BOUNDARIES,
       getSnapSettingsAtTick,
     )).toEqual([
       {
-        label: "C#4",
+        label: "C♯4",
         leftCssPixels: 40,
         widthCssPixels: 80,
       },

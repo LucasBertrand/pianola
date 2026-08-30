@@ -30,7 +30,7 @@ import {
 } from "../rendering/note-style";
 import {
   getMidiNoteLabelSegments,
-  type TonalBoundary,
+  type PitchContextBoundary,
 } from "../rendering/pitch-label";
 import { RENDERING_CONSTANTS } from "../rendering/rendering-constants";
 import {
@@ -61,7 +61,7 @@ export function populateGhostLayer(
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   resizeEdge: ResizeEdge | null,
   elements: HTMLElement[],
-  tonalBoundaries: readonly TonalBoundary[] = [],
+  pitchContextBoundaries: readonly PitchContextBoundary[] = [],
 ): LayerGeometry | null {
   if (ghostLayer === null) {
     return null;
@@ -137,7 +137,7 @@ export function populateGhostLayer(
         note.durationTicks,
         x,
         noteWidth,
-        tonalBoundaries,
+        pitchContextBoundaries,
         getSnapSettingsAtTick,
       ),
     );
@@ -265,7 +265,7 @@ export function updateGhostPitchPresentation(
   deltaTicks: number,
   deltaXCssPixels: number,
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
-  tonalBoundaries: readonly TonalBoundary[],
+  pitchContextBoundaries: readonly PitchContextBoundary[],
   updatePitchColor: boolean,
 ): void {
   if (geometry === null) {
@@ -303,7 +303,7 @@ export function updateGhostPitchPresentation(
         durationTicks,
         left + deltaXCssPixels,
         width,
-        tonalBoundaries,
+        pitchContextBoundaries,
         getSnapSettingsAtTick,
       ),
     );
@@ -328,7 +328,7 @@ export function updatePitchSnappedDrag(
   deltaTicks: number,
   deltaPitch: number,
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
-  tonalBoundaries: readonly TonalBoundary[],
+  pitchContextBoundaries: readonly PitchContextBoundary[],
   updatePitchLabel: boolean,
   updatePitchColor: boolean,
   updatePitchBackground = updatePitchColor,
@@ -383,7 +383,7 @@ export function updatePitchSnappedDrag(
           durationTicks,
           left + deltaXCssPixels,
           width,
-          tonalBoundaries,
+          pitchContextBoundaries,
           getSnapSettingsAtTick,
         ),
       );
@@ -444,7 +444,7 @@ export function getGhostNoteLabelLayout(
   durationTicks: number,
   noteLeftCssPixels: number,
   noteWidthCssPixels: number,
-  tonalBoundaries: readonly TonalBoundary[],
+  pitchContextBoundaries: readonly PitchContextBoundary[],
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
 ): readonly GhostNoteLabelLayout[] {
   if (durationTicks <= 0 || noteWidthCssPixels <= 0) {
@@ -459,7 +459,7 @@ export function getGhostNoteLabelLayout(
     pitch,
     startTick,
     endTick,
-    tonalBoundaries,
+    pitchContextBoundaries,
     getSnapSettingsAtTick,
   ).flatMap((segment) => {
     const segmentLeftCssPixels =

@@ -13,7 +13,7 @@ import type {
 } from "../../domain/music-theory/pitch-snap";
 import {
   spellPitchClass,
-} from "../../domain/music-theory/tonal-spelling";
+} from "../../domain/music-theory/pitch-spelling";
 import type {
   Note,
 } from "../../domain/notes/note";

@@ -1,4 +1,4 @@
-import { Chord } from "@tonaljs/tonal";
+import { Chord, Scale } from "musictheoryjs";
 
 export interface PitchPatternOption {
   readonly id: string;
@@ -15,15 +15,9 @@ function createScaleOption(id: string): PitchPatternOption {
 }
 
 function createChordOption(id: string): PitchPatternOption {
-  const chord = Chord.getChord(id);
-
-  if (chord.empty) {
-    throw new Error(`Tonal does not recognize chord type "${id}".`);
-  }
-
   return Object.freeze({
     id,
-    label: `${chord.symbol} (${chord.name})`,
+    label: Chord.from(`C${id}`).toString(),
   });
 }
 
@@ -75,14 +69,13 @@ export const SCALE_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze(
 export const CHORD_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze([
   createGroup("Major", [
     "M",
-    "6",
     "maj7",
     "maj9",
+    "maj11",
     "maj13",
   ], createChordOption),
   createGroup("Minor", [
     "m",
-    "m6",
     "m7",
     "mM7",
     "m9",
@@ -90,16 +83,27 @@ export const CHORD_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze(
     "m11",
     "m13",
   ], createChordOption),
+  createGroup("Sixths", [
+    "6",
+    "m6",
+    "6/9",
+    "m6/9",
+  ], createChordOption),
   createGroup("Dominant", [
     "7",
     "9",
+    "7b9",
+    "7#9",
     "11",
     "13",
   ], createChordOption),
   createGroup("Suspended", [
     "sus2",
     "sus4",
+    "sus24",
     "7sus4",
+    "9sus4",
+    "13sus4",
   ], createChordOption),
   createGroup("Diminished", [
     "dim",
@@ -135,18 +139,21 @@ export function isSupportedPitchPatternId(
     : SUPPORTED_CHORD_PATTERN_ID_SET.has(patternId);
 }
 
-/** Formats a rooted chord with Tonal's own symbol instead of an alias guess. */
-export function formatTonalChordSymbol(
+/** Returns the template pitch classes, in their musical degree order. */
+export function getPitchPatternSemitones(
+  patternType: "scale" | "chord",
+  patternId: string,
+): readonly number[] {
+  const intervals = patternType === "scale"
+    ? Scale.from("C4", patternId).intervals
+    : Chord.from(`C${patternId}`).intervals;
+  return intervals.map((interval) => ((interval.semitones % 12) + 12) % 12);
+}
+
+/** Formats a rooted chord with MusicTheoryJS's canonical symbol. */
+export function formatMusicTheoryChordSymbol(
   rootNote: string,
   chordId: string,
 ): string {
-  const chord = Chord.getChord(chordId, rootNote);
-
-  if (chord.empty) {
-    throw new Error(
-      `Tonal does not recognize chord type "${chordId}" at root "${rootNote}".`,
-    );
-  }
-
-  return chord.symbol;
+  return Chord.from(`${rootNote}${chordId}`).toString();
 }

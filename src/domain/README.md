@@ -15,7 +15,7 @@ d’un clip — marqueurs de tempo, métrique, gamme et section, dérivation des
 mesures — est exposée par `transport/time-map.ts` et répartie dans les modules
 `time-map-*`, `time-signature.ts` et `*-marker-operations.ts`. La théorie
 musicale pure vit dans `music-theory/` ; `pitch-pattern-catalog.ts` possède le
-catalogue catégorisé des gammes et accords. Leur symbolisation s'appuie sur Tonal.
+catalogue catégorisé des gammes et accords. Leur symbolisation s'appuie sur MusicTheoryJS.
 Les invariants sont validés dans
 `validation/transport-validation.ts`.
 

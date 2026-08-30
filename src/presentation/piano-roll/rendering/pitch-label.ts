@@ -7,9 +7,8 @@ import {
   type PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
 import {
-  spellPitchClass,
-} from "../../../domain/music-theory/tonal-spelling";
-import { Note } from "@tonaljs/tonal";
+  spellMidiNote,
+} from "../../../domain/music-theory/pitch-spelling";
 
 export interface MidiNoteLabelSegment {
   readonly startTick: number;
@@ -17,7 +16,7 @@ export interface MidiNoteLabelSegment {
   readonly label: string;
 }
 
-export interface TonalBoundary {
+export interface PitchContextBoundary {
   readonly startTick: number;
 }
 
@@ -33,30 +32,7 @@ export function getMidiNoteLabel(
     return "";
   }
 
-  const matchedNote = spellPitchClass(pitch, settings);
-
-  if (matchedNote !== "") {
-    const octave = Math.floor(pitch / 12) - 1;
-
-    let noteOctave = octave;
-    if (Note.midi(`${matchedNote}${octave}`) === pitch - 12) {
-      noteOctave = octave + 1;
-    } else if (Note.midi(`${matchedNote}${octave}`) === pitch + 12) {
-      noteOctave = octave - 1;
-    } else if (Note.midi(`${matchedNote}${octave}`) !== pitch) {
-      // If it's still not matching, maybe it's double flat/sharp crossing C?
-      if (Note.midi(`${matchedNote}${octave + 1}`) === pitch) {
-        noteOctave = octave + 1;
-      } else if (Note.midi(`${matchedNote}${octave - 1}`) === pitch) {
-        noteOctave = octave - 1;
-      }
-    }
-
-    return `${matchedNote}${noteOctave}`;
-  }
-
-  // Fallback
-  return Note.fromMidi(pitch) || "";
+  return spellMidiNote(pitch, settings);
 }
 
 export function getPitchLabelContextKey(
@@ -69,7 +45,7 @@ export function getMidiNoteLabelSegments(
   pitch: number,
   startTick: number,
   endTick: number,
-  tonalBoundaries: readonly TonalBoundary[],
+  pitchContextBoundaries: readonly PitchContextBoundary[],
   getSettingsAtTick: (tick: number) => PitchSnapSettings,
 ): readonly MidiNoteLabelSegment[] {
   const changes: Array<{
@@ -83,7 +59,7 @@ export function getMidiNoteLabelSegments(
 
   changes.push({ startTick, label: currentLabel });
 
-  for (const boundary of tonalBoundaries) {
+  for (const boundary of pitchContextBoundaries) {
     if (boundary.startTick <= startTick) {
       continue;
     }

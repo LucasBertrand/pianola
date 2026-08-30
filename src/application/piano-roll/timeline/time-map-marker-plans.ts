@@ -23,8 +23,11 @@ import {
 } from "../../../domain/transport/time-map";
 import type { PitchPatternId, PitchPatternType } from "../../../domain/music-theory/pitch-snap";
 import {
-  formatTonalChordSymbol,
+  formatMusicTheoryChordSymbol,
 } from "../../../domain/music-theory/pitch-pattern-catalog";
+import {
+  formatPitchClass,
+} from "../../../domain/music-theory/pitch-spelling";
 import type {
   TimeMapMarkerCollision,
 } from "./marker-collision-resolution";
@@ -597,10 +600,10 @@ export function formatMarkerFlagLabel(flag: TimeMapMarkerFlag): string {
     if (flag.rootNote === "none") {
       parts.push("Chromatic");
     } else {
-      const rootLabel = flag.rootNote;
+      const rootLabel = formatPitchClass(flag.rootNote);
       let scaleLabel = "";
       if (flag.patternType === "chord") {
-        scaleLabel = formatTonalChordSymbol(rootLabel, flag.patternId);
+        scaleLabel = formatMusicTheoryChordSymbol(flag.rootNote, flag.patternId);
       } else {
         scaleLabel = `${rootLabel} ${flag.patternId}`;
       }

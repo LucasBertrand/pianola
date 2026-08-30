@@ -1,40 +1,49 @@
-import { Chord, Midi, Interval } from "@tonaljs/tonal";
+import {
+  Note as MusicTheoryNote,
+  detectChord,
+  intervalName,
+  simplifyInterval,
+} from "musictheoryjs";
 import type { Note } from "../notes/note";
 
 export type NotePitchClassSpeller = (note: Note) => string;
 
 export function detectChordsFromNotes(
   notes: readonly Note[],
-  spellNote: NotePitchClassSpeller = spellNoteWithTonalDefault,
+  spellNote: NotePitchClassSpeller = spellNoteWithMusicTheoryDefault,
 ): string | null {
   if (notes.length === 0) return null;
 
-  // Sort notes by pitch so the lowest note is considered the bass by Tonal
   const sortedNotes = [...notes].sort((a, b) => a.pitch - b.pitch);
-  const pitchClassesByChroma = new Map<number, string>();
-
+  const pitchClassesByChroma = new Map<number, MusicTheoryNote>();
   for (const note of sortedNotes) {
     const chroma = ((note.pitch % 12) + 12) % 12;
     if (!pitchClassesByChroma.has(chroma)) {
-      pitchClassesByChroma.set(chroma, spellNote(note));
+      pitchClassesByChroma.set(chroma, spellMidiNote(note, spellNote(note)));
     }
   }
 
-  const pitchClasses = Array.from(pitchClassesByChroma.values());
-
-  if (pitchClasses.length === 2) {
-    const classes = pitchClasses;
-    return Interval.distance(classes[0]!, classes[1]!);
+  const spelledNotes = Array.from(pitchClassesByChroma.values());
+  if (spelledNotes.length === 2) {
+    return intervalName(
+      simplifyInterval(spelledNotes[0]!.intervalTo(spelledNotes[1]!)),
+    );
   }
 
-  const detected = Chord.detect(pitchClasses);
-  if (detected.length === 0) return null;
-
-  return detected.join(" · ");
+  return detectChord(spelledNotes)?.toString() ?? null;
 }
 
-function spellNoteWithTonalDefault(note: Note): string {
-  return Midi.midiToNoteName(note.pitch, {
-    pitchClass: true,
+function spellNoteWithMusicTheoryDefault(note: Note): string {
+  return MusicTheoryNote.fromMidi(note.pitch, "flat").toString({
+    octave: false,
+    unicodeAccidentals: true,
   });
+}
+
+function spellMidiNote(note: Note, pitchClass: string): MusicTheoryNote {
+  const octave = Math.floor(note.pitch / 12) - 1;
+  const candidate = MusicTheoryNote.from(`${pitchClass}${octave}`);
+  return candidate.withOctave(
+    octave + Math.round((note.pitch - candidate.midi) / 12),
+  );
 }
