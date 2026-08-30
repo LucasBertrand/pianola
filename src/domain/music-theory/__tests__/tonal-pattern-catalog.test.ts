@@ -22,15 +22,19 @@ describe("tonal pattern catalog", () => {
     expect(new Set(TONAL_SCALE_IDS).size).toBe(TONAL_SCALE_IDS.length);
   });
 
-  test("groups triads, sevenths, ninths, elevenths and thirteenths", () => {
+  test("groups suspended and extended chords", () => {
     expect(TONAL_CHORD_GROUPS.map((group) => group.label)).toEqual([
       "Triads",
+      "Suspended chords",
       "Seventh chords",
       "Ninth chords",
       "Eleventh chords",
       "Thirteenth chords",
     ]);
     expect(TONAL_CHORD_IDS).toEqual(expect.arrayContaining([
+      "sus2",
+      "sus4",
+      "7sus4",
       "maj9",
       "9",
       "mM9",
@@ -51,6 +55,9 @@ describe("tonal pattern catalog", () => {
 
     expect(minorMajorSeventh?.label).toBe("mM7 (minor/major seventh)");
     expect(formatTonalChordSymbol("C", "mM7")).toBe("CmM7");
+    expect(formatTonalChordSymbol("C", "sus2")).toBe("Csus2");
+    expect(formatTonalChordSymbol("C", "sus4")).toBe("Csus4");
+    expect(formatTonalChordSymbol("C", "7sus4")).toBe("C7sus4");
 
     for (const chordId of TONAL_CHORD_IDS) {
       expect(Chord.getChord(chordId).empty).toBe(false);

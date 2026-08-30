@@ -31,8 +31,9 @@ magnétisme actif. Lorsqu'une sélection franchit un marqueur de gamme, chaque
 note est ajustée avec la gamme active à sa nouvelle position.
 
 Le sélecteur tonal regroupe les gammes par famille et les accords par extension.
-Les accords proposés comprennent les triades, septièmes, neuvièmes, onzièmes et
-treizièmes usuelles. Leurs symboles sont ceux produits par Tonal, aussi bien
+Les accords proposés comprennent les triades, les accords suspendus `sus2`,
+`sus4` et `7sus4`, ainsi que les septièmes, neuvièmes, onzièmes et treizièmes
+usuelles. Leurs symboles sont ceux produits par Tonal, aussi bien
 dans le dialogue que sur les drapeaux de la timeline.
 
 ## Instruments

@@ -71,13 +71,18 @@ export const TONAL_SCALE_GROUPS: readonly TonalPatternGroup[] = Object.freeze([
   ], createScaleOption),
 ]);
 
-/** Supported chord choices, from triads through thirteenth chords. */
+/** Supported chord choices, including suspended and extended chords. */
 export const TONAL_CHORD_GROUPS: readonly TonalPatternGroup[] = Object.freeze([
   createGroup("Triads", [
     "M",
     "m",
     "dim",
     "aug",
+  ], createChordOption),
+  createGroup("Suspended chords", [
+    "sus2",
+    "sus4",
+    "7sus4",
   ], createChordOption),
   createGroup("Seventh chords", [
     "maj7",
