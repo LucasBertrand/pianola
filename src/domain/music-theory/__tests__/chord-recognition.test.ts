@@ -82,7 +82,7 @@ describe("detectChordsFromNotes", () => {
     )).toBe("5d");
   });
 
-  test("keeps flat chord roots from the tonal context", () => {
+  test("keeps flat chord roots from the pitch-pattern context", () => {
     const notes = [
       createTestNote({ id: "bb", pitch: 70 }),
       createTestNote({ id: "d", pitch: 74 }),

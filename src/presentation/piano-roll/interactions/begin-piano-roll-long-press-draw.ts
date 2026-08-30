@@ -30,7 +30,7 @@ import type {
   ReadonlyRenderSignal,
 } from "../../../editor-core/model/render-signal";
 import {
-  snapPitchToTonalPattern,
+  snapPitchToPattern,
   type PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
 import {
@@ -129,7 +129,7 @@ export function beginPianoRollLongPressDraw({
       resolutionTicks,
     ),
   );
-  const drawPitch = snapPitchToTonalPattern(
+  const drawPitch = snapPitchToPattern(
     pitch,
     resolvePitchSnapSettings(
       activeClip.timeline.timeMap,

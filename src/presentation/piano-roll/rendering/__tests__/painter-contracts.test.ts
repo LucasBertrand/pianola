@@ -106,7 +106,7 @@ describe("P3 Canvas painter contracts", () => {
     }
   });
 
-  test("uses absolute pitch-class colors in a rooted tonal grid", () => {
+  test("uses absolute pitch-class colors in a rooted pitch-pattern grid", () => {
     const recorder = createPaintRecorder();
 
     paintGrid({

@@ -12,7 +12,7 @@ import type {
   ViewportState,
 } from "../../editor-core/geometry/converter";
 import {
-  snapPitchToTonalPattern,
+  snapPitchToPattern,
   type PitchSnapSettings,
 } from "../../domain/music-theory/pitch-snap";
 import type {
@@ -204,7 +204,7 @@ export function PianoKeyboard(
         patternId: activeMarker.patternId,
       };
 
-      const auditionedPitch = snapPitchToTonalPattern(
+      const auditionedPitch = snapPitchToPattern(
         rawPitch,
         currentSnapSettings,
         movementDirection,

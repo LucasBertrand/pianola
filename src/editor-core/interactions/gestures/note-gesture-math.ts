@@ -2,7 +2,7 @@ import {
   type Note,
 } from "../../../domain/notes/note";
 import {
-  snapPitchToTonalPattern,
+  snapPitchToPattern,
   type PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
 import type {
@@ -177,8 +177,8 @@ export function buildRepositionedNotes(
 }
 
 /**
- * Resolves one selected note against the tonal pattern at its destination.
- * A horizontal move only changes pitch when it crosses into another tonal
+ * Resolves one selected note against the pitch pattern at its destination.
+ * A horizontal move only changes pitch when it crosses into another pitch-pattern
  * segment; vertical moves always apply the destination pattern.
  */
 export function resolveRepositionedPitch(
@@ -190,15 +190,15 @@ export function resolveRepositionedPitch(
 ): RepositionedPitch {
   const destinationTick = Math.max(0, baseTick + deltaTicks);
   const snapSettings = getSnapSettingsAtTick(destinationTick);
-  const shouldSnapForTonalChange =
+  const shouldSnapForPatternChange =
     deltaPitch === 0
     && snapSettings.enabled
-    && !haveSameTonalPattern(
+    && !haveSamePitchPattern(
       getSnapSettingsAtTick(baseTick),
       snapSettings,
     );
-  const pitch = deltaPitch !== 0 || shouldSnapForTonalChange
-    ? snapPitchToTonalPattern(
+  const pitch = deltaPitch !== 0 || shouldSnapForPatternChange
+    ? snapPitchToPattern(
         basePitch + deltaPitch,
         snapSettings,
         deltaPitch,
@@ -212,7 +212,7 @@ export function resolveRepositionedPitch(
   };
 }
 
-function haveSameTonalPattern(
+function haveSamePitchPattern(
   first: PitchSnapSettings,
   second: PitchSnapSettings,
 ): boolean {

@@ -2,28 +2,28 @@ import { Chord } from "@tonaljs/tonal";
 import { describe, expect, test } from "vitest";
 import {
   formatTonalChordSymbol,
-  isSupportedTonalPatternId,
-  TONAL_CHORD_GROUPS,
-  TONAL_CHORD_IDS,
-  TONAL_SCALE_GROUPS,
-  TONAL_SCALE_IDS,
-} from "../tonal-pattern-catalog";
+  isSupportedPitchPatternId,
+  CHORD_PATTERN_GROUPS,
+  SUPPORTED_CHORD_PATTERN_IDS,
+  SCALE_PATTERN_GROUPS,
+  SUPPORTED_SCALE_PATTERN_IDS,
+} from "../pitch-pattern-catalog";
 
-describe("tonal pattern catalog", () => {
+describe("pitch pattern catalog", () => {
   test("groups every supported scale without changing the existing vocabulary", () => {
-    expect(TONAL_SCALE_GROUPS.map((group) => group.label)).toEqual([
+    expect(SCALE_PATTERN_GROUPS.map((group) => group.label)).toEqual([
       "Diatonic modes",
       "Minor and derivative scales",
       "Pentatonic and blues",
       "Traditional scales",
       "Symmetric scales",
     ]);
-    expect(TONAL_SCALE_IDS).toHaveLength(19);
-    expect(new Set(TONAL_SCALE_IDS).size).toBe(TONAL_SCALE_IDS.length);
+    expect(SUPPORTED_SCALE_PATTERN_IDS).toHaveLength(19);
+    expect(new Set(SUPPORTED_SCALE_PATTERN_IDS).size).toBe(SUPPORTED_SCALE_PATTERN_IDS.length);
   });
 
   test("groups suspended and extended chords", () => {
-    expect(TONAL_CHORD_GROUPS.map((group) => group.label)).toEqual([
+    expect(CHORD_PATTERN_GROUPS.map((group) => group.label)).toEqual([
       "Triads",
       "Suspended chords",
       "Seventh chords",
@@ -31,7 +31,7 @@ describe("tonal pattern catalog", () => {
       "Eleventh chords",
       "Thirteenth chords",
     ]);
-    expect(TONAL_CHORD_IDS).toEqual(expect.arrayContaining([
+    expect(SUPPORTED_CHORD_PATTERN_IDS).toEqual(expect.arrayContaining([
       "sus2",
       "sus4",
       "7sus4",
@@ -45,11 +45,11 @@ describe("tonal pattern catalog", () => {
       "13",
       "m13",
     ]));
-    expect(new Set(TONAL_CHORD_IDS).size).toBe(TONAL_CHORD_IDS.length);
+    expect(new Set(SUPPORTED_CHORD_PATTERN_IDS).size).toBe(SUPPORTED_CHORD_PATTERN_IDS.length);
   });
 
   test("derives option labels and rooted symbols from Tonal", () => {
-    const minorMajorSeventh = TONAL_CHORD_GROUPS
+    const minorMajorSeventh = CHORD_PATTERN_GROUPS
       .flatMap((group) => group.options)
       .find((option) => option.id === "mM7");
 
@@ -59,15 +59,15 @@ describe("tonal pattern catalog", () => {
     expect(formatTonalChordSymbol("C", "sus4")).toBe("Csus4");
     expect(formatTonalChordSymbol("C", "7sus4")).toBe("C7sus4");
 
-    for (const chordId of TONAL_CHORD_IDS) {
+    for (const chordId of SUPPORTED_CHORD_PATTERN_IDS) {
       expect(Chord.getChord(chordId).empty).toBe(false);
     }
   });
 
   test("rejects entries outside the curated Tonal vocabulary", () => {
-    expect(isSupportedTonalPatternId("scale", "ionian")).toBe(true);
-    expect(isSupportedTonalPatternId("chord", "m13")).toBe(true);
-    expect(isSupportedTonalPatternId("chord", "not-a-chord")).toBe(false);
+    expect(isSupportedPitchPatternId("scale", "ionian")).toBe(true);
+    expect(isSupportedPitchPatternId("chord", "m13")).toBe(true);
+    expect(isSupportedPitchPatternId("chord", "not-a-chord")).toBe(false);
     expect(() => formatTonalChordSymbol("C", "not-a-chord")).toThrow(
       "Tonal does not recognize chord type",
     );

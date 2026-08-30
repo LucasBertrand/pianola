@@ -43,7 +43,7 @@ export interface PianoRollViewportControlsProps {
   readonly onAutoFit: () => void;
 }
 
-/** Composes navigation, grid and tonal controls for the piano-roll viewport. */
+/** Composes navigation, grid and pitch-snap controls for the piano-roll viewport. */
 export function PianoRollViewportControls({
   timelinePositionRef,
   timelineTimeRef,

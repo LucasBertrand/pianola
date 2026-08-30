@@ -1,20 +1,20 @@
 import { Chord } from "@tonaljs/tonal";
 
-export interface TonalPatternOption {
+export interface PitchPatternOption {
   readonly id: string;
   readonly label: string;
 }
 
-export interface TonalPatternGroup {
+export interface PitchPatternGroup {
   readonly label: string;
-  readonly options: readonly TonalPatternOption[];
+  readonly options: readonly PitchPatternOption[];
 }
 
-function createScaleOption(id: string): TonalPatternOption {
+function createScaleOption(id: string): PitchPatternOption {
   return Object.freeze({ id, label: id });
 }
 
-function createChordOption(id: string): TonalPatternOption {
+function createChordOption(id: string): PitchPatternOption {
   const chord = Chord.getChord(id);
 
   if (chord.empty) {
@@ -30,16 +30,16 @@ function createChordOption(id: string): TonalPatternOption {
 function createGroup(
   label: string,
   ids: readonly string[],
-  createOption: (id: string) => TonalPatternOption,
-): TonalPatternGroup {
+  createOption: (id: string) => PitchPatternOption,
+): PitchPatternGroup {
   return Object.freeze({
     label,
     options: Object.freeze(ids.map(createOption)),
   });
 }
 
-/** Supported scale choices, grouped for the tonal-marker selector. */
-export const TONAL_SCALE_GROUPS: readonly TonalPatternGroup[] = Object.freeze([
+/** Supported scale choices, grouped for the pitch-pattern selector. */
+export const SCALE_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze([
   createGroup("Diatonic modes", [
     "ionian",
     "dorian",
@@ -72,7 +72,7 @@ export const TONAL_SCALE_GROUPS: readonly TonalPatternGroup[] = Object.freeze([
 ]);
 
 /** Supported chord choices, including suspended and extended chords. */
-export const TONAL_CHORD_GROUPS: readonly TonalPatternGroup[] = Object.freeze([
+export const CHORD_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze([
   createGroup("Triads", [
     "M",
     "m",
@@ -109,28 +109,28 @@ export const TONAL_CHORD_GROUPS: readonly TonalPatternGroup[] = Object.freeze([
   ], createChordOption),
 ]);
 
-export const TONAL_SCALE_IDS: readonly string[] = Object.freeze(
-  TONAL_SCALE_GROUPS.flatMap((group) =>
+export const SUPPORTED_SCALE_PATTERN_IDS: readonly string[] = Object.freeze(
+  SCALE_PATTERN_GROUPS.flatMap((group) =>
     group.options.map((option) => option.id)
   ),
 );
 
-export const TONAL_CHORD_IDS: readonly string[] = Object.freeze(
-  TONAL_CHORD_GROUPS.flatMap((group) =>
+export const SUPPORTED_CHORD_PATTERN_IDS: readonly string[] = Object.freeze(
+  CHORD_PATTERN_GROUPS.flatMap((group) =>
     group.options.map((option) => option.id)
   ),
 );
 
-const TONAL_SCALE_ID_SET = new Set(TONAL_SCALE_IDS);
-const TONAL_CHORD_ID_SET = new Set(TONAL_CHORD_IDS);
+const SUPPORTED_SCALE_PATTERN_ID_SET = new Set(SUPPORTED_SCALE_PATTERN_IDS);
+const SUPPORTED_CHORD_PATTERN_ID_SET = new Set(SUPPORTED_CHORD_PATTERN_IDS);
 
-export function isSupportedTonalPatternId(
+export function isSupportedPitchPatternId(
   patternType: "scale" | "chord",
   patternId: string,
 ): boolean {
   return patternType === "scale"
-    ? TONAL_SCALE_ID_SET.has(patternId)
-    : TONAL_CHORD_ID_SET.has(patternId);
+    ? SUPPORTED_SCALE_PATTERN_ID_SET.has(patternId)
+    : SUPPORTED_CHORD_PATTERN_ID_SET.has(patternId);
 }
 
 /** Formats a rooted chord with Tonal's own symbol instead of an alias guess. */

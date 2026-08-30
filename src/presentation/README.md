@@ -20,7 +20,7 @@ Lire `home/ApplicationHome.tsx` pour l'accueil et
 `piano-roll/PianoRollWorkspace.tsx` pour l’assemblage de l'éditeur, puis
 `piano-roll/PianoRollWorkspaceLayout.tsx` pour sa structure DOM. Les fichiers,
 préférences et dialogues ont chacun un hook propriétaire. Les contrôles de
-navigation, grille et snap tonal sont sous `piano-roll/viewport/`, tandis que
+navigation, grille et snap par motif de hauteurs sont sous `piano-roll/viewport/`, tandis que
 les signaux et contrôleurs restent possédés par le piano roll et le noyau.
 Pour le Canvas, utiliser
 [`piano-roll/rendering/README.md`](piano-roll/rendering/README.md).

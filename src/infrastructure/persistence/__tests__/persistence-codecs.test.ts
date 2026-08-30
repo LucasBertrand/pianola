@@ -111,11 +111,11 @@ describe("persistence codecs", () => {
       .toEqual([{ startTick: 960, comment: "Verse" }]);
   });
 
-  test("rejects unsupported tonal patterns in a persisted workspace", () => {
+  test("rejects unsupported pitch patterns in a persisted workspace", () => {
     const document = createTestProject();
     const activeClipId = document.workspace.activeClipId;
     const serialized = serializePianolaProject({
-      sourceDocumentId: "invalid-tonal-pattern",
+      sourceDocumentId: "invalid-pitch-pattern",
       exportedAt: "2026-08-22T12:00:00.000Z",
       document,
       workspace: createDefaultPersistedEditorWorkspace(document),
@@ -134,7 +134,7 @@ describe("persistence codecs", () => {
     };
 
     expect(() => parsePianolaProject(JSON.stringify(source)))
-      .toThrow("Unsupported tonal pattern");
+      .toThrow("Unsupported pitch pattern");
   });
 
   test("keeps an embedded personal preset in portable project exports", () => {

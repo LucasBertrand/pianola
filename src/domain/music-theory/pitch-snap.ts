@@ -1,33 +1,33 @@
 import {
   PROJECT_CONSTANTS,
 } from "../project/project-constants";
-import { TONAL_SNAP_CONSTANTS } from "./tonal-snap-constants";
-import { isSupportedTonalPatternId } from "./tonal-pattern-catalog";
+import { PITCH_SNAP_CONSTANTS } from "./pitch-snap-constants";
+import { isSupportedPitchPatternId } from "./pitch-pattern-catalog";
 import { ScaleType, ChordType, Interval, Note } from "@tonaljs/tonal";
 
-export type TonalPatternType = "scale" | "chord";
-export type TonalPatternId = string;
+export type PitchPatternType = "scale" | "chord";
+export type PitchPatternId = string;
 
 export interface PitchSnapSettings {
   readonly enabled: boolean;
   readonly visualGuideEnabled: boolean;
   readonly rootNote: string;
-  readonly patternType: TonalPatternType;
-  readonly patternId: TonalPatternId;
+  readonly patternType: PitchPatternType;
+  readonly patternId: PitchPatternId;
 }
 
 export const DEFAULT_PITCH_SNAP_SETTINGS: PitchSnapSettings =
   Object.freeze({
-    enabled: TONAL_SNAP_CONSTANTS.defaultEnabled,
+    enabled: PITCH_SNAP_CONSTANTS.defaultEnabled,
     visualGuideEnabled:
-      TONAL_SNAP_CONSTANTS.defaultVisualGuideEnabled,
+      PITCH_SNAP_CONSTANTS.defaultVisualGuideEnabled,
     rootNote:
-      TONAL_SNAP_CONSTANTS.defaultRootNote,
+      PITCH_SNAP_CONSTANTS.defaultRootNote,
     patternType: "scale",
-    patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
+    patternId: PITCH_SNAP_CONSTANTS.defaultPatternId,
   });
 
-function getMaskForPattern(patternType: TonalPatternType, patternId: string): number {
+function getMaskForPattern(patternType: PitchPatternType, patternId: string): number {
   let mask = 0;
   let intervals: readonly string[] = [];
 
@@ -51,7 +51,7 @@ function getMaskForPattern(patternType: TonalPatternType, patternId: string): nu
 
 const PATTERN_MASKS = new Map<string, number>();
 
-function getCachedMask(patternType: TonalPatternType, patternId: string): number {
+function getCachedMask(patternType: PitchPatternType, patternId: string): number {
   const key = `${patternType}:${patternId}`;
   let mask = PATTERN_MASKS.get(key);
   if (mask === undefined) {
@@ -61,7 +61,7 @@ function getCachedMask(patternType: TonalPatternType, patternId: string): number
   return mask;
 }
 
-export function snapPitchToTonalPattern(
+export function snapPitchToPattern(
   pitch: number,
   settings: PitchSnapSettings,
   movementDirection: number,
@@ -76,7 +76,7 @@ export function snapPitchToTonalPattern(
     return boundedPitch;
   }
 
-  if (isPitchAllowedByTonalPattern(boundedPitch, settings)) {
+  if (isPitchIncludedInPattern(boundedPitch, settings)) {
     return boundedPitch;
   }
 
@@ -85,10 +85,10 @@ export function snapPitchToTonalPattern(
     const upperPitch = boundedPitch + distance;
     const lowerAllowed =
       lowerPitch >= PROJECT_CONSTANTS.minimumMidiPitch
-      && isPitchAllowedByTonalPattern(lowerPitch, settings);
+      && isPitchIncludedInPattern(lowerPitch, settings);
     const upperAllowed =
       upperPitch <= PROJECT_CONSTANTS.maximumMidiPitch
-      && isPitchAllowedByTonalPattern(upperPitch, settings);
+      && isPitchIncludedInPattern(upperPitch, settings);
 
     if (lowerAllowed && upperAllowed) {
       return movementDirection > 0
@@ -108,39 +108,39 @@ export function snapPitchToTonalPattern(
   return boundedPitch;
 }
 
-export function isTonalPatternId(
-  patternType: TonalPatternType,
+export function isPitchPatternId(
+  patternType: PitchPatternType,
   value: string,
-): value is TonalPatternId {
+): value is PitchPatternId {
   return (
     patternType === "scale"
-    && value === TONAL_SNAP_CONSTANTS.defaultPatternId
-  ) || isSupportedTonalPatternId(patternType, value);
+    && value === PITCH_SNAP_CONSTANTS.defaultPatternId
+  ) || isSupportedPitchPatternId(patternType, value);
 }
 
-export function isTonalRootNote(value: string): boolean {
-  return (TONAL_SNAP_CONSTANTS.rootOptions as readonly string[])
+export function isPitchSnapRootNote(value: string): boolean {
+  return (PITCH_SNAP_CONSTANTS.rootOptions as readonly string[])
     .includes(value);
 }
 
-export function isSupportedTonalSelection(
+export function isSupportedPitchSnapSelection(
   rootNote: string,
-  patternType: TonalPatternType,
+  patternType: PitchPatternType,
   patternId: string,
 ): boolean {
-  if (!isTonalRootNote(rootNote)) {
+  if (!isPitchSnapRootNote(rootNote)) {
     return false;
   }
 
-  if (rootNote === TONAL_SNAP_CONSTANTS.defaultRootNote) {
+  if (rootNote === PITCH_SNAP_CONSTANTS.defaultRootNote) {
     return patternType === "scale"
-      && patternId === TONAL_SNAP_CONSTANTS.defaultPatternId;
+      && patternId === PITCH_SNAP_CONSTANTS.defaultPatternId;
   }
 
-  return isSupportedTonalPatternId(patternType, patternId);
+  return isSupportedPitchPatternId(patternType, patternId);
 }
 
-export function isPitchAllowedByTonalPattern(
+export function isPitchIncludedInPattern(
   pitch: number,
   settings: PitchSnapSettings,
 ): boolean {

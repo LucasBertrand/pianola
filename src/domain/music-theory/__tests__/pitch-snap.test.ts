@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
-  isPitchAllowedByTonalPattern,
-  isSupportedTonalSelection,
-  isTonalPatternId,
+  isPitchIncludedInPattern,
+  isSupportedPitchSnapSelection,
+  isPitchPatternId,
   type PitchSnapSettings,
 } from "../pitch-snap";
 
@@ -18,7 +18,7 @@ function chordSettings(patternId: string): PitchSnapSettings {
 }
 
 describe("extended chord pitch snap", () => {
-  test("shows the tonal guide by default", () => {
+  test("shows the pitch guide by default", () => {
     expect(DEFAULT_PITCH_SNAP_SETTINGS.visualGuideEnabled).toBe(true);
   });
 
@@ -33,23 +33,23 @@ describe("extended chord pitch snap", () => {
     const settings = chordSettings(patternId);
 
     for (const pitch of allowed) {
-      expect(isPitchAllowedByTonalPattern(pitch, settings)).toBe(true);
+      expect(isPitchIncludedInPattern(pitch, settings)).toBe(true);
     }
 
     for (const pitch of rejected) {
-      expect(isPitchAllowedByTonalPattern(pitch, settings)).toBe(false);
+      expect(isPitchIncludedInPattern(pitch, settings)).toBe(false);
     }
   });
 
   test("validates chromatic defaults and curated rooted patterns", () => {
-    expect(isTonalPatternId("scale", "chromatic")).toBe(true);
-    expect(isTonalPatternId("chord", "m13")).toBe(true);
-    expect(isTonalPatternId("chord", "unknown")).toBe(false);
-    expect(isSupportedTonalSelection("none", "scale", "chromatic"))
+    expect(isPitchPatternId("scale", "chromatic")).toBe(true);
+    expect(isPitchPatternId("chord", "m13")).toBe(true);
+    expect(isPitchPatternId("chord", "unknown")).toBe(false);
+    expect(isSupportedPitchSnapSelection("none", "scale", "chromatic"))
       .toBe(true);
-    expect(isSupportedTonalSelection("C", "scale", "chromatic"))
+    expect(isSupportedPitchSnapSelection("C", "scale", "chromatic"))
       .toBe(false);
-    expect(isSupportedTonalSelection("H", "chord", "m13"))
+    expect(isSupportedPitchSnapSelection("H", "chord", "m13"))
       .toBe(false);
   });
 });

@@ -126,7 +126,7 @@ Le domaine est réparti par vocabulaire produit :
 - `src/domain/transport/transport.ts` pour horloge, métrique et boucle ;
 - `src/domain/transport/time-map.ts` comme surface publique des modules de
   modèle, navigation, marqueurs et éditions structurelles de la time map ;
-- `src/domain/music-theory/` pour snap tonal, orthographe et accords ;
+- `src/domain/music-theory/` pour snap par motif de hauteurs, orthographe et accords ;
 - `src/domain/master-bus.ts` pour le bus master ;
 - `src/domain/project/project-document.ts` pour le document et la sélection de
   clip de la session d'éditeur.

@@ -24,7 +24,7 @@ import type {
 } from "../../../editor-core/geometry/rect";
 import {
   getPitchSnapRootPitchClass,
-  isPitchAllowedByTonalPattern,
+  isPitchIncludedInPattern,
   type PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
 import {
@@ -146,7 +146,7 @@ export function paintGrid(snapshot: GridPaintSnapshot): void {
       };
 
       for (let pitch = firstPitch; pitch <= lastPitch; pitch += 1) {
-        if (!isPitchAllowedByTonalPattern(pitch, segmentSettings)) {
+        if (!isPitchIncludedInPattern(pitch, segmentSettings)) {
           continue;
         }
 

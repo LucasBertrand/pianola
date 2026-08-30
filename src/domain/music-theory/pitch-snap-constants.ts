@@ -1,10 +1,10 @@
 import {
-  TONAL_CHORD_IDS,
-  TONAL_SCALE_IDS,
-} from "./tonal-pattern-catalog";
+  SUPPORTED_CHORD_PATTERN_IDS,
+  SUPPORTED_SCALE_PATTERN_IDS,
+} from "./pitch-pattern-catalog";
 
-/** Tonal pitch-snap roots, supported vocabulary and defaults. */
-export const TONAL_SNAP_CONSTANTS = Object.freeze({
+/** Pitch-snap roots, supported pattern vocabulary and defaults. */
+export const PITCH_SNAP_CONSTANTS = Object.freeze({
   defaultEnabled: false,
   defaultVisualGuideEnabled: true,
   defaultRootNote: "none",
@@ -14,6 +14,6 @@ export const TONAL_SNAP_CONSTANTS = Object.freeze({
   rootOptions: Object.freeze([
     "none", "Cb", "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
   ] as const),
-  supportedScales: TONAL_SCALE_IDS,
-  supportedChords: TONAL_CHORD_IDS,
+  supportedScales: SUPPORTED_SCALE_PATTERN_IDS,
+  supportedChords: SUPPORTED_CHORD_PATTERN_IDS,
 } as const);

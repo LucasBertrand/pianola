@@ -23,7 +23,7 @@ import {
 import {
   type TimeSignature,
 } from "../transport/time-map";
-import type { TonalPatternId, TonalPatternType } from "../music-theory/pitch-snap";
+import type { PitchPatternId, PitchPatternType } from "../music-theory/pitch-snap";
 import {
   type Note,
 } from "../notes/note";
@@ -362,8 +362,8 @@ export interface AddScaleMarkerCommand {
   readonly marker: {
     readonly startTick: Tick;
     readonly rootNote: string;
-    readonly patternType: TonalPatternType;
-    readonly patternId: TonalPatternId;
+    readonly patternType: PitchPatternType;
+    readonly patternId: PitchPatternId;
   };
 }
 
@@ -380,8 +380,8 @@ export interface UpdateScaleMarkerCommand {
   readonly startTick: Tick;
   readonly changes: Partial<{
     readonly rootNote: string;
-    readonly patternType: TonalPatternType;
-    readonly patternId: TonalPatternId;
+    readonly patternType: PitchPatternType;
+    readonly patternId: PitchPatternId;
   }>;
 }
 

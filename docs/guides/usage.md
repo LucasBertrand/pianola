@@ -30,7 +30,7 @@ ancres. Le déplacement et le redimensionnement obéissent au système de
 magnétisme actif. Lorsqu'une sélection franchit un marqueur de gamme, chaque
 note est ajustée avec la gamme active à sa nouvelle position.
 
-Le sélecteur tonal regroupe les gammes par famille et les accords par extension.
+Le sélecteur de motif de hauteurs regroupe les gammes par famille et les accords par extension.
 Les accords proposés comprennent les triades, les accords suspendus `sus2`,
 `sus4` et `7sus4`, ainsi que les septièmes, neuvièmes, onzièmes et treizièmes
 usuelles. Leurs symboles sont ceux produits par Tonal, aussi bien
@@ -123,7 +123,7 @@ désactivation peut être annulée ou rétablie avec Undo/Redo ; lorsqu’il est
 playhead. Lorsqu’il est désactivé, ni la sélection du clip ni le viewport ne
 sont modifiés par la lecture : le playhead peut rester dans un autre clip ou
 sortir de la zone visible.
-Zooms, scrolls et snap tonal restent des états d’espace de travail, sans
+Zooms, scrolls et snap par motif de hauteurs restent des états d’espace de travail, sans
 Undo/Redo.
 La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme, section). Un marqueur de section attache un commentaire à un tick du clip ; il se sélectionne, se déplace et se copie comme les marqueurs de tempo et de gamme.
 

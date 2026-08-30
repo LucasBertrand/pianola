@@ -28,8 +28,8 @@ export function PitchSnapControls({
       <button
         className={`pitch-snap-toggle${settings.visualGuideEnabled ? " is-active" : ""}`}
         type="button"
-        title={settings.visualGuideEnabled ? "Hide tonal guide" : "Show tonal guide"}
-        aria-label={settings.visualGuideEnabled ? "Hide tonal guide" : "Show tonal guide"}
+        title={settings.visualGuideEnabled ? "Hide pitch-pattern guide" : "Show pitch-pattern guide"}
+        aria-label={settings.visualGuideEnabled ? "Hide pitch-pattern guide" : "Show pitch-pattern guide"}
         aria-pressed={settings.visualGuideEnabled}
         onClick={() => {
           onSettingsChange({
@@ -72,8 +72,8 @@ export function PitchSnapControls({
       <button
         className={`pitch-snap-toggle${settings.enabled ? " is-active" : ""}`}
         type="button"
-        title={settings.enabled ? "Disable tonal pitch snapping" : "Enable tonal pitch snapping"}
-        aria-label={settings.enabled ? "Disable tonal pitch snapping" : "Enable tonal pitch snapping"}
+        title={settings.enabled ? "Disable pitch-pattern snapping" : "Enable pitch-pattern snapping"}
+        aria-label={settings.enabled ? "Disable pitch-pattern snapping" : "Enable pitch-pattern snapping"}
         aria-pressed={settings.enabled}
         onClick={() => {
           onSettingsChange({ enabled: !settings.enabled });

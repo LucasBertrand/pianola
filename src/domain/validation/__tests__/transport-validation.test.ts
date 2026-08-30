@@ -217,7 +217,7 @@ describe("validateClipTimeline", () => {
       .toBe(true);
   });
 
-  test("accepts extended chords and rejects uncurated Tonal patterns", () => {
+  test("accepts extended chords and rejects uncurated pitch patterns", () => {
     const createChordTimeline = (patternId: string): ClipTimeline =>
       createTimeline({
         meterMarkers: [{

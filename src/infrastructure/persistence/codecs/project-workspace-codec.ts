@@ -16,11 +16,11 @@ import {
   parseGridSubdivision,
 } from "../../../editor-core/model/grid-settings";
 import type {
-  TonalPatternType,
+  PitchPatternType,
 } from "../../../domain/music-theory/pitch-snap";
 import {
-  isTonalPatternId,
-  isSupportedTonalSelection,
+  isPitchPatternId,
+  isSupportedPitchSnapSelection,
 } from "../../../domain/music-theory/pitch-snap";
 import {
   type PersistedClipEditorState,
@@ -149,11 +149,11 @@ function parsePitchSnapSettings(source: unknown, path: string) {
   );
 
   if (patternType !== "scale" && patternType !== "chord") {
-    return invalid(`${path}.patternType`, "Unsupported tonal pattern type.");
+    return invalid(`${path}.patternType`, "Unsupported pitch pattern type.");
   }
 
-  if (!isTonalPatternId(patternType, patternId)) {
-    return invalid(`${path}.patternId`, "Unsupported tonal pattern.");
+  if (!isPitchPatternId(patternType, patternId)) {
+    return invalid(`${path}.patternId`, "Unsupported pitch pattern.");
   }
 
   const rootNote = readPersistenceString(
@@ -162,8 +162,8 @@ function parsePitchSnapSettings(source: unknown, path: string) {
     10,
   );
 
-  if (!isSupportedTonalSelection(rootNote, patternType, patternId)) {
-    return invalid(path, "Unsupported tonal selection.");
+  if (!isSupportedPitchSnapSelection(rootNote, patternType, patternId)) {
+    return invalid(path, "Unsupported pitch-snap selection.");
   }
 
   return {
@@ -176,7 +176,7 @@ function parsePitchSnapSettings(source: unknown, path: string) {
       `${path}.visualGuideEnabled`,
     ),
     rootNote,
-    patternType: patternType as TonalPatternType,
+    patternType: patternType as PitchPatternType,
     patternId,
   };
 }

@@ -2,7 +2,7 @@ import { MIDI_CONSTANTS } from "./midi-constants";
 import {
   PROJECT_CONSTANTS,
 } from "../../../domain/project/project-constants";
-import { TONAL_SNAP_CONSTANTS } from "../../../domain/music-theory/tonal-snap-constants";
+import { PITCH_SNAP_CONSTANTS } from "../../../domain/music-theory/pitch-snap-constants";
 import {
   type Clip,
   type InstrumentTrack,
@@ -141,9 +141,9 @@ export function createProjectFromMidiImport(
     tempoMarkers: analysis.tempoMarkers,
     scaleMarkers: [{
       startTick: 0,
-      rootNote: TONAL_SNAP_CONSTANTS.defaultRootNote,
+      rootNote: PITCH_SNAP_CONSTANTS.defaultRootNote,
       patternType: "scale" as const,
-      patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
+      patternId: PITCH_SNAP_CONSTANTS.defaultPatternId,
     }],
     sectionMarkers: [],
   };

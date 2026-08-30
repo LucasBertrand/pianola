@@ -21,10 +21,10 @@ import {
   type TimeMap,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
-import type { TonalPatternId, TonalPatternType } from "../../../domain/music-theory/pitch-snap";
+import type { PitchPatternId, PitchPatternType } from "../../../domain/music-theory/pitch-snap";
 import {
   formatTonalChordSymbol,
-} from "../../../domain/music-theory/tonal-pattern-catalog";
+} from "../../../domain/music-theory/pitch-pattern-catalog";
 import type {
   TimeMapMarkerCollision,
 } from "./marker-collision-resolution";
@@ -39,7 +39,7 @@ export interface TimeMapMarkerFlag {
   readonly bpm: number | null;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string | null;
-  readonly patternType: TonalPatternType | null;
+  readonly patternType: PitchPatternType | null;
   readonly patternId: string | null;
   readonly sectionComment: string | null;
   readonly isInitial: boolean;
@@ -68,8 +68,8 @@ export interface TimeMapMarkerDraft {
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string;
-  readonly patternType: TonalPatternType;
-  readonly patternId: TonalPatternId;
+  readonly patternType: PitchPatternType;
+  readonly patternId: PitchPatternId;
   readonly sectionComment: string;
   readonly canDelete: boolean;
 }

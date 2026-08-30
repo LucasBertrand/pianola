@@ -3,16 +3,16 @@ import React from "react";
 import {
   PROJECT_CONSTANTS,
 } from "../../domain/project/project-constants";
-import { TONAL_SNAP_CONSTANTS } from "../../domain/music-theory/tonal-snap-constants";
+import { PITCH_SNAP_CONSTANTS } from "../../domain/music-theory/pitch-snap-constants";
 import {
-  TONAL_CHORD_GROUPS,
-  TONAL_SCALE_GROUPS,
-  type TonalPatternGroup,
-} from "../../domain/music-theory/tonal-pattern-catalog";
+  CHORD_PATTERN_GROUPS,
+  SCALE_PATTERN_GROUPS,
+  type PitchPatternGroup,
+} from "../../domain/music-theory/pitch-pattern-catalog";
 import type {
   TimeSignature,
 } from "../../domain/transport/time-map";
-import type { TonalPatternType } from "../../domain/music-theory/pitch-snap";
+import type { PitchPatternType } from "../../domain/music-theory/pitch-snap";
 
 const DENOMINATOR_OPTIONS = [1, 2, 4, 8, 16, 32] as const;
 
@@ -26,7 +26,7 @@ export interface TempoMeterMarkerDialogProps {
   readonly bpm: number;
   readonly timeSignature: TimeSignature | null;
   readonly rootNote: string;
-  readonly patternType: TonalPatternType;
+  readonly patternType: PitchPatternType;
   readonly patternId: string;
   readonly sectionComment: string;
   readonly onTempoIncludedChange: (included: boolean) => void;
@@ -36,7 +36,7 @@ export interface TempoMeterMarkerDialogProps {
   readonly onBpmChange: (bpm: number) => void;
   readonly onTimeSignatureChange: (timeSignature: TimeSignature) => void;
   readonly onRootNoteChange: (rootNote: string) => void;
-  readonly onPatternTypeChange: (patternType: TonalPatternType) => void;
+  readonly onPatternTypeChange: (patternType: PitchPatternType) => void;
   readonly onPatternIdChange: (patternId: string) => void;
   readonly onSectionCommentChange: (comment: string) => void;
   readonly onConfirm: () => void;
@@ -247,12 +247,12 @@ export function TempoMeterMarkerDialog({
                       } else if (oldRoot === "none") {
                         onPatternTypeChange("scale");
                         onPatternIdChange(
-                          TONAL_SNAP_CONSTANTS.defaultScalePatternId,
+                          PITCH_SNAP_CONSTANTS.defaultScalePatternId,
                         );
                       }
                     }}
                   >
-                    {TONAL_SNAP_CONSTANTS.rootOptions.map((option) => (
+                    {PITCH_SNAP_CONSTANTS.rootOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
@@ -268,15 +268,15 @@ export function TempoMeterMarkerDialog({
                         value={patternType}
                         aria-label="Pattern type"
                         onChange={(event) => {
-                          const newType = event.currentTarget.value as TonalPatternType;
+                          const newType = event.currentTarget.value as PitchPatternType;
                           onPatternTypeChange(newType);
                           if (newType === "scale") {
                             onPatternIdChange(
-                              TONAL_SNAP_CONSTANTS.defaultScalePatternId,
+                              PITCH_SNAP_CONSTANTS.defaultScalePatternId,
                             );
                           } else {
                             onPatternIdChange(
-                              TONAL_SNAP_CONSTANTS.defaultChordPatternId,
+                              PITCH_SNAP_CONSTANTS.defaultChordPatternId,
                             );
                           }
                         }}
@@ -290,15 +290,15 @@ export function TempoMeterMarkerDialog({
                       <span>{patternType === "scale" ? "Scale" : "Chord"}</span>
                       <select
                         value={patternId}
-                        aria-label="Tonal pattern"
+                        aria-label="Pitch pattern"
                         onChange={(event) => {
                           onPatternIdChange(event.currentTarget.value);
                         }}
                       >
-                        <TonalPatternOptions
+                        <PitchPatternOptions
                           groups={patternType === "scale"
-                            ? TONAL_SCALE_GROUPS
-                            : TONAL_CHORD_GROUPS}
+                            ? SCALE_PATTERN_GROUPS
+                            : CHORD_PATTERN_GROUPS}
                         />
                       </select>
                     </label>
@@ -368,10 +368,10 @@ export function TempoMeterMarkerDialog({
   );
 }
 
-function TonalPatternOptions({
+function PitchPatternOptions({
   groups,
 }: {
-  readonly groups: readonly TonalPatternGroup[];
+  readonly groups: readonly PitchPatternGroup[];
 }): React.JSX.Element {
   return (
     <>

@@ -132,9 +132,8 @@ import {
   getPitchScaleDegreeColorIndex,
   getScaleDegreeColorIndex,
   getScaleDegreeTriadQuality,
-  getTonalPatternDefinition,
-  isPitchAllowedByTonalPattern,
-  snapPitchToTonalPattern,
+  isPitchIncludedInPattern,
+  snapPitchToPattern,
 } from "../../src/domain/music-theory/pitch-snap";
 
 import {
@@ -1585,23 +1584,23 @@ function getActiveTestMeasureCount(state) {
     };
 
     assert.equal(
-      snapPitchToTonalPattern(61, cIonian, -1),
+      snapPitchToPattern(61, cIonian, -1),
       60,
     );
     assert.equal(
-      snapPitchToTonalPattern(61, cIonian, 1),
+      snapPitchToPattern(61, cIonian, 1),
       62,
     );
     assert.equal(
-      snapPitchToTonalPattern(62, cIonian, -1),
+      snapPitchToPattern(62, cIonian, -1),
       62,
     );
     assert.equal(
-      snapPitchToTonalPattern(63, cIonian, 1),
+      snapPitchToPattern(63, cIonian, 1),
       64,
     );
     assert.equal(
-      snapPitchToTonalPattern(
+      snapPitchToPattern(
         61,
         DEFAULT_PITCH_SNAP_SETTINGS,
         1,

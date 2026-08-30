@@ -46,7 +46,7 @@ describe("note color style", () => {
     );
   });
 
-  test("keeps absolute Chromatone colors when a tonal root is selected", () => {
+  test("keeps absolute Chromatone colors when a pitch-pattern root is selected", () => {
     expect(getPitchNoteColor(62, {
       ...DEFAULT_PITCH_SNAP_SETTINGS,
       rootNote: "D",

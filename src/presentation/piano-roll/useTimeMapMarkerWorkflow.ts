@@ -21,7 +21,7 @@ import {
   planMarkerMove,
   type TimeMapMarkerDraft,
 } from "../../application/piano-roll/timeline/time-map-marker-plans";
-import type { TonalPatternId, TonalPatternType } from "../../domain/music-theory/pitch-snap";
+import type { PitchPatternId, PitchPatternType } from "../../domain/music-theory/pitch-snap";
 
 export interface TimeMapMarkerWorkflow {
   readonly draft: TimeMapMarkerDraft | null;
@@ -36,8 +36,8 @@ export interface TimeMapMarkerWorkflow {
   readonly setDraftBpm: (bpm: number) => void;
   readonly setDraftTimeSignature: (timeSignature: TimeSignature) => void;
   readonly setDraftRootNote: (rootNote: string) => void;
-  readonly setDraftPatternId: (patternId: TonalPatternId) => void;
-  readonly setDraftPatternType: (patternType: TonalPatternType) => void;
+  readonly setDraftPatternId: (patternId: PitchPatternId) => void;
+  readonly setDraftPatternType: (patternType: PitchPatternType) => void;
   readonly setDraftSectionComment: (comment: string) => void;
   readonly confirmDraft: () => void;
   readonly deleteDraft: () => void;
@@ -261,10 +261,10 @@ export function useTimeMapMarkerWorkflow({
   const setDraftRootNote = useCallback((rootNote: string): void => {
     setDraft((current) => current === null ? null : { ...current, rootNote });
   }, []);
-  const setDraftPatternId = useCallback((patternId: TonalPatternId): void => {
+  const setDraftPatternId = useCallback((patternId: PitchPatternId): void => {
     setDraft((current) => current === null ? null : { ...current, patternId });
   }, []);
-  const setDraftPatternType = useCallback((patternType: TonalPatternType): void => {
+  const setDraftPatternType = useCallback((patternType: PitchPatternType): void => {
     setDraft((current) => current === null ? null : { ...current, patternType });
   }, []);
   const setDraftSectionComment = useCallback((comment: string): void => {

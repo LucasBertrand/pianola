@@ -1,9 +1,9 @@
 import { PROJECT_CONSTANTS } from "../project/project-constants";
-import { TONAL_SNAP_CONSTANTS } from "../music-theory/tonal-snap-constants";
+import { PITCH_SNAP_CONSTANTS } from "../music-theory/pitch-snap-constants";
 import type { Tick } from "../identifiers";
 import type {
-  TonalPatternId,
-  TonalPatternType,
+  PitchPatternId,
+  PitchPatternType,
 } from "../music-theory/pitch-snap";
 
 /**
@@ -34,8 +34,8 @@ export interface TempoMarker {
 export interface ScaleMarker {
   readonly startTick: Tick;
   readonly rootNote: string;
-  readonly patternType: TonalPatternType;
-  readonly patternId: TonalPatternId;
+  readonly patternType: PitchPatternType;
+  readonly patternId: PitchPatternId;
 }
 
 /** Free-form section comment positioned anywhere inside a clip timeline. */
@@ -92,9 +92,9 @@ export function createDefaultTimeMap(
     }],
     scaleMarkers: [{
       startTick: 0,
-      rootNote: TONAL_SNAP_CONSTANTS.defaultRootNote,
+      rootNote: PITCH_SNAP_CONSTANTS.defaultRootNote,
       patternType: "scale",
-      patternId: TONAL_SNAP_CONSTANTS.defaultPatternId,
+      patternId: PITCH_SNAP_CONSTANTS.defaultPatternId,
     }],
     sectionMarkers: [],
   };

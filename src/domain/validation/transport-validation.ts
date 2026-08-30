@@ -16,7 +16,7 @@ import {
   PROJECT_CONSTANTS,
 } from "../project/project-constants";
 import {
-  isSupportedTonalSelection,
+  isSupportedPitchSnapSelection,
 } from "../music-theory/pitch-snap";
 import { isValidTick } from "./note-validation";
 import {
@@ -331,14 +331,14 @@ function validateScaleMarkers(
       issues.push({
         code: "INVALID_SCALE",
         path: `${path}[${String(index)}]`,
-        message: "Scale marker tonal pattern is not supported.",
+        message: "Scale marker pitch pattern is not supported.",
       });
     }
   }
 }
 
 function isValidScaleMarker(marker: ScaleMarker): boolean {
-  return isSupportedTonalSelection(
+  return isSupportedPitchSnapSelection(
     marker.rootNote,
     marker.patternType,
     marker.patternId,

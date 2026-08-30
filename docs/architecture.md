@@ -75,7 +75,7 @@ Le domaine est réparti par propriétaire :
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
 | `src/domain/transport/transport.ts` | horloge (PPQN) et boucle locale au clip |
 | `src/domain/transport/time-map.ts` | surface publique de la time map ; modèle, navigation, normalisation, marqueurs et éditions structurelles sont dans des modules voisins |
-| `src/domain/music-theory/` | snap tonal, orthographe des hauteurs et détection d'accords |
+| `src/domain/music-theory/` | snap par motif de hauteurs, orthographe des hauteurs et détection d'accords |
 | `src/domain/commands/clip-*-commands.ts` | commandes de valeurs, groupes, concaténation/découpe et hiérarchie de clips |
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
 | `src/domain/project/project-document.ts` | document, enchaînement global, workspace et accès clip |
@@ -108,7 +108,7 @@ de clips et du sous-arbre, ce qui conserve une seule étape Undo/Redo. Le bypass
 est porté par le nœud de groupe et ne réécrit jamais le bypass des feuilles.
 La découpe suit le chemin inverse de la concaténation : `splitClip` construit
 les sous-clips par mesure ou aux marqueurs de section sélectionnés, tranche les
-notes chevauchantes et réinjecte le contexte métrique, tempo et tonal au tick 0.
+notes chevauchantes et réinjecte le contexte métrique, le tempo et le motif de hauteurs au tick 0.
 `SplitClipIntoGroupCommand` remplace ensuite atomiquement la feuille source par
 un groupe à la même position dans la hiérarchie.
 

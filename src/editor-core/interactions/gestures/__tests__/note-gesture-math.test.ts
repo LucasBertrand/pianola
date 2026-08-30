@@ -74,7 +74,7 @@ describe("selection pitch snapping", () => {
     expect(result.snapSettings.rootNote).toBe("D");
   });
 
-  test("does not alter a horizontal move inside the same tonal segment", () => {
+  test("does not alter a horizontal move inside the same pitch-pattern segment", () => {
     expect(resolveRepositionedPitch(
       61,
       0,
@@ -102,7 +102,7 @@ describe("selection pitch snapping", () => {
     ]);
   });
 
-  test("ignores scale-marker changes when tonal snapping is disabled", () => {
+  test("ignores scale-marker changes when pitch snapping is disabled", () => {
     const getDisabledSettings = (tick: number) => resolvePitchSnapSettings(
       TIME_MAP,
       DEFAULT_PITCH_SNAP_SETTINGS,
