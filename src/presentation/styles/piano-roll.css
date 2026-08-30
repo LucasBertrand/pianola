@@ -473,17 +473,13 @@
   --note-color: var(--color-accent-primary);
   position: absolute;
   overflow: hidden;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--note-color) 68%,
-    var(--color-white-strong)
-  );
+  border: 1px solid color-mix(in srgb,
+      var(--note-color) 68%,
+      var(--color-white-strong));
   border-radius: 3px;
-  outline: 1px solid color-mix(
-    in srgb,
-    var(--note-color) 44%,
-    transparent
-  );
+  outline: 1px solid color-mix(in srgb,
+      var(--note-color) 44%,
+      transparent);
   outline-offset: 1px;
   opacity: 0.82;
   color: var(--color-note-outline);
@@ -501,7 +497,6 @@
   bottom: 0;
   display: flex;
   overflow: hidden;
-  padding: 0 2px;
   white-space: nowrap;
   box-sizing: border-box;
   align-items: center;
@@ -517,23 +512,17 @@
 .interaction-note-selection {
   --note-color: var(--color-accent-primary);
   position: absolute;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--note-color) 68%,
-    var(--color-white-strong)
-  );
+  border: 1px solid color-mix(in srgb,
+      var(--note-color) 68%,
+      var(--color-white-strong));
   border-radius: 3px;
-  outline: 1px solid color-mix(
-    in srgb,
-    var(--note-color) 58%,
-    transparent
-  );
+  outline: 1px solid color-mix(in srgb,
+      var(--note-color) 58%,
+      transparent);
   outline-offset: 1px;
-  background: color-mix(
-    in srgb,
-    var(--note-color) 18%,
-    transparent
-  );
+  background: color-mix(in srgb,
+      var(--note-color) 18%,
+      transparent);
   box-sizing: border-box;
 }
 
@@ -542,17 +531,12 @@
   position: absolute;
   z-index: 1;
   top: 50%;
-  width: auto;
-  height: 68%;
-  min-height: 8px;
-  max-height: 13px;
-  aspect-ratio: 1;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--note-color) 58%,
-    var(--color-white-strong)
-  );
-  border-radius: 3px;
+  width: var(--note-resize-anchor-width);
+  height: var(--note-resize-anchor-height);
+  border: 1px solid color-mix(in srgb,
+      var(--note-color) 58%,
+      var(--color-white-strong));
+  border-radius: 1px;
   background: var(--note-color);
   box-sizing: border-box;
   content: "";
@@ -560,11 +544,11 @@
 }
 
 .interaction-note-selection::before {
-  left: -7px;
+  right: 100%;
 }
 
 .interaction-note-selection::after {
-  right: -7px;
+  left: 100%;
 }
 
 .interaction-note-selection.is-non-editable::before,
@@ -575,19 +559,15 @@
 .interaction-note-ghost.is-resizing-start,
 .interaction-note-ghost.is-resizing-end {
   opacity: 0.9;
-  outline-color: color-mix(
-    in srgb,
-    var(--note-color) 72%,
-    var(--color-white-nearly-opaque)
-  );
+  outline-color: color-mix(in srgb,
+      var(--note-color) 72%,
+      var(--color-white-nearly-opaque));
 }
 
 .interaction-note-ghost.is-drawing {
   border-style: dashed;
   opacity: 0.9;
-  outline-color: color-mix(
-    in srgb,
-    var(--note-color) 72%,
-    var(--color-success-strong)
-  );
+  outline-color: color-mix(in srgb,
+      var(--note-color) 72%,
+      var(--color-success-strong));
 }

@@ -32,6 +32,11 @@ import {
   getMidiNoteLabelSegments,
   type TonalBoundary,
 } from "../rendering/pitch-label";
+import { RENDERING_CONSTANTS } from "../rendering/rendering-constants";
+import {
+  getNoteResizeAnchorSize,
+  getNoteResizeAnchorWidth,
+} from "./note-resize-anchor-geometry";
 
 export interface LayerGeometry {
   readonly left: Float64Array;
@@ -207,8 +212,18 @@ export function populateSelectionLayer(
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
     element.style.width = `${noteWidth}px`;
-    element.style.height = `${Math.max(1, nextY - y - 1)}px`;
+    const noteHeight = Math.max(1, nextY - y - 1);
+
+    element.style.height = `${noteHeight}px`;
     element.style.setProperty("--note-color", getNoteColor(note));
+    element.style.setProperty(
+      "--note-resize-anchor-height",
+      `${getNoteResizeAnchorSize(noteHeight)}px`,
+    );
+    element.style.setProperty(
+      "--note-resize-anchor-width",
+      `${getNoteResizeAnchorWidth()}px`,
+    );
     const geometryIndex = elements.length;
 
     elements.push(element);
@@ -484,6 +499,8 @@ function renderGhostNoteLabels(
     if (labelElement === null) {
       labelElement = element.ownerDocument.createElement("span");
       labelElement.className = "interaction-note-label";
+      labelElement.style.paddingInline =
+        `${RENDERING_CONSTANTS.noteLabelHorizontalPaddingCssPixels}px`;
       element.appendChild(labelElement);
     }
 

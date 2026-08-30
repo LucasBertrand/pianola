@@ -19,7 +19,7 @@ export const EDITOR_CONSTANTS = Object.freeze({
   parameterSliderPositionStep: 0.001,
   zoomStep: 0.05,
   defaultDrawVelocity: 100,
-  defaultNoteColorMode: "instrument",
+  defaultNoteColorMode: "pitch",
   defaultGridBaseResolutionTicks: PROJECT_CONSTANTS.ppqn / 4,
   defaultGridSubdivision: "straight",
   transportMeterOptions: Object.freeze([

@@ -12,6 +12,11 @@ import type {
 import {
   isPointInsideNoteResizeAnchor,
 } from "../note-resize-anchor-hit-test";
+import {
+  getNoteResizeAnchorHitRect,
+  getNoteResizeAnchorSize,
+  getNoteResizeAnchorWidth,
+} from "../note-resize-anchor-geometry";
 
 const CONVERTER = new CoordinateConverter({
   zoomX: 1,
@@ -56,7 +61,7 @@ describe("note resize anchor hit test", () => {
     )).toBe(false);
   });
 
-  test("accepts only the two visible external anchors", () => {
+  test("accepts the two external anchors", () => {
     expect(isPointInsideNoteResizeAnchor(
       SMALL_NOTE,
       "start",
@@ -80,7 +85,7 @@ describe("note resize anchor hit test", () => {
     )).toBe(false);
   });
 
-  test("extends each square anchor toward the note interior", () => {
+  test("extends each anchor target toward the note interior", () => {
     expect(isPointInsideNoteResizeAnchor(
       SMALL_NOTE,
       "start",
@@ -95,5 +100,24 @@ describe("note resize anchor hit test", () => {
       872.5,
       CONVERTER,
     )).toBe(true);
+  });
+
+  test("keeps the visible anchor outside at minimum and maximum zoom sizes", () => {
+    expect(getNoteResizeAnchorSize(5)).toBe(8);
+    expect(getNoteResizeAnchorSize(100)).toBe(13);
+    expect(getNoteResizeAnchorWidth()).toBe(5);
+
+    expect(getNoteResizeAnchorHitRect("start", 20, 80, 10, 5)).toEqual({
+      left: 15,
+      right: 26,
+      top: 8.5,
+      bottom: 16.5,
+    });
+    expect(getNoteResizeAnchorHitRect("end", 20, 80, 10, 100)).toEqual({
+      left: 74,
+      right: 85,
+      top: 53.5,
+      bottom: 66.5,
+    });
   });
 });

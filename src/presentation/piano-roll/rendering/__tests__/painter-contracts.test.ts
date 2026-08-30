@@ -21,6 +21,7 @@ import {
 import { paintGrid } from "../grid-painter";
 import { paintNotes } from "../note-painter";
 import { paintRuler } from "../ruler-painter";
+import { RENDERING_CONSTANTS } from "../rendering-constants";
 
 interface PaintRecorder {
   readonly fillRects: Array<readonly [number, number, number, number]>;
@@ -206,7 +207,9 @@ describe("P3 Canvas painter contracts", () => {
     });
 
     expect(recorder.labels).toEqual(["C4"]);
-    expect(recorder.labelPositions[0]?.[0]).toBe(2);
+    expect(recorder.labelPositions[0]?.[0]).toBe(
+      RENDERING_CONSTANTS.noteLabelHorizontalPaddingCssPixels,
+    );
   });
 
   test("paints a new note spelling across an enharmonic scale boundary", () => {
@@ -250,7 +253,13 @@ describe("P3 Canvas painter contracts", () => {
     });
 
     expect(recorder.labels).toEqual(["C#4", "Db4"]);
-    expect(recorder.labelPositions.map(([x]) => x)).toEqual([2, 122]);
+    const padding =
+      RENDERING_CONSTANTS.noteLabelHorizontalPaddingCssPixels;
+
+    expect(recorder.labelPositions.map(([x]) => x)).toEqual([
+      padding,
+      120 + padding,
+    ]);
   });
 
   test("paints ruler labels from clock and timeline inputs", () => {

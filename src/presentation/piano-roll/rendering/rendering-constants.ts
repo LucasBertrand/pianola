@@ -5,7 +5,7 @@ import {
 /** Rendering budgets and colors sourced from the application theme. */
 export const RENDERING_CONSTANTS = Object.freeze({
   noteLabelMinimumHeightCssPixels: 11,
-  noteLabelHorizontalPaddingCssPixels: 2,
+  noteLabelHorizontalPaddingCssPixels: 4,
   noteLabelFontSizeCssPixels: 9,
   noteLabelColor: APPLICATION_COLORS.notes.label,
   activePitchLaneColor:

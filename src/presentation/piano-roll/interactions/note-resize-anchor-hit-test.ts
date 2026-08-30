@@ -7,13 +7,9 @@ import type {
 import type {
   ResizeEdge,
 } from "../../../editor-core/interactions/gestures/gesture-draft";
+import { getNoteResizeAnchorHitRect } from "./note-resize-anchor-geometry";
 
-const ANCHOR_OUTER_OFFSET_CSS_PIXELS = 7;
-const ANCHOR_HEIGHT_RATIO = 0.68;
-const MINIMUM_ANCHOR_HEIGHT_CSS_PIXELS = 8;
-const MAXIMUM_ANCHOR_HEIGHT_CSS_PIXELS = 13;
-
-/** Matches the visible CSS anchor exactly, including its external offset. */
+/** Includes the external visual anchor and its small interior pointer target. */
 export function isPointInsideNoteResizeAnchor(
   note: Note,
   edge: ResizeEdge,
@@ -28,24 +24,16 @@ export function isPointInsideNoteResizeAnchor(
   const noteTop = converter.pitchToCssPixelY(note.pitch);
   const noteBottom = converter.pitchToCssPixelY(note.pitch - 1) - 1;
   const noteHeight = Math.max(1, noteBottom - noteTop);
-  const anchorHeight = Math.min(
-    MAXIMUM_ANCHOR_HEIGHT_CSS_PIXELS,
-    Math.max(
-      MINIMUM_ANCHOR_HEIGHT_CSS_PIXELS,
-      noteHeight * ANCHOR_HEIGHT_RATIO,
-    ),
+  const anchor = getNoteResizeAnchorHitRect(
+    edge,
+    noteLeft,
+    noteRight,
+    noteTop,
+    noteHeight,
   );
-  const anchorTop = noteTop + (noteHeight - anchorHeight) / 2;
-  const anchorBottom = anchorTop + anchorHeight;
-  const anchorWidth = anchorHeight;
-  const anchorLeft = edge === "start"
-    ? noteLeft - ANCHOR_OUTER_OFFSET_CSS_PIXELS
-    : noteRight + ANCHOR_OUTER_OFFSET_CSS_PIXELS
-      - anchorWidth;
-  const anchorRight = anchorLeft + anchorWidth;
 
-  return localX >= anchorLeft
-    && localX <= anchorRight
-    && localY >= anchorTop
-    && localY <= anchorBottom;
+  return localX >= anchor.left
+    && localX <= anchor.right
+    && localY >= anchor.top
+    && localY <= anchor.bottom;
 }

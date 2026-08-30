@@ -29,6 +29,7 @@ import type {
 import {
   getMidiNoteLabel,
 } from "../rendering/pitch-label";
+import { RENDERING_CONSTANTS } from "../rendering/rendering-constants";
 import type {
   ReadonlyRenderSignal,
 } from "../../../editor-core/model/render-signal";
@@ -299,6 +300,8 @@ export class DomInteractionVisualController
 
     labelElement.className = "interaction-note-label";
     labelElement.style.insetInline = "0";
+    labelElement.style.paddingInline =
+      `${RENDERING_CONSTANTS.noteLabelHorizontalPaddingCssPixels}px`;
     labelElement.textContent = getMidiNoteLabel(
       pitch,
       getSnapSettingsAtTick(startTick),
