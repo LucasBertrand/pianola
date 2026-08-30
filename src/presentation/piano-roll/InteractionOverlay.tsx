@@ -233,9 +233,9 @@ export function InteractionOverlay(
           ? event.nativeEvent.pointerType
           : "mouse";
 
-        // Pen alternative buttons are handled at pointerdown so they keep
-        // true toggle semantics instead of also producing a second open.
-        if (pointerType === "pen") {
+        // Touch long presses draw notes, while pen alternative buttons are
+        // handled at pointerdown. Neither should also open this menu.
+        if (pointerType !== "mouse") {
           return;
         }
 
