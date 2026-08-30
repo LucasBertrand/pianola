@@ -73,39 +73,41 @@ export const SCALE_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze(
 
 /** Supported chord choices, including suspended and extended chords. */
 export const CHORD_PATTERN_GROUPS: readonly PitchPatternGroup[] = Object.freeze([
-  createGroup("Triads", [
+  createGroup("Major", [
     "M",
-    "m",
-    "dim",
-    "aug",
+    "6",
+    "maj7",
+    "maj9",
+    "maj13",
   ], createChordOption),
-  createGroup("Suspended chords", [
+  createGroup("Minor", [
+    "m",
+    "m6",
+    "m7",
+    "mM7",
+    "m9",
+    "mM9",
+    "m11",
+    "m13",
+  ], createChordOption),
+  createGroup("Dominant", [
+    "7",
+    "9",
+    "11",
+    "13",
+  ], createChordOption),
+  createGroup("Suspended", [
     "sus2",
     "sus4",
     "7sus4",
   ], createChordOption),
-  createGroup("Seventh chords", [
-    "maj7",
-    "7",
-    "mM7",
-    "m7",
-    "m7b5",
+  createGroup("Diminished", [
+    "dim",
     "dim7",
+    "m7b5",
   ], createChordOption),
-  createGroup("Ninth chords", [
-    "maj9",
-    "9",
-    "mM9",
-    "m9",
-  ], createChordOption),
-  createGroup("Eleventh chords", [
-    "11",
-    "m11",
-  ], createChordOption),
-  createGroup("Thirteenth chords", [
-    "maj13",
-    "13",
-    "m13",
+  createGroup("Augmented", [
+    "aug",
   ], createChordOption),
 ]);
 
