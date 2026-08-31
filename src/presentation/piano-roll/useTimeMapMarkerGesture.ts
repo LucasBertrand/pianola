@@ -42,6 +42,9 @@ import type {
   TimeMapMarkerPreviewSession,
   TimeMapMarkerPreviewToken,
 } from "../../application/editor-session/time-map-marker-preview-session";
+import {
+  BoundedPointerTickPosition,
+} from "../../editor-core/interactions/gestures/bounded-pointer-tick-position";
 
 export interface TimeMapMarkerGestureOptions {
   readonly selection: EditorSelection;
@@ -150,6 +153,20 @@ export function useTimeMapMarkerGesture({
     let targetTick = originTick;
     let dragging = false;
     let previewToken: TimeMapMarkerPreviewToken | null = null;
+    const dragPosition = new BoundedPointerTickPosition(
+      originTick,
+      (deltaTicks) => movesSelection
+        ? clampTimelineSelectionDelta(
+            selection.notes,
+            selection.markerGroups,
+            deltaTicks,
+            durationTicks,
+          )
+        : Math.min(
+            durationTicks - originTick,
+            Math.max(-originTick, deltaTicks),
+          ),
+    );
 
     const setDraggingVisual = (active: boolean): void => {
       handle.classList.toggle("is-dragging", active);
@@ -189,28 +206,16 @@ export function useTimeMapMarkerGesture({
       const resolution = Math.max(1, gridResolutionTicks.get());
       const state = projectStore.getState();
 
-      targetTick = snapTickToMeasureGrid(
-        state.clock.ppqn,
-        timeMap,
-        durationTicks,
+      targetTick = dragPosition.resolve(
         rawTick,
-        resolution,
+        (tick) => snapTickToMeasureGrid(
+          state.clock.ppqn,
+          timeMap,
+          durationTicks,
+          tick,
+          resolution,
+        ),
       );
-      targetTick = Math.min(durationTicks, Math.max(0, targetTick));
-
-      if (movesSelection) {
-        targetTick = originTick + clampTimelineSelectionDelta(
-          selection.notes,
-          selection.markerGroups,
-          targetTick - originTick,
-          durationTicks,
-        );
-      } else {
-        targetTick = Math.min(
-          durationTicks,
-          Math.max(0, targetTick),
-        );
-      }
 
       if (previewToken !== null) {
         markerPreview.update(previewToken, targetTick - originTick);
