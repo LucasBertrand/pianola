@@ -434,7 +434,7 @@
     padding: 0;
     grid-template-columns:
       27px 27px 38px minmax(48px, 0.8fr) minmax(70px, 1.2fr);
-    gap: 3px;
+    gap: var(--view-controls-right-gap);
   }
 
   .view-controls-left,

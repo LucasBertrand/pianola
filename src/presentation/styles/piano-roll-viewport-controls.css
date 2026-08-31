@@ -30,8 +30,10 @@
 }
 
 .view-controls-right {
+  --view-controls-right-gap: 3px;
   display: flex;
   align-items: center;
+  gap: var(--view-controls-right-gap);
 }
 
 .timeline-position {
@@ -89,12 +91,11 @@
   grid-template-columns: auto auto;
   grid-template-rows: auto;
   min-width: 0;
-  padding: 3px;
+  padding: 0;
   border: 0px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface-inset);
   align-items: center;
-  gap: 3px;
 }
 
 .grid-control-select {
@@ -120,12 +121,12 @@
 .grid-control .grid-control-header {
   display: flex;
   min-width: 0;
-  padding: 0 1px;
+  padding: 0;
   color: var(--color-text-muted);
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  gap: 4px;
+  gap: var(--view-controls-right-gap);
 }
 
 .pitch-snap-control {
@@ -137,7 +138,7 @@
   border-radius: 6px;
   background: var(--color-tonal-faint);
   align-items: center;
-  gap: 3px;
+  gap: var(--view-controls-right-gap);
 }
 
 .grid-control.is-snap-active,
