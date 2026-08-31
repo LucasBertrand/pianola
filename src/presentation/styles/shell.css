@@ -1,8 +1,8 @@
 .app-shell {
   --project-inspector-width: 400px;
   --project-inspector-panel-width: var(--project-inspector-width);
-  /* Follow short inspector content initially; 30vh remains the overflow cap. */
-  --project-inspector-panel-height: fit-content(30vh);
+  /* Follow short inspector content while leaving room for its creation actions. */
+  --project-inspector-panel-height: fit-content(36vh);
   --project-inspector-resize-handle-size: 10px;
   display: flex;
   width: 100%;
