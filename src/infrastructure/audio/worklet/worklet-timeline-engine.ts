@@ -350,11 +350,48 @@ export class WorkletTimelineEngine {
       }
     }
 
+    const oldLoopEnabled = this.requirePublishedTransport().loopEnabled;
+    const oldLoop = this.getEffectiveLoop();
+    const wasInside = oldLoopEnabled
+      && this.currentTick >= oldLoop.startTick
+      && this.currentTick < oldLoop.endTick;
+
     this.loopPreview = loop === null ? null : { ...loop };
     this.loopPreviewVersion = previewVersion;
+    
+    const newLoop = this.getEffectiveLoop();
+
+    if (
+      this.currentStatus === "playing"
+      && oldLoopEnabled
+      && wasInside
+      && this.currentTick >= newLoop.endTick
+    ) {
+      const loopDuration = newLoop.endTick - newLoop.startTick;
+      
+      this.currentTick = newLoop.startTick
+        + positiveModulo(
+          this.currentTick - newLoop.startTick,
+          loopDuration,
+        );
+      this.tickCompensation = 0;
+      this.refreshTempoCursor();
+      this.releaseTimelineVoices();
+      this.refreshCursors(newLoop.startTick);
+      this.startHeldNotes(
+        newLoop.startTick,
+        this.renderedFrame + 1,
+      );
+      this.onDiagnostic?.({
+        type: "loop",
+        frame: this.renderedFrame + 1,
+        tick: this.currentTick,
+      });
+    }
+
     this.loopActive = this.currentStatus === "playing"
-      && this.requirePublishedTransport().loopEnabled
-      && this.currentTick <= this.getEffectiveLoop().endTick;
+      && oldLoopEnabled
+      && this.currentTick <= newLoop.endTick;
 
     if (this.currentStatus === "playing") {
       const boundaryTick = this.resolvePlaybackBoundaryTick();

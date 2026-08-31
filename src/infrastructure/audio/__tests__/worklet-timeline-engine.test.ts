@@ -245,15 +245,13 @@ describe("AudioWorklet timeline engine", () => {
     }, 3, 0);
     engine.play(0);
     renderFrames(engine, 3_600);
-    const tickBeforePreview = engine.positionTick;
-
     engine.previewLoop(
       timeline.sourceId,
       3,
       1,
       { startTick: 0, endTick: 96 },
     );
-    expect(engine.positionTick).toBe(tickBeforePreview);
+    expect(engine.positionTick).toBeCloseTo(48, 8);
 
     renderFrames(engine, 1);
     expect(engine.positionTick).toBeCloseTo(48.04, 8);
