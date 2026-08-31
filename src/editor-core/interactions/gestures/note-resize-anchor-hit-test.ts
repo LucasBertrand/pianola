@@ -3,10 +3,10 @@ import type {
 } from "../../../domain/notes/note";
 import type {
   CoordinateConverter,
-} from "../../../editor-core/geometry/converter";
+} from "../../geometry/converter";
 import type {
   ResizeEdge,
-} from "../../../editor-core/interactions/gestures/gesture-draft";
+} from "./gesture-draft";
 import { getNoteResizeAnchorHitRect } from "./note-resize-anchor-geometry";
 
 /** Includes the external visual anchor and its small interior pointer target. */

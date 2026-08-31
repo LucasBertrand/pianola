@@ -36,7 +36,7 @@ import { RENDERING_CONSTANTS } from "../rendering/rendering-constants";
 import {
   getNoteResizeAnchorSize,
   getNoteResizeAnchorWidth,
-} from "./note-resize-anchor-geometry";
+} from "../../../editor-core/interactions/gestures/note-resize-anchor-geometry";
 
 export interface LayerGeometry {
   readonly left: Float64Array;

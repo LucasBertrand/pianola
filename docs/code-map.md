@@ -71,6 +71,11 @@ muté à la validation du geste. Les notes conservent leur draft géométrique d
 la session d’interaction ; si la sélection contient aussi des marqueurs, la
 stratégie publie parallèlement une `TimeMap` projetée et l’utilise pour le snap
 des ghosts comme pour la proposition finalement transmise au workflow.
+La reconnaissance du double-tap, la géométrie des poignées de resize et
+l'application du lasso ou du mode de sélection des marqueurs appartiennent à
+`src/editor-core/`. La stratégie de présentation leur fournit les coordonnées
+locales et conserve uniquement la mesure du DOM, le rendu transitoire et le
+déclenchement des intentions applicatives.
 
 ## Flux : projection temporelle
 

@@ -20,13 +20,12 @@ import {
 import {
   PianoRollGestureStateMachine,
 } from "./gestures/gesture-state-machine";
-
-export interface InteractionTapState {
-  noteId: NoteId | null;
-  timeStamp: number;
-  clientX: number;
-  clientY: number;
-}
+import {
+  DirectNoteDoubleTapGesture,
+} from "./gestures/direct-note-double-tap";
+import {
+  INTERACTION_CONSTANTS,
+} from "./interaction-constants";
 
 /**
  * Stable, non-React state for one mounted piano-roll editor. High-frequency
@@ -39,12 +38,11 @@ export class PianoRollInteractionSession {
   );
   public readonly selection: EditorSelection;
   public readonly lassoBuffer: Note[] = [];
-  public readonly tapState: InteractionTapState = {
-    noteId: null,
-    timeStamp: 0,
-    clientX: 0,
-    clientY: 0,
-  };
+  public readonly directNoteDoubleTap = new DirectNoteDoubleTapGesture({
+    maximumDelayMs: INTERACTION_CONSTANTS.touchDoubleTapDelayMs,
+    maximumDistanceCssPixels:
+      INTERACTION_CONSTANTS.touchDoubleTapDistanceCssPixels,
+  });
   public readonly converter: CoordinateConverter;
 
   private gestureSelectionSnapshot: EditorSelectionSnapshot = {

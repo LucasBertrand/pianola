@@ -75,7 +75,7 @@ import type {
 } from "../../editor-core/interactions/gestures/gesture-draft";
 import {
   applyTimeMapMarkerSelection,
-} from "./time-map-marker-selection";
+} from "../../editor-core/selection/time-map-marker-selection";
 import {
   resolveEffectiveTimeMap,
 } from "../../application/editor-session/time-map-marker-preview-session";

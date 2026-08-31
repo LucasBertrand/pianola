@@ -22,6 +22,10 @@ Lire `home/ApplicationHome.tsx` pour l'accueil et
 préférences et dialogues ont chacun un hook propriétaire. Les contrôles de
 navigation, grille et snap par motif de hauteurs sont sous `piano-roll/viewport/`, tandis que
 les signaux et contrôleurs restent possédés par le piano roll et le noyau.
+Les fichiers sous `piano-roll/interactions/` adaptent les événements natifs,
+le DOM, les retours visuels et les intentions applicatives ; les recognizers,
+hit-tests et mutations de sélection indépendants du navigateur vivent dans
+`../editor-core/`.
 Pour le Canvas, utiliser
 [`piano-roll/rendering/README.md`](piano-roll/rendering/README.md).
 

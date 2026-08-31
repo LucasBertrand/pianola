@@ -1,6 +1,6 @@
 import type {
   ResizeEdge,
-} from "../../../editor-core/interactions/gestures/gesture-draft";
+} from "./gesture-draft";
 
 const ANCHOR_HEIGHT_RATIO = 0.68;
 const MINIMUM_ANCHOR_SIZE_CSS_PIXELS = 8;

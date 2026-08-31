@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
-  createSelectedMarkerGroup,
-  EditorSelection,
-} from "../../../editor-core/selection/editor-selection";
-import {
   createTestNote,
   TEST_INSTRUMENT_ID,
 } from "../../../../tests/support/test-builders";
+import {
+  EditorSelection,
+  createSelectedMarkerGroup,
+} from "../editor-selection";
 import { applyTimeMapMarkerSelection } from "../time-map-marker-selection";
 
 const FIRST_GROUP = {

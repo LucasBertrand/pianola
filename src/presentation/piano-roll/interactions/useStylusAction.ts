@@ -5,7 +5,7 @@ import type {
 import {
   isStylusButtonActivation,
   isStylusHoverButtonActivation,
-} from "./stylus-action-policy";
+} from "../../../editor-core/interactions/pointer/stylus-action-policy";
 
 /** Maps pen barrel, eraser, and supported hover-button input to one action. */
 export function useStylusAction(

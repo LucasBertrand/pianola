@@ -51,7 +51,7 @@ import {
 } from "../../../application/piano-roll/timeline/pitch-snap-resolution";
 import {
   isPointInsideNoteResizeAnchor,
-} from "./note-resize-anchor-hit-test";
+} from "../../../editor-core/interactions/gestures/note-resize-anchor-hit-test";
 import {
   measureTimelineSelectionTickBounds,
 } from "../../../application/piano-roll/selection/timeline-selection-move";
@@ -74,11 +74,8 @@ import type {
   SelectionMode,
 } from "../../../editor-core/interactions/gestures/gesture-draft";
 import {
-  handleDirectNoteTap,
-} from "./direct-note-tap";
-import {
-  completePianoRollLasso,
-} from "./complete-piano-roll-lasso";
+  applyPianoRollLassoSelection,
+} from "../../../editor-core/selection/piano-roll-lasso-selection";
 import {
   beginPianoRollLongPressDraw,
 } from "./begin-piano-roll-long-press-draw";
@@ -121,8 +118,10 @@ const MOUSE_NOTE_HIT_ENVELOPE_CSS_PIXELS =
   INTERACTION_CONSTANTS.mouseNoteHitEnvelopeCssPixels;
 const TOUCH_NOTE_HIT_ENVELOPE_CSS_PIXELS =
   INTERACTION_CONSTANTS.touchNoteHitEnvelopeCssPixels;
+/** Marker flags are vertically anchored at the centre of the 50 px ruler. */
+const MARKER_LASSO_ANCHOR_LOCAL_Y = -25;
 
-/** Builds the DOM-free gesture strategy consumed by the pointer manager. */
+/** Coordinates the DOM adapter, editor core, visuals, and application intents. */
 export function createPianoRollGestureStrategy(
   options: PianoRollGestureStrategyOptions,
 ): PointerInteractionStrategy {
@@ -146,7 +145,13 @@ export function createPianoRollGestureStrategy(
     onPitchHighlightChange,
     timeMapMarkerPreview,
   } = options;
-  const { converter, draft, gesture, lassoBuffer, tapState } = session;
+  const {
+    converter,
+    directNoteDoubleTap,
+    draft,
+    gesture,
+    lassoBuffer,
+  } = session;
   const { selection } = selectionController;
   let handledDragNote: Note | null = null;
   let markerPreviewToken: TimeMapMarkerPreviewToken | null = null;
@@ -495,15 +500,32 @@ export function createPianoRollGestureStrategy(
       getVisuals()?.endDraw();
       selectionController.showSelection();
     } else if (mode === "LASSO_SELECTING") {
-      completePianoRollLasso({
-        completion,
+      const minimumLocalY = Math.min(
+        completion.originLocalY,
+        completion.currentLocalY,
+      );
+      const maximumLocalY = Math.max(
+        completion.originLocalY,
+        completion.currentLocalY,
+      );
+
+      applyPianoRollLassoSelection({
+        originLocalX: completion.originLocalX,
+        originLocalY: completion.originLocalY,
+        currentLocalX: completion.currentLocalX,
+        currentLocalY: completion.currentLocalY,
+        selectionMode: completion.selectionMode,
+        includeTimeMapMarkers:
+          minimumLocalY <= MARKER_LASSO_ANCHOR_LOCAL_Y
+          && maximumLocalY >= MARKER_LASSO_ANCHOR_LOCAL_Y,
         converter,
-        selectionController,
+        selection,
         spatialIndex,
         timeMap: getActiveClip(editorCommands.getState()).timeline.timeMap,
         resultBuffer: lassoBuffer,
-        visuals: getVisuals(),
       });
+      getVisuals()?.endLasso();
+      selectionController.showSelection();
     } else if (mode === "PENDING_LASSO" && pointerWasTap) {
       selectionController.clearSelection();
       const pointerTick = converter.cssPixelXToTick(
@@ -529,14 +551,17 @@ export function createPianoRollGestureStrategy(
       selectionController.removeHitNote(targetNoteId);
     }
 
-    if (pointerWasTap && targetNoteId !== null && mode !== "LASSO_SELECTING") {
-      handleDirectNoteTap(
-        event,
-        targetNoteId,
-        tapState,
-        selectionController,
-        workflow,
-      );
+    if (
+      pointerWasTap
+      && targetNoteId !== null
+      && mode !== "LASSO_SELECTING"
+      && directNoteDoubleTap.recordTap(event, targetNoteId)
+    ) {
+      const note = selection.find(targetNoteId);
+
+      if (note !== undefined) {
+        workflow.commitDelete(note);
+      }
     }
   };
 

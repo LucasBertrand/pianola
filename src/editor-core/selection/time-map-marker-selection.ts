@@ -1,12 +1,12 @@
 import type {
   SelectionMode,
-} from "../../editor-core/interactions/gestures/gesture-draft";
+} from "../interactions/gestures/gesture-draft";
 import type {
   EditorSelection,
   SelectedTimeMapMarkerGroup,
-} from "../../editor-core/selection/editor-selection";
+} from "./editor-selection";
 
-/** Applies the active selection mode to one selectable marker group. */
+/** Applies one gesture selection mode to a selectable time-map marker group. */
 export function applyTimeMapMarkerSelection(
   selection: EditorSelection,
   group: SelectedTimeMapMarkerGroup,

@@ -19,9 +19,6 @@ import {
 import {
   createSelectedMarkerGroup,
 } from "../../src/editor-core/selection/editor-selection";
-import type {
-  GestureCompletion,
-} from "../../src/editor-core/interactions/gestures/gesture-state-machine";
 import {
   NoteGestureWorkflow,
 } from "../../src/application/piano-roll/notes/note-gesture-workflow";
@@ -50,11 +47,8 @@ import type {
   MarkerCollisionResolutionRequest,
 } from "../../src/application/piano-roll/timeline/marker-collision-resolution";
 import {
-  completePianoRollLasso,
-} from "../../src/presentation/piano-roll/interactions/complete-piano-roll-lasso";
-import {
-  PianoRollSelectionController,
-} from "../../src/presentation/piano-roll/interactions/piano-roll-selection-controller";
+  applyPianoRollLassoSelection,
+} from "../../src/editor-core/selection/piano-roll-lasso-selection";
 import {
   createTestNote,
   createTestProject,
@@ -72,26 +66,20 @@ describe("timeline marker selection", () => {
       runtime.viewport.version,
       runtime.selection,
     );
-    const controller = new PianoRollSelectionController({
-      session,
-      viewport: runtime.viewport,
-      editorCommands: runtime.editorCommands,
-      getVisuals: () => null,
-      onSelectionChange: undefined,
-    });
     const converter = session.converter;
 
-    completePianoRollLasso({
-      completion: createLassoCompletion(
-        converter.tickToCssPixelX(MIXED_MARKER_TICK - 120),
-        converter.tickToCssPixelX(MIXED_MARKER_TICK + 120),
-      ),
+    applyPianoRollLassoSelection({
+      originLocalX: converter.tickToCssPixelX(MIXED_MARKER_TICK - 120),
+      originLocalY: 20,
+      currentLocalX: converter.tickToCssPixelX(MIXED_MARKER_TICK + 120),
+      currentLocalY: -30,
+      selectionMode: "replace",
+      includeTimeMapMarkers: true,
       converter,
-      selectionController: controller,
+      selection: runtime.selection,
       spatialIndex: runtime.spatialIndex,
       timeMap: getActiveClip(runtime.projectStore.getState()).timeline.timeMap,
       resultBuffer: [],
-      visuals: null,
     });
 
     expect(runtime.selection.markerGroups).toEqual([{
@@ -634,36 +622,6 @@ function withTimeMap(state: EditorSessionState, timeMap: TimeMap): EditorSession
         timeline: { ...clip.timeline, timeMap },
       },
     },
-  };
-}
-
-function createLassoCompletion(
-  originLocalX: number,
-  currentLocalX: number,
-): GestureCompletion {
-  return {
-    mode: "LASSO_SELECTING",
-    pointerWasTap: false,
-    targetNoteId: null,
-    deltaTicks: 0,
-    deltaPitch: 0,
-    getSnapSettingsAtTick: () => ({
-      enabled: false,
-      visualGuideEnabled: false,
-      rootNote: "C",
-      patternType: "scale",
-        patternId: "ionian",
-    }),
-    drawStartTick: 0,
-    drawPitch: 0,
-    drawDurationTicks: 0,
-    drawInstrumentId: null,
-    originLocalX,
-    originLocalY: 20,
-    currentLocalX,
-    currentLocalY: -30,
-    snapResolutionTicks: 240,
-    selectionMode: "replace",
   };
 }
 

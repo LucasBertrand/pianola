@@ -5,18 +5,18 @@ import {
 } from "vitest";
 import {
   CoordinateConverter,
-} from "../../../../editor-core/geometry/converter";
+} from "../../../geometry/converter";
 import type {
   Note,
 } from "../../../../domain/notes/note";
-import {
-  isPointInsideNoteResizeAnchor,
-} from "../note-resize-anchor-hit-test";
 import {
   getNoteResizeAnchorHitRect,
   getNoteResizeAnchorSize,
   getNoteResizeAnchorWidth,
 } from "../note-resize-anchor-geometry";
+import {
+  isPointInsideNoteResizeAnchor,
+} from "../note-resize-anchor-hit-test";
 
 const CONVERTER = new CoordinateConverter({
   zoomX: 1,

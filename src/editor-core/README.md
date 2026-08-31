@@ -3,7 +3,9 @@
 ## Que possède cette zone ?
 
 Le noyau indépendant du DOM du piano roll : géométrie, interactions, sélection,
-viewport et signaux. L'agrégat applicatif de ces mécanismes appartient à
+viewport et signaux. Il possède notamment les recognizers de pointeurs, la
+géométrie de hit-test des gestes et les politiques de sélection par lasso ou
+marqueur. L'agrégat applicatif de ces mécanismes appartient à
 `../application/editor-session/`.
 
 ## Quel fichier lire en premier ?
@@ -25,6 +27,8 @@ interdits.
 
 ## Où sont les tests ?
 
-Les unités géométriques vivent près de `geometry/`. Les contrats de contrôleur
-sont dans `tests/integration/editor-controller-contracts.test.ts` et les
-régressions de gestes dans la suite centrale.
+Les unités géométriques vivent près de `geometry/`, les tests de recognizers
+près de `interactions/` et les politiques de sélection près de `selection/`.
+Les contrats de contrôleur sont dans
+`tests/integration/editor-controller-contracts.test.ts` et les flux complets de
+gestes dans la suite d'intégration.
