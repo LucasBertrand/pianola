@@ -49,6 +49,10 @@ import {
   useCanvasRenderer,
   type CanvasFrame,
 } from "./useCanvasRenderer";
+import {
+  resolveEffectiveTimeMap,
+  type TimeMapMarkerMovePreview,
+} from "../../../application/editor-session/time-map-marker-preview-session";
 
 const CANVAS_LAYER_STYLE: CSSProperties = {
   position: "absolute",
@@ -76,6 +80,9 @@ export interface GridCanvasProps extends CanvasProjectionLayerProps {
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly projectStore: ProjectStorePort;
   readonly highlightedPitch: ReadonlyRenderSignal<number | null>;
+  readonly markerPreview: ReadonlyRenderSignal<
+    TimeMapMarkerMovePreview | null
+  >;
 }
 
 export interface NotesCanvasProps extends CanvasProjectionLayerProps {
@@ -87,6 +94,9 @@ export interface NotesCanvasProps extends CanvasProjectionLayerProps {
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly editingNoteMask: ReadonlyEditingNoteMask;
+  readonly markerPreview: ReadonlyRenderSignal<
+    TimeMapMarkerMovePreview | null
+  >;
 }
 
 interface CanvasLayerProps {
@@ -101,6 +111,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
     pitchSnapSettings,
     highlightedPitch,
     projectStore,
+    markerPreview,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
   const converterVersionRef = useRef(-1);
@@ -125,6 +136,12 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
 
       const state = projectStore.getState();
       const activeClip = getActiveClip(state);
+      const timeMap = resolveEffectiveTimeMap(
+        activeClip.timeline.timeMap,
+        markerPreview.get(),
+        activeClip.id,
+        state.revision,
+      );
 
       paintGrid({
         context: frame.context,
@@ -137,7 +154,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
         pitchSnapSettings: pitchSnapSettings.get(),
         highlightedPitch: highlightedPitch.get(),
         clock: state.clock,
-        timeMap: activeClip.timeline.timeMap,
+        timeMap,
         durationTicks: activeClip.timeline.durationTicks,
       });
     },
@@ -145,6 +162,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
       gridResolutionTicks,
       pitchSnapSettings,
       highlightedPitch,
+      markerPreview,
       projectStore,
       viewport,
       visibleRegion,
@@ -162,6 +180,7 @@ export function GridCanvas(props: GridCanvasProps): React.JSX.Element {
   useSignalInvalidation(gridResolutionTicks, renderer.invalidate);
   useSignalInvalidation(pitchSnapSettings, renderer.invalidate);
   useSignalInvalidation(highlightedPitch, renderer.invalidate);
+  useSignalInvalidation(markerPreview, renderer.invalidate);
   useEffect(
     () => projectStore.subscribe(renderer.invalidate),
     [projectStore, renderer.invalidate],
@@ -180,6 +199,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     noteColorMode,
     pitchSnapSettings,
     editingNoteMask,
+    markerPreview,
   } = props;
   const converterRef = useRef<CoordinateConverter | null>(null);
   const converterVersionRef = useRef(-1);
@@ -213,17 +233,24 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         region.maxPitch,
         visibleNotes,
       );
-      const activeClip = getActiveClip(projectStore.getState());
+      const state = projectStore.getState();
+      const activeClip = getActiveClip(state);
+      const timeMap = resolveEffectiveTimeMap(
+        activeClip.timeline.timeMap,
+        markerPreview.get(),
+        activeClip.id,
+        state.revision,
+      );
       paintNotes({
         context: frame.context,
         converter,
         visibleNotes,
         editingNoteIds: editingNoteMask.get(),
         stylesByInstrumentId: instrumentStyles.get(),
-        instrumentOrder: projectStore.getState().instrumentOrder,
+        instrumentOrder: state.instrumentOrder,
         colorMode: noteColorMode.get(),
         globalPitchSnapSettings: pitchSnapSettings.get(),
-        timeMap: activeClip.timeline.timeMap,
+        timeMap,
       });
     },
     [
@@ -234,6 +261,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       instrumentStyles,
       noteColorMode,
       pitchSnapSettings,
+      markerPreview,
     ],
   );
   const renderer = useCanvasRenderer({
@@ -249,6 +277,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
   useSignalInvalidation(noteColorMode, renderer.invalidate);
   useSignalInvalidation(pitchSnapSettings, renderer.invalidate);
   useSignalInvalidation(editingNoteMask, renderer.invalidate);
+  useSignalInvalidation(markerPreview, renderer.invalidate);
   useEffect(
     () => projectStore.subscribe(renderer.invalidate),
     [projectStore, renderer.invalidate],

@@ -128,7 +128,7 @@ sont modifiés par la lecture : le playhead peut rester dans un autre clip ou
 sortir de la zone visible.
 Zooms, scrolls et snap par motif de hauteurs restent des états d’espace de travail, sans
 Undo/Redo.
-La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme, section). Un marqueur de section attache un commentaire à un tick du clip ; il se sélectionne, se déplace et se copie comme les marqueurs de tempo et de gamme.
+La timeline permet d'ajouter un nombre spécifique de mesures avant ou après la mesure courante, et d'éditer les marqueurs (tempo, métrique, gamme, section). L'ajout au playhead reste disponible pendant la lecture : sa position audio continue est capturée à l'ouverture puis projetée une fois sur la grille musicale active. Si cette projection atteint la fin du clip, l'ajout est explicitement refusé au lieu de déplacer silencieusement le marqueur. Pendant un drag, la projection éditoriale peut en revanche afficher provisoirement un marqueur sur cette frontière ; seul le commit au relâchement est refusé. Le brouillon ne suit ensuite plus le playhead et le document n'est modifié qu'à la confirmation. Un marqueur de section attache un commentaire à un tick du clip ; il se sélectionne, se déplace et se copie comme les marqueurs de tempo et de gamme.
 
 Un marqueur métrique isolé ne se sélectionne et ne se déplace pas : un clic
 sur son drapeau ouvre la modale qui permet de l'éditer ou de le supprimer. Si

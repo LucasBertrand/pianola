@@ -12,7 +12,8 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | sélection | `src/presentation/piano-roll/usePianoRollSelectionWorkflow.ts` | `EditorSelection` et presse-papier UI | suite centrale de régression |
 | instruments | `src/presentation/inspector/instruments/ProjectInstrumentControls.tsx` | `ProjectDocument`, brouillon du dialogue et paramètres transitoires du worklet | tests AudioWorklet et suite centrale |
 | clips et groupes | `src/presentation/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
-| transport | `src/presentation/transport/TransportControls.tsx` puis `usePianoRollTransportViewport.ts` | `TimeMap` et boucle du clip, enchaînement global et auto-scroll du document, worklet pour statut et horloge audio | politiques transport/viewport, tests AudioWorklet et suite centrale |
+| projections temporelles | gestes dans `PianoRollTimeMapOverlay.tsx`, `PianoRollLoopOverlay.tsx` et `piano-roll-gesture-strategy.ts` | état publié dans `ProjectStore`, projections dans `TimeMapMarkerPreviewSession` / `LoopPreviewSession`, état effectif dans les consommateurs et le worklet | tests des sessions, projections, sélection mixte et AudioWorklet |
+| transport | `src/presentation/transport/TransportControls.tsx` puis `usePianoRollTransportViewport.ts` | `TimeMap` et boucle publiées du clip, enchaînement global et auto-scroll du document ; timeline/transport publiés et surcharges effectives dans le worklet | politiques transport/viewport, tests AudioWorklet et suite centrale |
 | persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` | `StoredProject`, rapport transitoire, générations et quarantaine de `ProjectRepository` ; réglages dans `UserSettingsRepository` | `src/infrastructure/persistence/__tests__/project-repository-contract.test.ts` et `indexed-db-reset.test.ts` |
 | fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` puis `migrations/migrate-portable-project.ts` | document + `PersistedEditorWorkspace`, avec rapport de migration transitoire | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` puis `useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
@@ -27,8 +28,9 @@ restent le garde-fou de parité des flux transversaux.
 | Besoin | Commencer ici | Continuer vers |
 | --- | --- | --- |
 | modifier le bouton Lecture | `src/presentation/transport/TransportControls.tsx` | `useAudioPlayback.ts`, puis `audio-worklet-transport.ts` |
-| modifier le ruler ou la boucle | `src/presentation/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx` et painter |
-| modifier les marqueurs tempo/métrique/gamme/section | `src/presentation/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, puis `application/piano-roll/timeline/time-map-marker-plans.ts` |
+| modifier le ruler ou la boucle | `src/presentation/piano-roll/PianoRollTimeline.tsx` | `PianoRollLoopOverlay.tsx`, `application/editor-session/loop-preview-session.ts`, puis painter et transport audio |
+| modifier les marqueurs tempo/métrique/gamme/section | `src/presentation/piano-roll/PianoRollTimeMapOverlay.tsx` | `useTimeMapMarkerGesture.ts`, `application/editor-session/time-map-marker-preview-session.ts`, puis projection et plans sous `application/piano-roll/timeline/` |
+| modifier la projection audio du tempo ou de la boucle | `src/presentation/transport/useAudioPlayback.ts` | `audio-worklet-transport.ts`, protocole puis `worklet-timeline-engine.ts` |
 | modifier le playhead | `src/editor-core/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier Undo/Redo ou les transactions | `src/application/history/editor-command-service.ts` | `project-store.ts`, puis reducers sous `src/domain/commands/` |
 | modifier l’indicateur de lecture des clips | `src/presentation/inspector/clips/clip-playhead-visual.ts` | `src/presentation/inspector/clips/ClipInspector.tsx`, puis `src/presentation/styles/inspector.css` |
@@ -65,7 +67,26 @@ PianoRollLayers
 ```
 
 Le contrôleur visuel DOM dessine uniquement l’état transitoire. Le document est
-muté à la validation du geste.
+muté à la validation du geste. Les notes conservent leur draft géométrique dans
+la session d’interaction ; si la sélection contient aussi des marqueurs, la
+stratégie publie parallèlement une `TimeMap` projetée et l’utilise pour le snap
+des ghosts comme pour la proposition finalement transmise au workflow.
+
+## Flux : projection temporelle
+
+```text
+ProjectStore (TimeMap / boucle publiées)
+  → TimeMapMarkerPreviewSession / LoopPreviewSession
+  → snapshot éditorial effectif pour ruler, grille, notes, clavier et snap
+  → useAudioPlayback
+  → messages tempo-map-preview / loop-preview
+  → WorkletTimelineEngine (publié + surcharge = effectif)
+```
+
+Les sessions de projection sont liées au clip, à la révision source et à un
+jeton de geste. Elles ne sont ni persistées ni historisées. Les deux canaux
+audio restent indépendants : annuler une boucle ne retire pas un tempo projeté,
+et inversement.
 
 ## Flux : transport
 
@@ -81,7 +102,8 @@ TransportControls
 ```
 
 Le statut et les voix ne sont ni persistés ni annulables. Le worklet avance
-l’horloge à chaque échantillon ; l’UI ne planifie aucune occurrence.
+l’horloge à chaque échantillon ; l’UI ne planifie aucune occurrence. Il conserve
+les snapshots publiés séparément des surcharges effectives de tempo et boucle.
 
 ## Flux : persistance et fichier portable
 

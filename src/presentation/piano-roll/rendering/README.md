@@ -21,6 +21,12 @@ selection, snapping, collision or hit-testing decisions. The note snapshot is a
 pre-culled projection; the editing mask only prevents the stable projection
 from being drawn underneath its DOM draft.
 
+During a time-map or loop gesture, the React/store adapters resolve an effective
+snapshot from the published clip and the revision-scoped editorial projection.
+Painters remain unaware of that distinction. Marker, loop, grid and note
+invalidations subscribe directly to the corresponding runtime signals, so a
+pointer move does not need to publish a project revision or a React-owned copy.
+
 Rendering budgets live in `rendering-constants.ts`; the shared theme data lives
 with the stylesheet owner in `src/presentation/styles/application-colors.ts`.
 

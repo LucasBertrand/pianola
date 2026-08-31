@@ -22,9 +22,6 @@ import {
   type EditorSessionState,
 } from "../../domain/project/project-document";
 import type {
-  LoopRegion,
-} from "../../domain/transport/transport";
-import type {
   ReadonlyRenderSignal,
 } from "../../editor-core/model/render-signal";
 import {
@@ -32,10 +29,14 @@ import {
   formatSaveStatus,
   formatSelectionLabel,
 } from "./editor-context-format";
+import {
+  resolveEffectiveLoop,
+  type LoopPreview,
+} from "../../application/editor-session/loop-preview-session";
 
 export interface EditorContextPanelProps {
   readonly projectState: EditorSessionState;
-  readonly loopDragPreview: ReadonlyRenderSignal<LoopRegion | null>;
+  readonly loopPreview: ReadonlyRenderSignal<LoopPreview | null>;
   readonly selectedNotes: readonly Note[];
   readonly selectedMarkerCount: number;
   readonly gridResolutionTicks: number;
@@ -46,7 +47,7 @@ export interface EditorContextPanelProps {
 /** Owns the derived and preview state rendered by the header context rail. */
 export function EditorContextPanel({
   projectState,
-  loopDragPreview,
+  loopPreview,
   selectedNotes,
   selectedMarkerCount,
   gridResolutionTicks,
@@ -54,7 +55,7 @@ export function EditorContextPanel({
   saveStatus,
 }: EditorContextPanelProps): React.JSX.Element {
   const [previewLoop, setPreviewLoop] = React.useState(
-    () => loopDragPreview.get(),
+    () => loopPreview.get(),
   );
   const activeClip = getActiveClip(projectState);
   const saveStatusLabel = formatSaveStatus(saveStatus);
@@ -76,7 +77,12 @@ export function EditorContextPanel({
     () => formatLoopDuration(
       projectState.clock.ppqn,
       activeClip.timeline,
-      previewLoop ?? activeClip.transportSettings.loop,
+      resolveEffectiveLoop(
+        activeClip.transportSettings.loop,
+        previewLoop,
+        activeClip.id,
+        projectState.revision,
+      ),
       gridResolutionTicks,
     ),
     [
@@ -94,13 +100,13 @@ export function EditorContextPanel({
 
   React.useEffect(() => {
     const updatePreview = (): void => {
-      setPreviewLoop(loopDragPreview.get());
+      setPreviewLoop(loopPreview.get());
     };
-    const unsubscribe = loopDragPreview.subscribe(updatePreview);
+    const unsubscribe = loopPreview.subscribe(updatePreview);
 
     updatePreview();
     return unsubscribe;
-  }, [loopDragPreview]);
+  }, [loopPreview]);
 
   return (
     <div className="editor-context-panel" aria-label="Editor context">

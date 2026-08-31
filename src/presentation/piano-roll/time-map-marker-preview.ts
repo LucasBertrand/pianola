@@ -2,15 +2,14 @@ import type {
   Tick,
 } from "../../domain/identifiers";
 import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
-import type {
-  MovableTimeMapMarkerKind,
   SelectedTimeMapMarkerGroup,
 } from "../../editor-core/selection/editor-selection";
 import type {
   TimeMapMarkerFlag,
 } from "../../application/piano-roll/timeline/time-map-marker-plans";
+import type {
+  TimeMapMarkerMovePreview,
+} from "../../application/editor-session/time-map-marker-preview-session";
 
 type PreviewMarkerGroup = SelectedTimeMapMarkerGroup;
 
@@ -41,10 +40,9 @@ export function isOriginalMarkerBoundaryVisible(
 
 export function createMarkerPreviewProjection(
   flags: readonly TimeMapMarkerFlag[],
-  selectedGroups: readonly SelectedTimeMapMarkerGroup[],
-  preview: TimelineDragPreview,
+  preview: TimeMapMarkerMovePreview,
 ): MarkerPreviewProjection {
-  const groups = resolvePreviewMarkerGroups(flags, selectedGroups, preview);
+  const groups = preview.movedGroups;
   const sourceGroupsByTick = new Map(
     groups.map((group) => [group.startTick, group] as const),
   );
@@ -98,46 +96,6 @@ export function createMarkerPreviewProjection(
     remainingFlagsByTick,
     destinationFlagsByTick,
   };
-}
-
-function resolvePreviewMarkerGroups(
-  flags: readonly TimeMapMarkerFlag[],
-  selectedGroups: readonly SelectedTimeMapMarkerGroup[],
-  preview: TimelineDragPreview,
-): readonly PreviewMarkerGroup[] {
-  if (
-    preview.source !== "markers"
-    || preview.standaloneMarkerTick === null
-  ) {
-    return selectedGroups;
-  }
-
-  const flag = flags.find(
-    (candidate) => candidate.startTick === preview.standaloneMarkerTick,
-  );
-
-  if (flag === undefined) {
-    return [];
-  }
-
-  const kinds: MovableTimeMapMarkerKind[] = [];
-
-  if (flag.startTick > 0 && flag.bpm !== null) {
-    kinds.push("tempo");
-  }
-
-  if (flag.startTick > 0 && flag.patternId !== null) {
-    kinds.push("scale");
-  }
-
-  if (flag.sectionComment !== null) {
-    kinds.push("section");
-  }
-
-  return [{
-    startTick: flag.startTick,
-    kinds,
-  }];
 }
 
 function removePreviewedMarkerKinds(

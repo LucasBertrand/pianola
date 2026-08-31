@@ -42,11 +42,7 @@ import type {
 } from "../../../editor-core/model/instrument-render-style";
 import type {
   ReadonlyRenderSignal,
-  MutableRenderSignal,
 } from "../../../editor-core/model/render-signal";
-import type {
-  TimelineDragPreview,
-} from "../../../editor-core/model/timeline-drag-preview";
 import type {
   PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
@@ -86,6 +82,11 @@ import {
 import {
   beginPianoRollLongPressDraw,
 } from "./begin-piano-roll-long-press-draw";
+import {
+  resolveEffectiveTimeMap,
+  type TimeMapMarkerPreviewSession,
+  type TimeMapMarkerPreviewToken,
+} from "../../../application/editor-session/time-map-marker-preview-session";
 
 export interface PianoRollGestureStrategyOptions {
   readonly overlay: HTMLElement;
@@ -107,9 +108,7 @@ export interface PianoRollGestureStrategyOptions {
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly onGridSeek: ((tick: number) => void) | undefined;
   readonly onPitchHighlightChange?: ((pitch: number | null) => void) | undefined;
-  readonly timelineDragPreview?: MutableRenderSignal<
-    TimelineDragPreview | null
-  > | undefined;
+  readonly timeMapMarkerPreview?: TimeMapMarkerPreviewSession | undefined;
 }
 
 const TAP_MOVEMENT_TOLERANCE_CSS_PIXELS =
@@ -145,11 +144,18 @@ export function createPianoRollGestureStrategy(
     pitchSnapSettings,
     onGridSeek,
     onPitchHighlightChange,
-    timelineDragPreview,
+    timeMapMarkerPreview,
   } = options;
   const { converter, draft, gesture, lassoBuffer, tapState } = session;
   const { selection } = selectionController;
   let handledDragNote: Note | null = null;
+  let markerPreviewToken: TimeMapMarkerPreviewToken | null = null;
+  const clearMarkerPreview = (): void => {
+    if (markerPreviewToken !== null) {
+      timeMapMarkerPreview?.clear(markerPreviewToken);
+      markerPreviewToken = null;
+    }
+  };
   const updateConverter = (): void => {
     session.synchronizeConverter(
       viewport.get(),
@@ -158,7 +164,7 @@ export function createPianoRollGestureStrategy(
   };
 
   const endGestureVisual = (): void => {
-    timelineDragPreview?.set(null);
+    clearMarkerPreview();
 
     if (draft.mode === "DRAGGING") {
       getVisuals()?.endDrag();
@@ -202,6 +208,12 @@ export function createPianoRollGestureStrategy(
     const resolutionTicks = gridResolutionTicks.get();
     const gestureState = editorCommands.getState();
     const gestureClip = getActiveClip(gestureState);
+    const resolveGestureTimeMap = () => resolveEffectiveTimeMap(
+      gestureClip.timeline.timeMap,
+      timeMapMarkerPreview?.signal.get() ?? null,
+      gestureClip.id,
+      gestureState.revision,
+    );
     const snapAbsoluteTick = (tick: number): number =>
       snapTickToMeasureGrid(
         gestureState.clock.ppqn,
@@ -259,7 +271,7 @@ export function createPianoRollGestureStrategy(
       snapResolutionTicks: resolutionTicks,
       snapAbsoluteTick,
       getSnapSettingsAtTick: (tick) => resolvePitchSnapSettings(
-        gestureClip.timeline.timeMap,
+        resolveGestureTimeMap(),
         pitchSnapSettings.get(),
         tick,
       ),
@@ -309,12 +321,21 @@ export function createPianoRollGestureStrategy(
     if (resizeEdge === null) {
       handledDragNote = targetNote;
       gesture.beginDrag(selectionBounds);
+      if (
+        timeMapMarkerPreview !== undefined
+        && selection.markerGroups.length > 0
+      ) {
+        markerPreviewToken = timeMapMarkerPreview.begin({
+          clipId: gestureClip.id,
+          movedGroups: selection.markerGroups,
+        });
+      }
       getVisuals()?.beginDrag(
         editableNotes,
         converter,
         instrumentStyles.get(),
         draft.getSnapSettingsAtTick,
-        gestureClip.timeline.timeMap.scaleMarkers,
+        () => resolveGestureTimeMap().scaleMarkers,
       );
       if (handledDragNote !== null) {
         const referencePitch = resolveRepositionedPitch(
@@ -387,6 +408,12 @@ export function createPianoRollGestureStrategy(
     }
 
     if (updateKind === "updateDrag") {
+      if (markerPreviewToken !== null) {
+        timeMapMarkerPreview?.update(
+          markerPreviewToken,
+          draft.deltaTicks,
+        );
+      }
       const deltaX = converter.tickToCssPixelX(draft.deltaTicks)
         - converter.tickToCssPixelX(0);
       const pitchStepCssPixels = converter.pitchToCssPixelY(0)
@@ -399,11 +426,6 @@ export function createPianoRollGestureStrategy(
         draft.deltaPitch,
         draft.getSnapSettingsAtTick,
       );
-      timelineDragPreview?.set({
-        source: "notes",
-        deltaTicks: draft.deltaTicks,
-      });
-
       if (handledDragNote !== null) {
         const referencePitch = resolveRepositionedPitch(
           handledDragNote.pitch,
@@ -451,8 +473,13 @@ export function createPianoRollGestureStrategy(
     const { mode, pointerWasTap, targetNoteId } = completion;
 
     if (mode === "DRAGGING") {
-      workflow.commitMove(completion);
-      timelineDragPreview?.set(null);
+      if (
+        markerPreviewToken === null
+        || timeMapMarkerPreview?.isActive(markerPreviewToken) === true
+      ) {
+        workflow.commitMove(completion);
+      }
+      clearMarkerPreview();
       getVisuals()?.endDrag();
       if (handledDragNote !== null) {
         handledDragNote = null;

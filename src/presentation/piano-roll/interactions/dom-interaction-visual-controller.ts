@@ -75,7 +75,7 @@ export class DomInteractionVisualController
   private ghostGeometry: LayerGeometry | null = null;
   private selectionGeometry: LayerGeometry | null = null;
   private drawGhostElement: HTMLElement | null = null;
-  private dragScaleMarkers: readonly ScaleMarker[] = [];
+  private getDragScaleMarkers: () => readonly ScaleMarker[] = () => [];
 
   public constructor(
     private readonly editingNoteMask: EditingNoteMask,
@@ -106,12 +106,13 @@ export class DomInteractionVisualController
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
-    scaleMarkers: readonly ScaleMarker[],
+    getScaleMarkers: () => readonly ScaleMarker[],
   ): void {
     const editableNotes = filterEditableInteractionNotes(notes);
+    const scaleMarkers = getScaleMarkers();
 
     this.editingNoteMask.replace(editableNotes);
-    this.dragScaleMarkers = scaleMarkers;
+    this.getDragScaleMarkers = getScaleMarkers;
     this.showSelection(editableNotes, converter);
     this.ghostGeometry = populateGhostLayer(
       this.ghostLayer,
@@ -144,7 +145,7 @@ export class DomInteractionVisualController
         deltaTicks,
         deltaPitch,
         getSnapSettingsAtTick,
-        this.dragScaleMarkers,
+        this.getDragScaleMarkers(),
         true,
         this.noteColorMode.get() === "pitch",
       );
@@ -156,7 +157,7 @@ export class DomInteractionVisualController
         deltaTicks,
         deltaPitch,
         getSnapSettingsAtTick,
-        this.dragScaleMarkers,
+        this.getDragScaleMarkers(),
         false,
         this.noteColorMode.get() === "pitch",
         false,
@@ -183,7 +184,7 @@ export class DomInteractionVisualController
       deltaTicks,
       deltaXCssPixels,
       getSnapSettingsAtTick,
-      this.dragScaleMarkers,
+      this.getDragScaleMarkers(),
       this.noteColorMode.get() === "pitch",
     );
 
@@ -203,7 +204,7 @@ export class DomInteractionVisualController
     resetLayerTransform(this.selectionLayer);
     clearLayer(this.ghostLayer, this.ghostElements);
     this.ghostGeometry = null;
-    this.dragScaleMarkers = [];
+    this.getDragScaleMarkers = () => [];
   }
 
   public beginResize(

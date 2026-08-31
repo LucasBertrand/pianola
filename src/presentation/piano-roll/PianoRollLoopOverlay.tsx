@@ -12,7 +12,6 @@ import type {
   ViewportState,
 } from "../../editor-core/geometry/converter";
 import type {
-  MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../editor-core/model/render-signal";
 import {
@@ -21,6 +20,9 @@ import {
 import type {
   PointerInteractionStrategy,
 } from "../../editor-core/interactions/pointer/pointer-interaction-strategy";
+import type {
+  LoopPreviewSession,
+} from "../../application/editor-session/loop-preview-session";
 
 export interface PianoRollLoopOverlayProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
@@ -29,7 +31,7 @@ export interface PianoRollLoopOverlayProps {
   readonly interactionStrategyRef: RefObject<
     PointerInteractionStrategy | null
   >;
-  readonly loopDragPreview: MutableRenderSignal<LoopRegion | null>;
+  readonly loopPreview: LoopPreviewSession;
   readonly onCommit: (loop: LoopRegion) => void;
   readonly onClearSelection: () => void;
 }
@@ -42,7 +44,7 @@ export function PianoRollLoopOverlay(
     projectStore,
     gridResolutionTicks,
     interactionStrategyRef,
-    loopDragPreview,
+    loopPreview,
     onCommit,
     onClearSelection,
   } = props;
@@ -59,7 +61,7 @@ export function PianoRollLoopOverlay(
     projectStore,
     gridResolutionTicks,
     interactionStrategyRef,
-    loopDragPreview,
+    loopPreview,
     onCommit,
     onClearSelection,
     layerRef,

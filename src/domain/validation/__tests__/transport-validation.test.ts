@@ -193,6 +193,47 @@ describe("validateClipTimeline", () => {
       .toBe(true);
   });
 
+  test("distinguishes invalid, duplicate, and end-boundary marker positions", () => {
+    const baseTimeMap = createDefaultTimeMap();
+    const fractional = validateClipTimeline(
+      createTimeline({
+        ...baseTimeMap,
+        tempoMarkers: [
+          { startTick: 0, bpm: 120 },
+          { startTick: 960.5, bpm: 90 },
+        ],
+      }),
+      CLOCK,
+    );
+    const duplicate = validateClipTimeline(
+      createTimeline({
+        ...baseTimeMap,
+        sectionMarkers: [
+          { startTick: 960, comment: "Verse" },
+          { startTick: 960, comment: "Chorus" },
+        ],
+      }),
+      CLOCK,
+    );
+    const atEnd = validateClipTimeline(
+      createTimeline({
+        ...baseTimeMap,
+        sectionMarkers: [{ startTick: 15_360, comment: "End" }],
+      }),
+      CLOCK,
+    );
+
+    expect(fractional.issues).toContainEqual(expect.objectContaining({
+      message: "Tempo marker position must be a non-negative whole-number tick.",
+    }));
+    expect(duplicate.issues).toContainEqual(expect.objectContaining({
+      message: "Section markers cannot share a position and must remain strictly ordered.",
+    }));
+    expect(atEnd.issues).toContainEqual(expect.objectContaining({
+      message: "A section marker must be placed before the end of the clip.",
+    }));
+  });
+
   test("requires valid, ordered scale markers starting at tick 0", () => {
     const result = validateClipTimeline(
       createTimeline({

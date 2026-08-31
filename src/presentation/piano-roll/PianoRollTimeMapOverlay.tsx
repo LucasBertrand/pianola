@@ -26,12 +26,6 @@ import {
 import type {
   EditorSelection,
 } from "../../editor-core/selection/editor-selection";
-import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
-import type {
-  MutableRenderSignal,
-} from "../../editor-core/model/render-signal";
 import {
   createMarkerPreviewProjection,
   isOriginalMarkerBoundaryVisible,
@@ -39,13 +33,14 @@ import {
 import type {
   SelectionMode,
 } from "../../editor-core/interactions/gestures/gesture-draft";
+import type {
+  TimeMapMarkerPreviewSession,
+} from "../../application/editor-session/time-map-marker-preview-session";
 
 export interface PianoRollTimeMapOverlayProps {
   readonly flags: readonly TimeMapMarkerFlag[];
   readonly selection: EditorSelection;
-  readonly timelineDragPreview: MutableRenderSignal<
-    TimelineDragPreview | null
-  >;
+  readonly markerPreview: TimeMapMarkerPreviewSession;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly projectStore: ProjectStorePort;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
@@ -63,7 +58,7 @@ export interface PianoRollTimeMapOverlayProps {
 export function PianoRollTimeMapOverlay({
   flags,
   selection,
-  timelineDragPreview,
+  markerPreview,
   viewport,
   projectStore,
   gridResolutionTicks,
@@ -92,12 +87,11 @@ export function PianoRollTimeMapOverlay({
     const currentViewport = viewport.get();
     const pixelsPerTick =
       currentViewport.zoomX / currentViewport.ticksPerPixel;
-    const preview = timelineDragPreview.get();
+    const preview = markerPreview.signal.get();
     const projection = preview === null
       ? null
       : createMarkerPreviewProjection(
           flags,
-          selection.markerGroups,
           preview,
         );
 
@@ -203,13 +197,13 @@ export function PianoRollTimeMapOverlay({
         }
       }
     }
-  }, [flags, selection, timelineDragPreview, viewport]);
+  }, [flags, markerPreview, selection, viewport]);
 
   useEffect(() => {
     syncMarkerPresentation();
 
     const unsubscribeViewport = viewport.subscribe(syncMarkerPresentation);
-    const unsubscribePreview = timelineDragPreview.subscribe(
+    const unsubscribePreview = markerPreview.signal.subscribe(
       syncMarkerPresentation,
     );
     const unsubscribeSelection = selection.subscribe(syncMarkerPresentation);
@@ -219,7 +213,7 @@ export function PianoRollTimeMapOverlay({
       unsubscribePreview();
       unsubscribeSelection();
     };
-  }, [selection, syncMarkerPresentation, timelineDragPreview, viewport]);
+  }, [markerPreview, selection, syncMarkerPresentation, viewport]);
 
   useEffect(
     () => projectStore.subscribe((state) => {
@@ -230,7 +224,7 @@ export function PianoRollTimeMapOverlay({
 
   const markerGesture = useTimeMapMarkerGesture({
     selection,
-    timelineDragPreview,
+    markerPreview,
     viewport,
     gridResolutionTicks,
     projectStore,

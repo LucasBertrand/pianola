@@ -65,9 +65,6 @@ import {
 import {
   PianoRollSelectionController,
 } from "./piano-roll-selection-controller";
-import type {
-  TimelineDragPreview,
-} from "../../../editor-core/model/timeline-drag-preview";
 import {
   getActiveClip,
 } from "../../../domain/project/project-document";
@@ -77,6 +74,11 @@ import {
 import type {
   ProjectStorePort,
 } from "../../../application/history/project-store";
+import {
+  resolveEffectiveTimeMap,
+  type TimeMapMarkerMovePreview,
+  type TimeMapMarkerPreviewSession,
+} from "../../../application/editor-session/time-map-marker-preview-session";
 
 export interface UsePianoRollEventsOptions {
   readonly overlayRef: RefObject<HTMLElement | null>;
@@ -98,9 +100,7 @@ export interface UsePianoRollEventsOptions {
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly selectionRequests: EditorSelectionRequests;
   readonly highlightedPitch: MutableRenderSignal<number | null>;
-  readonly timelineDragPreview: MutableRenderSignal<
-    TimelineDragPreview | null
-  >;
+  readonly timeMapMarkerPreview: TimeMapMarkerPreviewSession;
   readonly onGridSeek?: (tick: number) => void;
   readonly onSelectionChange?: (
     hasSelection: boolean,
@@ -137,7 +137,7 @@ export function usePianoRollEvents(
     pitchSnapSettings,
     selectionRequests,
     highlightedPitch,
-    timelineDragPreview,
+    timeMapMarkerPreview,
     onGridSeek,
     onSelectionChange,
     onNoteCollision,
@@ -210,7 +210,7 @@ export function usePianoRollEvents(
       onPitchHighlightChange: (pitch) => {
         highlightedPitch.set(pitch);
       },
-      timelineDragPreview,
+      timeMapMarkerPreview,
     });
     const unsubscribeViewport = viewport.subscribe(
       () => selectionController.showSelection(),
@@ -268,7 +268,7 @@ export function usePianoRollEvents(
     spatialIndex,
     strategyRef,
     totalTicks,
-    timelineDragPreview,
+    timeMapMarkerPreview,
     viewport,
     visualsRef,
   ]);
@@ -277,12 +277,13 @@ export function usePianoRollEvents(
     let externalPreviewActive = false;
 
     const updateExternalPreview = (): void => {
-      const preview = timelineDragPreview.get();
+      const preview = timeMapMarkerPreview.signal.get();
       const visuals = visualsRef.current;
 
       if (
-        preview?.source !== "markers"
-        || preview.standaloneMarkerTick !== null
+        session.draft.mode === "DRAGGING"
+        || preview === null
+        || !doesPreviewMoveEditorSelection(preview, selection)
       ) {
         if (externalPreviewActive) {
           externalPreviewActive = false;
@@ -294,13 +295,19 @@ export function usePianoRollEvents(
 
       const state = editorCommands.getState();
       const clip = getActiveClip(state);
+      const getEffectiveTimeMap = () => resolveEffectiveTimeMap(
+        clip.timeline.timeMap,
+        timeMapMarkerPreview.signal.get(),
+        clip.id,
+        state.revision,
+      );
       const converter = session.synchronizeConverter(
         viewport.get(),
         viewport.version,
       );
       const getSnapSettingsAtTick = (tick: number) =>
         resolvePitchSnapSettings(
-          clip.timeline.timeMap,
+          getEffectiveTimeMap(),
           pitchSnapSettings.get(),
           tick,
         );
@@ -312,7 +319,7 @@ export function usePianoRollEvents(
           converter,
           instrumentStyles.get(),
           getSnapSettingsAtTick,
-          clip.timeline.timeMap.scaleMarkers,
+          () => getEffectiveTimeMap().scaleMarkers,
         );
       }
 
@@ -330,7 +337,9 @@ export function usePianoRollEvents(
       );
     };
 
-    const unsubscribe = timelineDragPreview.subscribe(updateExternalPreview);
+    const unsubscribe = timeMapMarkerPreview.signal.subscribe(
+      updateExternalPreview,
+    );
 
     return (): void => {
       unsubscribe();
@@ -345,10 +354,30 @@ export function usePianoRollEvents(
     pitchSnapSettings,
     selectionController,
     session,
-    timelineDragPreview,
+    timeMapMarkerPreview,
     viewport,
     visualsRef,
   ]);
 
   return selectionController;
+}
+
+function doesPreviewMoveEditorSelection(
+  preview: TimeMapMarkerMovePreview,
+  selection: EditorSelection,
+): boolean {
+  if (
+    selection.notes.length === 0
+    || preview.movedGroups.length !== selection.markerGroups.length
+  ) {
+    return false;
+  }
+
+  return preview.movedGroups.every((group) => {
+    const selected = selection.findMarkerGroup(group.startTick);
+
+    return selected !== undefined
+      && selected.kinds.length === group.kinds.length
+      && group.kinds.every((kind) => selected.kinds.includes(kind));
+  });
 }

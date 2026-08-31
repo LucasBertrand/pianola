@@ -30,6 +30,7 @@ import {
 } from "../../infrastructure/audio/audio-worklet-transport";
 import {
   compilePlaybackPlan,
+  compileTempoMapSnapshot,
 } from "../../infrastructure/audio/playback-snapshot";
 import {
   createClipPlaybackSource,
@@ -43,10 +44,18 @@ import type {
 import type {
   InstrumentConfig,
 } from "../../domain/instruments/instrument";
+import type {
+  TimeMapMarkerPreviewSession,
+} from "../../application/editor-session/time-map-marker-preview-session";
+import type {
+  LoopPreviewSession,
+} from "../../application/editor-session/loop-preview-session";
 
 export interface UseAudioPlaybackOptions {
   readonly projectStore: ProjectStorePort;
   readonly playheadPosition: MutableRenderSignal<PlayheadPosition>;
+  readonly timeMapMarkerPreview: TimeMapMarkerPreviewSession;
+  readonly loopPreview: LoopPreviewSession;
   readonly onError: (error: unknown) => void;
 }
 
@@ -80,6 +89,8 @@ export function useAudioPlayback(
   const {
     projectStore,
     playheadPosition,
+    timeMapMarkerPreview,
+    loopPreview,
     onError,
   } = options;
   const onErrorRef = useRef(onError);
@@ -105,6 +116,57 @@ export function useAudioPlayback(
       playheadPosition.set({ clipId, tick });
     }
   }, [playheadPosition]);
+
+  const clearTimingPreviews = useCallback((): void => {
+    const transport = transportRef.current;
+    const loadedClipId = loadedClipIdRef.current;
+
+    if (transport === null || loadedClipId === null) {
+      return;
+    }
+
+    transport.previewTempoMap(loadedClipId, null);
+    transport.previewLoop(loadedClipId, null);
+  }, []);
+
+  const publishTimingPreviews = useCallback((): void => {
+    const transport = transportRef.current;
+    const loadedClipId = loadedClipIdRef.current;
+
+    if (transport === null || loadedClipId === null) {
+      return;
+    }
+
+    const state = projectStore.getState();
+    const markerPreview = timeMapMarkerPreview.signal.get();
+    const hasTempoPreview = markerPreview !== null
+      && markerPreview.clipId === loadedClipId
+      && markerPreview.sourceRevision === state.revision
+      && markerPreview.movedGroups.some(
+        (group) => group.kinds.includes("tempo"),
+      );
+
+    transport.previewTempoMap(
+      loadedClipId,
+      hasTempoPreview
+        ? compileTempoMapSnapshot(
+            state.clock.ppqn,
+            markerPreview.projectedTimeMap,
+          )
+        : null,
+    );
+
+    const loopPreviewValue = loopPreview.signal.get();
+    const hasAudibleLoopPreview = loopPreviewValue !== null
+      && loopPreviewValue.clipId === loadedClipId
+      && loopPreviewValue.sourceRevision === state.revision
+      && loopPreviewValue.loopEnabled;
+
+    transport.previewLoop(
+      loadedClipId,
+      hasAudibleLoopPreview ? loopPreviewValue.loop : null,
+    );
+  }, [loopPreview, projectStore, timeMapMarkerPreview]);
 
   const playTransport = useCallback((
     transport: AudioWorkletTransport,
@@ -145,6 +207,7 @@ export function useAudioPlayback(
             const sourceChanged = loadedClipIdRef.current !== sourceClipId;
 
             loadedClipIdRef.current = sourceClipId;
+            publishTimingPreviews();
             publishPlayhead(sourceClipId, positionTick);
 
             if (sourceChanged) {
@@ -180,6 +243,7 @@ export function useAudioPlayback(
       );
       transportRef.current = transport;
       loadedClipIdRef.current = initialClip.id;
+      publishTimingPreviews();
       synchronizeAutoAdvanceQueue(
         transport,
         state,
@@ -257,6 +321,7 @@ export function useAudioPlayback(
           sourceChanged ? sourcePosition.tick : undefined,
         );
         loadedClipIdRef.current = sourcePosition.clipId;
+        publishTimingPreviews();
         synchronizeAutoAdvanceQueue(
           transport,
           state,
@@ -289,6 +354,44 @@ export function useAudioPlayback(
     projectStore,
     publishPlayhead,
     publishPlayingClipId,
+    publishTimingPreviews,
+  ]);
+
+  useEffect(() => {
+    let animationFrame = 0;
+
+    const schedulePublish = (): void => {
+      if (animationFrame !== 0) {
+        return;
+      }
+
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = 0;
+        publishTimingPreviews();
+      });
+    };
+    const unsubscribeMarkers = timeMapMarkerPreview.signal.subscribe(
+      schedulePublish,
+    );
+    const unsubscribeLoop = loopPreview.signal.subscribe(schedulePublish);
+
+    schedulePublish();
+
+    return (): void => {
+      unsubscribeMarkers();
+      unsubscribeLoop();
+
+      if (animationFrame !== 0) {
+        cancelAnimationFrame(animationFrame);
+      }
+
+      clearTimingPreviews();
+    };
+  }, [
+    clearTimingPreviews,
+    loopPreview,
+    publishTimingPreviews,
+    timeMapMarkerPreview,
   ]);
 
   useEffect(() => {
@@ -339,6 +442,7 @@ export function useAudioPlayback(
 
       replaceTransportClip(transport, state, clipId, normalizedTick);
       loadedClipIdRef.current = clipId;
+      publishTimingPreviews();
       synchronizeAutoAdvanceQueue(
         transport,
         state,
@@ -364,13 +468,15 @@ export function useAudioPlayback(
     projectStore,
     publishPlayhead,
     publishPlayingClipId,
+    publishTimingPreviews,
   ]);
 
   const stopPlayback = useCallback((): void => {
     transportRef.current?.stop();
+    clearTimingPreviews();
     publishPlayingClipId(null);
     setStatus("stopped");
-  }, [publishPlayingClipId]);
+  }, [clearTimingPreviews, publishPlayingClipId]);
 
   const togglePlayback = useCallback((): void => {
     const transport = transportRef.current;
@@ -442,6 +548,7 @@ export function useAudioPlayback(
     if (loadedClipIdRef.current !== position.clipId) {
       replaceTransportClip(transport, state, position.clipId, 0);
       loadedClipIdRef.current = position.clipId;
+      publishTimingPreviews();
       synchronizeAutoAdvanceQueue(
         transport,
         state,
@@ -463,6 +570,7 @@ export function useAudioPlayback(
     projectStore,
     publishPlayhead,
     publishPlayingClipId,
+    publishTimingPreviews,
   ]);
 
   const seek = useCallback((tick: Tick): void => {
@@ -485,6 +593,7 @@ export function useAudioPlayback(
           normalizedTick,
         );
         loadedClipIdRef.current = targetClip.id;
+        publishTimingPreviews();
         synchronizeAutoAdvanceQueue(
           transport,
           state,
@@ -510,6 +619,7 @@ export function useAudioPlayback(
     projectStore,
     publishPlayhead,
     publishPlayingClipId,
+    publishTimingPreviews,
   ]);
 
   const auditionPitch = useCallback((

@@ -31,6 +31,7 @@ export interface TempoMeterMarkerDialogProps {
   readonly patternType: PitchPatternType;
   readonly patternId: string;
   readonly sectionComment: string;
+  readonly errorMessage: string | null;
   readonly onTempoIncludedChange: (included: boolean) => void;
   readonly onMeterIncludedChange: (included: boolean) => void;
   readonly onScaleIncludedChange: (included: boolean) => void;
@@ -59,6 +60,7 @@ export function TempoMeterMarkerDialog({
   patternType,
   patternId,
   sectionComment,
+  errorMessage,
   onTempoIncludedChange,
   onMeterIncludedChange,
   onScaleIncludedChange,
@@ -127,11 +129,12 @@ export function TempoMeterMarkerDialog({
                   <span>Tempo (BPM)</span>
                   <input
                     type="number"
-                    value={bpm}
+                    value={Number.isFinite(bpm) ? bpm : ""}
                     min={PROJECT_CONSTANTS.minimumTempoBpm}
                     max={PROJECT_CONSTANTS.maximumTempoBpm}
                     step={PROJECT_CONSTANTS.tempoStepBpm}
                     inputMode="decimal"
+                    required
                     aria-label="Marker tempo in beats per minute"
                     onChange={(event) => {
                       onBpmChange(event.currentTarget.valueAsNumber);
@@ -351,6 +354,15 @@ export function TempoMeterMarkerDialog({
             The initial tempo, meter, and scale markers are required.
           </p>
         ) : null}
+
+        {errorMessage === null ? null : (
+          <p
+            className="tempo-meter-marker-dialog-note is-error"
+            role="alert"
+          >
+            {errorMessage}
+          </p>
+        )}
 
         <div className="application-dialog-actions">
           <button

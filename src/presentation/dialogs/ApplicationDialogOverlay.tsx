@@ -25,7 +25,7 @@ export function ApplicationDialogOverlay(
   }
 
   return (
-    <div className="application-dialog-backdrop">
+    <div className="application-dialog-backdrop application-dialog-overlay-backdrop">
       <section
         className="application-dialog"
         data-tone={dialog.tone}

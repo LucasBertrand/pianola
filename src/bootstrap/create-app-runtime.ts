@@ -87,6 +87,12 @@ import {
 import {
   WorkerStoredProjectCodec,
 } from "../infrastructure/persistence/worker/worker-stored-project-codec";
+import {
+  TimeMapMarkerPreviewSession,
+} from "../application/editor-session/time-map-marker-preview-session";
+import {
+  LoopPreviewSession,
+} from "../application/editor-session/loop-preview-session";
 
 /** Creates the runtime for one project. A future tab system can own one per tab. */
 export function createEditorRuntime(
@@ -98,6 +104,8 @@ export function createEditorRuntime(
   const selection = new EditorSelection();
   const indexedNotesBuffer: Note[] = [];
   const editorCommands = new EditorCommandService(projectStore, selection);
+  const timeMapMarkerPreview = new TimeMapMarkerPreviewSession(projectStore);
+  const loopPreview = new LoopPreviewSession(projectStore);
   const activeClip = getActiveClip(initialProjectState);
 
   rebuildSpatialIndex(
@@ -210,6 +218,8 @@ export function createEditorRuntime(
       gridSettings,
       (settings) => settings.resolutionTicks,
     ),
+    timeMapMarkerPreview,
+    loopPreview,
     captureClipEditorStates(): Readonly<Record<ClipId, ClipEditorRuntimeState>> {
       const state = projectStore.getState();
 

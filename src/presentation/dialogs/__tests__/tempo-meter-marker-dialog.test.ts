@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   TempoMeterMarkerDialog,
   type TempoMeterMarkerDialogProps,
@@ -19,6 +19,7 @@ const BASE_PROPS: TempoMeterMarkerDialogProps = {
   patternType: "chord",
   patternId: "mM7",
   sectionComment: "",
+  errorMessage: null,
   onTempoIncludedChange: () => undefined,
   onMeterIncludedChange: () => undefined,
   onScaleIncludedChange: () => undefined,
@@ -73,5 +74,41 @@ describe("TempoMeterMarkerDialog", () => {
     expect(markup).toContain('<optgroup label="Diatonic modes">');
     expect(markup).toContain('<optgroup label="Pentatonic and blues">');
     expect(markup).toContain('<optgroup label="Symmetric scales">');
+  });
+
+  test("renders a draft validation error inside the marker dialog", () => {
+    const markup = renderToStaticMarkup(createElement(
+      TempoMeterMarkerDialog,
+      {
+        ...BASE_PROPS,
+        errorMessage: "The marker position is invalid.",
+      },
+    ));
+
+    expect(markup).toContain('role="alert"');
+    expect(markup).toContain("The marker position is invalid.");
+  });
+
+  test("renders an emptied tempo input without passing NaN to React", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(
+      () => undefined,
+    );
+
+    try {
+      const markup = renderToStaticMarkup(createElement(
+        TempoMeterMarkerDialog,
+        {
+          ...BASE_PROPS,
+          tempoIncluded: true,
+          bpm: Number.NaN,
+        },
+      ));
+
+      expect(markup).toContain('value=""');
+      expect(markup).toContain('required=""');
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

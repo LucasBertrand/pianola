@@ -92,6 +92,107 @@ describe("AudioWorklet timeline engine", () => {
       .toEqual(expect.objectContaining({ frame: 4_800, tick: 144 }));
   });
 
+  test("composes a tempo preview over the latest published tempo", () => {
+    const snapshot = createSnapshotWithNotes([]);
+    const timeline = toTimeline(snapshot);
+    const engine = new WorkletTimelineEngine(SAMPLE_RATE);
+    const transport = {
+      loopEnabled: false,
+      loop: { startTick: 0, endTick: timeline.durationTicks },
+    };
+
+    engine.loadTimeline(timeline, transport, 7, 0);
+    engine.play(0);
+    renderFrames(engine, 2_400);
+    const tickBeforePreview = engine.positionTick;
+
+    engine.previewTempoMap(
+      timeline.sourceId,
+      7,
+      1,
+      new Float64Array([0]),
+      new Float64Array([60]),
+    );
+
+    expect(engine.positionTick).toBe(tickBeforePreview);
+    renderFrames(engine, 2_400);
+    expect(engine.positionTick - tickBeforePreview).toBeCloseTo(48, 8);
+
+    engine.updateTransport(transport, {
+      ppqn: timeline.ppqn,
+      durationTicks: timeline.durationTicks,
+      tempoStartTicks: new Float64Array([0]),
+      tempoBpms: new Float64Array([180]),
+    }, 7, 1);
+    const tickBeforePublishedUpdate = engine.positionTick;
+
+    renderFrames(engine, 2_400);
+    expect(engine.positionTick - tickBeforePublishedUpdate)
+      .toBeCloseTo(48, 8);
+
+    engine.previewTempoMap(timeline.sourceId, 7, 2, null, null);
+    const tickBeforeClear = engine.positionTick;
+
+    renderFrames(engine, 2_400);
+    expect(engine.positionTick - tickBeforeClear).toBeCloseTo(144, 8);
+
+    engine.previewTempoMap(
+      timeline.sourceId,
+      7,
+      1,
+      new Float64Array([0]),
+      new Float64Array([30]),
+    );
+    const tickBeforeStaleMessage = engine.positionTick;
+
+    renderFrames(engine, 800);
+    expect(engine.positionTick - tickBeforeStaleMessage).toBeCloseTo(48, 8);
+  });
+
+  test("composes independently versioned tempo and loop previews", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const snapshot = createSnapshotWithNotes([]);
+    const timeline = toTimeline(snapshot);
+    const engine = new WorkletTimelineEngine(SAMPLE_RATE, {
+      onDiagnostic: (event) => diagnostics.push(event),
+    });
+
+    engine.loadTimeline(timeline, {
+      loopEnabled: true,
+      loop: { startTick: 0, endTick: 192 },
+    }, 5, 0);
+    engine.previewTempoMap(
+      timeline.sourceId,
+      5,
+      10,
+      new Float64Array([0]),
+      new Float64Array([60]),
+    );
+    engine.previewLoop(
+      timeline.sourceId,
+      5,
+      1,
+      { startTick: 0, endTick: 72 },
+    );
+    engine.play(0);
+    renderFrames(engine, 3_600);
+
+    expect(engine.positionTick).toBeCloseTo(0, 8);
+    expect(diagnostics.at(-1)?.type).toBe("loop");
+
+    engine.previewLoop(timeline.sourceId, 5, 2, null);
+    engine.previewTempoMap(
+      timeline.sourceId,
+      5,
+      9,
+      new Float64Array([0]),
+      new Float64Array([180]),
+    );
+    renderFrames(engine, 2_400);
+
+    expect(engine.positionTick).toBeCloseTo(48, 8);
+  });
+
   test("keeps looping while the main thread sends no messages", () => {
     const diagnostics: TimelineEngineDiagnostic[] = [];
     const snapshot = createSnapshotWithNotes([
@@ -128,6 +229,58 @@ describe("AudioWorklet timeline engine", () => {
       9_600,
       14_400,
     ]);
+  });
+
+  test("uses a loop preview immediately and reveals the published loop", () => {
+    const diagnostics: TimelineEngineDiagnostic[] = [];
+    const snapshot = createSnapshotWithNotes([]);
+    const timeline = toTimeline(snapshot);
+    const engine = new WorkletTimelineEngine(SAMPLE_RATE, {
+      onDiagnostic: (event) => diagnostics.push(event),
+    });
+
+    engine.loadTimeline(timeline, {
+      loopEnabled: true,
+      loop: { startTick: 0, endTick: 192 },
+    }, 3, 0);
+    engine.play(0);
+    renderFrames(engine, 3_600);
+    const tickBeforePreview = engine.positionTick;
+
+    engine.previewLoop(
+      timeline.sourceId,
+      3,
+      1,
+      { startTick: 0, endTick: 96 },
+    );
+    expect(engine.positionTick).toBe(tickBeforePreview);
+
+    renderFrames(engine, 1);
+    expect(engine.positionTick).toBeCloseTo(48.04, 8);
+    expect(diagnostics.at(-1)?.type).toBe("loop");
+
+    engine.updateTransport({
+      loopEnabled: true,
+      loop: { startTick: 0, endTick: 240 },
+    }, {
+      ppqn: timeline.ppqn,
+      durationTicks: timeline.durationTicks,
+      tempoStartTicks: timeline.tempoStartTicks,
+      tempoBpms: timeline.tempoBpms,
+    }, 3, 1);
+    engine.previewLoop(timeline.sourceId, 3, 2, null);
+    renderFrames(engine, 3_000);
+
+    expect(engine.positionTick).toBeCloseTo(168.04, 8);
+
+    engine.previewLoop(
+      timeline.sourceId,
+      3,
+      1,
+      { startTick: 0, endTick: 60 },
+    );
+    renderFrames(engine, 100);
+    expect(engine.positionTick).toBeCloseTo(172.04, 8);
   });
 
   test("renders finite stereo samples at maximum filter resonance", () => {

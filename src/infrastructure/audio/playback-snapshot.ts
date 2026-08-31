@@ -159,7 +159,7 @@ export function compilePlaybackPlan(
     masterMuted: projectState.masterBus.muted,
     masterTuningFrequencyHz:
       projectState.masterBus.tuningFrequencyHz,
-    tempoMap: createTempoMapSnapshot(
+    tempoMap: compileTempoMapSnapshot(
       projectState.clock.ppqn,
       clip.timeline.timeMap,
     ),
@@ -344,7 +344,7 @@ function cloneInstrument(
  * the previous segment, so tick↔seconds conversion stays exact across tempo
  * changes.
  */
-function createTempoMapSnapshot(
+export function compileTempoMapSnapshot(
   ppqn: number,
   timeMap: TimeMap,
 ): TempoMapSnapshot {

@@ -8,6 +8,7 @@ import type {
   InstrumentConfig,
 } from "../../../domain/instruments/instrument";
 import type {
+  LoopRegion,
   TransportState,
 } from "../../../domain/transport/transport";
 import type {
@@ -104,6 +105,21 @@ export type MainToAudioWorkletMessage = VersionedMessage & (
   | {
       readonly type: "seek";
       readonly tick: Tick;
+    }
+  | {
+      readonly type: "tempo-map-preview";
+      readonly sourceId: ClipId;
+      readonly sequence: number;
+      readonly previewVersion: number;
+      readonly tempoStartTicks: Float64Array | null;
+      readonly tempoBpms: Float64Array | null;
+    }
+  | {
+      readonly type: "loop-preview";
+      readonly sourceId: ClipId;
+      readonly sequence: number;
+      readonly previewVersion: number;
+      readonly loop: LoopRegion | null;
     }
   | {
       readonly type: "instrument-preview";

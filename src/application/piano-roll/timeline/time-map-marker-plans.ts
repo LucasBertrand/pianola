@@ -18,6 +18,7 @@ import {
   getTempoAtTick,
   getScaleMarkerAtTick,
   isMeasureBoundary,
+  snapTickToMeasureGrid,
   type TimeMap,
   type TimeSignature,
 } from "../../../domain/transport/time-map";
@@ -206,6 +207,39 @@ export function createMarkerDraft(
 }
 
 /**
+ * Captures a continuous playhead position as an editable musical tick.
+ * The active grid owns the projection. The clip end itself is not editable,
+ * and is represented by `null` so the caller can refuse it explicitly.
+ */
+export function projectPlayheadTickToMarkerGrid(
+  state: EditorSessionState,
+  clipId: ClipId,
+  playheadTick: number,
+  resolutionTicks: number,
+): Tick | null {
+  const clip = getClip(state, clipId);
+  const { timeMap, durationTicks } = clip.timeline;
+  const sourceTick = Number.isFinite(playheadTick) ? playheadTick : 0;
+  const resolution = Number.isSafeInteger(resolutionTicks)
+    && resolutionTicks > 0
+    ? resolutionTicks
+    : 1;
+  const snappedTick = snapTickToMeasureGrid(
+    state.clock.ppqn,
+    timeMap,
+    durationTicks,
+    sourceTick,
+    resolution,
+  );
+
+  if (snappedTick < durationTicks) {
+    return snappedTick;
+  }
+
+  return null;
+}
+
+/**
  * Reconciles the explicit marker types selected in a dialog draft with the
  * stored flag. Unselected existing components are deleted, selected missing
  * components are created, and retained components are updated as needed.
@@ -217,7 +251,6 @@ export function planMarkerDraftCommands(
 ): PianoRollCommand[] {
   const clip = getClip(state, clipId);
   const { timeMap } = clip.timeline;
-  const bpm = normalizeDraftBpm(draft.bpm);
   const commands: PianoRollCommand[] = [];
 
   if (
@@ -277,22 +310,26 @@ export function planMarkerDraftCommands(
     (marker) => marker.startTick === draft.startTick,
   );
 
-  if (draft.tempoIncluded && tempoMarker !== undefined) {
-    if (tempoMarker.bpm !== bpm) {
+  if (draft.tempoIncluded) {
+    const bpm = normalizeDraftBpm(draft.bpm);
+
+    if (tempoMarker !== undefined) {
+      if (tempoMarker.bpm !== bpm) {
+        commands.push({
+          type: "UpdateTempoMarker",
+          clipId,
+          startTick: draft.startTick,
+          bpm,
+        });
+      }
+    } else {
       commands.push({
-        type: "UpdateTempoMarker",
+        type: "AddTempoMarker",
         clipId,
         startTick: draft.startTick,
         bpm,
       });
     }
-  } else if (draft.tempoIncluded) {
-    commands.push({
-      type: "AddTempoMarker",
-      clipId,
-      startTick: draft.startTick,
-      bpm,
-    });
   } else if (tempoMarker !== undefined && draft.startTick > 0) {
     commands.push({
       type: "DeleteTempoMarker",
@@ -433,6 +470,19 @@ export function planMarkerMove(
 
   const clip = getClip(state, clipId);
   const { timeMap } = clip.timeline;
+
+  if (!Number.isSafeInteger(toTick) || toTick < 0) {
+    throw new RangeError(
+      "A marker must be placed on a non-negative whole-number tick.",
+    );
+  }
+
+  if (toTick >= clip.timeline.durationTicks) {
+    throw new RangeError(
+      "A marker must be placed before the end of the clip.",
+    );
+  }
+
   const moveCommands: PianoRollCommand[] = [];
   const groupTargetTick = toTick;
 
@@ -446,7 +496,28 @@ export function planMarkerMove(
       collisions.push({ kind: "tempo", targetTick: groupTargetTick });
     }
 
-    if (fromTick !== groupTargetTick) {
+    if (
+      fromTick !== groupTargetTick
+      && groupTargetTick === 0
+      && targetHasTempo
+      && overwriteCollisions
+    ) {
+      const source = timeMap.tempoMarkers.find(
+        (marker) => marker.startTick === fromTick,
+      );
+
+      if (source !== undefined) {
+        moveCommands.push(
+          {
+            type: "UpdateTempoMarker",
+            clipId,
+            startTick: 0,
+            bpm: source.bpm,
+          },
+          { type: "DeleteTempoMarker", clipId, startTick: fromTick },
+        );
+      }
+    } else if (fromTick !== groupTargetTick) {
       moveCommands.push({
         type: "MoveTempoMarker",
         clipId,
@@ -465,7 +536,32 @@ export function planMarkerMove(
       collisions.push({ kind: "scale", targetTick: groupTargetTick });
     }
 
-    if (fromTick !== groupTargetTick) {
+    if (
+      fromTick !== groupTargetTick
+      && groupTargetTick === 0
+      && targetHasScale
+      && overwriteCollisions
+    ) {
+      const source = timeMap.scaleMarkers.find(
+        (marker) => marker.startTick === fromTick,
+      );
+
+      if (source !== undefined) {
+        moveCommands.push(
+          {
+            type: "UpdateScaleMarker",
+            clipId,
+            startTick: 0,
+            changes: {
+              rootNote: source.rootNote,
+              patternType: source.patternType,
+              patternId: source.patternId,
+            },
+          },
+          { type: "DeleteScaleMarker", clipId, startTick: fromTick },
+        );
+      }
+    } else if (fromTick !== groupTargetTick) {
       moveCommands.push({
         type: "MoveScaleMarker",
         clipId,
@@ -501,15 +597,20 @@ export function planMarkerMove(
     return { commands: [], collisions };
   }
 
-  const deleteCommands: PianoRollCommand[] = collisions.map((collision) => ({
-    type: collision.kind === "tempo"
-      ? "DeleteTempoMarker"
-      : collision.kind === "scale"
-        ? "DeleteScaleMarker"
-        : "DeleteSectionMarker",
-    clipId,
-    startTick: collision.targetTick,
-  }));
+  const deleteCommands: PianoRollCommand[] = collisions
+    .filter((collision) => !(
+      collision.targetTick === 0
+      && (collision.kind === "tempo" || collision.kind === "scale")
+    ))
+    .map((collision) => ({
+      type: collision.kind === "tempo"
+        ? "DeleteTempoMarker"
+        : collision.kind === "scale"
+          ? "DeleteScaleMarker"
+          : "DeleteSectionMarker",
+      clipId,
+      startTick: collision.targetTick,
+    }));
 
   return {
     commands: [...deleteCommands, ...moveCommands],
@@ -517,10 +618,10 @@ export function planMarkerMove(
   };
 }
 
-/** Clamps and rounds a draft tempo to the editor limits and step. */
+/** Requires, clamps, and rounds a draft tempo to the editor limits and step. */
 export function normalizeDraftBpm(bpm: number): number {
   if (!Number.isFinite(bpm)) {
-    return PROJECT_CONSTANTS.defaultTempoBpm;
+    throw new RangeError("Tempo is required.");
   }
 
   const stepped = Math.round(bpm / PROJECT_CONSTANTS.tempoStepBpm)

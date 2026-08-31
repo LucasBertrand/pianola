@@ -1,9 +1,11 @@
 import type {
+  ClipId,
   InstrumentId,
   Tick,
 } from "../../domain/identifiers";
 import {
   resolvePlaybackStartTick,
+  type LoopRegion,
   type TransportState,
 } from "../../domain/transport/transport";
 import type {
@@ -16,6 +18,7 @@ import type {
   AudioTransportController,
   PlaybackSnapshot,
   PlaybackStatus,
+  TempoMapSnapshot,
 } from "./playback-model";
 import {
   assertCompatiblePlaybackState,
@@ -60,6 +63,15 @@ export class AudioWorkletTransport implements AudioTransportController {
   private readonly contextFactory: AudioContextFactory;
   private readonly nodeFactory: AudioWorkletNodeFactory;
   private readonly instrumentPreviews = new Map<InstrumentId, InstrumentConfig>();
+  private tempoMapPreview: {
+    readonly sourceId: ClipId;
+    readonly startTicks: Float64Array;
+    readonly bpms: Float64Array;
+  } | null = null;
+  private loopPreview: {
+    readonly sourceId: ClipId;
+    readonly loop: LoopRegion;
+  } | null = null;
   private context: AudioContext | null = null;
   private node: AudioWorkletNode | null = null;
   private initialization: Promise<void> | null = null;
@@ -71,6 +83,8 @@ export class AudioWorkletTransport implements AudioTransportController {
   private timelineSequence = 1;
   private nextTimelineSequence = 1;
   private stateVersion = 1;
+  private tempoMapPreviewVersion = 0;
+  private loopPreviewVersion = 0;
   private pendingPositionAcknowledgement: PlaybackStatus | null = null;
   private disposed = false;
 
@@ -116,8 +130,13 @@ export class AudioWorkletTransport implements AudioTransportController {
       snapshot,
     );
     const hadQueuedTimeline = this.queuedSequence !== null;
+    const sourceChanged = previousSnapshot.sourceId !== snapshot.sourceId;
     this.snapshot = snapshot;
     this.transport = transport;
+    if (sourceChanged) {
+      this.tempoMapPreview = null;
+      this.loopPreview = null;
+    }
     this.stateVersion += 1;
     if (requiresTimelineReplacement) {
       this.timelineSequence = ++this.nextTimelineSequence;
@@ -217,6 +236,74 @@ export class AudioWorkletTransport implements AudioTransportController {
       instrumentId,
       instrument,
     });
+  }
+
+  public previewTempoMap(
+    clipId: ClipId,
+    tempoMap: TempoMapSnapshot | null,
+  ): void {
+    this.assertUsable();
+
+    if (clipId !== this.snapshot.sourceId) {
+      return;
+    }
+
+    if (tempoMap === null) {
+      if (this.tempoMapPreview === null) {
+        return;
+      }
+
+      this.tempoMapPreview = null;
+      this.postTempoMapPreview();
+      return;
+    }
+
+    if (
+      this.tempoMapPreview?.sourceId === clipId
+      && haveEqualNumbers(this.tempoMapPreview.startTicks, tempoMap.startTicks)
+      && haveEqualNumbers(this.tempoMapPreview.bpms, tempoMap.bpms)
+    ) {
+      return;
+    }
+
+    this.tempoMapPreview = {
+      sourceId: clipId,
+      startTicks: new Float64Array(tempoMap.startTicks),
+      bpms: new Float64Array(tempoMap.bpms),
+    };
+    this.postTempoMapPreview();
+  }
+
+  public previewLoop(clipId: ClipId, loop: LoopRegion | null): void {
+    this.assertUsable();
+
+    if (clipId !== this.snapshot.sourceId) {
+      return;
+    }
+
+    if (loop === null) {
+      if (this.loopPreview === null) {
+        return;
+      }
+
+      this.loopPreview = null;
+      this.postLoopPreview();
+      return;
+    }
+
+    if (
+      this.loopPreview?.sourceId === clipId
+      && this.loopPreview.loop.startTick === loop.startTick
+      && this.loopPreview.loop.endTick === loop.endTick
+    ) {
+      return;
+    }
+
+    this.loopPreview = {
+      sourceId: clipId,
+      loop: { ...loop },
+    };
+    this.postLoopPreview();
   }
 
   public async play(startTick: Tick = this.positionTick): Promise<void> {
@@ -439,6 +526,63 @@ export class AudioWorkletTransport implements AudioTransportController {
       stateVersion: this.stateVersion,
       protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
     } satisfies MainToAudioWorkletMessage, transfers);
+    this.postActiveTimingPreviews();
+  }
+
+  private postActiveTimingPreviews(): void {
+    if (this.tempoMapPreview !== null) {
+      this.postTempoMapPreview();
+    }
+
+    if (this.loopPreview !== null) {
+      this.postLoopPreview();
+    }
+  }
+
+  private postTempoMapPreview(): void {
+    if (this.node === null) {
+      return;
+    }
+
+    const preview = this.tempoMapPreview;
+    const tempoStartTicks = preview === null
+      ? null
+      : new Float64Array(preview.startTicks);
+    const tempoBpms = preview === null
+      ? null
+      : new Float64Array(preview.bpms);
+    const transfers: Transferable[] = [];
+
+    if (tempoStartTicks !== null && tempoBpms !== null) {
+      transfers.push(tempoStartTicks.buffer, tempoBpms.buffer);
+    }
+
+    this.node.port.postMessage({
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+      type: "tempo-map-preview",
+      sourceId: this.snapshot.sourceId,
+      sequence: this.timelineSequence,
+      previewVersion: ++this.tempoMapPreviewVersion,
+      tempoStartTicks,
+      tempoBpms,
+    } satisfies MainToAudioWorkletMessage, transfers);
+  }
+
+  private postLoopPreview(): void {
+    if (this.node === null) {
+      return;
+    }
+
+    this.node.port.postMessage({
+      protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
+      type: "loop-preview",
+      sourceId: this.snapshot.sourceId,
+      sequence: this.timelineSequence,
+      previewVersion: ++this.loopPreviewVersion,
+      loop: this.loopPreview === null
+        ? null
+        : { ...this.loopPreview.loop },
+    } satisfies MainToAudioWorkletMessage);
   }
 
   private postQueuedTimeline(
@@ -585,6 +729,10 @@ export class AudioWorkletTransport implements AudioTransportController {
       message.sequence > this.timelineSequence
       && pendingTimeline !== undefined
     ) {
+      if (pendingTimeline.snapshot.sourceId !== this.snapshot.sourceId) {
+        this.tempoMapPreview = null;
+        this.loopPreview = null;
+      }
       this.snapshot = pendingTimeline.snapshot;
       this.transport = pendingTimeline.transport;
       this.timelineSequence = message.sequence;

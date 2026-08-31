@@ -180,6 +180,7 @@ export function PianoRollWorkspaceDialogs({
           patternType={timeMapMarkers.draft.patternType}
           patternId={timeMapMarkers.draft.patternId}
           sectionComment={timeMapMarkers.draft.sectionComment}
+          errorMessage={timeMapMarkers.draftError}
           onTempoIncludedChange={timeMapMarkers.setDraftTempoIncluded}
           onMeterIncludedChange={timeMapMarkers.setDraftMeterIncluded}
           onScaleIncludedChange={timeMapMarkers.setDraftScaleIncluded}

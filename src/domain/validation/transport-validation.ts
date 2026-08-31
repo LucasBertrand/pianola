@@ -1,6 +1,7 @@
 import {
   type ClipTimeline,
 } from "../clips/clip";
+import type { Tick } from "../identifiers";
 import {
   type ProjectClock,
   type TransportState,
@@ -147,16 +148,18 @@ function validateMeterMarkers(
       continue;
     }
 
-    if (
-      !isValidTick(marker.startTick)
-      || (index > 0
-        && marker.startTick <= (markers[index - 1]?.startTick ?? -1))
-      || marker.startTick >= timeline.durationTicks
-    ) {
+    const positionIssue = getMarkerPositionIssue(
+      "Meter",
+      marker.startTick,
+      index > 0 ? markers[index - 1]?.startTick : undefined,
+      timeline.durationTicks,
+    );
+
+    if (positionIssue !== null) {
       issues.push({
         code: "INVALID_TIME_SIGNATURE",
         path: `${path}[${String(index)}].startTick`,
-        message: "Meter markers must be strictly ordered within the clip duration.",
+        message: positionIssue,
       });
     }
 
@@ -262,16 +265,18 @@ function validateTempoMarkers(
       continue;
     }
 
-    if (
-      !isValidTick(marker.startTick)
-      || (index > 0
-        && marker.startTick <= (markers[index - 1]?.startTick ?? -1))
-      || marker.startTick >= timeline.durationTicks
-    ) {
+    const positionIssue = getMarkerPositionIssue(
+      "Tempo",
+      marker.startTick,
+      index > 0 ? markers[index - 1]?.startTick : undefined,
+      timeline.durationTicks,
+    );
+
+    if (positionIssue !== null) {
       issues.push({
         code: "INVALID_TEMPO",
         path: `${path}[${String(index)}].startTick`,
-        message: "Tempo markers must be strictly ordered within the clip duration.",
+        message: positionIssue,
       });
     }
 
@@ -314,16 +319,18 @@ function validateScaleMarkers(
       continue;
     }
 
-    if (
-      !isValidTick(marker.startTick)
-      || (index > 0
-        && marker.startTick <= (markers[index - 1]?.startTick ?? -1))
-      || marker.startTick >= timeline.durationTicks
-    ) {
+    const positionIssue = getMarkerPositionIssue(
+      "Scale",
+      marker.startTick,
+      index > 0 ? markers[index - 1]?.startTick : undefined,
+      timeline.durationTicks,
+    );
+
+    if (positionIssue !== null) {
       issues.push({
         code: "INVALID_SCALE",
         path: `${path}[${String(index)}].startTick`,
-        message: "Scale markers must be strictly ordered within the clip duration.",
+        message: positionIssue,
       });
     }
 
@@ -359,16 +366,18 @@ function validateSectionMarkers(
       continue;
     }
 
-    if (
-      !isValidTick(marker.startTick)
-      || (index > 0
-        && marker.startTick <= (markers[index - 1]?.startTick ?? -1))
-      || marker.startTick >= timeline.durationTicks
-    ) {
+    const positionIssue = getMarkerPositionIssue(
+      "Section",
+      marker.startTick,
+      index > 0 ? markers[index - 1]?.startTick : undefined,
+      timeline.durationTicks,
+    );
+
+    if (positionIssue !== null) {
       issues.push({
         code: "INVALID_SECTION",
         path: `${path}[${String(index)}].startTick`,
-        message: "Section markers must be strictly ordered within the clip duration.",
+        message: positionIssue,
       });
     }
 
@@ -380,6 +389,27 @@ function validateSectionMarkers(
       });
     }
   }
+}
+
+function getMarkerPositionIssue(
+  label: "Meter" | "Tempo" | "Scale" | "Section",
+  startTick: Tick,
+  previousStartTick: Tick | undefined,
+  durationTicks: Tick,
+): string | null {
+  if (!isValidTick(startTick)) {
+    return `${label} marker position must be a non-negative whole-number tick.`;
+  }
+
+  if (startTick >= durationTicks) {
+    return `A ${label.toLowerCase()} marker must be placed before the end of the clip.`;
+  }
+
+  if (previousStartTick !== undefined && startTick <= previousStartTick) {
+    return `${label} markers cannot share a position and must remain strictly ordered.`;
+  }
+
+  return null;
 }
 
 function isValidSectionMarker(marker: SectionMarker): boolean {

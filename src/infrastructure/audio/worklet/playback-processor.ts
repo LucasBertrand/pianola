@@ -159,6 +159,25 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         this.engine.seek(message.tick);
         break;
 
+      case "tempo-map-preview":
+        this.engine.previewTempoMap(
+          message.sourceId,
+          message.sequence,
+          message.previewVersion,
+          message.tempoStartTicks,
+          message.tempoBpms,
+        );
+        break;
+
+      case "loop-preview":
+        this.engine.previewLoop(
+          message.sourceId,
+          message.sequence,
+          message.previewVersion,
+          message.loop,
+        );
+        break;
+
       case "instrument-preview":
         this.engine.previewInstrument(
           message.instrumentId,

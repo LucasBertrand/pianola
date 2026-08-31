@@ -5,7 +5,7 @@ comportement précis, partir de la [carte du code](code-map.md). Pour décider s
 un état doit persister ou entrer dans Undo/Redo, consulter
 [`state-ownership.md`](state-ownership.md).
 
-Dernière revue complète : 29 août 2026.
+Dernière revue complète : 31 août 2026.
 
 ## Vue d’ensemble
 
@@ -80,7 +80,7 @@ Le domaine est réparti par propriétaire :
 | `src/domain/master-bus.ts` | gain, mute et accordage master |
 | `src/domain/project/project-document.ts` | document, enchaînement global, workspace et accès clip |
 
-La `TimeMap` d’un clip est l’unique source de vérité temporelle. Notes,
+La `TimeMap` publiée d’un clip est l’unique source de vérité temporelle. Notes,
 marqueurs de tempo, de gamme et de section sont ancrés à leurs ticks absolus.
 Un marqueur de section associe un commentaire libre à son tick. Lors d'une
 découpe de clip, les marqueurs placés exactement sur une frontière de mesure
@@ -131,6 +131,13 @@ L'agrégat de session qui compose ces mécanismes reste hors du noyau, sous
 `src/application/piano-roll/selection/`. Le service de commandes transversal est
 possédé par `src/application/history/`.
 
+Les projections musicales de marqueurs et de boucle appartiennent aussi à cet
+agrégat applicatif, respectivement via `TimeMapMarkerPreviewSession` et
+`LoopPreviewSession`. Elles sont immuables, rattachées au clip et à la révision
+qui ont ouvert le geste, et distinctes du draft géométrique haute fréquence de
+`PianoRollInteractionSession`. Une nouvelle révision ou un changement de clip
+les invalide automatiquement.
+
 ## Présentation et styles
 
 Les composants sont rangés par surface : dialogs, editor-header,
@@ -144,8 +151,10 @@ Les valeurs partagées qui produisent du JSX passent par
 `useProjectStoreSelector` ou `useRenderSignalValue`, fondés sur
 `useSyncExternalStore`. Le sélecteur conserve sa référence tant que sa
 projection ne change pas et ne notifie pas React pour une mutation sans rapport.
-Le viewport, le playhead, les survols et les previews de geste restent des
-signaux à invalidation DOM/Canvas directe.
+Le viewport, le playhead, les survols et les projections de geste restent des
+signaux à invalidation DOM/Canvas directe. Les adaptateurs de rendu résolvent
+une `TimeMap` ou une boucle effective à partir du snapshot publié et de la
+projection compatible ; les peintres reçoivent seulement ce snapshot explicite.
 
 `src/presentation/styles/index.css` importe des propriétaires symétriques :
 primitives de range, shell, editor header et contexte, editor toolbar, contrôles du viewport,
@@ -159,14 +168,18 @@ PointerEvent
   → dom-pointer-sample
   → stratégie de geste
   → PianoRollInteractionSession
-  → feedback DOM/Canvas transitoire
+  → draft géométrique + projection éditoriale marqueurs/boucle
+  → snapshot effectif pour DOM/Canvas, snap et ghosts
   → NoteGestureWorkflow
   → plan de commandes ou demande de collision
   → EditorCommandPort
   → ProjectStore / reducer / Undo-Redo
 ```
 
-Pendant `pointermove`, le document ne change pas. Les rôles fréquents sont
+Pendant `pointermove`, le document ne change pas. La projection des marqueurs
+est calculée par la même primitive pure que le plan de commit ; une note
+déplacée avec un marqueur de gamme se cale ainsi sur la gamme projetée, puis les
+notes et marqueurs sont publiés dans une seule transaction. Les rôles fréquents sont
 séparés : manager de pointeurs, politique de seuils, double-tap, lasso,
 ciblage/stratégie, contrôleur de sélection et contrôleur visuel.
 
@@ -175,11 +188,13 @@ ciblage/stratégie, contrôleur de sélection et contrôleur visuel.
 ```text
 ClipPlaybackSource
   → compilePlaybackPlan
-  → PlaybackSnapshot
+  → PlaybackSnapshot publié
   → createTransferableAudioWorkletTimeline (données audio minimales)
   → AudioWorkletTransport (cycle de vie navigateur et commandes)
   → MessagePort
-  → WorkletTimelineEngine (horloge, boucles, occurrences et polyphonie)
+  → WorkletTimelineEngine
+      timeline/transport publiés + surcharges tempo/boucle
+      → état effectif (horloge, boucles, occurrences et polyphonie)
   → SubtractiveWorkletVoice (oscillateur, enveloppes et filtre par échantillon)
 ```
 
@@ -187,6 +202,15 @@ Le worklet possède le transport et déclenche les occurrences depuis le nombre
 d’échantillons réellement rendus. Le thread principal ne possède aucun timer
 audio et n’envoie aucun événement par note. Une charge React ou Canvas peut
 retarder l’affichage du playhead, jamais la lecture.
+
+`useAudioPlayback` projette les previews temporelles vers deux messages légers
+et indépendants. Le tempo effectif change la pente tick↔seconde sans seek ni
+redémarrage de voix. La boucle effective agit dès la prochaine frontière audio,
+y compris si sa fin passe derrière le playhead. Chaque message porte l’identité
+et la séquence de la timeline ainsi qu’une version monotone ; une projection
+tardive ne peut donc pas contaminer une autre source. Une mise à jour publiée
+reste mémorisée sous la surcharge, et retirer celle-ci révèle toujours la
+dernière version publiée.
 
 `EditorRuntime.playheadPosition` est l’unique position de lecture et contient le
 clip ainsi que son tick. `ActiveClipSelection.activeClipId` reste une sélection

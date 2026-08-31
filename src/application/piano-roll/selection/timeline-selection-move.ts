@@ -19,6 +19,9 @@ import type {
 import type {
   TimeMapMarkerCollision,
 } from "../timeline/marker-collision-resolution";
+import {
+  projectTimeMapMarkerMove,
+} from "../timeline/time-map-marker-move-projection";
 
 export interface SelectedMarkerMovePlan {
   readonly commands: readonly PianoRollCommand[];
@@ -71,40 +74,28 @@ export function planSelectedMarkerMove(
     section: collectSelectedTicks(groups, "section"),
   };
 
-  const tempoCollisions = validateKindMove(
-    "tempo",
-    timeMap.tempoMarkers.map((marker) => marker.startTick),
-    selectedTicksByKind.tempo,
-    deltaTicks,
-    durationTicks,
-  );
-  const scaleCollisions = validateKindMove(
-    "scale",
-    timeMap.scaleMarkers.map((marker) => marker.startTick),
-    selectedTicksByKind.scale,
-    deltaTicks,
-    durationTicks,
-  );
-  const sectionCollisions = validateKindMove(
-    "section",
-    timeMap.sectionMarkers.map((marker) => marker.startTick),
-    selectedTicksByKind.section,
-    deltaTicks,
-    durationTicks,
-  );
-  const collisions = [
-    ...tempoCollisions,
-    ...scaleCollisions,
-    ...sectionCollisions,
-  ];
+  let collisions: readonly TimeMapMarkerCollision[];
+
+  try {
+    collisions = projectTimeMapMarkerMove({
+      timeMap,
+      durationTicks,
+      movedGroups: groups,
+      deltaTicks,
+      boundaryPolicy: "published",
+    }).collisions;
+  } catch (error: unknown) {
+    throw new TimelineSelectionMoveError(
+      error instanceof Error
+        ? error.message
+        : "The selected markers cannot be moved.",
+    );
+  }
 
   if (collisions.length > 0 && !overwriteCollisions) {
     return {
       commands: [],
-      resultingMarkerGroups: groups.map((group) => ({
-        startTick: group.startTick + deltaTicks,
-        kinds: group.kinds.slice(),
-      })),
+      resultingMarkerGroups: moveMarkerGroups(groups, deltaTicks),
       collisions,
     };
   }
@@ -112,6 +103,13 @@ export function planSelectedMarkerMove(
   const commands: PianoRollCommand[] = [];
 
   for (const collision of collisions) {
+    if (
+      collision.targetTick === 0
+      && (collision.kind === "tempo" || collision.kind === "scale")
+    ) {
+      continue;
+    }
+
     commands.push({
       type: collision.kind === "tempo"
         ? "DeleteTempoMarker"
@@ -127,11 +125,36 @@ export function planSelectedMarkerMove(
     selectedTicksByKind.tempo,
     deltaTicks,
   )) {
+    const targetTick = startTick + deltaTicks;
+
+    if (targetTick === 0) {
+      const source = timeMap.tempoMarkers.find(
+        (marker) => marker.startTick === startTick,
+      );
+
+      if (source === undefined) {
+        throw new TimelineSelectionMoveError(
+          `The selected tempo marker at tick ${String(startTick)} no longer exists.`,
+        );
+      }
+
+      commands.push(
+        {
+          type: "UpdateTempoMarker",
+          clipId,
+          startTick: 0,
+          bpm: source.bpm,
+        },
+        { type: "DeleteTempoMarker", clipId, startTick },
+      );
+      continue;
+    }
+
     commands.push({
       type: "MoveTempoMarker",
       clipId,
       startTick,
-      targetTick: startTick + deltaTicks,
+      targetTick,
     });
   }
 
@@ -139,11 +162,40 @@ export function planSelectedMarkerMove(
     selectedTicksByKind.scale,
     deltaTicks,
   )) {
+    const targetTick = startTick + deltaTicks;
+
+    if (targetTick === 0) {
+      const source = timeMap.scaleMarkers.find(
+        (marker) => marker.startTick === startTick,
+      );
+
+      if (source === undefined) {
+        throw new TimelineSelectionMoveError(
+          `The selected scale marker at tick ${String(startTick)} no longer exists.`,
+        );
+      }
+
+      commands.push(
+        {
+          type: "UpdateScaleMarker",
+          clipId,
+          startTick: 0,
+          changes: {
+            rootNote: source.rootNote,
+            patternType: source.patternType,
+            patternId: source.patternId,
+          },
+        },
+        { type: "DeleteScaleMarker", clipId, startTick },
+      );
+      continue;
+    }
+
     commands.push({
       type: "MoveScaleMarker",
       clipId,
       startTick,
-      targetTick: startTick + deltaTicks,
+      targetTick,
     });
   }
 
@@ -161,18 +213,30 @@ export function planSelectedMarkerMove(
 
   return {
     commands,
-    resultingMarkerGroups: groups.map((group) => ({
-      startTick: group.startTick + deltaTicks,
-      kinds: group.kinds.slice(),
-    })),
+    resultingMarkerGroups: moveMarkerGroups(groups, deltaTicks),
     collisions,
   };
+}
+
+function moveMarkerGroups(
+  groups: readonly SelectedTimeMapMarkerGroup[],
+  deltaTicks: Tick,
+): SelectedTimeMapMarkerGroup[] {
+  return groups.flatMap((group) => {
+    const startTick = group.startTick + deltaTicks;
+    const kinds = startTick === 0
+      ? group.kinds.filter((kind) => kind === "section")
+      : group.kinds.slice();
+
+    return kinds.length === 0 ? [] : [{ startTick, kinds }];
+  });
 }
 
 /** Bounds shared by note-initiated and marker-initiated horizontal drags. */
 export function measureTimelineSelectionTickBounds(
   notes: readonly Note[],
   markerGroups: readonly SelectedTimeMapMarkerGroup[],
+  allowMarkerAtClipEnd = false,
 ): TimelineSelectionTickBounds | null {
   let minimumStartTick = Number.POSITIVE_INFINITY;
   let maximumEndTick = Number.NEGATIVE_INFINITY;
@@ -187,8 +251,10 @@ export function measureTimelineSelectionTickBounds(
 
   for (const group of markerGroups) {
     minimumStartTick = Math.min(minimumStartTick, group.startTick);
-    // Point markers must remain strictly inside the clip duration.
-    maximumEndTick = Math.max(maximumEndTick, group.startTick + 1);
+    maximumEndTick = Math.max(
+      maximumEndTick,
+      group.startTick + (allowMarkerAtClipEnd ? 0 : 1),
+    );
   }
 
   return Number.isFinite(minimumStartTick)
@@ -201,8 +267,13 @@ export function clampTimelineSelectionDelta(
   markerGroups: readonly SelectedTimeMapMarkerGroup[],
   requestedDeltaTicks: Tick,
   durationTicks: Tick,
+  allowMarkerAtClipEnd = false,
 ): Tick {
-  const bounds = measureTimelineSelectionTickBounds(notes, markerGroups);
+  const bounds = measureTimelineSelectionTickBounds(
+    notes,
+    markerGroups,
+    allowMarkerAtClipEnd,
+  );
 
   if (bounds === null) {
     return 0;
@@ -221,40 +292,6 @@ function collectSelectedTicks(
   return groups
     .filter((group) => group.kinds.includes(kind))
     .map((group) => group.startTick);
-}
-
-function validateKindMove(
-  label: MovableTimeMapMarkerKind,
-  existingTicks: readonly Tick[],
-  selectedTicks: readonly Tick[],
-  deltaTicks: Tick,
-  durationTicks: Tick,
-): TimeMapMarkerCollision[] {
-  const selected = new Set(selectedTicks);
-  const existing = new Set(existingTicks);
-  const collisions: TimeMapMarkerCollision[] = [];
-
-  for (const startTick of selectedTicks) {
-    if (!existing.has(startTick)) {
-      throw new TimelineSelectionMoveError(
-        `The selected ${label} marker no longer exists.`,
-      );
-    }
-
-    const targetTick = startTick + deltaTicks;
-
-    if (targetTick <= 0 || targetTick >= durationTicks) {
-      throw new TimelineSelectionMoveError(
-        `The ${label} marker must remain inside the clip after tick 0.`,
-      );
-    }
-
-    if (existing.has(targetTick) && !selected.has(targetTick)) {
-      collisions.push({ kind: label, targetTick });
-    }
-  }
-
-  return collisions;
 }
 
 function orderSourcesForMove(

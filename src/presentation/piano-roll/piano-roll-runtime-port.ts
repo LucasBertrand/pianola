@@ -35,6 +35,12 @@ import type {
   MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../editor-core/model/render-signal";
+import type {
+  TimeMapMarkerPreviewSession,
+} from "../../application/editor-session/time-map-marker-preview-session";
+import type {
+  LoopPreviewSession,
+} from "../../application/editor-session/loop-preview-session";
 
 /**
  * Stable services and high-frequency signals required by the piano-roll UI.
@@ -56,4 +62,6 @@ export interface PianoRollRuntimePort {
   readonly highlightedPitch: MutableRenderSignal<number | null>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly timeMapMarkerPreview: TimeMapMarkerPreviewSession;
+  readonly loopPreview: LoopPreviewSession;
 }

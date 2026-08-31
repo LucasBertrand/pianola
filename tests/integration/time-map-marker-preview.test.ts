@@ -10,6 +10,15 @@ import {
   createMarkerPreviewProjection,
   isOriginalMarkerBoundaryVisible,
 } from "../../src/presentation/piano-roll/time-map-marker-preview";
+import type {
+  TimeMapMarkerMovePreview,
+} from "../../src/application/editor-session/time-map-marker-preview-session";
+import type {
+  SelectedTimeMapMarkerGroup,
+} from "../../src/editor-core/selection/editor-selection";
+import {
+  createDefaultTimeMap,
+} from "../../src/domain/transport/time-map";
 
 describe("time-map marker preview", () => {
   test("keeps a non-selected meter at the source of a selection move", () => {
@@ -22,8 +31,10 @@ describe("time-map marker preview", () => {
     });
     const projection = createMarkerPreviewProjection(
       [source],
-      [{ startTick: 960, kinds: ["tempo", "scale"] }],
-      { source: "notes", deltaTicks: 240 },
+      createPreview(
+        [{ startTick: 960, kinds: ["tempo", "scale"] }],
+        240,
+      ),
     );
 
     expect(projection.remainingFlagsByTick.get(960)).toEqual(
@@ -53,12 +64,10 @@ describe("time-map marker preview", () => {
     });
     const projection = createMarkerPreviewProjection(
       [source, destination],
-      [],
-      {
-        source: "markers",
-        deltaTicks: 240,
-        standaloneMarkerTick: 960,
-      },
+      createPreview(
+        [{ startTick: 960, kinds: ["tempo"] }],
+        240,
+      ),
     );
 
     expect(projection.remainingFlagsByTick.get(960)).toEqual(
@@ -88,12 +97,10 @@ describe("time-map marker preview", () => {
     });
     const projection = createMarkerPreviewProjection(
       [source],
-      [],
-      {
-        source: "markers",
-        deltaTicks: 240,
-        standaloneMarkerTick: 0,
-      },
+      createPreview(
+        [{ startTick: 0, kinds: ["section"] }],
+        240,
+      ),
     );
 
     expect(projection.remainingFlagsByTick.get(0)).toEqual(createFlag(0, {
@@ -132,6 +139,20 @@ describe("time-map marker preview", () => {
     })).toBe(true);
   });
 });
+
+function createPreview(
+  movedGroups: readonly SelectedTimeMapMarkerGroup[],
+  deltaTicks: number,
+): TimeMapMarkerMovePreview {
+  return {
+    clipId: "clip-preview",
+    sourceRevision: 1,
+    deltaTicks,
+    movedGroups,
+    projectedTimeMap: createDefaultTimeMap(),
+    collisions: [],
+  };
+}
 
 function createFlag(
   startTick: number,

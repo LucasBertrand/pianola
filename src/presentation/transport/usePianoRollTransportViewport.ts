@@ -71,6 +71,8 @@ export function usePianoRollTransportViewport({
   const playback = useAudioPlayback({
     projectStore: runtime.projectStore,
     playheadPosition: runtime.playheadPosition,
+    timeMapMarkerPreview: runtime.timeMapMarkerPreview,
+    loopPreview: runtime.loopPreview,
     onError(error) {
       alert(
         "Playback unavailable",

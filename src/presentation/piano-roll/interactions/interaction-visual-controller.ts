@@ -26,7 +26,7 @@ export interface InteractionVisualController {
     converter: CoordinateConverter,
     stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
     getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
-    scaleMarkers: readonly ScaleMarker[],
+    getScaleMarkers: () => readonly ScaleMarker[],
   ): void;
   updateDrag(
     deltaXCssPixels: number,

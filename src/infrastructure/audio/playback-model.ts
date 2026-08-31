@@ -9,6 +9,7 @@ import {
   type OscillatorWaveform,
 } from "../../domain/instruments/instrument";
 import {
+  type LoopRegion,
   type TransportState,
 } from "../../domain/transport/transport";
 import {
@@ -108,6 +109,11 @@ export interface AudioTransportController extends InstrumentPreviewPort {
     instrumentId: InstrumentId,
     instrument: InstrumentConfig | null,
   ): void;
+  previewTempoMap(
+    clipId: ClipId,
+    tempoMap: TempoMapSnapshot | null,
+  ): void;
+  previewLoop(clipId: ClipId, loop: LoopRegion | null): void;
   play(startTick?: Tick): Promise<void>;
   pause(): void;
   stop(): void;

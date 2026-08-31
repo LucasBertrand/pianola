@@ -48,17 +48,18 @@ import type {
   EditorSelection,
 } from "../../editor-core/selection/editor-selection";
 import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
-import type {
-  MutableRenderSignal,
-} from "../../editor-core/model/render-signal";
-import type {
   PointerInteractionStrategy,
 } from "../../editor-core/interactions/pointer/pointer-interaction-strategy";
 import type {
   SelectionMode,
 } from "../../editor-core/interactions/gestures/gesture-draft";
+import {
+  resolveEffectiveTimeMap,
+  type TimeMapMarkerPreviewSession,
+} from "../../application/editor-session/time-map-marker-preview-session";
+import type {
+  LoopPreviewSession,
+} from "../../application/editor-session/loop-preview-session";
 
 export interface PianoRollRulerProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
@@ -66,10 +67,8 @@ export interface PianoRollRulerProps {
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly markerFlags: readonly TimeMapMarkerFlag[];
   readonly selection: EditorSelection;
-  readonly timelineDragPreview: MutableRenderSignal<
-    TimelineDragPreview | null
-  >;
-  readonly loopDragPreview: MutableRenderSignal<LoopRegion | null>;
+  readonly markerPreview: TimeMapMarkerPreviewSession;
+  readonly loopPreview: LoopPreviewSession;
   readonly interactionStrategyRef: RefObject<
     PointerInteractionStrategy | null
   >;
@@ -90,8 +89,8 @@ export function PianoRollRuler(
     gridResolutionTicks,
     markerFlags,
     selection,
-    timelineDragPreview,
-    loopDragPreview,
+    markerPreview,
+    loopPreview,
     interactionStrategyRef,
     selectionMode,
     onLoopCommit,
@@ -106,6 +105,12 @@ export function PianoRollRuler(
       const projectState = projectStore.getState();
       const activeClip = getActiveClip(projectState);
       const totalTicks = getClipDurationTicks(activeClip);
+      const timeMap = resolveEffectiveTimeMap(
+        activeClip.timeline.timeMap,
+        markerPreview.signal.get(),
+        activeClip.id,
+        projectState.revision,
+      );
       paintRulerCanvas({
         context: frame.context,
         widthCssPixels: frame.widthCssPixels,
@@ -113,13 +118,14 @@ export function PianoRollRuler(
         devicePixelRatio: frame.devicePixelRatio,
         viewport: currentViewport,
         clock: projectState.clock,
-        timeMap: activeClip.timeline.timeMap,
+        timeMap,
         durationTicks: totalTicks,
         gridResolutionTicks: gridResolutionTicks.get(),
       });
     },
     [
       gridResolutionTicks,
+      markerPreview,
       projectStore,
       viewport,
     ],
@@ -140,6 +146,9 @@ export function PianoRollRuler(
     const unsubscribeProject = projectStore.subscribe(
       renderer.invalidate,
     );
+    const unsubscribeMarkerPreview = markerPreview.signal.subscribe(
+      renderer.invalidate,
+    );
 
     renderer.invalidate();
 
@@ -147,9 +156,11 @@ export function PianoRollRuler(
       unsubscribeViewport();
       unsubscribeGrid();
       unsubscribeProject();
+      unsubscribeMarkerPreview();
     };
   }, [
     gridResolutionTicks,
+    markerPreview,
     projectStore,
     renderer.invalidate,
     viewport,
@@ -167,14 +178,14 @@ export function PianoRollRuler(
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}
         interactionStrategyRef={interactionStrategyRef}
-        loopDragPreview={loopDragPreview}
+        loopPreview={loopPreview}
         onCommit={onLoopCommit}
         onClearSelection={onClearSelection}
       />
       <PianoRollTimeMapOverlay
         flags={markerFlags}
         selection={selection}
-        timelineDragPreview={timelineDragPreview}
+        markerPreview={markerPreview}
         viewport={viewport}
         projectStore={projectStore}
         gridResolutionTicks={gridResolutionTicks}

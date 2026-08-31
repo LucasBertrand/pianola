@@ -9,6 +9,7 @@ import {
   planMarkerDeletionCommands,
   planMarkerDraftCommands,
   planMarkerMove,
+  projectPlayheadTickToMarkerGrid,
 } from "../time-map-marker-plans";
 import {
   createTestProject,
@@ -191,6 +192,28 @@ describe("createMarkerDraft", () => {
   });
 });
 
+describe("projectPlayheadTickToMarkerGrid", () => {
+  test("projects a fractional audio position onto the active editor grid", () => {
+    expect(projectPlayheadTickToMarkerGrid(
+      createProjectWithMarkers(),
+      TEST_CLIP_ID,
+      MEASURE_TICKS + 601.75,
+      960,
+    )).toBe(MEASURE_TICKS + 960);
+  });
+
+  test("rejects a projection onto the clip end", () => {
+    const state = createProjectWithMarkers();
+    const durationTicks = state.clipsById[TEST_CLIP_ID]!.timeline.durationTicks;
+    expect(projectPlayheadTickToMarkerGrid(
+      state,
+      TEST_CLIP_ID,
+      durationTicks - 0.1,
+      960,
+    )).toBeNull();
+  });
+});
+
 describe("planMarkerDraftCommands", () => {
   test("creates a section comment at an arbitrary tick", () => {
     const state = createProjectWithMarkers();
@@ -336,6 +359,7 @@ describe("planMarkerDraftCommands", () => {
     expect(planMarkerDraftCommands(state, TEST_CLIP_ID, {
       ...draft,
       tempoIncluded: false,
+      bpm: Number.NaN,
     })).toEqual([{
       type: "DeleteTempoMarker",
       clipId: TEST_CLIP_ID,
@@ -358,7 +382,19 @@ describe("planMarkerDraftCommands", () => {
   test("clamps draft tempo to editor limits", () => {
     expect(normalizeDraftBpm(500)).toBe(240);
     expect(normalizeDraftBpm(1)).toBe(30);
-    expect(normalizeDraftBpm(Number.NaN)).toBe(120);
+    expect(() => normalizeDraftBpm(Number.NaN))
+      .toThrowError("Tempo is required.");
+  });
+
+  test("refuses an empty included tempo instead of defaulting to 120 BPM", () => {
+    const state = createProjectWithMarkers();
+    const draft = createMarkerDraft(state, TEST_CLIP_ID, MEASURE_TICKS);
+
+    expect(() => planMarkerDraftCommands(state, TEST_CLIP_ID, {
+      ...draft,
+      tempoIncluded: true,
+      bpm: Number.NaN,
+    })).toThrowError("Tempo is required.");
   });
 
   test("normalizes a free-form draft time signature", () => {
@@ -420,6 +456,51 @@ describe("planMarkerDeletionCommands", () => {
 });
 
 describe("planMarkerMove", () => {
+  test("offers a collision and safely overwrites the initial tempo", () => {
+    const state = createProjectWithMarkers();
+
+    expect(planMarkerMove(
+      state,
+      TEST_CLIP_ID,
+      2 * MEASURE_TICKS,
+      0,
+    )).toEqual({
+      commands: [],
+      collisions: [{ kind: "tempo", targetTick: 0 }],
+    });
+    expect(planMarkerMove(
+      state,
+      TEST_CLIP_ID,
+      2 * MEASURE_TICKS,
+      0,
+      true,
+    ).commands).toEqual([
+      {
+        type: "UpdateTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 0,
+        bpm: 90,
+      },
+      {
+        type: "DeleteTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 2 * MEASURE_TICKS,
+      },
+    ]);
+  });
+
+  test("refuses the clip-end boundary", () => {
+    const state = createProjectWithMarkers();
+    const durationTicks = state.clipsById[TEST_CLIP_ID]!.timeline.durationTicks;
+
+    expect(() => planMarkerMove(
+      state,
+      TEST_CLIP_ID,
+      2 * MEASURE_TICKS,
+      durationTicks,
+    )).toThrowError("before the end of the clip");
+  });
+
   test("moves only the optional section from the initial flag", () => {
     const base = createProjectWithMarkers();
     const clip = base.clipsById[TEST_CLIP_ID]!;

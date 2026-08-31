@@ -35,12 +35,6 @@ import {
   GridCanvas,
   NotesCanvas,
 } from "./rendering/CanvasLayer";
-import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
-import type {
-  MutableRenderSignal,
-} from "../../editor-core/model/render-signal";
 import {
   InteractionOverlay,
 } from "./InteractionOverlay";
@@ -76,9 +70,6 @@ export interface PianoRollLayersProps {
     request: MarkerCollisionResolutionRequest,
   ) => void;
   readonly globalLassoRef: RefObject<HTMLDivElement | null>;
-  readonly timelineDragPreview: MutableRenderSignal<
-    TimelineDragPreview | null
-  >;
 }
 
 const LAYER_STACK_STYLE: CSSProperties = {
@@ -109,7 +100,6 @@ export function PianoRollLayers(
     onNoteCollision,
     onMarkerCollision,
     globalLassoRef,
-    timelineDragPreview,
   } = props;
   const {
     viewport,
@@ -139,6 +129,7 @@ export function PianoRollLayers(
         pitchSnapSettings={pitchSnapSettings}
         highlightedPitch={highlightedPitch}
         projectStore={projectStore}
+        markerPreview={runtime.timeMapMarkerPreview.signal}
       />
       <NotesCanvas
         viewport={viewport}
@@ -149,6 +140,7 @@ export function PianoRollLayers(
         noteColorMode={noteColorMode}
         pitchSnapSettings={pitchSnapSettings}
         editingNoteMask={editingNoteMask}
+        markerPreview={runtime.timeMapMarkerPreview.signal}
       />
       <InteractionOverlay
         runtime={runtime}
@@ -172,7 +164,6 @@ export function PianoRollLayers(
         onNoteCollision={onNoteCollision}
         onMarkerCollision={onMarkerCollision}
         globalLassoRef={globalLassoRef}
-        timelineDragPreview={timelineDragPreview}
       />
     </div>
   );

@@ -1,5 +1,4 @@
 import type {
-  AudioWorkletTimeline,
   AudioWorkletTimelineInstrument,
 } from "./audio-worklet-protocol";
 
@@ -22,10 +21,9 @@ export function lowerBound(values: Float64Array, target: number): number {
 }
 
 export function findTempoIndexAtTick(
-  timeline: AudioWorkletTimeline,
+  starts: Float64Array,
   tick: number,
 ): number {
-  const starts = timeline.tempoStartTicks;
   let low = 0;
   let high = starts.length;
 

@@ -94,6 +94,81 @@ describe("AudioWorklet browser transport", () => {
     expect(fakeContext.state).toBe("closed");
   });
 
+  test("publishes independent versioned tempo and loop previews", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compilePlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const fakePort = new FakeMessagePort();
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      {},
+      0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+    const tempoPreview = {
+      ...snapshot.tempoMap,
+      bpms: new Float64Array([90]),
+    };
+
+    transport.previewTempoMap(TEST_CLIP_ID, tempoPreview);
+    transport.previewLoop(TEST_CLIP_ID, { startTick: 240, endTick: 960 });
+    transport.previewLoop("another-clip", { startTick: 0, endTick: 480 });
+    await transport.play(0);
+
+    expect(fakePort.messages.map((message) => message.type)).toEqual([
+      "load-timeline",
+      "tempo-map-preview",
+      "loop-preview",
+      "play",
+    ]);
+    const tempoMessage = fakePort.messages[1];
+    const loopMessage = fakePort.messages[2];
+
+    expect(tempoMessage).toMatchObject({
+      type: "tempo-map-preview",
+      sourceId: TEST_CLIP_ID,
+      sequence: 1,
+      previewVersion: 1,
+    });
+    expect(loopMessage).toMatchObject({
+      type: "loop-preview",
+      sourceId: TEST_CLIP_ID,
+      sequence: 1,
+      previewVersion: 1,
+      loop: { startTick: 240, endTick: 960 },
+    });
+
+    const messageCount = fakePort.messages.length;
+
+    transport.previewTempoMap(TEST_CLIP_ID, tempoPreview);
+    transport.previewLoop(TEST_CLIP_ID, { startTick: 240, endTick: 960 });
+    expect(fakePort.messages).toHaveLength(messageCount);
+
+    transport.previewTempoMap(TEST_CLIP_ID, null);
+    transport.previewLoop(TEST_CLIP_ID, null);
+
+    expect(fakePort.messages.slice(-2)).toEqual([
+      expect.objectContaining({
+        type: "tempo-map-preview",
+        previewVersion: 2,
+        tempoStartTicks: null,
+        tempoBpms: null,
+      }),
+      expect.objectContaining({
+        type: "loop-preview",
+        previewVersion: 2,
+        loop: null,
+      }),
+    ]);
+
+    await transport.dispose();
+  });
+
   test("sends versioned lightweight commands without retransferring notes", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);

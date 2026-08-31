@@ -19,12 +19,14 @@ import {
   planMarkerDeletionCommands,
   planMarkerDraftCommands,
   planMarkerMove,
+  projectPlayheadTickToMarkerGrid,
   type TimeMapMarkerDraft,
 } from "../../application/piano-roll/timeline/time-map-marker-plans";
 import type { PitchPatternId, PitchPatternType } from "../../domain/music-theory/pitch-snap";
 
 export interface TimeMapMarkerWorkflow {
   readonly draft: TimeMapMarkerDraft | null;
+  readonly draftError: string | null;
   readonly openMarker: (tick: Tick) => void;
   readonly selectMarker: (tick: Tick, mode: SelectionMode) => void;
   readonly openMarkerAtPlayhead: () => void;
@@ -74,6 +76,9 @@ import type {
 import {
   applyTimeMapMarkerSelection,
 } from "./time-map-marker-selection";
+import {
+  resolveEffectiveTimeMap,
+} from "../../application/editor-session/time-map-marker-preview-session";
 
 export interface TimeMapMarkerWorkflowOptions {
   readonly runtime: EditorRuntime;
@@ -99,11 +104,13 @@ export function useTimeMapMarkerWorkflow({
   resolveMarkerCollision,
 }: TimeMapMarkerWorkflowOptions): TimeMapMarkerWorkflow {
   const [draft, setDraft] = useState<TimeMapMarkerDraft | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   const openMarker = useCallback(
     (tick: Tick): void => {
       const state = runtime.projectStore.getState();
 
+      setDraftError(null);
       setDraft(
         createMarkerDraft(state, getActiveClip(state).id, tick),
       );
@@ -138,6 +145,12 @@ export function useTimeMapMarkerWorkflow({
       if (runtime.selection.hasMarkerGroup(fromTick)) {
         const deltaTicks = toTick - fromTick;
         const activeClip = getActiveClip(state);
+        const effectiveTimeMap = resolveEffectiveTimeMap(
+          activeClip.timeline.timeMap,
+          runtime.timeMapMarkerPreview.signal.get(),
+          activeClip.id,
+          state.revision,
+        );
         const workflow = new NoteGestureWorkflow(
           runtime.editorCommands,
           runtime.selection,
@@ -164,7 +177,7 @@ export function useTimeMapMarkerWorkflow({
             deltaTicks,
             0,
             (tick) => resolvePitchSnapSettings(
-              activeClip.timeline.timeMap,
+              effectiveTimeMap,
               runtime.pitchSnapSettings.get(),
               tick,
             ),
@@ -225,27 +238,32 @@ export function useTimeMapMarkerWorkflow({
     ],
   );
   const setDraftBpm = useCallback((bpm: number): void => {
+    setDraftError(null);
     setDraft((current) => current === null ? null : { ...current, bpm });
   }, []);
   const setDraftTempoIncluded = useCallback((included: boolean): void => {
+    setDraftError(null);
     setDraft((current) =>
       current === null || !current.canChangeMarkerTypes
         ? current
         : { ...current, tempoIncluded: included });
   }, []);
   const setDraftMeterIncluded = useCallback((included: boolean): void => {
+    setDraftError(null);
     setDraft((current) =>
       current === null || !current.canChangeMarkerTypes
         ? current
         : { ...current, meterIncluded: included });
   }, []);
   const setDraftScaleIncluded = useCallback((included: boolean): void => {
+    setDraftError(null);
     setDraft((current) =>
       current === null || !current.canChangeMarkerTypes
         ? current
         : { ...current, scaleIncluded: included });
   }, []);
   const setDraftSectionIncluded = useCallback((included: boolean): void => {
+    setDraftError(null);
     setDraft((current) =>
       current === null
         ? null
@@ -253,21 +271,26 @@ export function useTimeMapMarkerWorkflow({
   }, []);
   const setDraftTimeSignature = useCallback(
     (timeSignature: TimeSignature): void => {
+      setDraftError(null);
       setDraft((current) =>
         current === null ? null : { ...current, timeSignature });
     },
     [],
   );
   const setDraftRootNote = useCallback((rootNote: string): void => {
+    setDraftError(null);
     setDraft((current) => current === null ? null : { ...current, rootNote });
   }, []);
   const setDraftPatternId = useCallback((patternId: PitchPatternId): void => {
+    setDraftError(null);
     setDraft((current) => current === null ? null : { ...current, patternId });
   }, []);
   const setDraftPatternType = useCallback((patternType: PitchPatternType): void => {
+    setDraftError(null);
     setDraft((current) => current === null ? null : { ...current, patternType });
   }, []);
   const setDraftSectionComment = useCallback((comment: string): void => {
+    setDraftError(null);
     setDraft((current) => current === null
       ? null
       : { ...current, sectionComment: comment });
@@ -289,17 +312,16 @@ export function useTimeMapMarkerWorkflow({
         );
       }
 
+      setDraftError(null);
       setDraft(null);
     } catch (error: unknown) {
-      alert(
-        "Marker edit unavailable",
+      setDraftError(
         error instanceof Error
           ? error.message
           : "The marker could not be edited.",
-        "danger",
       );
     }
-  }, [alert, draft, runtime]);
+  }, [draft, runtime]);
   const deleteDraft = useCallback((): void => {
     if (draft === null || !draft.canDelete) {
       return;
@@ -313,6 +335,7 @@ export function useTimeMapMarkerWorkflow({
       draft.startTick,
     );
 
+    setDraftError(null);
     setDraft(null);
 
     if (commands.length === 0) {
@@ -322,20 +345,38 @@ export function useTimeMapMarkerWorkflow({
     runtime.editorCommands.dispatch(commands, "Delete marker");
   }, [draft, runtime]);
   const cancelDraft = useCallback((): void => {
+    setDraftError(null);
     setDraft(null);
   }, []);
 
   const openMarkerAtPlayhead = useCallback((): void => {
     const state = runtime.projectStore.getState();
-    const tick = runtime.playheadTick.get();
-
-    setDraft(
-      createMarkerDraft(state, getActiveClip(state).id, tick),
+    const clipId = getActiveClip(state).id;
+    const tick = projectPlayheadTickToMarkerGrid(
+      state,
+      clipId,
+      runtime.playheadTick.get(),
+      runtime.gridResolutionTicks.get(),
     );
-  }, [runtime]);
+
+    if (tick === null) {
+      alert(
+        "Marker unavailable",
+        "A marker must be placed before the end of the clip.",
+        "danger",
+      );
+      return;
+    }
+
+    setDraftError(null);
+    setDraft(
+      createMarkerDraft(state, clipId, tick),
+    );
+  }, [alert, runtime]);
 
   return {
     draft,
+    draftError,
     openMarker,
     selectMarker,
     openMarkerAtPlayhead,

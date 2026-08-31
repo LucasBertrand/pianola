@@ -26,6 +26,12 @@ import {
   NoteGestureWorkflow,
 } from "../../src/application/piano-roll/notes/note-gesture-workflow";
 import {
+  resolveEffectiveTimeMap,
+} from "../../src/application/editor-session/time-map-marker-preview-session";
+import {
+  resolvePitchSnapSettings,
+} from "../../src/application/piano-roll/timeline/pitch-snap-resolution";
+import {
   planSelectedMarkerMove,
 } from "../../src/application/piano-roll/selection/timeline-selection-move";
 import {
@@ -34,6 +40,9 @@ import {
 import {
   createNoteCollisionResolutionPlan,
 } from "../../src/domain/note-collision";
+import {
+  buildRepositionedNotes,
+} from "../../src/editor-core/interactions/gestures/note-gesture-math";
 import type {
   NoteCollisionResolutionRequest,
 } from "../../src/application/piano-roll/notes/note-collision-resolution";
@@ -50,6 +59,7 @@ import {
   createTestNote,
   createTestProject,
   TEST_CLIP_ID,
+  TEST_INSTRUMENT_ID,
 } from "../support/test-builders";
 
 const MIXED_MARKER_TICK = 3_840;
@@ -154,6 +164,96 @@ describe("timeline marker selection", () => {
     );
   });
 
+  test("snaps a moved note against the projected scale before publishing both", () => {
+    const note = createTestNote({
+      id: "projected-scale-note",
+      startTick: 960,
+      durationTicks: 240,
+      pitch: 60,
+    });
+    const state = createTestProject({
+      clips: [{ id: TEST_CLIP_ID, notes: [note] }],
+    });
+    const clip = getActiveClip(state);
+    const runtime = createEditorRuntime(withTimeMap(state, {
+      ...clip.timeline.timeMap,
+      scaleMarkers: [
+        clip.timeline.timeMap.scaleMarkers[0]!,
+        {
+          startTick: 960,
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+      ],
+    }));
+    const markerGroup = createSelectedMarkerGroup(960, false, true);
+
+    expect(markerGroup).not.toBeNull();
+    runtime.selection.add(note);
+    runtime.selection.addMarkerGroup(markerGroup!);
+    runtime.pitchSnapSettings.set({
+      ...runtime.pitchSnapSettings.get(),
+      enabled: true,
+    });
+
+    const token = runtime.timeMapMarkerPreview.begin({
+      clipId: TEST_CLIP_ID,
+      movedGroups: [markerGroup!],
+    });
+    runtime.timeMapMarkerPreview.update(token, 240);
+
+    const publishedBeforeCommit = getActiveClip(
+      runtime.projectStore.getState(),
+    ).timeline.timeMap;
+    const effectiveTimeMap = resolveEffectiveTimeMap(
+      publishedBeforeCommit,
+      runtime.timeMapMarkerPreview.signal.get(),
+      TEST_CLIP_ID,
+      runtime.projectStore.getState().revision,
+    );
+
+    expect(publishedBeforeCommit.scaleMarkers.map((marker) => marker.startTick))
+      .toContain(960);
+    expect(effectiveTimeMap.scaleMarkers.map((marker) => marker.startTick))
+      .toContain(1_200);
+
+    const workflow = new NoteGestureWorkflow(
+      runtime.editorCommands,
+      runtime.selection,
+      {
+        onCollision: undefined,
+        onTransactionRejected(error): void {
+          throw error;
+        },
+        onSelectionChanged: undefined,
+      },
+    );
+    const proposedNotes = buildRepositionedNotes(
+      [note],
+      240,
+      0,
+      (tick) => resolvePitchSnapSettings(
+        effectiveTimeMap,
+        runtime.pitchSnapSettings.get(),
+        tick,
+      ),
+    );
+
+    expect(proposedNotes[0]?.pitch).toBe(59);
+    expect(workflow.commitMove(proposedNotes, 240)).toBe("committed");
+
+    const committedClip = getActiveClip(runtime.projectStore.getState());
+    expect(committedClip.tracksByInstrumentId[TEST_INSTRUMENT_ID]
+      ?.notesById[note.id]).toMatchObject({
+        startTick: 1_200,
+        pitch: 59,
+      });
+    expect(committedClip.timeline.timeMap.scaleMarkers
+      .map((marker) => marker.startTick)).toContain(1_200);
+    expect(runtime.timeMapMarkerPreview.signal.get()).toBeNull();
+  });
+
   test("orders chained marker moves so selected destinations are vacated", () => {
     const state = createProjectWithMixedFlag();
     const clip = getActiveClip(state);
@@ -189,6 +289,93 @@ describe("timeline marker selection", () => {
         targetTick: 1_200,
       },
     ]);
+  });
+
+  test("resolves grouped marker collisions at tick zero without removing initial markers", () => {
+    const state = createProjectWithMixedFlag();
+    const collisionPlan = planSelectedMarkerMove(
+      state,
+      TEST_CLIP_ID,
+      [{
+        startTick: MIXED_MARKER_TICK,
+        kinds: ["tempo", "scale", "section"],
+      }],
+      -MIXED_MARKER_TICK,
+    );
+
+    expect(collisionPlan).toMatchObject({
+      commands: [],
+      resultingMarkerGroups: [{ startTick: 0, kinds: ["section"] }],
+      collisions: [
+        { kind: "tempo", targetTick: 0 },
+        { kind: "scale", targetTick: 0 },
+      ],
+    });
+    const overwritePlan = planSelectedMarkerMove(
+      state,
+      TEST_CLIP_ID,
+      [{
+        startTick: MIXED_MARKER_TICK,
+        kinds: ["tempo", "scale", "section"],
+      }],
+      -MIXED_MARKER_TICK,
+      true,
+    );
+
+    expect(overwritePlan.commands).toEqual([
+      {
+        type: "UpdateTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 0,
+        bpm: 90,
+      },
+      {
+        type: "DeleteTempoMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: MIXED_MARKER_TICK,
+      },
+      {
+        type: "UpdateScaleMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: 0,
+        changes: {
+          rootNote: "D",
+          patternType: "scale",
+          patternId: "ionian",
+        },
+      },
+      {
+        type: "DeleteScaleMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: MIXED_MARKER_TICK,
+      },
+      {
+        type: "MoveSectionMarker",
+        clipId: TEST_CLIP_ID,
+        startTick: MIXED_MARKER_TICK,
+        targetTick: 0,
+      },
+    ]);
+
+    const runtime = createEditorRuntime(state);
+    runtime.editorCommands.dispatch(
+      overwritePlan.commands,
+      "Overwrite initial markers",
+    );
+    const timeMap = getActiveClip(runtime.projectStore.getState()).timeline.timeMap;
+
+    expect(timeMap.tempoMarkers).toContainEqual({ startTick: 0, bpm: 90 });
+    expect(timeMap.tempoMarkers.some(
+      (marker) => marker.startTick === MIXED_MARKER_TICK,
+    )).toBe(false);
+    expect(timeMap.scaleMarkers[0]).toMatchObject({
+      startTick: 0,
+      rootNote: "D",
+    });
+    expect(timeMap.sectionMarkers).toContainEqual({
+      startTick: 0,
+      comment: "Verse",
+    });
   });
 
   test("plans cancel-or-overwrite for a standalone marker collision", () => {

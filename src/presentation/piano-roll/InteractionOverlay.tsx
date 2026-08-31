@@ -42,12 +42,6 @@ import {
   DomInteractionVisualController,
 } from "./interactions/dom-interaction-visual-controller";
 import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
-import type {
-  MutableRenderSignal,
-} from "../../editor-core/model/render-signal";
-import type {
   ViewportPoint,
 } from "../radial-menu/floating-radial-menu-model";
 
@@ -80,9 +74,6 @@ export interface InteractionOverlayProps {
     request: MarkerCollisionResolutionRequest,
   ) => void;
   readonly globalLassoRef: RefObject<HTMLDivElement | null>;
-  readonly timelineDragPreview: MutableRenderSignal<
-    TimelineDragPreview | null
-  >;
 }
 
 const INTERACTION_LAYER_STYLE: CSSProperties = {
@@ -129,7 +120,6 @@ export function InteractionOverlay(
     onNoteCollision,
     onMarkerCollision,
     globalLassoRef,
-    timelineDragPreview,
   } = props;
   const {
     viewport,
@@ -143,6 +133,7 @@ export function InteractionOverlay(
     pitchSnapSettings,
     selectionRequests,
     highlightedPitch,
+    timeMapMarkerPreview,
   } = runtime;
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const visualsRef = useRef<DomInteractionVisualController | null>(null);
@@ -200,7 +191,7 @@ export function InteractionOverlay(
     onSelectionChange,
     onNoteCollision,
     onMarkerCollision,
-    timelineDragPreview,
+    timeMapMarkerPreview,
   });
 
   useEffect(

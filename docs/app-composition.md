@@ -18,10 +18,11 @@ héberger les protocoles détaillés.
 | instrument | nom, couleur, preset et synthé en brouillon | `useInstrumentDialogWorkflow` | validation complète avant transaction |
 | collisions | choix merge/slice et séquence | `useNoteCollisionDialogWorkflow` | transforme une décision utilisateur en transaction |
 | clips et groupes | dialogues et orchestration des opérations de hiérarchie | `useClipDialogWorkflow`, `useClipWorkflow` et hooks de capacité associés | prépare une intention puis publie une transaction atomique |
-| marqueurs tempo/métrique/gamme/section | brouillon de la modale et gestes du ruler | `useTimeMapMarkerWorkflow` | une intention validée produit au plus une transaction |
+| marqueurs tempo/métrique/gamme/section | brouillon de la modale, projection éditoriale et gestes du ruler ou des notes | `useTimeMapMarkerWorkflow` + `EditorRuntime.timeMapMarkerPreview` | la projection reste hors document ; une intention validée produit au plus une transaction |
+| boucle | région publiée et projection du geste | `EditorRuntime.loopPreview` + `usePianoRollLoopGesture` | le ruler, le contexte et l’audio résolvent leur état effectif sans muter le document |
 | fichiers | inputs, autosave, export et fermeture | `usePianoRollProjectLifecycle`, composé de `useProjectFileWorkflow` et `useProjectAutosave` | cycle de vie complet hors du composant racine |
 | MIDI | input et analyse en attente | `usePianoRollProjectLifecycle` via `useMidiFileWorkflow` | préparation/confirmation avant remplacement |
-| transport | statut, commandes et suivi de clip | `usePianoRollTransportViewport`, composé de `useAudioPlayback` et `useTransportWorkflow` | pont explicite vers l’audio, le domaine et la politique de suivi |
+| transport | statut, commandes, suivi de clip et projection des surcharges temporelles | `usePianoRollTransportViewport`, composé de `useAudioPlayback` et `useTransportWorkflow` | pont explicite vers l’audio, le domaine et la politique de suivi ; tempo et boucle sont versionnés séparément |
 | viewport | refs DOM et interactions de scroll/zoom | `usePianoRollTransportViewport` via `useViewportControls` | synchronisation DOM/signaux à haute fréquence |
 
 ## État React restant dans le workspace

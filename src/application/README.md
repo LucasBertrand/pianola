@@ -4,7 +4,10 @@
 
 Les intentions indépendantes de React : autosave, workflows de notes/sélection
 du piano roll et plans de fichiers projet. L'historique, le service de commandes
-et la projection de session vivent dans cette même couche ; les contrats de
+et la projection de session vivent dans cette même couche. Les projections
+temporelles de marqueurs et de boucle appartiennent à `editor-session/` ; elles
+sont liées à un clip et une révision, restent hors Undo/Redo et exposent des
+snapshots explicites aux consommateurs. Les contrats de
 persistance injectés sont sous `ports/`.
 
 ## Quel fichier lire en premier ?
@@ -12,7 +15,10 @@ persistance injectés sont sous `ports/`.
 Lire `history/editor-command-service.ts` pour le port de mutation. Pour le piano
 roll, commencer par
 `piano-roll/notes/note-gesture-workflow.ts` ou
-`piano-roll/selection/selection-edit-plans.ts`. La persistance de session part
+`piano-roll/selection/selection-edit-plans.ts`. Pour un geste temporel, lire
+`editor-session/time-map-marker-preview-session.ts`,
+`editor-session/loop-preview-session.ts`, puis le projecteur pur sous
+`piano-roll/timeline/`. La persistance de session part
 de `persistence/project-autosave.ts`.
 
 ## Quelles dépendances sont autorisées ?

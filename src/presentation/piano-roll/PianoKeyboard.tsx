@@ -22,6 +22,13 @@ import {
   getScaleMarkerAtTick,
   type TimeMap,
 } from "../../domain/transport/time-map";
+import type {
+  ClipId,
+} from "../../domain/identifiers";
+import {
+  resolveEffectiveTimeMap,
+  type TimeMapMarkerMovePreview,
+} from "../../application/editor-session/time-map-marker-preview-session";
 
 const PITCH_CLASS_NAMES = [
   "C",
@@ -49,6 +56,11 @@ export interface PianoKeyboardProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly playheadTick: ReadonlyRenderSignal<number>;
   readonly timeMap: TimeMap;
+  readonly clipId: ClipId;
+  readonly sourceRevision: number;
+  readonly markerPreview: ReadonlyRenderSignal<
+    TimeMapMarkerMovePreview | null
+  >;
   readonly previewEnabled: boolean;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly onPreviewToggle: () => void;
@@ -66,6 +78,9 @@ export function PianoKeyboard(
     viewport,
     playheadTick,
     timeMap,
+    clipId,
+    sourceRevision,
+    markerPreview,
     previewEnabled,
     pitchSnapSettings,
     onPreviewToggle,
@@ -196,7 +211,16 @@ export function PianoKeyboard(
       movementDirection: number,
     ): number => {
       const currentTick = playheadTick.get();
-      const activeMarker = getScaleMarkerAtTick(timeMap, currentTick);
+      const effectiveTimeMap = resolveEffectiveTimeMap(
+        timeMap,
+        markerPreview.get(),
+        clipId,
+        sourceRevision,
+      );
+      const activeMarker = getScaleMarkerAtTick(
+        effectiveTimeMap,
+        currentTick,
+      );
       const currentSnapSettings = {
         ...pitchSnapSettings,
         rootNote: activeMarker.rootNote,
@@ -389,6 +413,9 @@ export function PianoKeyboard(
     pitchSnapSettings,
     previewEnabled,
     playheadTick,
+    markerPreview,
+    clipId,
+    sourceRevision,
     timeMap,
   ]);
 

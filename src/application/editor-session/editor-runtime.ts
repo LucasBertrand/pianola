@@ -42,6 +42,12 @@ import type {
 import type {
   PlayheadPosition,
 } from "../../editor-core/model/playhead-position";
+import type {
+  TimeMapMarkerPreviewSession,
+} from "./time-map-marker-preview-session";
+import type {
+  LoopPreviewSession,
+} from "./loop-preview-session";
 
 /** Long-lived services and high-frequency signals owned by one editor tab. */
 export interface EditorRuntime {
@@ -64,6 +70,8 @@ export interface EditorRuntime {
   readonly pitchSnapSettings: MutableRenderSignal<PitchSnapSettings>;
   readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
+  readonly timeMapMarkerPreview: TimeMapMarkerPreviewSession;
+  readonly loopPreview: LoopPreviewSession;
   readonly captureClipEditorStates: () => Readonly<
     Record<ClipId, ClipEditorRuntimeState>
   >;

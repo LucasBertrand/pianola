@@ -30,23 +30,22 @@ import type {
   EditorSelection,
 } from "../../editor-core/selection/editor-selection";
 import {
+  createSelectedMarkerGroup,
+} from "../../editor-core/selection/editor-selection";
+import {
   clampTimelineSelectionDelta,
 } from "../../application/piano-roll/selection/timeline-selection-move";
 import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
-import type {
-  MutableRenderSignal,
-} from "../../editor-core/model/render-signal";
-import type {
   SelectionMode,
 } from "../../editor-core/interactions/gestures/gesture-draft";
+import type {
+  TimeMapMarkerPreviewSession,
+  TimeMapMarkerPreviewToken,
+} from "../../application/editor-session/time-map-marker-preview-session";
 
 export interface TimeMapMarkerGestureOptions {
   readonly selection: EditorSelection;
-  readonly timelineDragPreview: MutableRenderSignal<
-    TimelineDragPreview | null
-  >;
+  readonly markerPreview: TimeMapMarkerPreviewSession;
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly gridResolutionTicks: ReadonlyRenderSignal<number>;
   readonly projectStore: ProjectStorePort;
@@ -68,7 +67,7 @@ export interface TimeMapMarkerGestureController {
 
 export function useTimeMapMarkerGesture({
   selection,
-  timelineDragPreview,
+  markerPreview,
   viewport,
   gridResolutionTicks,
   projectStore,
@@ -135,12 +134,22 @@ export function useTimeMapMarkerGesture({
     const originClientY = reactEvent.clientY;
     const originTick = flag.startTick;
     const movesSelection = selection.hasMarkerGroup(originTick);
+    const standaloneGroup = createSelectedMarkerGroup(
+      originTick,
+      flag.bpm !== null,
+      flag.patternId !== null,
+      flag.sectionComment !== null,
+    );
+    const movedGroups = movesSelection
+      ? selection.markerGroups
+      : standaloneGroup === null ? [] : [standaloneGroup];
     const layerLeft = layer.getBoundingClientRect().left;
 
     const clip = getActiveClip(projectStore.getState());
     const { timeMap, durationTicks } = clip.timeline;
     let targetTick = originTick;
     let dragging = false;
+    let previewToken: TimeMapMarkerPreviewToken | null = null;
 
     const setDraggingVisual = (active: boolean): void => {
       handle.classList.toggle("is-dragging", active);
@@ -169,6 +178,10 @@ export function useTimeMapMarkerGesture({
       if (!dragging) {
         dragging = true;
         setDraggingVisual(true);
+        previewToken = markerPreview.begin({
+          clipId: clip.id,
+          movedGroups,
+        });
       }
 
       const rawTick = pointerTick(event.clientX);
@@ -191,14 +204,18 @@ export function useTimeMapMarkerGesture({
           selection.markerGroups,
           targetTick - originTick,
           durationTicks,
+          true,
+        );
+      } else {
+        targetTick = Math.min(
+          durationTicks,
+          Math.max(0, targetTick),
         );
       }
 
-      timelineDragPreview.set({
-        source: "markers",
-        deltaTicks: targetTick - originTick,
-        standaloneMarkerTick: movesSelection ? null : originTick,
-      });
+      if (previewToken !== null) {
+        markerPreview.update(previewToken, targetTick - originTick);
+      }
     };
 
     const finish = (event: PointerEvent): void => {
@@ -207,11 +224,14 @@ export function useTimeMapMarkerGesture({
       handle.removeEventListener("pointercancel", cancel);
       handle.removeEventListener("lostpointercapture", cancel);
       setDraggingVisual(false);
-      timelineDragPreview.set(null);
 
       if (dragging) {
         onSuppressActivation(originTick);
-        if (originTick !== targetTick) {
+        if (
+          originTick !== targetTick
+          && previewToken !== null
+          && markerPreview.isActive(previewToken)
+        ) {
           onMoveMarker(originTick, targetTick);
         }
       } else {
@@ -226,6 +246,11 @@ export function useTimeMapMarkerGesture({
           }
         }
       }
+
+      if (previewToken !== null) {
+        markerPreview.clear(previewToken);
+        previewToken = null;
+      }
     };
 
     const cancel = (): void => {
@@ -234,7 +259,10 @@ export function useTimeMapMarkerGesture({
       handle.removeEventListener("pointercancel", cancel);
       handle.removeEventListener("lostpointercapture", cancel);
       setDraggingVisual(false);
-      timelineDragPreview.set(null);
+      if (previewToken !== null) {
+        markerPreview.clear(previewToken);
+        previewToken = null;
+      }
     };
 
     handle.addEventListener("pointermove", move);
@@ -252,7 +280,7 @@ export function useTimeMapMarkerGesture({
     onSuppressActivation,
     getFlagElement,
     selection,
-    timelineDragPreview,
+    markerPreview,
   ]);
 
   return { begin };

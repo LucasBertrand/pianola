@@ -4,7 +4,7 @@ Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 29 août 2026.
+Dernière mise à jour : 31 août 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -12,8 +12,9 @@ Dernière mise à jour : 29 août 2026.
 | session d'éditeur minimale | document ouvert et clip actif canonique | `EditorSessionState`, dont `ActiveClipSelection` | ouverture du projet | clip actif projeté dans le contexte persistant | seul le `ProjectDocument` est historisé | moyenne |
 | contexte d'éditeur persistant | clip et instrument actifs, grille et snap par motif de hauteurs par clip | `PersistedEditorWorkspace`, avec un `PersistedClipEditorState` par clip, projeté par `application/editor-session/workspace-persistence.ts` dans `EditorRuntime` | durée de vie du projet | oui, atomiquement avec le document et dans une section portable distincte | non | moyenne |
 | préférences utilisateur | mode de sélection, couleur des notes, préécoute du pitch, presets personnels et raccourcis par action | `UserSettingsRepository`, projeté temporairement par `usePianoRollUserPreferences` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
-| session d’édition | sélection de notes, presse-papier, draft de geste, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | snapshots d’identifiants avant/après pour la sélection ; les autres états restent hors historique | élevée |
-| prévisualisation audio | réglages d’instrument en cours d’édition | brouillon du dialogue projeté par message dans le worklet | ouverture du dialogue d’instrument | non | non ; la validation seule crée une transaction | élevée pendant l’interaction |
+| session d’édition | sélection de notes, presse-papier, draft géométrique de note, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | snapshots d’identifiants avant/après pour la sélection ; les autres états restent hors historique | élevée |
+| projection éditoriale temporelle | `TimeMap` projetée pour un déplacement de marqueurs et région de boucle projetée | `TimeMapMarkerPreviewSession` et `LoopPreviewSession` dans `application/editor-session/` | un geste, lié au clip et à la révision sources | non | non ; le commit seul publie une transaction | élevée pendant le geste |
+| état audio effectif | timeline et transport publiés, surchargés indépendamment par le tempo projeté, la boucle projetée ou les paramètres d’instrument en cours d’édition | `AudioWorkletTransport` puis `WorkletTimelineEngine` | source audio courante ou interaction | non | non ; retirer une surcharge révèle le dernier état publié | audio-rate et interaction |
 | temps réel | playhead unique `{ clipId, tick }`, statut de lecture, tick à l’échantillon, voix DSP et buffers Canvas | `application/editor-session/EditorRuntime.playheadPosition`, `useAudioPlayback` et `WorkletTimelineEngine` | session ou frame courante | non | non | audio-rate ou frame |
 
 ## Règles
@@ -38,9 +39,26 @@ Dernière mise à jour : 29 août 2026.
   lieu de reprendre la valeur du snapshot restauré.
 - Une intention validée produit au plus une transaction Undo/Redo. Les mouvements
   intermédiaires restent dans la session d’interaction.
+- Un draft de note décrit la géométrie du geste. Une projection temporelle décrit
+  le résultat musical complet que les consommateurs doivent lire pendant ce
+  geste. Ils restent séparés : il n’existe pas d’union globale de previews.
+- Chaque projection temporelle porte `clipId`, `sourceRevision` et un jeton de
+  geste. Un changement de révision ou de clip l’invalide ; un ancien geste ne
+  peut ni effacer la projection d’un geste plus récent, ni publier son commit.
+- Canvas, ruler, clavier, snap et ghosts résolvent leur snapshot effectif à leur
+  frontière de consommation. Ils ne mutent jamais la `TimeMap` ou la boucle
+  publiée pendant `pointermove`.
+- Une projection éditoriale peut représenter provisoirement un marqueur sur la
+  frontière de fin du clip pour restituer fidèlement le geste. Cette pose reste
+  non publiable : le plan de commit réapplique les bornes métier au relâchement
+  et produit alors un refus explicite.
 - Pendant l’édition d’un instrument, le brouillon est envoyé directement au
   worklet comme paramètre transitoire. Il ne recompile pas la timeline, ne mute
   pas le document et n’entre pas dans Undo/Redo.
+- Le worklet conserve séparément l’état publié et ses surcharges effectives de
+  tempo et de boucle. Ces canaux sont versionnés indépendamment ; publier une
+  nouvelle révision ne consomme pas la surcharge active, et la retirer révèle
+  la dernière valeur publiée plutôt qu’une copie ancienne.
 - Le compilateur audio reçoit un `PlaybackSource` explicite. Il ne choisit pas le
   clip à partir de l’écran actif.
 - Le playhead est une entité unique située dans exactement un clip. Le clip
@@ -49,6 +67,26 @@ Dernière mise à jour : 29 août 2026.
   clip affiché déplace immédiatement la source du transport vers ce clip.
 - L’export MIDI reçoit un `MidiExportPlan` neutre. Le codec ne connaît ni
   le store, ni React, ni le clip affiché.
+
+## Trois lectures d’une interaction temporelle
+
+```text
+ProjectStore (publié, persistant, Undo/Redo)
+  ├─→ projection éditoriale (geste, clip + révision + jeton)
+  │     └─→ snapshot effectif de rendu, snap et collision
+  └─→ timeline/transport publiés du worklet
+        + surcharges tempo/boucle versionnées
+        └─→ état audio effectif à l’échantillon
+```
+
+L’état publié reste l’autorité métier pour les notes, les marqueurs et la
+boucle. La projection éditoriale répond à « que verrait le projet si le geste
+était validé ? » sans écrire dans le document. L’état audio effectif répond à
+« que doit entendre le moteur maintenant ? » : les événements de notes restent
+ceux de la timeline publiée, tandis qu’un tempo ou une boucle projetés peuvent
+modifier immédiatement leur lecture. Une gamme projetée influence donc le
+snap et les ghosts des notes déplacées, mais ne réécrit ni ne rejoue les notes
+du worklet avant le commit.
 
 ## Agrégat persistant
 

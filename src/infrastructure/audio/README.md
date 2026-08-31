@@ -39,6 +39,30 @@ relâchées, et seules celles qui viennent de le recouvrir sont déclenchées.
 Le worklet avance le tick depuis le nombre d’échantillons rendus : aucun timer,
 frame React ou callback du thread principal ne déclenche une note.
 
+## État publié et état effectif
+
+`WorkletTimelineEngine` conserve la timeline et le transport publiés séparément
+de deux surcharges temporelles : tempo et boucle. L’état audio effectif est
+résolu au moment de la lecture ; il ne devient jamais une nouvelle source de
+vérité persistante.
+
+- `tempo-map-preview` remplace seulement les segments tempo effectifs. Le tick
+  reste continu, sans seek ni redémarrage des voix.
+- `loop-preview` remplace seulement la région de boucle effective. Une fin
+  déplacée derrière le playhead reboucle au prochain échantillon traité.
+- Les deux canaux portent `sourceId`, `timelineSequence` et leur propre version
+  monotone. Ils peuvent évoluer ou être retirés indépendamment.
+- Une mutation publiée reçue pendant une surcharge met à jour l’état publié
+  sous-jacent. Retirer la surcharge révèle cette dernière valeur, jamais le
+  snapshot qui existait au début du geste.
+- Un changement de source retire les surcharges de l’ancienne timeline. Une
+  projection créée avant l’initialisation audio est rejouée après le chargement
+  de la source et avant une éventuelle commande de lecture.
+
+Les événements de notes restent issus du snapshot publié pendant un geste.
+Déplacer une gamme peut changer immédiatement le snap éditorial des notes sans
+envoyer d’événements de notes provisoires au thread audio.
+
 Le cœur évite les allocations temporaires dans `process()`, borne la polyphonie
 globale pour les processeurs mobiles et utilise des oscillateurs PolyBLEP pour
 limiter l’aliasing. Le vol de voix réaffecte la voix existante avec continuité :
@@ -108,7 +132,8 @@ Elle ne dépend ni de React, ni de la présentation, ni du bootstrap.
 ## Où sont les tests ?
 
 `__tests__/worklet-timeline-engine.test.ts` couvre l’horloge à l’échantillon,
-les boucles autonomes, les seeks, les paramètres actifs et la stabilité DSP.
+les boucles autonomes, les seeks, les surcharges temporelles, les paramètres
+actifs et la stabilité DSP.
 `__tests__/audio-worklet-transport.test.ts` vérifie les transferts différentiels,
 le versionnage et les courses entre commandes, remplacements et clips
 préchargés.

@@ -143,7 +143,7 @@ et refusent tout nouveau cycle d'import.
 
 ## Propriété des états
 
-Pianola distingue quatre durées de vie :
+Pianola distingue les familles d’état suivantes :
 
 | État | Propriétaire | Persisté | Undo/Redo |
 | --- | --- | --- | --- |
@@ -152,10 +152,14 @@ Pianola distingue quatre durées de vie :
 | contexte d'éditeur persistant | `PersistedEditorWorkspace`, dont `PersistedClipEditorState` par clip | oui, avec le document | non |
 | préférences utilisateur | `UserSettingsRepository` | oui, séparément | non |
 | session de geste | sélection, draft, lasso, presse-papier | non | non |
+| projection éditoriale | sessions de marqueurs et de boucle liées au clip et à la révision | non | non |
+| état audio effectif | timeline/transport publiés + surcharges tempo, boucle ou instrument dans le worklet | non | non |
 | temps réel | transport AudioWorklet, voix DSP, buffers Canvas | non | non |
 
 Une intention validée produit au plus une transaction. Les déplacements
-intermédiaires du pointeur ne modifient pas `EditorSessionState`. Le détail complet se
+intermédiaires du pointeur ne modifient pas le document publié. Le rendu et le
+snap lisent une projection éditoriale, tandis que le worklet résout séparément
+son état audio effectif. Le détail complet se
 trouve dans [`docs/state-ownership.md`](docs/state-ownership.md).
 
 ## Surfaces principales

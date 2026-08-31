@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -18,9 +17,6 @@ import {
   getMeasureSpans,
 } from "../../domain/transport/time-map";
 import { isNoteEditable } from "../../domain/notes/note";
-import type {
-  LoopRegion,
-} from "../../domain/transport/transport";
 import {
   createTimeMapMarkerFlags,
 } from "../../application/piano-roll/timeline/time-map-marker-plans";
@@ -79,12 +75,6 @@ import {
 import type {
   EditorRuntime,
 } from "../../application/editor-session/editor-runtime";
-import {
-  MutableRenderSignal,
-} from "../../editor-core/model/render-signal";
-import type {
-  TimelineDragPreview,
-} from "../../editor-core/model/timeline-drag-preview";
 import {
   useClipWorkflow,
 } from "../inspector/clips/useClipWorkflow";
@@ -178,14 +168,6 @@ export function PianoRollWorkspace({
   const interactionStrategyRef =
     useRef<PointerInteractionStrategy | null>(null);
   const globalLassoRef = useRef<HTMLDivElement | null>(null);
-  const timelineDragPreview = useMemo(
-    () => new MutableRenderSignal<TimelineDragPreview | null>(null),
-    [],
-  );
-  const loopDragPreview = useMemo(
-    () => new MutableRenderSignal<LoopRegion | null>(null),
-    [],
-  );
   const {
     project: projectState,
     selectedInstrumentId,
@@ -547,7 +529,7 @@ export function PianoRollWorkspace({
           }}
           context={{
             projectState,
-            loopDragPreview,
+            loopPreview: runtime.loopPreview.signal,
             selectedNotes,
             selectedMarkerCount,
             gridResolutionTicks,
@@ -611,6 +593,9 @@ export function PianoRollWorkspace({
           viewport={runtime.viewport}
           playheadTick={runtime.playheadTick}
           timeMap={activeClip.timeline.timeMap}
+          clipId={activeClip.id}
+          sourceRevision={projectState.revision}
+          markerPreview={runtime.timeMapMarkerPreview.signal}
           previewEnabled={preferences.pitchPreviewEnabled}
           pitchSnapSettings={pitchSnapSettings}
           onPreviewToggle={preferences.togglePitchPreview}
@@ -628,8 +613,8 @@ export function PianoRollWorkspace({
           gridResolutionTicks={runtime.gridResolutionTicks}
           markerFlags={createTimeMapMarkerFlags(activeClip.timeline.timeMap)}
           selection={runtime.selection}
-          timelineDragPreview={timelineDragPreview}
-          loopDragPreview={loopDragPreview}
+          markerPreview={runtime.timeMapMarkerPreview}
+          loopPreview={runtime.loopPreview}
           interactionStrategyRef={interactionStrategyRef}
           selectionMode={preferences.selectionMode}
           onLoopCommit={handleLoopRegionCommit}
@@ -661,7 +646,6 @@ export function PianoRollWorkspace({
           onNoteCollision={handleNoteCollision}
           onMarkerCollision={handleMarkerCollision}
           globalLassoRef={globalLassoRef}
-          timelineDragPreview={timelineDragPreview}
         />
       )}
       globalLasso={<PianoRollGlobalLasso elementRef={globalLassoRef} />}
