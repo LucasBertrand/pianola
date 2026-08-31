@@ -158,7 +158,7 @@
   .workspace {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows:
-      minmax(0, var(--project-inspector-panel-height))
+      var(--project-inspector-panel-height)
       var(--project-inspector-resize-handle-size)
       minmax(0, 1fr);
   }
@@ -260,14 +260,14 @@
 
   .workspace.is-project-inspector-open {
     grid-template-rows:
-      minmax(0, var(--project-inspector-panel-height))
+      var(--project-inspector-panel-height)
       var(--project-inspector-resize-handle-size)
       minmax(0, 1fr);
   }
 
   .workspace.is-clips-inspector-open {
     grid-template-rows:
-      minmax(0, var(--project-inspector-panel-height))
+      var(--project-inspector-panel-height)
       var(--project-inspector-resize-handle-size)
       minmax(0, 1fr);
   }
