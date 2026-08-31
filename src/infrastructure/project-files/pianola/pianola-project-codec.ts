@@ -6,7 +6,6 @@ import {
   ProjectPersistenceError,
 } from "../../persistence/codecs/project-persistence-error";
 import {
-  readPersistenceInteger,
   readPersistenceIsoDate,
   readPersistenceString,
 } from "../../persistence/codecs/persistence-codec-readers";
@@ -61,27 +60,6 @@ export function parsePianolaProject(
 
   const migrated = migratePortableProject(parsed);
   const source = migrated.source;
-  const format = readPersistenceString(source["format"], "$.format", 64);
-
-  if (format !== PIANOLA_PROJECT_FORMAT) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      "The selected file is not a Pianola project.",
-    );
-  }
-
-  const version = readPersistenceInteger(
-    source["schemaVersion"],
-    "$.schemaVersion",
-    1,
-  );
-
-  if (version !== PIANOLA_PROJECT_SCHEMA_VERSION) {
-    throw new ProjectPersistenceError(
-      "FUTURE_VERSION",
-      `Project file version ${version} is not supported. Baseline is ${PIANOLA_PROJECT_SCHEMA_VERSION}.`,
-    );
-  }
 
   assertExactKeys(source, [
     "format",

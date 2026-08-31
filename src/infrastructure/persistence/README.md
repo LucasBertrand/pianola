@@ -17,11 +17,19 @@ L'infrastructure ne possède aucune intention applicative.
 
 ## Compatibilité locale
 
-Le writer et le lecteur emploient `app.pianola.stored-project.v1`. Le pipeline
-de version vit sous `codecs/migrations/`, mais aucune migration historique
-n'existe dans cette première baseline. Un échec complet conserve les
+Le writer et le lecteur emploient `app.pianola.stored-project.v1`. Le routage
+commun des enveloppes versionnées appartient à
+`infrastructure/versioned-data/`. Cette zone conserve uniquement les
+migrations concrètes des projets locaux et des réglages. Aucune migration
+historique n'existe dans cette première baseline. Un échec complet conserve les
 générations, enregistre une cause par révision et permet leur export avec un
 rapport texte.
+
+Lorsqu'un snapshot local ou un réglage change, la migration reste dans
+`codecs/migrations/` et suit la procédure de
+[`versioned-data`](../versioned-data/README.md) : version d'écriture augmentée,
+étape pure `n -> n + 1`, parseur courant strict et preuve de transition. Le
+repository ne contient pas de branche de compatibilité de format.
 
 IndexedDB emploie le layout 1. `onupgradeneeded` crée les stores de la première
 baseline ; `PianolaIndexedDb.layoutMigration` exposera un futur upgrade. Dans

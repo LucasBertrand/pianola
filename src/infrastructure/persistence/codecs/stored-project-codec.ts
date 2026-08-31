@@ -90,27 +90,6 @@ export function parseStoredProject(
     "document",
     "workspace",
   ], "$");
-  const format = readPersistenceString(source["format"], "$.format", 64);
-
-  if (format !== STORED_PROJECT_FORMAT) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      "Stored project uses an unknown format.",
-    );
-  }
-
-  const schemaVersion = readPersistenceInteger(
-    source["schemaVersion"],
-    "$.schemaVersion",
-    1,
-  );
-
-  if (schemaVersion !== STORED_PROJECT_SCHEMA_VERSION) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      "Migration did not reach the current stored-project version.",
-    );
-  }
 
   const document = parseDocument(source["document"], "$.document");
 

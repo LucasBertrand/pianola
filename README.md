@@ -82,7 +82,8 @@ src/
 │   ├── audio/                   timeline et moteur AudioWorklet
 │   ├── browser/                 enregistrement du service worker
 │   ├── persistence/             IndexedDB, Worker et codecs locaux
-│   └── project-files/           formats `.pianola` et Standard MIDI File
+│   ├── project-files/           formats `.pianola` et Standard MIDI File
+│   └── versioned-data/          routage et migrations des enveloppes versionnées
 └── presentation/                React, DOM, Canvas et styles par surface
 ```
 

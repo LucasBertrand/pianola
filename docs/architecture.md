@@ -247,7 +247,12 @@ Les contrats `ProjectRepository`, `StoredProjectCodec`,
 `UserSettingsRepository` et `AutosaveScheduler` sont sous
 `src/application/ports/`. Leurs implémentations Worker, IndexedDB, navigateur et
 mémoire sont sous `src/infrastructure/persistence/`. Les codecs routent d'abord
-l'identité et la version inconnues, puis valident strictement le modèle courant.
+l'identité et la version inconnues dans le pipeline commun
+`src/infrastructure/versioned-data/`. Chaque format ne déclare que sa version
+courante, le format attendu par version et ses étapes pures successives ; le
+pipeline refuse centralement les versions futures, les étapes manquantes et les
+sorties de migration incohérentes, puis les parseurs valident strictement le
+modèle courant.
 Le fichier portable, le snapshot local, le document musical et le layout
 IndexedDB partent tous de leur version 1. Aucune version historique ni migration
 de projet n'est encore déclarée.

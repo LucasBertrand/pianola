@@ -28,8 +28,9 @@ repositories IndexedDB/mémoire et politiques navigateur sous
 Le pipeline portable :
 
 1. reçoit une valeur JSON inconnue ;
-2. vérifie identité et version avant la validation courante ;
-3. applique les migrations fermées nécessaires ;
+2. confie identité, version et classification des incompatibilités au pipeline
+   commun de `infrastructure/versioned-data/` ;
+3. applique les migrations pures déclarées, successivement et sans saut ;
 4. valide strictement les limites et sections courantes ;
 5. crée une entrée locale distincte sans modifier `UserSettings`.
 
@@ -37,7 +38,16 @@ La fenêtre supportée contient uniquement la première baseline : fichiers
 `.pianola` 1, snapshots locaux 1 et documents musicaux de schéma 1.
 Les writers n'émettent que la version 1. Toute modification future de
 structure ou de vocabulaire persistant augmente la version de son enveloppe et
-ajoute une migration avant/après couverte par test.
+ajoute une migration pure `n -> n + 1` couverte par test. Le changement doit :
+
+1. mettre à jour le writer vers la nouvelle version ;
+2. déclarer format et étape de migration près du format concerné ;
+3. laisser aux parseurs uniquement la validation stricte de la version courante ;
+4. prouver la transition depuis chaque version encore supportée, ainsi que le
+   refus d'une étape absente ou d'une version future.
+
+Le contrat commun et un exemple exécutable sont documentés dans
+[`src/infrastructure/versioned-data/README.md`](../../src/infrastructure/versioned-data/README.md).
 
 Une version future n'est jamais remplacée. Si aucune des deux générations ne
 s'ouvre, les diagnostics distinguent JSON corrompu, donnée invalide,
@@ -56,6 +66,7 @@ Tests ciblés :
 npm test -- src/infrastructure/persistence/__tests__/persistence-codecs.test.ts
 npm test -- src/infrastructure/persistence/__tests__/project-repository-contract.test.ts
 npm test -- src/infrastructure/persistence/__tests__/indexed-db-reset.test.ts
+npm test -- src/infrastructure/versioned-data/__tests__/versioned-migration-pipeline.test.ts
 ```
 
 ## MIDI

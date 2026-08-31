@@ -18,8 +18,14 @@ import {
 import {
   parsePersonalInstrumentPresetLibrary,
 } from "./personal-instrument-preset-codec";
+import {
+  migrateUserSettings,
+} from "./migrations/migrate-user-settings";
+import {
+  USER_SETTINGS_FORMAT,
+} from "./user-settings-codec-constants";
 
-export const USER_SETTINGS_FORMAT = "app.pianola.user-settings.v1";
+export { USER_SETTINGS_FORMAT } from "./user-settings-codec-constants";
 
 const ACTION_IDS = [
   "editor.redo",
@@ -68,31 +74,8 @@ export function serializeUserSettings(
 export function parseUserSettingsEnvelope(
   serialized: string,
 ): UserSettingsEnvelope {
-  const source = readPersistenceRecord(
-    parsePersistenceJson(serialized),
-    "$",
-  );
-  const format = readPersistenceString(source["format"], "$.format", 64);
-
-  const version = readPersistenceInteger(
-    source["schemaVersion"],
-    "$.schemaVersion",
-    1,
-  );
-
-  if (version > USER_SETTINGS_SCHEMA_VERSION) {
-    throw new ProjectPersistenceError(
-      "FUTURE_VERSION",
-      `User settings version ${version} is newer than this application.`,
-    );
-  }
-
-  if (version !== USER_SETTINGS_SCHEMA_VERSION || format !== USER_SETTINGS_FORMAT) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      "Stored user settings use an unknown format or version.",
-    );
-  }
+  const migrated = migrateUserSettings(parsePersistenceJson(serialized));
+  const source = migrated.source;
 
   return {
     format: USER_SETTINGS_FORMAT,
