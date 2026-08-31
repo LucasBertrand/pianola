@@ -193,7 +193,7 @@ describe("validateClipTimeline", () => {
       .toBe(true);
   });
 
-  test("distinguishes invalid, duplicate, and end-boundary marker positions", () => {
+  test("distinguishes invalid and duplicate positions while accepting the clip end", () => {
     const baseTimeMap = createDefaultTimeMap();
     const fractional = validateClipTimeline(
       createTimeline({
@@ -229,9 +229,7 @@ describe("validateClipTimeline", () => {
     expect(duplicate.issues).toContainEqual(expect.objectContaining({
       message: "Section markers cannot share a position and must remain strictly ordered.",
     }));
-    expect(atEnd.issues).toContainEqual(expect.objectContaining({
-      message: "A section marker must be placed before the end of the clip.",
-    }));
+    expect(atEnd).toEqual({ valid: true, issues: [] });
   });
 
   test("requires valid, ordered scale markers starting at tick 0", () => {

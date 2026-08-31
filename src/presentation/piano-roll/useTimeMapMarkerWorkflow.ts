@@ -359,15 +359,6 @@ export function useTimeMapMarkerWorkflow({
       runtime.gridResolutionTicks.get(),
     );
 
-    if (tick === null) {
-      alert(
-        "Marker unavailable",
-        "A marker must be placed before the end of the clip.",
-        "danger",
-      );
-      return;
-    }
-
     setDraftError(null);
     setDraft(
       createMarkerDraft(state, clipId, tick),

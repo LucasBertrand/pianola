@@ -164,6 +164,36 @@ describe("timeline marker selection", () => {
     );
   });
 
+  test("commits a selected marker move at the exact clip end", () => {
+    const runtime = createEditorRuntime(createProjectWithTempoCollision());
+    const durationTicks = getActiveClip(runtime.projectStore.getState())
+      .timeline.durationTicks;
+    const markerGroup = createSelectedMarkerGroup(1_200, true, false);
+
+    expect(markerGroup).not.toBeNull();
+    runtime.selection.addMarkerGroup(markerGroup!);
+
+    const workflow = new NoteGestureWorkflow(
+      runtime.editorCommands,
+      runtime.selection,
+      {
+        onCollision: undefined,
+        onTransactionRejected(error): void {
+          throw error;
+        },
+        onSelectionChanged: undefined,
+      },
+    );
+
+    expect(workflow.commitMove([], durationTicks - 1_200))
+      .toBe("committed");
+    expect(activeMarkerTicks(runtime, "tempo")).toContain(durationTicks);
+    expect(runtime.selection.markerGroups).toEqual([{
+      startTick: durationTicks,
+      kinds: ["tempo"],
+    }]);
+  });
+
   test("snaps a moved note against the projected scale before publishing both", () => {
     const note = createTestNote({
       id: "projected-scale-note",

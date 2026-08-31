@@ -82,7 +82,6 @@ export function planSelectedMarkerMove(
       durationTicks,
       movedGroups: groups,
       deltaTicks,
-      boundaryPolicy: "published",
     }).collisions;
   } catch (error: unknown) {
     throw new TimelineSelectionMoveError(
@@ -236,7 +235,6 @@ function moveMarkerGroups(
 export function measureTimelineSelectionTickBounds(
   notes: readonly Note[],
   markerGroups: readonly SelectedTimeMapMarkerGroup[],
-  allowMarkerAtClipEnd = false,
 ): TimelineSelectionTickBounds | null {
   let minimumStartTick = Number.POSITIVE_INFINITY;
   let maximumEndTick = Number.NEGATIVE_INFINITY;
@@ -253,7 +251,7 @@ export function measureTimelineSelectionTickBounds(
     minimumStartTick = Math.min(minimumStartTick, group.startTick);
     maximumEndTick = Math.max(
       maximumEndTick,
-      group.startTick + (allowMarkerAtClipEnd ? 0 : 1),
+      group.startTick,
     );
   }
 
@@ -267,12 +265,10 @@ export function clampTimelineSelectionDelta(
   markerGroups: readonly SelectedTimeMapMarkerGroup[],
   requestedDeltaTicks: Tick,
   durationTicks: Tick,
-  allowMarkerAtClipEnd = false,
 ): Tick {
   const bounds = measureTimelineSelectionTickBounds(
     notes,
     markerGroups,
-    allowMarkerAtClipEnd,
   );
 
   if (bounds === null) {

@@ -51,7 +51,6 @@ describe("time-map marker move projection", () => {
         kinds: ["tempo", "scale", "section"],
       }],
       deltaTicks: 480,
-      boundaryPolicy: "published",
     });
 
     expect(projection.timeMap.meterMarkers)
@@ -80,7 +79,6 @@ describe("time-map marker move projection", () => {
       durationTicks: 3_840,
       movedGroups: [{ startTick: 0, kinds: ["section"] }],
       deltaTicks: 240,
-      boundaryPolicy: "published",
     });
 
     expect(projection.timeMap.tempoMarkers[0]).toBe(
@@ -101,7 +99,6 @@ describe("time-map marker move projection", () => {
       durationTicks: 3_840,
       movedGroups: [{ startTick: 960, kinds: ["tempo"] }],
       deltaTicks: -1_200,
-      boundaryPolicy: "published",
     })).toThrowError("inside the clip");
   });
 
@@ -111,7 +108,6 @@ describe("time-map marker move projection", () => {
       durationTicks: 3_840,
       movedGroups: [{ startTick: 960, kinds: ["tempo", "scale"] }],
       deltaTicks: -960,
-      boundaryPolicy: "published",
     });
 
     expect(projection.collisions).toEqual([
@@ -128,25 +124,23 @@ describe("time-map marker move projection", () => {
     });
   });
 
-  test("rejects the clip-end boundary explicitly", () => {
-    expect(() => projectTimeMapMarkerMove({
-      timeMap: SOURCE_TIME_MAP,
-      durationTicks: 3_840,
-      movedGroups: [{ startTick: 960, kinds: ["tempo"] }],
-      deltaTicks: 2_880,
-      boundaryPolicy: "published",
-    })).toThrowError("before the end of the clip");
-  });
-
-  test("allows the clip-end boundary only for an editorial preview", () => {
+  test("allows the exact clip-end boundary", () => {
     const projection = projectTimeMapMarkerMove({
       timeMap: SOURCE_TIME_MAP,
       durationTicks: 3_840,
       movedGroups: [{ startTick: 960, kinds: ["tempo"] }],
       deltaTicks: 2_880,
-      boundaryPolicy: "editorial-preview",
     });
 
     expect(projection.timeMap.tempoMarkers.at(-1)?.startTick).toBe(3_840);
+  });
+
+  test("still rejects positions beyond the clip end", () => {
+    expect(() => projectTimeMapMarkerMove({
+      timeMap: SOURCE_TIME_MAP,
+      durationTicks: 3_840,
+      movedGroups: [{ startTick: 960, kinds: ["tempo"] }],
+      deltaTicks: 2_881,
+    })).toThrowError("within the clip");
   });
 });

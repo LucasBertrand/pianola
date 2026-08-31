@@ -204,7 +204,6 @@ export function useTimeMapMarkerGesture({
           selection.markerGroups,
           targetTick - originTick,
           durationTicks,
-          true,
         );
       } else {
         targetTick = Math.min(

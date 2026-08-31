@@ -208,15 +208,14 @@ export function createMarkerDraft(
 
 /**
  * Captures a continuous playhead position as an editable musical tick.
- * The active grid owns the projection. The clip end itself is not editable,
- * and is represented by `null` so the caller can refuse it explicitly.
+ * The active grid owns the projection, including the exact clip-end boundary.
  */
 export function projectPlayheadTickToMarkerGrid(
   state: EditorSessionState,
   clipId: ClipId,
   playheadTick: number,
   resolutionTicks: number,
-): Tick | null {
+): Tick {
   const clip = getClip(state, clipId);
   const { timeMap, durationTicks } = clip.timeline;
   const sourceTick = Number.isFinite(playheadTick) ? playheadTick : 0;
@@ -232,11 +231,7 @@ export function projectPlayheadTickToMarkerGrid(
     resolution,
   );
 
-  if (snappedTick < durationTicks) {
-    return snappedTick;
-  }
-
-  return null;
+  return Math.min(durationTicks, snappedTick);
 }
 
 /**
@@ -477,9 +472,9 @@ export function planMarkerMove(
     );
   }
 
-  if (toTick >= clip.timeline.durationTicks) {
+  if (toTick > clip.timeline.durationTicks) {
     throw new RangeError(
-      "A marker must be placed before the end of the clip.",
+      "A marker must be placed within the clip.",
     );
   }
 

@@ -17,9 +17,9 @@ export function insertTempoMarker(
   durationTicks: Tick,
   marker: TempoMarker,
 ): TimeMap {
-  if (marker.startTick <= 0 || marker.startTick >= durationTicks) {
+  if (marker.startTick <= 0 || marker.startTick > durationTicks) {
     throw new RangeError(
-      "A tempo marker must start inside the clip, after tick 0.",
+      "A tempo marker must start within the clip, after tick 0.",
     );
   }
 
@@ -106,9 +106,9 @@ export function insertScaleMarker(
   durationTicks: Tick,
   marker: ScaleMarker,
 ): TimeMap {
-  if (marker.startTick <= 0 || marker.startTick >= durationTicks) {
+  if (marker.startTick <= 0 || marker.startTick > durationTicks) {
     throw new RangeError(
-      "A scale marker must start inside the clip, after tick 0.",
+      "A scale marker must start within the clip, after tick 0.",
     );
   }
 
@@ -192,8 +192,8 @@ export function insertSectionMarker(
   durationTicks: Tick,
   marker: SectionMarker,
 ): TimeMap {
-  if (marker.startTick < 0 || marker.startTick >= durationTicks) {
-    throw new RangeError("A section marker must start inside the clip.");
+  if (marker.startTick < 0 || marker.startTick > durationTicks) {
+    throw new RangeError("A section marker must start within the clip.");
   }
 
   assertSectionComment(marker.comment);

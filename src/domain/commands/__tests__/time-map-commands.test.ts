@@ -111,6 +111,41 @@ describe("meter marker commands", () => {
 });
 
 describe("tempo marker commands", () => {
+  test("adds point markers at the exact clip end", () => {
+    const store = new ProjectStore(createTestProject());
+    const durationTicks = activeTimeline(store).durationTicks;
+
+    dispatch(store, {
+      type: "AddTempoMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: durationTicks,
+      bpm: 90,
+    });
+    dispatch(store, {
+      type: "AddScaleMarker",
+      clipId: TEST_CLIP_ID,
+      marker: {
+        startTick: durationTicks,
+        rootNote: "D",
+        patternType: "scale",
+        patternId: "dorian",
+      },
+    });
+    dispatch(store, {
+      type: "AddSectionMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: durationTicks,
+      comment: "End",
+    });
+
+    expect(activeTimeline(store).timeMap.tempoMarkers.at(-1)?.startTick)
+      .toBe(durationTicks);
+    expect(activeTimeline(store).timeMap.scaleMarkers.at(-1)?.startTick)
+      .toBe(durationTicks);
+    expect(activeTimeline(store).timeMap.sectionMarkers.at(-1)?.startTick)
+      .toBe(durationTicks);
+  });
+
   test("keeps consecutive tempo and scale markers with identical values", () => {
     const store = new ProjectStore(createTestProject());
     const initialScale = activeTimeline(store).timeMap.scaleMarkers[0]!;

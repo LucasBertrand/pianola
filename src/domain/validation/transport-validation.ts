@@ -401,8 +401,13 @@ function getMarkerPositionIssue(
     return `${label} marker position must be a non-negative whole-number tick.`;
   }
 
-  if (startTick >= durationTicks) {
-    return `A ${label.toLowerCase()} marker must be placed before the end of the clip.`;
+  if (
+    startTick > durationTicks
+    || (label === "Meter" && startTick === durationTicks)
+  ) {
+    return label === "Meter"
+      ? "A meter marker must start a complete measure before the end of the clip."
+      : `A ${label.toLowerCase()} marker must be placed within the clip.`;
   }
 
   if (previousStartTick !== undefined && startTick <= previousStartTick) {

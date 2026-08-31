@@ -17,7 +17,6 @@ export interface TimeMapMarkerMoveProjectionInput {
   readonly durationTicks: Tick;
   readonly movedGroups: readonly SelectedTimeMapMarkerGroup[];
   readonly deltaTicks: Tick;
-  readonly boundaryPolicy: "published" | "editorial-preview";
 }
 
 export interface TimeMapMarkerMoveProjection {
@@ -37,9 +36,7 @@ export function projectTimeMapMarkerMove(
     durationTicks,
     movedGroups,
     deltaTicks,
-    boundaryPolicy,
   } = input;
-  const allowClipEnd = boundaryPolicy === "editorial-preview";
 
   if (!Number.isSafeInteger(deltaTicks)) {
     throw new RangeError("A marker preview must use a whole tick offset.");
@@ -51,7 +48,6 @@ export function projectTimeMapMarkerMove(
     movedGroups,
     deltaTicks,
     durationTicks,
-    allowClipEnd,
   );
   const scale = projectMarkerKind(
     "scale",
@@ -59,7 +55,6 @@ export function projectTimeMapMarkerMove(
     movedGroups,
     deltaTicks,
     durationTicks,
-    allowClipEnd,
   );
   const section = projectMarkerKind(
     "section",
@@ -67,7 +62,6 @@ export function projectTimeMapMarkerMove(
     movedGroups,
     deltaTicks,
     durationTicks,
-    allowClipEnd,
   );
 
   if (deltaTicks === 0 || movedGroups.length === 0) {
@@ -102,7 +96,6 @@ function projectMarkerKind<TMarker extends MarkerAtTick>(
   groups: readonly SelectedTimeMapMarkerGroup[],
   deltaTicks: Tick,
   durationTicks: Tick,
-  allowClipEnd: boolean,
 ): {
   readonly markers: readonly TMarker[];
   readonly collisions: readonly TimeMapMarkerCollision[];
@@ -134,14 +127,10 @@ function projectMarkerKind<TMarker extends MarkerAtTick>(
 
     const targetTick = sourceTick + deltaTicks;
 
-    if (
-      targetTick > durationTicks
-      || (!allowClipEnd && targetTick === durationTicks)
-      || targetTick < 0
-    ) {
+    if (targetTick > durationTicks || targetTick < 0) {
       throw new RangeError(
-        targetTick >= durationTicks
-          ? "A marker must be placed before the end of the clip."
+        targetTick > durationTicks
+          ? "A marker must be placed within the clip."
           : `The ${kind} marker must remain inside the clip.`,
       );
     }

@@ -48,10 +48,9 @@ Dernière mise à jour : 31 août 2026.
 - Canvas, ruler, clavier, snap et ghosts résolvent leur snapshot effectif à leur
   frontière de consommation. Ils ne mutent jamais la `TimeMap` ou la boucle
   publiée pendant `pointermove`.
-- Une projection éditoriale peut représenter provisoirement un marqueur sur la
-  frontière de fin du clip pour restituer fidèlement le geste. Cette pose reste
-  non publiable : le plan de commit réapplique les bornes métier au relâchement
-  et produit alors un refus explicite.
+- Une projection éditoriale peut représenter un marqueur ponctuel sur la
+  frontière exacte de fin du clip. Cette position respecte les mêmes bornes
+  que le plan de commit et peut donc être publiée au relâchement.
 - Pendant l’édition d’un instrument, le brouillon est envoyé directement au
   worklet comme paramètre transitoire. Il ne recompile pas la timeline, ne mute
   pas le document et n’entre pas dans Undo/Redo.

@@ -154,7 +154,6 @@ export class TimeMapMarkerPreviewSession {
       durationTicks: active.durationTicks,
       movedGroups: active.movedGroups,
       deltaTicks,
-      boundaryPolicy: "editorial-preview",
     });
 
     this.mutableSignal.set({

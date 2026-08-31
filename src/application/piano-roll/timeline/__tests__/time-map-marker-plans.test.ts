@@ -202,7 +202,7 @@ describe("projectPlayheadTickToMarkerGrid", () => {
     )).toBe(MEASURE_TICKS + 960);
   });
 
-  test("rejects a projection onto the clip end", () => {
+  test("projects onto the exact clip end", () => {
     const state = createProjectWithMarkers();
     const durationTicks = state.clipsById[TEST_CLIP_ID]!.timeline.durationTicks;
     expect(projectPlayheadTickToMarkerGrid(
@@ -210,7 +210,7 @@ describe("projectPlayheadTickToMarkerGrid", () => {
       TEST_CLIP_ID,
       durationTicks - 0.1,
       960,
-    )).toBeNull();
+    )).toBe(durationTicks);
   });
 });
 
@@ -489,16 +489,21 @@ describe("planMarkerMove", () => {
     ]);
   });
 
-  test("refuses the clip-end boundary", () => {
+  test("moves a marker to the clip-end boundary", () => {
     const state = createProjectWithMarkers();
     const durationTicks = state.clipsById[TEST_CLIP_ID]!.timeline.durationTicks;
 
-    expect(() => planMarkerMove(
+    expect(planMarkerMove(
       state,
       TEST_CLIP_ID,
       2 * MEASURE_TICKS,
       durationTicks,
-    )).toThrowError("before the end of the clip");
+    ).commands).toEqual([{
+      type: "MoveTempoMarker",
+      clipId: TEST_CLIP_ID,
+      startTick: 2 * MEASURE_TICKS,
+      targetTick: durationTicks,
+    }]);
   });
 
   test("moves only the optional section from the initial flag", () => {
