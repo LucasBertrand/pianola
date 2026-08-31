@@ -290,25 +290,30 @@ export class PianoRollGestureStateMachine {
     pointerPitch: number,
     totalTicks: number,
   ): GestureUpdateKind {
-    const rawAbsoluteTick = this.draft.minimumSelectedStartTick
+    let rawAbsoluteTick = this.draft.minimumSelectedStartTick
       + (pointerTick - this.draft.originPointerTick);
-    let deltaTicks = this.draft.snapAbsoluteTick(rawAbsoluteTick)
+
+    if (rawAbsoluteTick < 0) {
+      rawAbsoluteTick = 0;
+      this.draft.originPointerTick = this.draft.minimumSelectedStartTick + pointerTick;
+    } else if (this.draft.maximumSelectedEndTick + (rawAbsoluteTick - this.draft.minimumSelectedStartTick) > totalTicks) {
+      const maxRawDelta = totalTicks - this.draft.maximumSelectedEndTick;
+      rawAbsoluteTick = this.draft.minimumSelectedStartTick + maxRawDelta;
+      this.draft.originPointerTick = this.draft.minimumSelectedStartTick + pointerTick - rawAbsoluteTick;
+    }
+
+    const deltaTicks = this.draft.snapAbsoluteTick(rawAbsoluteTick)
       - this.draft.minimumSelectedStartTick;
+
     let deltaPitch =
       pointerPitch - this.draft.originPointerPitch;
 
-    if (this.draft.minimumSelectedStartTick + deltaTicks < 0) {
-      deltaTicks = -this.draft.minimumSelectedStartTick;
-    }
-
-    if (this.draft.maximumSelectedEndTick + deltaTicks > totalTicks) {
-      deltaTicks = totalTicks - this.draft.maximumSelectedEndTick;
-    }
-
     if (this.draft.minimumSelectedPitch + deltaPitch < 0) {
       deltaPitch = -this.draft.minimumSelectedPitch;
+      this.draft.originPointerPitch = pointerPitch - deltaPitch;
     } else if (this.draft.maximumSelectedPitch + deltaPitch > 127) {
       deltaPitch = 127 - this.draft.maximumSelectedPitch;
+      this.draft.originPointerPitch = pointerPitch - deltaPitch;
     }
 
     if (
@@ -324,18 +329,23 @@ export class PianoRollGestureStateMachine {
   }
 
   private updateResize(pointerTick: number): GestureUpdateKind {
-    const targetTick = this.draft.snapAbsoluteTick(
-      this.draft.originResizeTick
+    let rawTargetTick = this.draft.originResizeTick
         + pointerTick
-        - this.draft.originPointerTick,
-    );
-    let deltaTicks = targetTick - this.draft.originResizeTick;
+        - this.draft.originPointerTick;
+    let rawDeltaTicks = rawTargetTick - this.draft.originResizeTick;
 
-    if (deltaTicks < this.draft.minimumResizeDeltaTicks) {
-      deltaTicks = this.draft.minimumResizeDeltaTicks;
-    } else if (deltaTicks > this.draft.maximumResizeDeltaTicks) {
-      deltaTicks = this.draft.maximumResizeDeltaTicks;
+    if (rawDeltaTicks < this.draft.minimumResizeDeltaTicks) {
+      rawDeltaTicks = this.draft.minimumResizeDeltaTicks;
+      rawTargetTick = this.draft.originResizeTick + rawDeltaTicks;
+      this.draft.originPointerTick = this.draft.originResizeTick + pointerTick - rawTargetTick;
+    } else if (rawDeltaTicks > this.draft.maximumResizeDeltaTicks) {
+      rawDeltaTicks = this.draft.maximumResizeDeltaTicks;
+      rawTargetTick = this.draft.originResizeTick + rawDeltaTicks;
+      this.draft.originPointerTick = this.draft.originResizeTick + pointerTick - rawTargetTick;
     }
+
+    const targetTick = this.draft.snapAbsoluteTick(rawTargetTick);
+    const deltaTicks = targetTick - this.draft.originResizeTick;
 
     if (deltaTicks === this.draft.deltaTicks) {
       return "none";
