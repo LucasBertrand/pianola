@@ -28,7 +28,8 @@ baseline ; `PianolaIndexedDb.layoutMigration` exposera un futur upgrade. Dans
 ce reset initial, un layout local supérieur incompatible est supprimé puis la
 baseline 1 est recréée. Les réglages
 illisibles sont copiés dans le store de diagnostics avant restauration des
-valeurs par défaut.
+valeurs par défaut. Leur enveloppe propre est en version 2 ; la version 1 est
+migrée explicitement avec le mode historique `pitch` pour les labels de notes.
 
 Validation ciblée :
 

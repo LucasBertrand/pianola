@@ -11,7 +11,7 @@ Dernière mise à jour : 31 août 2026.
 | document projet | horloge globale (PPQN), clips, bypass par clip et par groupe, hiérarchie de groupes et ordre de lecture dérivé, timelines (marqueurs de tempo/métrique/gamme/section, durée), boucles locales, enchaînement global, auto-scroll du playhead, pistes, notes, instruments, presets et mixage | `ProjectDocument` historisé par `application/history/ProjectStore` | ouverture du projet | oui, dans `StoredProject` et la section `document` du nouveau `.pianola` | oui, par transaction métier | faible à moyenne |
 | session d'éditeur minimale | document ouvert et clip actif canonique | `EditorSessionState`, dont `ActiveClipSelection` | ouverture du projet | clip actif projeté dans le contexte persistant | seul le `ProjectDocument` est historisé | moyenne |
 | contexte d'éditeur persistant | clip et instrument actifs, grille et snap par motif de hauteurs par clip | `PersistedEditorWorkspace`, avec un `PersistedClipEditorState` par clip, projeté par `application/editor-session/workspace-persistence.ts` dans `EditorRuntime` | durée de vie du projet | oui, atomiquement avec le document et dans une section portable distincte | non | moyenne |
-| préférences utilisateur | mode de sélection, couleur des notes, préécoute du pitch, presets personnels et raccourcis par action | `UserSettingsRepository`, projeté temporairement par `usePianoRollUserPreferences` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
+| préférences utilisateur | mode de sélection, couleur et type de label des notes, préécoute du pitch, presets personnels et raccourcis par action | `UserSettingsRepository`, projeté temporairement par `usePianoRollUserPreferences` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
 | session d’édition | sélection de notes, presse-papier, draft géométrique de note, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | snapshots d’identifiants avant/après pour la sélection ; les autres états restent hors historique | élevée |
 | projection éditoriale temporelle | `TimeMap` projetée pour un déplacement de marqueurs et région de boucle projetée | `TimeMapMarkerPreviewSession` et `LoopPreviewSession` dans `application/editor-session/` | un geste, lié au clip et à la révision sources | non | non ; le commit seul publie une transaction | élevée pendant le geste |
 | état audio effectif | timeline et transport publiés, surchargés indépendamment par le tempo projeté, la boucle projetée ou les paramètres d’instrument en cours d’édition | `AudioWorkletTransport` puis `WorkletTimelineEngine` | source audio courante ou interaction | non | non ; retirer une surcharge révèle le dernier état publié | audio-rate et interaction |
@@ -107,8 +107,9 @@ refuse les champs qui ne font pas partie de la baseline courante au lieu de les
 convertir ou de les abandonner silencieusement. Les seules données par clip
 persistées sont `pitchSnapSettings` et `gridSettings`.
 
-Le snapshot local courant est la première baseline, version 1. Il n'existe
-encore aucune version historique ni migration à exécuter. Un futur rapport de
+Le snapshot projet local courant est la première baseline, version 1. Les
+préférences utilisateur sont en version 2 ; leur version 1 est migrée
+explicitement en conservant l'affichage historique des labels par pitch. Un futur rapport de
 migration restera transitoire et n'entrera pas dans Undo/Redo. IndexedDB utilise
 également son premier layout, version 1 ; un layout local supérieur incompatible
 est supprimé et recréé pendant ce reset initial.

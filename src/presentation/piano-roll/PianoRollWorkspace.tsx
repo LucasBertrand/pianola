@@ -670,7 +670,9 @@ export function PianoRollWorkspace({
           gridSettings={runtime.gridSettings}
           pitchSnapSettings={pitchSnapSettings}
           noteColorMode={preferences.noteColorMode}
+          noteLabelMode={preferences.noteLabelMode}
           onNoteColorModeToggle={preferences.toggleNoteColorMode}
+          onNoteLabelModeChange={preferences.changeNoteLabelMode}
           onPitchSnapSettingsChange={updatePitchSnapSettings}
           onAutoFit={handleAutoFit}
         />

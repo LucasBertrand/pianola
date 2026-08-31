@@ -16,8 +16,12 @@ import type {
 import type {
   NoteColorMode,
 } from "../../editor-core/model/note-color-mode";
+import {
+  DEFAULT_NOTE_LABEL_MODE,
+  type NoteLabelMode,
+} from "../../editor-core/model/note-label-mode";
 
-export const USER_SETTINGS_SCHEMA_VERSION = 1;
+export const USER_SETTINGS_SCHEMA_VERSION = 2;
 
 export type ShortcutActionId =
   | "editor.redo"
@@ -36,6 +40,7 @@ export interface UserSettings {
   readonly schemaVersion: typeof USER_SETTINGS_SCHEMA_VERSION;
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
+  readonly noteLabelMode: NoteLabelMode;
   readonly pitchPreviewEnabled: boolean;
   readonly personalInstrumentPresetsById: Readonly<
     Record<PresetId, InstrumentPreset>
@@ -57,6 +62,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = Object.freeze({
   schemaVersion: USER_SETTINGS_SCHEMA_VERSION,
   selectionMode: "replace",
   noteColorMode: EDITOR_CONSTANTS.defaultNoteColorMode,
+  noteLabelMode: DEFAULT_NOTE_LABEL_MODE,
   pitchPreviewEnabled:
     EDITOR_CONSTANTS.defaultPitchPreviewEnabled,
   personalInstrumentPresetsById: Object.freeze({}),

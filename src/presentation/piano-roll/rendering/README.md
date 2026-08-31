@@ -34,6 +34,11 @@ The label-width and locked-note-pattern caches are isolated in their own
 modules. DOM overlays remain responsible for focus, menus, playhead, lasso and
 other accessible interaction feedback.
 
+Note labels use the explicit `noteLabelMode` render signal. `pitch` keeps the
+contextual note spelling with octave; `degree` derives interval degrees from
+the scale or chord effective at each tick. Canvas notes and DOM ghosts split
+their labels at the same tonal boundaries.
+
 ## Pixel spaces
 
 `useCanvasRenderer` scales the visible context by `devicePixelRatio`, capped at 2 for precise pointers and 1.5 for coarse pointers to bound mobile GPU fill cost. Render functions therefore use the converter CSS-pixel methods. The converter device-pixel methods remain available for direct backing-store operations.

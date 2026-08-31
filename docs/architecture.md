@@ -250,7 +250,9 @@ mémoire sont sous `src/infrastructure/persistence/`. Les codecs routent d'abord
 l'identité et la version inconnues, puis valident strictement le modèle courant.
 Le fichier portable, le snapshot local, le document musical et le layout
 IndexedDB partent tous de leur version 1. Aucune version historique ni migration
-n'est encore déclarée.
+de projet n'est encore déclarée.
+Les préférences utilisateur suivent séparément un schéma 2 : leur schéma 1 est
+migré vers le mode historique de labels par pitch avant validation.
 
 Les échecs complets alimentent les diagnostics de quarantaine et restent
 exportables sans mutation. IndexedDB crée son premier layout avec

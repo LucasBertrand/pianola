@@ -121,6 +121,7 @@ export function InteractionOverlay(
     spatialIndex,
     instrumentStyles,
     noteColorMode,
+    noteLabelMode,
     projectStore,
     editorCommands,
     selection,
@@ -137,6 +138,7 @@ export function InteractionOverlay(
     visualsRef.current = new DomInteractionVisualController(
       editingNoteMask,
       noteColorMode,
+      noteLabelMode,
       instrumentStyles,
       editorCommands,
       pitchSnapSettings,

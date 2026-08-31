@@ -11,6 +11,12 @@ import {
 } from "../../../domain/music-theory/tonal-spelling";
 import { formatAccidentals } from "../../../domain/music-theory/pitch-notation";
 import { Note } from "@tonaljs/tonal";
+import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
+import {
+  getPitchPatternDegreeLabel,
+} from "../../../domain/music-theory/pitch-snap";
 
 export interface MidiNoteLabelSegment {
   readonly startTick: number;
@@ -25,6 +31,7 @@ export interface TonalBoundary {
 export function getMidiNoteLabel(
   pitch: number,
   settings: PitchSnapSettings = DEFAULT_PITCH_SNAP_SETTINGS,
+  mode: NoteLabelMode = "pitch",
 ): string {
   if (
     !Number.isInteger(pitch)
@@ -32,6 +39,10 @@ export function getMidiNoteLabel(
     || pitch > PROJECT_CONSTANTS.maximumMidiPitch
   ) {
     return "";
+  }
+
+  if (mode === "degree") {
+    return getPitchPatternDegreeLabel(pitch, settings);
   }
 
   const matchedNote = spellPitchClass(pitch, settings);
@@ -62,8 +73,9 @@ export function getMidiNoteLabel(
 
 export function getPitchLabelContextKey(
   settings: PitchSnapSettings,
+  mode: NoteLabelMode = "pitch",
 ): string {
-  return `${settings.rootNote}:${settings.patternType}:${settings.patternId}`;
+  return `${mode}:${settings.rootNote}:${settings.patternType}:${settings.patternId}`;
 }
 
 export function getMidiNoteLabelSegments(
@@ -72,6 +84,7 @@ export function getMidiNoteLabelSegments(
   endTick: number,
   tonalBoundaries: readonly TonalBoundary[],
   getSettingsAtTick: (tick: number) => PitchSnapSettings,
+  mode: NoteLabelMode = "pitch",
 ): readonly MidiNoteLabelSegment[] {
   const changes: Array<{
     readonly startTick: number;
@@ -80,6 +93,7 @@ export function getMidiNoteLabelSegments(
   let currentLabel = getMidiNoteLabel(
     pitch,
     getSettingsAtTick(startTick),
+    mode,
   );
 
   changes.push({ startTick, label: currentLabel });
@@ -96,6 +110,7 @@ export function getMidiNoteLabelSegments(
     const nextLabel = getMidiNoteLabel(
       pitch,
       getSettingsAtTick(boundary.startTick),
+      mode,
     );
 
     if (nextLabel === currentLabel) {

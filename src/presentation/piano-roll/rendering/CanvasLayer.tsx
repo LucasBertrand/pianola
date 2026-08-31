@@ -38,6 +38,9 @@ import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
 import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
+import type {
   ReadonlyRenderSignal,
 } from "../../../editor-core/model/render-signal";
 import type {
@@ -92,6 +95,7 @@ export interface NotesCanvasProps extends CanvasProjectionLayerProps {
     Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly noteColorMode: ReadonlyRenderSignal<NoteColorMode>;
+  readonly noteLabelMode: ReadonlyRenderSignal<NoteLabelMode>;
   readonly pitchSnapSettings: ReadonlyRenderSignal<PitchSnapSettings>;
   readonly editingNoteMask: ReadonlyEditingNoteMask;
   readonly markerPreview: ReadonlyRenderSignal<
@@ -197,6 +201,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
     projectStore,
     instrumentStyles,
     noteColorMode,
+    noteLabelMode,
     pitchSnapSettings,
     editingNoteMask,
     markerPreview,
@@ -249,6 +254,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
         stylesByInstrumentId: instrumentStyles.get(),
         instrumentOrder: state.instrumentOrder,
         colorMode: noteColorMode.get(),
+        labelMode: noteLabelMode.get(),
         globalPitchSnapSettings: pitchSnapSettings.get(),
         timeMap,
       });
@@ -260,6 +266,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
       visibleRegion,
       instrumentStyles,
       noteColorMode,
+      noteLabelMode,
       pitchSnapSettings,
       markerPreview,
     ],
@@ -275,6 +282,7 @@ export function NotesCanvas(props: NotesCanvasProps): React.JSX.Element {
   useSignalInvalidation(visibleRegion, renderer.invalidate);
   useSignalInvalidation(instrumentStyles, renderer.invalidate);
   useSignalInvalidation(noteColorMode, renderer.invalidate);
+  useSignalInvalidation(noteLabelMode, renderer.invalidate);
   useSignalInvalidation(pitchSnapSettings, renderer.invalidate);
   useSignalInvalidation(editingNoteMask, renderer.invalidate);
   useSignalInvalidation(markerPreview, renderer.invalidate);

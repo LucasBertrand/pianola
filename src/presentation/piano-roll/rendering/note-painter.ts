@@ -15,6 +15,9 @@ import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
 import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
+import type {
   CoordinateConverter,
 } from "../../../editor-core/geometry/converter";
 import type {
@@ -54,6 +57,7 @@ export interface NotePaintSnapshot {
   >;
   readonly instrumentOrder: readonly InstrumentId[];
   readonly colorMode: NoteColorMode;
+  readonly labelMode: NoteLabelMode;
   readonly globalPitchSnapSettings: PitchSnapSettings;
   readonly timeMap: TimeMap;
 }
@@ -173,6 +177,7 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
     stylesByInstrumentId,
     timeMap,
     globalPitchSnapSettings,
+    labelMode,
   } = snapshot;
 
   context.fillStyle = NOTE_LABEL_COLOR;
@@ -210,6 +215,7 @@ function paintNoteLabels(snapshot: NotePaintSnapshot): void {
           globalPitchSnapSettings,
           tick,
         ),
+        labelMode,
       )
     ) {
       const startX = Math.max(

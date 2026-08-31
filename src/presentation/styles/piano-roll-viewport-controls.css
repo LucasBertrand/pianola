@@ -213,6 +213,10 @@
   border-color: var(--color-border-primary);
 }
 
+.note-label-mode-control select {
+  width: 68px;
+}
+
 .pitch-snap-tonic-select {
   width: 100%;
 }

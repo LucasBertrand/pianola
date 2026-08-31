@@ -33,6 +33,9 @@ import type {
   NoteColorMode,
 } from "../../editor-core/model/note-color-mode";
 import type {
+  NoteLabelMode,
+} from "../../editor-core/model/note-label-mode";
+import type {
   MutableRenderSignal,
   ReadonlyRenderSignal,
 } from "../../editor-core/model/render-signal";
@@ -64,6 +67,7 @@ export interface EditorRuntime {
     Readonly<Record<InstrumentId, InstrumentRenderStyle>>
   >;
   readonly noteColorMode: MutableRenderSignal<NoteColorMode>;
+  readonly noteLabelMode: MutableRenderSignal<NoteLabelMode>;
   readonly playheadPosition: MutableRenderSignal<PlayheadPosition>;
   readonly playheadTick: MutableRenderSignal<number>;
   readonly highlightedPitch: MutableRenderSignal<number | null>;

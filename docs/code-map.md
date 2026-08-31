@@ -50,6 +50,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier autosave ou récupération | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` | `src/application/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports, migrations de codec puis repository IndexedDB/Worker |
 | modifier le MIDI | `src/infrastructure/project-files/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier les couleurs | `src/presentation/styles/application-colors.ts` | tokens CSS et styles de surface |
+| modifier les labels de notes | `src/presentation/piano-roll/rendering/pitch-label.ts` | `domain/music-theory/pitch-snap.ts`, puis préférence, Canvas et ghosts du piano roll |
 | modifier le responsive | `src/presentation/styles/responsive.css` | styles propriétaires des surfaces impliquées |
 
 ## Flux : geste de note

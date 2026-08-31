@@ -5,6 +5,9 @@ import {
 import type {
   PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
+import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
 import {
   getMidiNoteLabel,
   getPitchLabelContextKey,
@@ -21,8 +24,9 @@ const noteLabelWidthCaches =
 export function getNoteLabelWidths(
   context: CanvasRenderingContext2D,
   settings: PitchSnapSettings,
+  mode: NoteLabelMode = "pitch",
 ): Float32Array {
-  const contextKey = getPitchLabelContextKey(settings);
+  const contextKey = getPitchLabelContextKey(settings, mode);
   const cached = noteLabelWidthCaches.get(context);
 
   if (cached?.contextKey === contextKey) {
@@ -37,7 +41,7 @@ export function getNoteLabelWidths(
     pitch += 1
   ) {
     widths[pitch] = context.measureText(
-      getMidiNoteLabel(pitch, settings),
+      getMidiNoteLabel(pitch, settings, mode),
     ).width;
   }
 

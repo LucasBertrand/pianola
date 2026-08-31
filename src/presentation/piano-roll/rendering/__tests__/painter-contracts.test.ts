@@ -174,6 +174,7 @@ describe("P3 Canvas painter contracts", () => {
       },
       instrumentOrder: ["instrument"],
       colorMode: "instrument",
+      labelMode: "pitch",
       globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
       timeMap: createDefaultTimeMap(),
     });
@@ -202,6 +203,7 @@ describe("P3 Canvas painter contracts", () => {
       },
       instrumentOrder: ["instrument"],
       colorMode: "instrument",
+      labelMode: "pitch",
       globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
       timeMap: createDefaultTimeMap(),
     });
@@ -232,6 +234,7 @@ describe("P3 Canvas painter contracts", () => {
       },
       instrumentOrder: ["instrument"],
       colorMode: "instrument",
+      labelMode: "pitch",
       globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
       timeMap: {
         ...createDefaultTimeMap(),
@@ -260,6 +263,49 @@ describe("P3 Canvas painter contracts", () => {
       padding,
       120 + padding,
     ]);
+  });
+
+  test("paints contextual degrees across a scale boundary", () => {
+    const recorder = createPaintRecorder();
+
+    paintNotes({
+      context: recorder.context,
+      converter: new CoordinateConverter(VIEWPORT),
+      visibleNotes: [{
+        ...createNote("degree", 61, 0),
+        durationTicks: 960,
+      }],
+      editingNoteIds: new Set(),
+      stylesByInstrumentId: {
+        instrument: {
+          fillStyle: "#abcdef",
+          opacity: 1,
+        },
+      },
+      instrumentOrder: ["instrument"],
+      colorMode: "instrument",
+      labelMode: "degree",
+      globalPitchSnapSettings: DEFAULT_PITCH_SNAP_SETTINGS,
+      timeMap: {
+        ...createDefaultTimeMap(),
+        scaleMarkers: [
+          {
+            startTick: 0,
+            rootNote: "C",
+            patternType: "scale",
+            patternId: "ionian",
+          },
+          {
+            startTick: 480,
+            rootNote: "Db",
+            patternType: "scale",
+            patternId: "ionian",
+          },
+        ],
+      },
+    });
+
+    expect(recorder.labels).toEqual(["♭2", "1"]);
   });
 
   test("paints ruler labels from clock and timeline inputs", () => {

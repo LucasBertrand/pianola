@@ -49,6 +49,9 @@ IndexedDB utilise son premier layout, version 1. Dans ce reset initial, tout
 layout local supérieur incompatible est supprimé puis la baseline 1 est
 recréée. Les futurs upgrades de layout devront créer uniquement les stores
 manquants via `onupgradeneeded` et préserver les enregistrements existants.
+Le document de préférences, distinct des projets, utilise désormais son schéma
+2 ; le lecteur migre explicitement le schéma 1 en conservant les labels par
+pitch.
 
 Tests ciblés :
 

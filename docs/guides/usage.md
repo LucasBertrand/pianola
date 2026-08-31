@@ -41,6 +41,11 @@ fondamentale choisie. Les altérations visibles emploient les glyphes musicaux
 `♭` et `♯`, sans modifier les valeurs internes. Les symboles d'accord, comme
 ceux des drapeaux de la timeline, sont produits par Tonal.
 
+Le contrôle d'affichage des labels permet de choisir `Pitch`, qui conserve le
+nom contextualisé et l'octave, ou `Degree`, qui affiche le degré de la gamme ou
+de l'accord actif (`1`, `♭3`, `♯4`, etc.). Une note qui traverse un marqueur
+tonal adapte son label de chaque côté de la frontière.
+
 ## Instruments
 
 L’inspecteur projet ajoute, édite, réordonne et supprime les instruments

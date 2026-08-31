@@ -64,6 +64,35 @@ describe("drag note label layout", () => {
       },
     ]);
   });
+
+  test("uses contextual degrees across a scale boundary", () => {
+    expect(getGhostNoteLabelLayout(
+      61,
+      240,
+      480,
+      20,
+      120,
+      TONAL_BOUNDARIES,
+      (tick) => ({
+        ...DEFAULT_PITCH_SNAP_SETTINGS,
+        rootNote: tick < 480 ? "C" : "Db",
+        patternType: "scale",
+        patternId: "ionian",
+      }),
+      "degree",
+    )).toEqual([
+      {
+        label: "♭2",
+        leftCssPixels: 0,
+        widthCssPixels: 60,
+      },
+      {
+        label: "1",
+        leftCssPixels: 60,
+        widthCssPixels: 60,
+      },
+    ]);
+  });
 });
 
 describe("non-editable note interaction visuals", () => {

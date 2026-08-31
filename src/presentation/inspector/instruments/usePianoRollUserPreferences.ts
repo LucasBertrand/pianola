@@ -27,6 +27,9 @@ import type {
 import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
+import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
 import {
   addPersonalInstrumentPreset,
   deletePersonalInstrumentPreset,
@@ -37,12 +40,14 @@ import {
 export interface PianoRollUserPreferences {
   readonly selectionMode: SelectionMode;
   readonly noteColorMode: NoteColorMode;
+  readonly noteLabelMode: NoteLabelMode;
   readonly pitchPreviewEnabled: boolean;
   readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly presetOrder: readonly PresetId[];
   readonly personalPresetIds: ReadonlySet<PresetId>;
   readonly changeSelectionMode: (mode: SelectionMode) => void;
   readonly toggleNoteColorMode: () => void;
+  readonly changeNoteLabelMode: (mode: NoteLabelMode) => void;
   readonly togglePitchPreview: () => void;
   readonly createPersonalPreset: (
     name: string,
@@ -90,6 +95,8 @@ export function usePianoRollUserPreferences({
     useState<SelectionMode>(settings.selectionMode);
   const [noteColorMode, setNoteColorMode] =
     useState<NoteColorMode>(settings.noteColorMode);
+  const [noteLabelMode, setNoteLabelMode] =
+    useState<NoteLabelMode>(settings.noteLabelMode);
   const [pitchPreviewEnabled, setPitchPreviewEnabled] =
     useState(settings.pitchPreviewEnabled);
   const mergedPresets = useMemo(() => mergeInstrumentPresetLibraries(
@@ -129,6 +136,14 @@ export function usePianoRollUserPreferences({
       }));
       return nextMode;
     });
+  }, [persistPreference, runtime]);
+  const changeNoteLabelMode = useCallback((mode: NoteLabelMode): void => {
+    setNoteLabelMode(mode);
+    runtime.noteLabelMode.set(mode);
+    persistPreference((current) => ({
+      ...current,
+      noteLabelMode: mode,
+    }));
   }, [persistPreference, runtime]);
   const togglePitchPreview = useCallback((): void => {
     setPitchPreviewEnabled((enabled) => {
@@ -219,12 +234,14 @@ export function usePianoRollUserPreferences({
   return {
     selectionMode,
     noteColorMode,
+    noteLabelMode,
     pitchPreviewEnabled,
     presetsById: mergedPresets.presetsById,
     presetOrder: mergedPresets.presetOrder,
     personalPresetIds,
     changeSelectionMode,
     toggleNoteColorMode,
+    changeNoteLabelMode,
     togglePitchPreview,
     createPersonalPreset,
     updatePersonalPreset,

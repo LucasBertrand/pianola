@@ -26,6 +26,9 @@ import type {
 import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
+import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
 import {
   getMidiNoteLabel,
 } from "../rendering/pitch-label";
@@ -81,6 +84,8 @@ export class DomInteractionVisualController
     private readonly editingNoteMask: EditingNoteMask,
     private readonly noteColorMode:
       ReadonlyRenderSignal<NoteColorMode>,
+    private readonly noteLabelMode:
+      ReadonlyRenderSignal<NoteLabelMode>,
     private readonly instrumentStyles: ReadonlyRenderSignal<
       Readonly<Record<InstrumentId, InstrumentRenderStyle>>
     >,
@@ -120,6 +125,7 @@ export class DomInteractionVisualController
       converter,
       stylesByInstrumentId,
       this.noteColorMode.get(),
+      this.noteLabelMode.get(),
       getSnapSettingsAtTick,
       null,
       this.ghostElements,
@@ -148,6 +154,8 @@ export class DomInteractionVisualController
         this.getDragScaleMarkers(),
         true,
         this.noteColorMode.get() === "pitch",
+        true,
+        this.noteLabelMode.get(),
       );
       updatePitchSnappedDrag(
         this.selectionElements,
@@ -161,6 +169,7 @@ export class DomInteractionVisualController
         false,
         this.noteColorMode.get() === "pitch",
         false,
+        this.noteLabelMode.get(),
       );
       return;
     }
@@ -186,6 +195,7 @@ export class DomInteractionVisualController
       getSnapSettingsAtTick,
       this.getDragScaleMarkers(),
       this.noteColorMode.get() === "pitch",
+      this.noteLabelMode.get(),
     );
 
     if (this.noteColorMode.get() === "pitch") {
@@ -224,6 +234,7 @@ export class DomInteractionVisualController
       converter,
       stylesByInstrumentId,
       this.noteColorMode.get(),
+      this.noteLabelMode.get(),
       getSnapSettingsAtTick,
       edge,
       this.ghostElements,
@@ -306,6 +317,7 @@ export class DomInteractionVisualController
     labelElement.textContent = getMidiNoteLabel(
       pitch,
       getSnapSettingsAtTick(startTick),
+      this.noteLabelMode.get(),
     );
     element.appendChild(labelElement);
     this.drawGhostElement = element;

@@ -19,7 +19,8 @@ import {
   parsePersonalInstrumentPresetLibrary,
 } from "./personal-instrument-preset-codec";
 
-export const USER_SETTINGS_FORMAT = "app.pianola.user-settings.v1";
+export const USER_SETTINGS_FORMAT = "app.pianola.user-settings.v2";
+const PREVIOUS_USER_SETTINGS_FORMAT = "app.pianola.user-settings.v1";
 
 const ACTION_IDS = [
   "editor.redo",
@@ -74,13 +75,6 @@ export function parseUserSettingsEnvelope(
   );
   const format = readPersistenceString(source["format"], "$.format", 64);
 
-  if (format !== USER_SETTINGS_FORMAT) {
-    throw new ProjectPersistenceError(
-      "INVALID_DATA",
-      "Stored user settings use an unknown format.",
-    );
-  }
-
   const version = readPersistenceInteger(
     source["schemaVersion"],
     "$.schemaVersion",
@@ -94,10 +88,17 @@ export function parseUserSettingsEnvelope(
     );
   }
 
-  if (version !== USER_SETTINGS_SCHEMA_VERSION) {
+  const isCurrentEnvelope =
+    version === USER_SETTINGS_SCHEMA_VERSION
+    && format === USER_SETTINGS_FORMAT;
+  const isPreviousEnvelope =
+    version === 1
+    && format === PREVIOUS_USER_SETTINGS_FORMAT;
+
+  if (!isCurrentEnvelope && !isPreviousEnvelope) {
     throw new ProjectPersistenceError(
       "INVALID_DATA",
-      `User settings version ${version} is not supported.`,
+      "Stored user settings use an unknown format or version.",
     );
   }
 
@@ -105,13 +106,29 @@ export function parseUserSettingsEnvelope(
     format: USER_SETTINGS_FORMAT,
     schemaVersion: USER_SETTINGS_SCHEMA_VERSION,
     updatedAt: readPersistenceIsoDate(source["updatedAt"], "$.updatedAt"),
-    settings: parseUserSettings(source["settings"], "$.settings"),
+    settings: parseUserSettingsVersion(
+      source["settings"],
+      "$.settings",
+      version,
+    ),
   };
 }
 
 export function parseUserSettings(
   source: unknown,
   path: string,
+): UserSettings {
+  return parseUserSettingsVersion(
+    source,
+    path,
+    USER_SETTINGS_SCHEMA_VERSION,
+  );
+}
+
+function parseUserSettingsVersion(
+  source: unknown,
+  path: string,
+  expectedVersion: number,
 ): UserSettings {
   const settings = readPersistenceRecord(source, path);
   const version = readPersistenceInteger(
@@ -120,7 +137,7 @@ export function parseUserSettings(
     1,
   );
 
-  if (version !== USER_SETTINGS_SCHEMA_VERSION) {
+  if (version !== expectedVersion) {
     throw new ProjectPersistenceError(
       version > USER_SETTINGS_SCHEMA_VERSION
         ? "FUTURE_VERSION"
@@ -155,6 +172,21 @@ export function parseUserSettings(
     throw new ProjectPersistenceError(
       "INVALID_DATA",
       "Unsupported note color mode in user settings.",
+    );
+  }
+
+  const noteLabelMode = version === 1
+    ? "pitch"
+    : readPersistenceString(
+        settings["noteLabelMode"],
+        `${path}.noteLabelMode`,
+        16,
+      );
+
+  if (noteLabelMode !== "pitch" && noteLabelMode !== "degree") {
+    throw new ProjectPersistenceError(
+      "INVALID_DATA",
+      "Unsupported note label mode in user settings.",
     );
   }
 
@@ -218,6 +250,7 @@ export function parseUserSettings(
     schemaVersion: USER_SETTINGS_SCHEMA_VERSION,
     selectionMode,
     noteColorMode,
+    noteLabelMode,
     pitchPreviewEnabled: readPersistenceBoolean(
       settings["pitchPreviewEnabled"],
       `${path}.pitchPreviewEnabled`,

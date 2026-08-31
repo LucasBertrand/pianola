@@ -102,6 +102,7 @@ export function PianoRollLayers(
     spatialIndex,
     instrumentStyles,
     noteColorMode,
+    noteLabelMode,
     projectStore,
     gridResolutionTicks,
     pitchSnapSettings,
@@ -133,6 +134,7 @@ export function PianoRollLayers(
         projectStore={projectStore}
         instrumentStyles={instrumentStyles}
         noteColorMode={noteColorMode}
+        noteLabelMode={noteLabelMode}
         pitchSnapSettings={pitchSnapSettings}
         editingNoteMask={editingNoteMask}
         markerPreview={runtime.timeMapMarkerPreview.signal}

@@ -50,6 +50,7 @@ export const DEFAULT_PITCH_SNAP_SETTINGS: PitchSnapSettings =
 interface CachedPatternData {
   readonly mask: number;
   readonly semitones: readonly number[];
+  readonly degreeLabels: ReadonlyMap<number, string>;
 }
 
 function buildPatternData(
@@ -59,6 +60,7 @@ function buildPatternData(
   const intervals = getPatternIntervals(patternType, patternId);
   let mask = 0;
   const semitones: number[] = [];
+  const degreeLabels = new Map<number, string>();
 
   for (const interval of intervals) {
     const s = Interval.semitones(interval);
@@ -66,10 +68,21 @@ function buildPatternData(
       const pitchClass = s % 12;
       mask |= 1 << pitchClass;
       semitones.push(pitchClass);
+      const intervalData = Interval.get(interval);
+      const degree = patternType === "chord"
+        ? intervalData.num
+        : intervalData.simple;
+
+      if (degree !== undefined && !degreeLabels.has(pitchClass)) {
+        degreeLabels.set(
+          pitchClass,
+          formatDegreeLabel(degree, intervalData.alt ?? 0),
+        );
+      }
     }
   }
 
-  return { mask, semitones };
+  return { mask, semitones, degreeLabels };
 }
 
 const PATTERN_CACHE = new Map<string, CachedPatternData>();
@@ -200,4 +213,50 @@ export function getPitchScaleDegreeColorIndex(
   }
 
   return null;
+}
+
+const CHROMATIC_DEGREE_LABELS = [
+  "1",
+  "♭2",
+  "2",
+  "♭3",
+  "3",
+  "4",
+  "♭5",
+  "5",
+  "♭6",
+  "6",
+  "♭7",
+  "7",
+] as const;
+
+/** Formats a pitch as a scale/chord degree in the active tonal context. */
+export function getPitchPatternDegreeLabel(
+  pitch: number,
+  settings: PitchSnapSettings,
+): string {
+  if (!Number.isInteger(pitch)) {
+    return "";
+  }
+
+  const relativePitchClass = getRelativePitchClass(
+    pitch,
+    settings.rootNote,
+  );
+  const contextualLabel = getCachedPatternData(
+    settings.patternType,
+    settings.patternId,
+  ).degreeLabels.get(relativePitchClass);
+
+  return contextualLabel
+    ?? CHROMATIC_DEGREE_LABELS[relativePitchClass]
+    ?? "";
+}
+
+function formatDegreeLabel(degree: number, alteration: number): string {
+  const accidental = alteration < 0
+    ? "♭".repeat(-alteration)
+    : "♯".repeat(alteration);
+
+  return `${accidental}${degree}`;
 }

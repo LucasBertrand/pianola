@@ -13,6 +13,9 @@ import type {
 import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
+import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
 import {
   AutoFitViewportButton,
 } from "./AutoFitViewportButton";
@@ -36,7 +39,9 @@ export interface PianoRollViewportControlsProps {
   readonly gridSettings: MutableRenderSignal<GridSettings>;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly noteColorMode: NoteColorMode;
+  readonly noteLabelMode: NoteLabelMode;
   readonly onNoteColorModeToggle: () => void;
+  readonly onNoteLabelModeChange: (mode: NoteLabelMode) => void;
   readonly onPitchSnapSettingsChange: (
     changes: Partial<PitchSnapSettings>,
   ) => void;
@@ -54,7 +59,9 @@ export function PianoRollViewportControls({
   gridSettings,
   pitchSnapSettings,
   noteColorMode,
+  noteLabelMode,
   onNoteColorModeToggle,
+  onNoteLabelModeChange,
   onPitchSnapSettingsChange,
   onAutoFit,
 }: PianoRollViewportControlsProps): React.JSX.Element {
@@ -73,7 +80,9 @@ export function PianoRollViewportControls({
         <PitchSnapControls
           settings={pitchSnapSettings}
           noteColorMode={noteColorMode}
+          noteLabelMode={noteLabelMode}
           onNoteColorModeToggle={onNoteColorModeToggle}
+          onNoteLabelModeChange={onNoteLabelModeChange}
           onSettingsChange={onPitchSnapSettingsChange}
         />
         <AutoFitViewportButton onAutoFit={onAutoFit} />

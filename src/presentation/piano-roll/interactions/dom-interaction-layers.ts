@@ -22,6 +22,9 @@ import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
 import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
+import type {
   PitchSnapSettings,
 } from "../../../domain/music-theory/pitch-snap";
 import {
@@ -58,6 +61,7 @@ export function populateGhostLayer(
   converter: CoordinateConverter,
   stylesByInstrumentId: Readonly<Record<InstrumentId, InstrumentRenderStyle>>,
   colorMode: NoteColorMode,
+  labelMode: NoteLabelMode,
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   resizeEdge: ResizeEdge | null,
   elements: HTMLElement[],
@@ -139,6 +143,7 @@ export function populateGhostLayer(
         noteWidth,
         tonalBoundaries,
         getSnapSettingsAtTick,
+        labelMode,
       ),
     );
     const geometryIndex = elements.length;
@@ -267,6 +272,7 @@ export function updateGhostPitchPresentation(
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
   tonalBoundaries: readonly TonalBoundary[],
   updatePitchColor: boolean,
+  labelMode: NoteLabelMode = "pitch",
 ): void {
   if (geometry === null) {
     return;
@@ -305,6 +311,7 @@ export function updateGhostPitchPresentation(
         width,
         tonalBoundaries,
         getSnapSettingsAtTick,
+        labelMode,
       ),
     );
 
@@ -332,6 +339,7 @@ export function updatePitchSnappedDrag(
   updatePitchLabel: boolean,
   updatePitchColor: boolean,
   updatePitchBackground = updatePitchColor,
+  labelMode: NoteLabelMode = "pitch",
 ): void {
   if (geometry === null) {
     return;
@@ -385,6 +393,7 @@ export function updatePitchSnappedDrag(
           width,
           tonalBoundaries,
           getSnapSettingsAtTick,
+          labelMode,
         ),
       );
     }
@@ -446,6 +455,7 @@ export function getGhostNoteLabelLayout(
   noteWidthCssPixels: number,
   tonalBoundaries: readonly TonalBoundary[],
   getSnapSettingsAtTick: (tick: number) => PitchSnapSettings,
+  labelMode: NoteLabelMode = "pitch",
 ): readonly GhostNoteLabelLayout[] {
   if (durationTicks <= 0 || noteWidthCssPixels <= 0) {
     return [];
@@ -461,6 +471,7 @@ export function getGhostNoteLabelLayout(
     endTick,
     tonalBoundaries,
     getSnapSettingsAtTick,
+    labelMode,
   ).flatMap((segment) => {
     const segmentLeftCssPixels =
       (segment.startTick - startTick) * pixelsPerTick;

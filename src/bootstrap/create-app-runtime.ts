@@ -59,6 +59,10 @@ import type {
   NoteColorMode,
 } from "../editor-core/model/note-color-mode";
 import {
+  DEFAULT_NOTE_LABEL_MODE,
+  type NoteLabelMode,
+} from "../editor-core/model/note-label-mode";
+import {
   MappedRenderSignal,
   MutableRenderSignal,
 } from "../editor-core/model/render-signal";
@@ -208,6 +212,9 @@ export function createEditorRuntime(
     instrumentStyles,
     noteColorMode: new MutableRenderSignal<NoteColorMode>(
       EDITOR_CONSTANTS.defaultNoteColorMode,
+    ),
+    noteLabelMode: new MutableRenderSignal<NoteLabelMode>(
+      DEFAULT_NOTE_LABEL_MODE,
     ),
     playheadPosition,
     playheadTick,

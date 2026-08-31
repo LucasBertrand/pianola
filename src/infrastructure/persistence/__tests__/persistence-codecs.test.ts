@@ -266,6 +266,28 @@ describe("persistence codecs", () => {
     )).toThrow("Expected an array");
   });
 
+  test("migrates version 1 user settings to pitch labels", () => {
+    const previous = JSON.parse(serializeUserSettings(
+      recoverDefaultUserSettings(),
+      "2026-08-24T12:00:00.000Z",
+    )) as {
+      format: string;
+      schemaVersion: number;
+      settings: Record<string, unknown>;
+    };
+
+    previous.format = "app.pianola.user-settings.v1";
+    previous.schemaVersion = 1;
+    previous.settings["schemaVersion"] = 1;
+    delete previous.settings["noteLabelMode"];
+
+    expect(parseUserSettingsEnvelope(JSON.stringify(previous)).settings)
+      .toMatchObject({
+        schemaVersion: 2,
+        noteLabelMode: "pitch",
+      });
+  });
+
   test("rejects browser-reserved shortcut bindings", () => {
     const settings = recoverDefaultUserSettings();
 

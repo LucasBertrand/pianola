@@ -307,6 +307,7 @@ function ActiveProjectEditor({
       createStoredEditorSessionState(storedProject),
     );
     runtimeRef.current.noteColorMode.set(settings.noteColorMode);
+    runtimeRef.current.noteLabelMode.set(settings.noteLabelMode);
     restorePersistedEditorWorkspace(runtimeRef.current, storedProject.workspace);
   }
 

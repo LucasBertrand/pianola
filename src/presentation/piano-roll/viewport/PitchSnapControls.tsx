@@ -5,11 +5,16 @@ import type {
 import type {
   NoteColorMode,
 } from "../../../editor-core/model/note-color-mode";
+import type {
+  NoteLabelMode,
+} from "../../../editor-core/model/note-label-mode";
 
 export interface PitchSnapControlsProps {
   readonly settings: PitchSnapSettings;
   readonly noteColorMode: NoteColorMode;
+  readonly noteLabelMode: NoteLabelMode;
   readonly onNoteColorModeToggle: () => void;
+  readonly onNoteLabelModeChange: (mode: NoteLabelMode) => void;
   readonly onSettingsChange: (
     changes: Partial<PitchSnapSettings>,
   ) => void;
@@ -18,7 +23,9 @@ export interface PitchSnapControlsProps {
 export function PitchSnapControls({
   settings,
   noteColorMode,
+  noteLabelMode,
   onNoteColorModeToggle,
+  onNoteLabelModeChange,
   onSettingsChange,
 }: PitchSnapControlsProps): React.JSX.Element {
   return (
@@ -48,6 +55,18 @@ export function PitchSnapControls({
           <circle cx="13" cy="6.5" r="1" />
         </svg>
       </button>
+      <label className="note-label-mode-control">
+        <select
+          aria-label="Note label display"
+          value={noteLabelMode}
+          onChange={(event) => {
+            onNoteLabelModeChange(event.currentTarget.value as NoteLabelMode);
+          }}
+        >
+          <option value="pitch">Pitch</option>
+          <option value="degree">Degree</option>
+        </select>
+      </label>
       <button
         className={`pitch-snap-toggle note-color-toggle${noteColorMode === "pitch" ? " is-active" : ""}`}
         type="button"

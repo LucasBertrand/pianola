@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   DEFAULT_PITCH_SNAP_SETTINGS,
+  getPitchPatternDegreeLabel,
   isPitchIncludedInPattern,
   isSupportedPitchSnapSelection,
   isPitchPatternId,
@@ -51,5 +52,22 @@ describe("extended chord pitch snap", () => {
       .toBe(false);
     expect(isSupportedPitchSnapSelection("H", "chord", "m13"))
       .toBe(false);
+  });
+
+  test("formats contextual scale and extended-chord degrees", () => {
+    expect(getPitchPatternDegreeLabel(63, {
+      ...DEFAULT_PITCH_SNAP_SETTINGS,
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "dorian",
+    })).toBe("♭3");
+    expect(getPitchPatternDegreeLabel(66, {
+      ...DEFAULT_PITCH_SNAP_SETTINGS,
+      rootNote: "C",
+      patternType: "scale",
+      patternId: "lydian",
+    })).toBe("♯4");
+    expect(getPitchPatternDegreeLabel(62, chordSettings("maj9")))
+      .toBe("9");
   });
 });
