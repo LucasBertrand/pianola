@@ -17,6 +17,7 @@ import type {
 } from "../../editor-core/model/render-signal";
 import {
   formatMarkerFlagLabel,
+  isDirectEditMarkerFlag,
   isIsolatedMeterMarkerFlag,
   type TimeMapMarkerFlag,
 } from "../../application/piano-roll/timeline/time-map-marker-plans";
@@ -266,7 +267,7 @@ export function PianoRollTimeMapOverlay({
               }
               type="button"
               data-marker-tick={flag.startTick}
-              title={isIsolatedMeterMarkerFlag(flag)
+              title={isDirectEditMarkerFlag(flag)
                 ? "Click to edit."
                 : "Click to select. Double-click to edit."}
               aria-label={
@@ -276,7 +277,7 @@ export function PianoRollTimeMapOverlay({
                 if (suppressedActivationTickRef.current === flag.startTick) {
                   suppressedActivationTickRef.current = null;
                 }
-                if (!isIsolatedMeterMarkerFlag(flag)) {
+                if (!isDirectEditMarkerFlag(flag)) {
                   markerGesture.begin(flag, event);
                 }
               }}
@@ -288,7 +289,7 @@ export function PianoRollTimeMapOverlay({
                   event.stopPropagation();
                   return;
                 }
-                if (isIsolatedMeterMarkerFlag(flag)) {
+                if (isDirectEditMarkerFlag(flag)) {
                   event.preventDefault();
                   event.stopPropagation();
                   onOpenMarker(flag.startTick);
@@ -300,7 +301,7 @@ export function PianoRollTimeMapOverlay({
                   event.stopPropagation();
                   return;
                 }
-                if (isIsolatedMeterMarkerFlag(flag)) {
+                if (isDirectEditMarkerFlag(flag)) {
                   return;
                 }
                 event.preventDefault();
@@ -308,7 +309,7 @@ export function PianoRollTimeMapOverlay({
                 onOpenMarker(flag.startTick);
               }}
               onPointerEnter={() => {
-                if (isIsolatedMeterMarkerFlag(flag)) {
+                if (isDirectEditMarkerFlag(flag)) {
                   return;
                 }
                 hoveredMarkerTickRef.current = flag.startTick;

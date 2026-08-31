@@ -1,4 +1,5 @@
 import React, {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -11,6 +12,9 @@ import {
 import {
   MAXIMUM_PROJECT_TITLE_LENGTH,
 } from "../../domain/project/project-document";
+import {
+  HelpMemoDialog,
+} from "../dialogs/HelpMemoDialog";
 
 export interface ProjectMenuProps {
   readonly projectTitle: string;
@@ -36,7 +40,13 @@ export function ProjectMenu({
   onProjectTitleCommit,
 }: ProjectMenuProps): React.JSX.Element {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const closeHelp = useCallback((): void => {
+    setHelpOpen(false);
+    window.requestAnimationFrame(() => menuTriggerRef.current?.focus());
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -69,6 +79,7 @@ export function ProjectMenu({
       aria-label="Project actions"
     >
         <button
+          ref={menuTriggerRef}
           className="project-menu-trigger"
           type="button"
           title="Project menu"
@@ -127,6 +138,15 @@ export function ProjectMenu({
                 void onReturnHome();
               }}
             />
+            <ProjectMenuItem
+              icon="help"
+              label="Editor memo"
+              description="Commands and essential concepts"
+              onSelect={() => {
+                close();
+                setHelpOpen(true);
+              }}
+            />
           </div>
 
           <div
@@ -177,6 +197,10 @@ export function ProjectMenu({
           tabIndex={-1}
           onChange={(event) => void onMidiFileChange(event)}
         />
+
+        {helpOpen ? (
+          <HelpMemoDialog onClose={closeHelp} />
+        ) : null}
     </div>
   );
 }
@@ -213,6 +237,7 @@ function ProjectMenuItem({
 }
 
 type ProjectMenuIconName =
+  | "help"
   | "home"
   | "midi-export"
   | "midi-import"
@@ -247,6 +272,14 @@ function getProjectMenuIconPaths(
         <>
           <path d="m3.5 11 8.5-7 8.5 7" />
           <path d="M5.5 9.5v10h13v-10M9.5 19.5v-6h5v6" />
+        </>
+      );
+    case "help":
+      return (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.8 9a2.3 2.3 0 1 1 3.6 1.9c-.9.6-1.4 1-1.4 2.1" />
+          <path d="M12 16.8h.01" />
         </>
       );
     case "project-export":

@@ -78,7 +78,7 @@ const INTERACTION_LAYER_STYLE: CSSProperties = {
   overflow: "hidden",
   touchAction: "none",
   outline: "none",
-  cursor: "crosshair",
+  cursor: "default",
 };
 
 const GHOST_LAYER_STYLE: CSSProperties = {

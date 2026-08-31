@@ -6,6 +6,7 @@ import React, {
 import {
   calculateLandscapeInspectorBounds,
   clampProjectInspectorSize,
+  resolveProjectInspectorResizeOrientation,
   resizeProjectInspectorFromKey,
   resizeProjectInspectorFromPointer,
   type ProjectInspectorResizeOrientation,
@@ -45,7 +46,10 @@ export function ProjectInspectorResizeHandle({
     const portraitQuery = window.matchMedia(PORTRAIT_LAYOUT_QUERY);
     const compactQuery = window.matchMedia(COMPACT_LAYOUT_QUERY);
     const synchronize = (): void => {
-      setOrientation(portraitQuery.matches ? "portrait" : "landscape");
+      setOrientation(resolveProjectInspectorResizeOrientation(
+        compactQuery.matches,
+        portraitQuery.matches,
+      ));
       setCompactLayout(compactQuery.matches);
     };
 
@@ -283,9 +287,12 @@ function readSizeProperty(
 }
 
 function readOrientation(): ProjectInspectorResizeOrientation {
-  return typeof window !== "undefined" && window.matchMedia(PORTRAIT_LAYOUT_QUERY).matches
-    ? "portrait"
-    : "landscape";
+  if (typeof window === "undefined") return "landscape";
+
+  return resolveProjectInspectorResizeOrientation(
+    window.matchMedia(COMPACT_LAYOUT_QUERY).matches,
+    window.matchMedia(PORTRAIT_LAYOUT_QUERY).matches,
+  );
 }
 
 function readCompactLayout(): boolean {

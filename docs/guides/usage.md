@@ -5,6 +5,9 @@
 Le titre du projet se modifie dans l’en-tête. Undo et Redo portent uniquement
 sur les transactions musicales ; changer de clip, ouvrir un panneau ou déplacer
 le viewport ne consomme pas l’historique.
+Le menu du projet donne aussi accès à « Editor memo », une aide synthétique qui
+regroupe les commandes des barres d’outils et rappelle les principes des
+marqueurs, des clips et des presets d’instruments.
 
 ## Notes et sélection
 
@@ -68,6 +71,12 @@ sont prévisualisés sans interrompre le transport. Les paramètres continus son
 lissés sur une note tenue ; les paramètres structurels s’appliquent dès la note
 suivante. Cancel restaure les réglages précédents sans toucher à l’historique ;
 Save changes crée une seule étape Undo/Redo avec le résultat final.
+
+Les presets du projet sont enregistrés avec le document et voyagent avec lui.
+Les presets personnels appartiennent aux préférences locales du navigateur et
+peuvent être réutilisés dans les autres projets. Sélectionner un preset remplit
+le brouillon de l’éditeur d’instrument ; seul « Save changes » publie ensuite
+les réglages dans le projet.
 
 ## Clips
 

@@ -57,6 +57,13 @@ export function isIsolatedMeterMarkerFlag(
     && flag.sectionComment === null;
 }
 
+/** True when a ruler flag opens its editor directly instead of selecting. */
+export function isDirectEditMarkerFlag(
+  flag: TimeMapMarkerFlag,
+): boolean {
+  return flag.isInitial || isIsolatedMeterMarkerFlag(flag);
+}
+
 /** Transient dialog draft; never enters the document until confirmation. */
 export interface TimeMapMarkerDraft {
   readonly mode: "create" | "edit";

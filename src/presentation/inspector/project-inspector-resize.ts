@@ -1,5 +1,12 @@
 export type ProjectInspectorResizeOrientation = "landscape" | "portrait";
 
+export function resolveProjectInspectorResizeOrientation(
+  compactLayout: boolean,
+  portraitViewport: boolean,
+): ProjectInspectorResizeOrientation {
+  return compactLayout && portraitViewport ? "portrait" : "landscape";
+}
+
 export interface ProjectInspectorSizeBounds {
   readonly minimum: number;
   readonly maximum: number;

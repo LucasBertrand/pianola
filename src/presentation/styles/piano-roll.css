@@ -147,7 +147,6 @@
   bottom: 0;
   left: 0;
   overflow: hidden;
-  cursor: crosshair;
   touch-action: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -223,14 +222,14 @@
   --marker-stem-color: var(--color-border-control);
   border-color: var(--color-border-control);
   color: var(--color-text-secondary);
-  cursor: default;
+  cursor: pointer;
 }
 
 .bar-ruler-marker-flag.is-initial.has-section-marker {
   --marker-stem-color: var(--color-border-primary);
   border-color: var(--color-border-primary);
   color: var(--color-text-strong);
-  cursor: grab;
+  cursor: pointer;
 }
 
 .bar-ruler-marker-flag.is-initial:not(.has-section-marker):hover {
@@ -503,6 +502,7 @@
 }
 
 .interaction-overlay {
+  cursor: default;
   user-select: none;
   -webkit-touch-callout: none;
   overscroll-behavior: contain;

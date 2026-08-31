@@ -5,6 +5,7 @@ import {
 } from "vitest";
 import {
   calculateLandscapeInspectorBounds,
+  resolveProjectInspectorResizeOrientation,
   resizeProjectInspectorFromKey,
   resizeProjectInspectorFromPointer,
 } from "../project-inspector-resize";
@@ -12,6 +13,12 @@ import {
 const BOUNDS = { minimum: 200, maximum: 500 } as const;
 
 describe("project inspector resizing", () => {
+  test("uses portrait resizing only for the compact portrait layout", () => {
+    expect(resolveProjectInspectorResizeOrientation(true, true)).toBe("portrait");
+    expect(resolveProjectInspectorResizeOrientation(false, true)).toBe("landscape");
+    expect(resolveProjectInspectorResizeOrientation(true, false)).toBe("landscape");
+  });
+
   test("uses all landscape space beyond the editor minimum", () => {
     expect(calculateLandscapeInspectorBounds(1_200, 400, 360, 10))
       .toEqual({ minimum: 400, maximum: 830 });

@@ -213,6 +213,213 @@
   background: var(--color-surface-danger-strong);
 }
 
+/* Editor command and concept memo */
+
+.help-memo-backdrop {
+  z-index: 1200;
+  touch-action: pan-y;
+}
+
+.help-memo-dialog {
+  width: min(100%, 680px);
+  padding: 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: var(--color-border-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  white-space: normal;
+}
+
+.help-memo-header {
+  display: grid;
+  margin-bottom: 20px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.help-memo-header .application-dialog-heading {
+  grid-template-columns: 34px minmax(0, 1fr);
+}
+
+.help-memo-header .application-dialog-mark {
+  width: 34px;
+  height: 34px;
+}
+
+.application-dialog .help-memo-header p {
+  margin: 3px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.help-memo-close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: 9px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  place-items: center;
+}
+
+.help-memo-close:hover,
+.help-memo-close:focus-visible {
+  border-color: var(--color-border-active);
+  color: var(--color-text-primary);
+}
+
+.help-memo-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.help-memo-command-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+.help-memo-command-group {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-deep);
+}
+
+.help-memo-command-group h3,
+.help-memo-concepts > h3 {
+  margin: 0 0 10px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.help-memo-command-group ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 5px 12px;
+  list-style: none;
+}
+
+.help-memo-command-group li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.help-memo-command-group li > span:last-child {
+  display: grid;
+  min-width: 0;
+  padding-top: 2px;
+  gap: 1px;
+}
+
+.help-memo-command-group strong {
+  color: var(--color-text-control);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.help-memo-command-group small {
+  color: var(--color-text-muted);
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+
+.help-memo-command-icon {
+  display: grid;
+  border: 1px solid var(--color-border-control);
+  background: var(--color-surface-control);
+  color: var(--color-accent-primary-bright);
+  place-items: center;
+}
+
+.help-memo-command-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.help-memo-command-icon svg {
+  width: 17px;
+  height: 17px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.help-memo-command-icon svg ellipse,
+.help-memo-command-icon svg rect {
+  fill: none;
+}
+
+.help-memo-command-icon svg.is-note-color-brush {
+  fill: currentColor;
+  stroke: none;
+}
+
+.help-memo-concepts {
+  margin-top: 18px;
+}
+
+.help-memo-concept-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.help-memo-concept-card {
+  display: block;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 9px;
+  background: var(--color-surface-information);
+}
+
+.help-memo-concept-card h4 {
+  margin: 0 0 4px;
+  color: var(--color-text-primary);
+  font-size: 11px;
+}
+
+.application-dialog .help-memo-concept-card p {
+  max-width: 100%;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+@media (max-width: 480px) {
+  .help-memo-dialog {
+    padding: 22px;
+  }
+}
+
 /* Global browser diagnostics */
 
 .browser-error-backdrop {
@@ -845,4 +1052,3 @@
 .instrument-editor-dialog > .application-dialog-actions {
   padding-top: 16px;
 }
-

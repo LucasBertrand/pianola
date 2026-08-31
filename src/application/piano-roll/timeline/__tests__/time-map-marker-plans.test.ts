@@ -3,6 +3,7 @@ import {
   createTimeMapMarkerFlags,
   createMarkerDraft,
   formatMarkerFlagLabel,
+  isDirectEditMarkerFlag,
   isIsolatedMeterMarkerFlag,
   normalizeDraftBpm,
   normalizeDraftTimeSignature,
@@ -112,6 +113,9 @@ describe("createTimeMapMarkerFlags", () => {
     expect(isIsolatedMeterMarkerFlag(flags[0]!)).toBe(false);
     expect(isIsolatedMeterMarkerFlag(flags[1]!)).toBe(true);
     expect(isIsolatedMeterMarkerFlag(flags[2]!)).toBe(false);
+    expect(isDirectEditMarkerFlag(flags[0]!)).toBe(true);
+    expect(isDirectEditMarkerFlag(flags[1]!)).toBe(true);
+    expect(isDirectEditMarkerFlag(flags[2]!)).toBe(false);
   });
 
   test("uses Tonal's rooted chord symbol for marker labels", () => {
