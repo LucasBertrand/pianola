@@ -40,7 +40,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier zoom/scroll | `src/presentation/piano-roll/viewport/PianoRollViewportControls.tsx` | `ViewportNavigationControls.tsx`, `usePianoRollTransportViewport.ts`, `useViewportControls.ts`, puis contrôleur viewport |
 | modifier un geste de note | `src/presentation/piano-roll/interactions/piano-roll-gesture-strategy.ts` | noyau interactions puis cas d’usage notes |
 | modifier Copy/Cut/Paste | `src/presentation/piano-roll/usePianoRollSelectionWorkflow.ts` | clipboard et plans de sélection |
-| modifier le menu radial ou le bouton du stylet | `src/presentation/radial-menu/piano-roll-radial-command-model.ts` | `usePianoRollRadialMenuCommands.ts`, `piano-roll/InteractionOverlay.tsx`, puis `piano-roll/interactions/useStylusAction.ts` |
+| modifier le menu radial ou le bouton du stylet | `src/presentation/radial-menu/piano-roll-radial-command-model.ts` | `usePianoRollRadialMenuCommands.ts`, `useDocumentRadialMenu.ts`, puis `piano-roll/interactions/useStylusAction.ts` |
 | modifier les collisions | `src/presentation/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts` | `src/domain/note-collision.ts` |
 | modifier l’inspecteur | `src/presentation/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |

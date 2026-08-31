@@ -107,6 +107,9 @@ import {
   useFloatingRadialMenu,
 } from "../radial-menu/useFloatingRadialMenu";
 import {
+  useDocumentRadialMenu,
+} from "../radial-menu/useDocumentRadialMenu";
+import {
   usePianoRollRadialMenuCommands,
 } from "../radial-menu/usePianoRollRadialMenuCommands";
 import {
@@ -272,6 +275,7 @@ export function PianoRollWorkspace({
   );
   const radialMenu = useFloatingRadialMenu();
 
+  useDocumentRadialMenu(radialMenu.openAt);
   useStylusAction(radialMenu.toggleAt);
 
   const handleNoteCollision = useNoteCollisionDialogWorkflow({
@@ -642,7 +646,6 @@ export function PianoRollWorkspace({
           interactionStrategyRef={interactionStrategyRef}
           onSelectionChange={handleSelectionChange}
           onGridSeek={seekPlayback}
-          onOpenContextMenu={radialMenu.openAt}
           onNoteCollision={handleNoteCollision}
           onMarkerCollision={handleMarkerCollision}
           globalLassoRef={globalLassoRef}

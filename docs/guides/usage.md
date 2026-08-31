@@ -18,8 +18,10 @@ le viewport ne consomme pas l’historique.
 - Slice : couper les notes sélectionnées au playhead ou aux deux ancres de la
   boucle, via la modale de choix.
 
-Un clic droit sur la grille ouvre un menu radial à la position du pointeur avec
-Copy, Cut, Paste, Slice, l'activation/désactivation des notes et Lecture/Pause.
+Un clic droit partout dans l'éditeur ouvre un menu radial à la position du
+pointeur avec Copy, Cut, Paste, Slice, l'activation/désactivation des notes et
+Lecture/Pause. Le menu contextuel natif du navigateur est désactivé dans tout
+le document pendant l'édition.
 Un clic extérieur ou Échap le ferme ; un nouveau clic droit le replace
 immédiatement. Le bouton alternatif du stylet ouvre et ferme désormais ce menu
 au lieu de commander directement le transport.

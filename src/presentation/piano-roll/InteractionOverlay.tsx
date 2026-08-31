@@ -41,9 +41,6 @@ import type {
 import {
   DomInteractionVisualController,
 } from "./interactions/dom-interaction-visual-controller";
-import type {
-  ViewportPoint,
-} from "../radial-menu/floating-radial-menu-model";
 
 export interface InteractionOverlayProps {
   readonly runtime: PianoRollRuntimePort;
@@ -66,7 +63,6 @@ export interface InteractionOverlayProps {
     soleInstrumentId: InstrumentId | null,
   ) => void;
   readonly onGridSeek: (tick: number) => void;
-  readonly onOpenContextMenu: (position: ViewportPoint) => void;
   readonly onNoteCollision: (
     request: NoteCollisionResolutionRequest,
   ) => void;
@@ -116,7 +112,6 @@ export function InteractionOverlay(
     interactionStrategyRef,
     onSelectionChange,
     onGridSeek,
-    onOpenContextMenu,
     onNoteCollision,
     onMarkerCollision,
     globalLassoRef,
@@ -217,21 +212,6 @@ export function InteractionOverlay(
       style={INTERACTION_LAYER_STYLE}
       role="application"
       aria-label="Interactive piano roll"
-      onContextMenu={(event) => {
-        event.preventDefault();
-
-        const pointerType = "pointerType" in event.nativeEvent
-          ? event.nativeEvent.pointerType
-          : "mouse";
-
-        // Touch long presses draw notes, while pen alternative buttons are
-        // handled at pointerdown. Neither should also open this menu.
-        if (pointerType !== "mouse") {
-          return;
-        }
-
-        onOpenContextMenu({ x: event.clientX, y: event.clientY });
-      }}
     >
       <div
         ref={(element) => {
