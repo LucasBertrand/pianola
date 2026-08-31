@@ -251,8 +251,6 @@ l'identité et la version inconnues, puis valident strictement le modèle couran
 Le fichier portable, le snapshot local, le document musical et le layout
 IndexedDB partent tous de leur version 1. Aucune version historique ni migration
 de projet n'est encore déclarée.
-Les préférences utilisateur suivent séparément un schéma 2 : leur schéma 1 est
-migré vers le mode historique de labels par pitch avant validation.
 
 Les échecs complets alimentent les diagnostics de quarantaine et restent
 exportables sans mutation. IndexedDB crée son premier layout avec

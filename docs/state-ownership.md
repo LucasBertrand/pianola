@@ -108,8 +108,8 @@ convertir ou de les abandonner silencieusement. Les seules données par clip
 persistées sont `pitchSnapSettings` et `gridSettings`.
 
 Le snapshot projet local courant est la première baseline, version 1. Les
-préférences utilisateur sont en version 2 ; leur version 1 est migrée
-explicitement en conservant l'affichage historique des labels par pitch. Un futur rapport de
+préférences utilisateur restent également en version 1 pendant cette phase de
+développement. Un futur rapport de
 migration restera transitoire et n'entrera pas dans Undo/Redo. IndexedDB utilise
 également son premier layout, version 1 ; un layout local supérieur incompatible
 est supprimé et recréé pendant ce reset initial.

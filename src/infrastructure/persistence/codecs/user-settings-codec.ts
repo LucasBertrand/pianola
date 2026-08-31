@@ -19,8 +19,7 @@ import {
   parsePersonalInstrumentPresetLibrary,
 } from "./personal-instrument-preset-codec";
 
-export const USER_SETTINGS_FORMAT = "app.pianola.user-settings.v2";
-const PREVIOUS_USER_SETTINGS_FORMAT = "app.pianola.user-settings.v1";
+export const USER_SETTINGS_FORMAT = "app.pianola.user-settings.v1";
 
 const ACTION_IDS = [
   "editor.redo",
@@ -88,14 +87,7 @@ export function parseUserSettingsEnvelope(
     );
   }
 
-  const isCurrentEnvelope =
-    version === USER_SETTINGS_SCHEMA_VERSION
-    && format === USER_SETTINGS_FORMAT;
-  const isPreviousEnvelope =
-    version === 1
-    && format === PREVIOUS_USER_SETTINGS_FORMAT;
-
-  if (!isCurrentEnvelope && !isPreviousEnvelope) {
+  if (version !== USER_SETTINGS_SCHEMA_VERSION || format !== USER_SETTINGS_FORMAT) {
     throw new ProjectPersistenceError(
       "INVALID_DATA",
       "Stored user settings use an unknown format or version.",
@@ -106,29 +98,13 @@ export function parseUserSettingsEnvelope(
     format: USER_SETTINGS_FORMAT,
     schemaVersion: USER_SETTINGS_SCHEMA_VERSION,
     updatedAt: readPersistenceIsoDate(source["updatedAt"], "$.updatedAt"),
-    settings: parseUserSettingsVersion(
-      source["settings"],
-      "$.settings",
-      version,
-    ),
+    settings: parseUserSettings(source["settings"], "$.settings"),
   };
 }
 
 export function parseUserSettings(
   source: unknown,
   path: string,
-): UserSettings {
-  return parseUserSettingsVersion(
-    source,
-    path,
-    USER_SETTINGS_SCHEMA_VERSION,
-  );
-}
-
-function parseUserSettingsVersion(
-  source: unknown,
-  path: string,
-  expectedVersion: number,
 ): UserSettings {
   const settings = readPersistenceRecord(source, path);
   const version = readPersistenceInteger(
@@ -137,7 +113,7 @@ function parseUserSettingsVersion(
     1,
   );
 
-  if (version !== expectedVersion) {
+  if (version !== USER_SETTINGS_SCHEMA_VERSION) {
     throw new ProjectPersistenceError(
       version > USER_SETTINGS_SCHEMA_VERSION
         ? "FUTURE_VERSION"
@@ -175,13 +151,11 @@ function parseUserSettingsVersion(
     );
   }
 
-  const noteLabelMode = version === 1
-    ? "pitch"
-    : readPersistenceString(
-        settings["noteLabelMode"],
-        `${path}.noteLabelMode`,
-        16,
-      );
+  const noteLabelMode = readPersistenceString(
+    settings["noteLabelMode"],
+    `${path}.noteLabelMode`,
+    16,
+  );
 
   if (noteLabelMode !== "pitch" && noteLabelMode !== "degree") {
     throw new ProjectPersistenceError(
