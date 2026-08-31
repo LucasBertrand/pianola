@@ -22,6 +22,7 @@ describe("slider pointer session", () => {
       initialClientX: 180,
       initialValue: 0.4,
       currentValue: 0.4,
+      restorationValue: 0.4,
       trackLengthCssPixels: 200,
     });
   });
@@ -50,6 +51,13 @@ describe("slider pointer session", () => {
   test("restores the initial value when the matching pointer is cancelled", () => {
     const started = startSliderPointerSession(7, 180, 0.4, 200);
     const moved = moveSliderPointerSession(started, 7, 220, CONSTRAINTS);
+
+    expect(endSliderPointerSession(moved, 7, "cancel")).toBe(0.4);
+  });
+
+  test("restores the pre-jump value when a track gesture is cancelled", () => {
+    const started = startSliderPointerSession(7, 180, 0.8, 200, 0.4);
+    const moved = moveSliderPointerSession(started, 7, 200, CONSTRAINTS);
 
     expect(endSliderPointerSession(moved, 7, "cancel")).toBe(0.4);
   });

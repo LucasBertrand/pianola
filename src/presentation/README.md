@@ -33,7 +33,8 @@ Pour le Canvas, utiliser
 Pour un contrôle continu, partir de `slider/Slider.tsx` et conserver la valeur
 durable chez la surface consommatrice : `onPreview` ne publie que le geste en
 cours, `onCommit` est émis une seule fois au relâchement et une annulation
-restaure la valeur d'ouverture.
+restaure la valeur d'ouverture. Un appui sur la piste positionne immédiatement
+la valeur ; un appui sur la pastille conserve un déplacement relatif sans saut.
 
 ## Quelles dépendances sont autorisées ?
 

@@ -1,5 +1,7 @@
 export type SliderStep = number | "any";
 
+export const SLIDER_THUMB_SIZE_CSS_PIXELS = 18;
+
 export interface SliderValueConstraints {
   readonly minimum: number;
   readonly maximum: number;
@@ -59,6 +61,68 @@ export function getSliderValueFromPointerDelta(
     initialValue + deltaCssPixels / trackLengthCssPixels * valueRange,
     constraints,
   );
+}
+
+/** Returns the distance available to the thumb's center inside the control. */
+export function getSliderTrackLength(
+  controlLengthCssPixels: number,
+  thumbSizeCssPixels: number,
+): number {
+  return Math.max(0, controlLengthCssPixels - thumbSizeCssPixels);
+}
+
+/** Maps an absolute pointer position on the track to a normalized value. */
+export function getSliderValueFromPointerPosition(
+  pointerClientX: number,
+  controlClientLeft: number,
+  controlLengthCssPixels: number,
+  thumbSizeCssPixels: number,
+  constraints: SliderValueConstraints,
+): number {
+  const trackLength = getSliderTrackLength(
+    controlLengthCssPixels,
+    thumbSizeCssPixels,
+  );
+
+  if (trackLength <= 0) {
+    return normalizeSliderValue(constraints.minimum, constraints);
+  }
+
+  const pointerTrackPosition = pointerClientX
+    - controlClientLeft
+    - thumbSizeCssPixels / 2;
+  const progress = pointerTrackPosition / trackLength;
+
+  return normalizeSliderValue(
+    constraints.minimum
+      + progress * (constraints.maximum - constraints.minimum),
+    constraints,
+  );
+}
+
+/** Tests whether an absolute pointer position intersects the current thumb. */
+export function isPointerOnSliderThumb(
+  pointerClientX: number,
+  controlClientLeft: number,
+  controlLengthCssPixels: number,
+  thumbSizeCssPixels: number,
+  value: number,
+  constraints: SliderValueConstraints,
+): boolean {
+  const valueRange = constraints.maximum - constraints.minimum;
+  const progress = valueRange <= 0
+    ? 0
+    : (normalizeSliderValue(value, constraints) - constraints.minimum)
+      / valueRange;
+  const thumbCenterClientX = controlClientLeft
+    + thumbSizeCssPixels / 2
+    + progress * getSliderTrackLength(
+      controlLengthCssPixels,
+      thumbSizeCssPixels,
+    );
+
+  return Math.abs(pointerClientX - thumbCenterClientX)
+    <= thumbSizeCssPixels / 2;
 }
 
 /** Resolves the standard range-input keyboard navigation for one key press. */

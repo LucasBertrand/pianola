@@ -8,6 +8,7 @@ export interface SliderPointerSession {
   readonly initialClientX: number;
   readonly initialValue: number;
   readonly currentValue: number;
+  readonly restorationValue: number;
   readonly trackLengthCssPixels: number;
 }
 
@@ -17,12 +18,14 @@ export function startSliderPointerSession(
   clientX: number,
   value: number,
   trackLengthCssPixels: number,
+  restorationValue: number = value,
 ): SliderPointerSession {
   return {
     pointerId,
     initialClientX: clientX,
     initialValue: value,
     currentValue: value,
+    restorationValue,
     trackLengthCssPixels,
   };
 }
@@ -60,5 +63,5 @@ export function endSliderPointerSession(
     return null;
   }
 
-  return outcome === "commit" ? session.currentValue : session.initialValue;
+  return outcome === "commit" ? session.currentValue : session.restorationValue;
 }

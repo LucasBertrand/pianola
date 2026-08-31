@@ -4,8 +4,11 @@ import {
   test,
 } from "vitest";
 import {
+  getSliderTrackLength,
   getSliderValueFromNavigationKey,
   getSliderValueFromPointerDelta,
+  getSliderValueFromPointerPosition,
+  isPointerOnSliderThumb,
   normalizeSliderValue,
   type SliderValueConstraints,
 } from "../slider-value";
@@ -51,6 +54,54 @@ describe("slider value", () => {
 
     expect(getSliderValueFromPointerDelta(5, -200, 100, constraints)).toBe(0);
     expect(getSliderValueFromPointerDelta(5, 200, 100, constraints)).toBe(10);
+  });
+
+  test("maps track clicks while accounting for the thumb width", () => {
+    const constraints = { minimum: 0, maximum: 100, step: 1 } as const;
+
+    expect(getSliderTrackLength(118, 18)).toBe(100);
+    expect(getSliderValueFromPointerPosition(
+      159,
+      100,
+      118,
+      18,
+      constraints,
+    )).toBe(50);
+    expect(getSliderValueFromPointerPosition(
+      90,
+      100,
+      118,
+      18,
+      constraints,
+    )).toBe(0);
+    expect(getSliderValueFromPointerPosition(
+      230,
+      100,
+      118,
+      18,
+      constraints,
+    )).toBe(100);
+  });
+
+  test("distinguishes the thumb from the clickable track", () => {
+    const constraints = { minimum: 0, maximum: 100, step: 1 } as const;
+
+    expect(isPointerOnSliderThumb(
+      159,
+      100,
+      118,
+      18,
+      50,
+      constraints,
+    )).toBe(true);
+    expect(isPointerOnSliderThumb(
+      130,
+      100,
+      118,
+      18,
+      50,
+      constraints,
+    )).toBe(false);
   });
 
   test("supports arrows, pages and boundary navigation", () => {

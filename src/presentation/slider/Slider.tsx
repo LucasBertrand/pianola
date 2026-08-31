@@ -13,8 +13,12 @@ import {
   type SliderPointerSession,
 } from "./slider-pointer-session";
 import {
+  getSliderTrackLength,
   getSliderValueFromNavigationKey,
+  getSliderValueFromPointerPosition,
+  isPointerOnSliderThumb,
   normalizeSliderValue,
+  SLIDER_THUMB_SIZE_CSS_PIXELS,
   type SliderStep,
   type SliderValueConstraints,
 } from "./slider-value";
@@ -49,6 +53,7 @@ export interface SliderProps extends NativeSliderProps {
 
 /**
  * Accessible range input with a relative, captured pointer gesture.
+ * Thumb presses stay relative; track presses jump before continuing the drag.
  * Pointer previews stay transient until one commit on release.
  */
 export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
@@ -163,13 +168,42 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
 
         event.preventDefault();
         event.currentTarget.focus({ preventScroll: true });
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const constraints = getInputConstraints(event.currentTarget);
+        const currentValue = event.currentTarget.valueAsNumber;
+        const pointerIsOnThumb = isPointerOnSliderThumb(
+          event.clientX,
+          bounds.left,
+          bounds.width,
+          SLIDER_THUMB_SIZE_CSS_PIXELS,
+          currentValue,
+          constraints,
+        );
+        const gestureValue = pointerIsOnThumb
+          ? currentValue
+          : getSliderValueFromPointerPosition(
+              event.clientX,
+              bounds.left,
+              bounds.width,
+              SLIDER_THUMB_SIZE_CSS_PIXELS,
+              constraints,
+            );
+
         sessionRef.current = startSliderPointerSession(
           event.pointerId,
           event.clientX,
-          event.currentTarget.valueAsNumber,
-          event.currentTarget.getBoundingClientRect().width,
+          gestureValue,
+          getSliderTrackLength(
+            bounds.width,
+            SLIDER_THUMB_SIZE_CSS_PIXELS,
+          ),
+          currentValue,
         );
         event.currentTarget.setPointerCapture(event.pointerId);
+
+        if (gestureValue !== currentValue) {
+          previewValue(event.currentTarget, gestureValue);
+        }
       }}
       onPointerMoveCapture={(event) => {
         const session = sessionRef.current;

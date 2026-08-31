@@ -4,7 +4,7 @@
   outline: 0;
   appearance: none;
   background: var(--color-border);
-  cursor: ew-resize;
+  cursor: pointer;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -13,6 +13,7 @@
 }
 
 .slider::-webkit-slider-thumb {
+  box-sizing: border-box;
   width: 18px;
   height: 18px;
   border: 2px solid var(--color-surface-inset);
@@ -34,8 +35,9 @@
 }
 
 .slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
   border: 2px solid var(--color-surface-inset);
   border-radius: 50%;
   background: var(--color-accent-primary-bright);
