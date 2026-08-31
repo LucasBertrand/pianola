@@ -46,6 +46,7 @@ const forbiddenPaths = [
   "src/presentation/piano-roll/useSelectionWorkflow.ts",
   "src/presentation/styles/header-transport.css",
   "src/presentation/styles/application-header.css",
+  "src/presentation/styles/range-input.css",
 ];
 const requiredGuides = [
   "src/domain/README.md",
@@ -65,7 +66,7 @@ const requiredStyles = [
   "src/presentation/styles/piano-roll.css",
   "src/presentation/styles/piano-roll-viewport-controls.css",
   "src/presentation/styles/project-files.css",
-  "src/presentation/styles/range-input.css",
+  "src/presentation/styles/slider.css",
   "src/presentation/styles/responsive.css",
   "src/presentation/styles/shell.css",
   "src/presentation/styles/tokens-reset.css",
@@ -78,6 +79,7 @@ const requiredPresentationOwners = [
   "src/presentation/inspector/card-reorder/useCardReorder.ts",
   "src/presentation/piano-roll/viewport/PianoRollViewportControls.tsx",
   "src/presentation/radial-menu/FloatingRadialMenu.tsx",
+  "src/presentation/slider/Slider.tsx",
 ];
 const forbiddenGenericFileNames = new Set([
   "common.ts",

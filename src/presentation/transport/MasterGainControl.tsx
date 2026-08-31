@@ -15,6 +15,9 @@ import {
   MINIMUM_MASTER_GAIN,
   MINIMUM_MASTER_TUNING_FREQUENCY_HZ,
 } from "../../domain/master-bus";
+import {
+  Slider,
+} from "../slider/Slider";
 
 export interface MasterGainControlProps {
   readonly gain: number;
@@ -38,7 +41,6 @@ export function MasterGainControl(
     onMuteToggle,
     onTuningCommit,
   } = props;
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const outputRef = useRef<HTMLOutputElement | null>(null);
   const tuningInputRef = useRef<HTMLInputElement | null>(null);
   const lastCommittedGainRef = useRef(gain);
@@ -52,10 +54,6 @@ export function MasterGainControl(
   }, []);
 
   useEffect(() => {
-    if (inputRef.current !== null) {
-      inputRef.current.value = String(gain);
-    }
-
     lastCommittedGainRef.current = gain;
     updateVisual(gain);
   }, [
@@ -71,13 +69,8 @@ export function MasterGainControl(
     }
   }, [tuningFrequencyHz]);
 
-  const commitGain = (): void => {
-    const nextGain = Number(inputRef.current?.value);
-
-    if (
-      !Number.isFinite(nextGain)
-      || nextGain === lastCommittedGainRef.current
-    ) {
+  const commitGain = (nextGain: number): void => {
+    if (nextGain === lastCommittedGainRef.current) {
       return;
     }
 
@@ -153,28 +146,21 @@ export function MasterGainControl(
         <output ref={outputRef} className="master-gain-output">
           {formatMasterGainDecibels(gain)}
         </output>
-        <input
-          ref={inputRef}
+        <Slider
           className="master-gain-input"
-          type="range"
           min={MINIMUM_MASTER_GAIN}
           max={MAXIMUM_MASTER_GAIN}
           step={EDITOR_CONSTANTS.gainStep}
-          defaultValue={gain}
+          value={gain}
           aria-label="Master gain"
-          onInput={(event) => {
-            const nextGain = Number(event.currentTarget.value);
-
+          onPreview={(nextGain) => {
             updateVisual(nextGain);
             onPreview(nextGain);
           }}
+          onCommit={commitGain}
           onContextMenu={(event) => {
             event.preventDefault();
           }}
-          onPointerUp={commitGain}
-          onPointerCancel={commitGain}
-          onBlur={commitGain}
-          onKeyUp={commitGain}
         />
         <button
           className="master-mute-button"

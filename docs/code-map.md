@@ -17,6 +17,7 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` ; routage commun des versions dans `src/infrastructure/versioned-data/versioned-migration-pipeline.ts` | `StoredProject`, rapport transitoire, générations et quarantaine de `ProjectRepository` ; réglages dans `UserSettingsRepository` | contrats sous `src/infrastructure/persistence/__tests__/` et pipeline sous `src/infrastructure/versioned-data/__tests__/` |
 | fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` puis `migrations/migrate-portable-project.ts` | document + `PersistedEditorWorkspace`, avec rapport de migration transitoire | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` puis `useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
+| sliders | `src/presentation/slider/Slider.tsx` | valeur durable du consommateur ; `SliderPointerSession` transitoire pendant un geste | tests purs colocalisés de `slider-value.ts` et `slider-pointer-session.ts` |
 | styles | `src/presentation/styles/index.css` | fichier CSS de la surface | build Vite et vérification humaine |
 
 La « suite centrale » désigne
@@ -49,6 +50,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | pipeline `pianola/migrations/`, workspace codec, parseur de document puis `presentation/project-files/useProjectMigrationDialog.tsx` pour un futur rapport |
 | modifier autosave ou récupération | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` | `src/application/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports, migrations de codec puis repository IndexedDB/Worker |
 | modifier le MIDI | `src/infrastructure/project-files/midi/standard-midi-file.ts` | reader/writer et analyse |
+| modifier un slider | `src/presentation/slider/Slider.tsx` | `slider-pointer-session.ts`, `slider-value.ts`, puis `styles/slider.css` |
 | modifier les couleurs | `src/presentation/styles/application-colors.ts` | tokens CSS et styles de surface |
 | modifier les labels de notes | `src/presentation/piano-roll/rendering/pitch-label.ts` | `domain/music-theory/pitch-snap.ts`, puis préférence, Canvas et ghosts du piano roll |
 | modifier le responsive | `src/presentation/styles/responsive.css` | styles propriétaires des surfaces impliquées |
@@ -187,7 +189,7 @@ dans un groupe bypassé, la suite reprend après ce groupe.
 | Surface | Fichier |
 | --- | --- |
 | shell/workspace | `src/presentation/styles/shell.css` |
-| entrées de type range | `src/presentation/styles/range-input.css` |
+| primitive slider | `src/presentation/styles/slider.css` |
 | en-tête | `src/presentation/styles/editor-header.css` |
 | contexte de l'en-tête | `src/presentation/styles/editor-context-panel.css` |
 | toolbar | `src/presentation/styles/editor-toolbar.css` |

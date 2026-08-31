@@ -11,8 +11,10 @@ adaptateurs de stockage navigateur vivent sous
 L'en-tête et la toolbar appartiennent respectivement à `editor-header/` et
 `editor-toolbar/`, les icônes de commandes à `command-icons/`, le menu radial à
 `radial-menu/` et le réordonnancement de cartes à
-`inspector/card-reorder/` ; aucune zone `presentation/shared` ne sert de
-propriétaire par défaut.
+`inspector/card-reorder/`. La primitive `slider/Slider.tsx` possède les entrées
+continues communes : sa session de pointeur reste transitoire et ses calculs de
+valeur purs sont colocalisés dans `slider/`. Aucune zone
+`presentation/shared` ne sert de propriétaire par défaut.
 
 ## Quel fichier lire en premier ?
 
@@ -28,6 +30,10 @@ hit-tests et mutations de sélection indépendants du navigateur vivent dans
 `../editor-core/`.
 Pour le Canvas, utiliser
 [`piano-roll/rendering/README.md`](piano-roll/rendering/README.md).
+Pour un contrôle continu, partir de `slider/Slider.tsx` et conserver la valeur
+durable chez la surface consommatrice : `onPreview` ne publie que le geste en
+cours, `onCommit` est émis une seule fois au relâchement et une annulation
+restaure la valeur d'ouverture.
 
 ## Quelles dépendances sont autorisées ?
 
@@ -41,4 +47,5 @@ Les peintres ont leurs contrats près de `piano-roll/rendering/__tests__/`. Les
 modèles de layout, dialogues, presets et sélecteurs ont leurs tests colocalisés ;
 ceux du menu radial sont sous `radial-menu/__tests__/`. Les flux UI traversants
 sont couverts par `tests/integration/` et le smoke navigateur du scénario de
-rendu.
+rendu. Les invariants de clamp, de pas, de clavier et de session relative du
+slider sont testés sous `slider/__tests__/`.

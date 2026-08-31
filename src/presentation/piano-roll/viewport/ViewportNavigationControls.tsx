@@ -11,6 +11,9 @@ import {
 import {
   VIEWPORT_CONSTANTS,
 } from "../../../editor-core/viewport/viewport-constants";
+import {
+  Slider,
+} from "../../slider/Slider";
 
 export interface ViewportNavigationControlsProps {
   readonly timelinePositionRef: RefObject<HTMLOutputElement | null>;
@@ -43,33 +46,31 @@ export function ViewportNavigationControls({
       <div className="view-sliders">
         <label className="view-position-control">
           <span aria-hidden="true">X</span>
-          <input
+          <Slider
             ref={horizontalScrollRef}
-            type="range"
-            min="0"
+            min={0}
+            max={100}
             step="any"
-            defaultValue="0"
+            value={0}
             aria-label="Horizontal timeline position"
           />
         </label>
         <label className="view-zoom-control">
           <span aria-hidden="true">ZX</span>
-          <input
+          <Slider
             ref={horizontalZoomRef}
-            type="range"
             min={VIEWPORT_CONSTANTS.minimumStoredZoom}
             max={MAXIMUM_HORIZONTAL_ZOOM}
             step={EDITOR_CONSTANTS.zoomStep}
-            defaultValue={VIEWPORT_CONSTANTS.initialHorizontalZoom}
+            value={VIEWPORT_CONSTANTS.initialHorizontalZoom}
             aria-label="Horizontal zoom"
           />
         </label>
         <label className="view-position-control">
           <span aria-hidden="true">Y</span>
-          <input
+          <Slider
             ref={verticalScrollRef}
-            type="range"
-            min="0"
+            min={0}
             max={Math.max(
               0,
               VIEWPORT_CONSTANTS.displayedPitchCount
@@ -78,24 +79,23 @@ export function ViewportNavigationControls({
               - VIEWPORT_CONSTANTS.initialHeightCssPixels,
             )}
             step="any"
-            defaultValue={String(
+            value={
               (
                 VIEWPORT_CONSTANTS.highestDisplayedMidiPitch
                 - VIEWPORT_CONSTANTS.initialMaximumVisiblePitch
-              ) * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels,
-            )}
+              ) * VIEWPORT_CONSTANTS.initialPitchHeightCssPixels
+            }
             aria-label="Vertical pitch position"
           />
         </label>
         <label className="view-zoom-control">
           <span aria-hidden="true">ZY</span>
-          <input
+          <Slider
             ref={verticalZoomRef}
-            type="range"
             min={VIEWPORT_CONSTANTS.minimumStoredZoom}
             max={MAXIMUM_VERTICAL_ZOOM}
             step={EDITOR_CONSTANTS.zoomStep}
-            defaultValue={VIEWPORT_CONSTANTS.initialVerticalZoom}
+            value={VIEWPORT_CONSTANTS.initialVerticalZoom}
             aria-label="Vertical pitch zoom"
           />
         </label>

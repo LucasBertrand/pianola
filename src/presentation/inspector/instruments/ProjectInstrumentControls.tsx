@@ -8,6 +8,10 @@ import {
 import {
   INSTRUMENT_CONSTANTS,
 } from "../../../domain/instruments/instrument-constants";
+import {
+  Slider,
+} from "../../slider/Slider";
+
 export interface InstrumentGainSliderProps {
   readonly gain: number;
   readonly instrumentName: string;
@@ -24,24 +28,14 @@ export function InstrumentGainSlider(
     onPreview,
     onCommit,
   } = props;
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const lastCommittedGainRef = useRef(gain);
 
   useEffect(() => {
-    if (inputRef.current !== null) {
-      inputRef.current.value = String(gain);
-    }
-
     lastCommittedGainRef.current = gain;
   }, [gain]);
 
-  const commitGain = (): void => {
-    const nextGain = Number(inputRef.current?.value);
-
-    if (
-      !Number.isFinite(nextGain)
-      || nextGain === lastCommittedGainRef.current
-    ) {
+  const commitGain = (nextGain: number): void => {
+    if (nextGain === lastCommittedGainRef.current) {
       return;
     }
 
@@ -63,21 +57,14 @@ export function InstrumentGainSlider(
         event.preventDefault();
       }}
     >
-      <input
-        ref={inputRef}
-        type="range"
+      <Slider
         min={INSTRUMENT_CONSTANTS.minimumGain}
         max={INSTRUMENT_CONSTANTS.maximumGain}
         step={EDITOR_CONSTANTS.gainStep}
-        defaultValue={gain}
+        value={gain}
         aria-label={`Volume for ${instrumentName}`}
-        onInput={(event) => {
-          onPreview(Number(event.currentTarget.value));
-        }}
-        onPointerUp={commitGain}
-        onPointerCancel={commitGain}
-        onBlur={commitGain}
-        onKeyUp={commitGain}
+        onPreview={onPreview}
+        onCommit={commitGain}
         onContextMenu={(event) => {
           event.preventDefault();
         }}

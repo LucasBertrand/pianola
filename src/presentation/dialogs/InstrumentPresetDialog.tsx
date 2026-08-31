@@ -18,6 +18,9 @@ import {
 import {
   type PresetId,
 } from "../../domain/identifiers";
+import {
+  Slider,
+} from "../slider/Slider";
 
 export interface InstrumentPresetDialogProps {
   readonly mode: "create" | "edit";
@@ -847,23 +850,27 @@ function ParameterControl({
   const position = scaled
     ? valueToPosition(value, minimum, maximum, scale)
     : value;
+  const resolveValue = (nextPosition: number): number => scaled
+    ? positionToValue(nextPosition, minimum, maximum, step, scale)
+    : nextPosition;
 
   return (
     <label className="instrument-editor-parameter">
       <span>{label}</span>
-      <input
-        type="range"
+      <Slider
         min={scaled ? 0 : minimum}
         max={scaled ? 1 : maximum}
         step={scaled ? EDITOR_CONSTANTS.parameterSliderPositionStep : step}
         value={position}
-        onChange={(event) => {
-          const inputValue = Number(event.currentTarget.value);
-          const nextValue = scaled
-            ? positionToValue(inputValue, minimum, maximum, step, scale)
-            : inputValue;
+        onPreview={(nextPosition) => {
+          onChange(resolveValue(nextPosition));
+        }}
+        onCommit={(nextPosition) => {
+          const nextValue = resolveValue(nextPosition);
 
-          onChange(nextValue);
+          if (nextValue !== value) {
+            onChange(nextValue);
+          }
         }}
         onContextMenu={(event) => event.preventDefault()}
       />

@@ -142,6 +142,9 @@ les invalide automatiquement.
 
 Les composants sont rangés par surface : dialogs, editor-header,
 editor-toolbar, inspector, piano-roll, project-files, radial-menu et transport.
+La primitive continue commune appartient à `presentation/slider/` : elle garde
+une session de pointeur relative et transitoire, publie les previews pendant le
+geste, restaure sur annulation et laisse le commit durable au consommateur.
 Les icônes de commandes ont le propriétaire nommé `command-icons`, et le
 réordonnancement de cartes appartient à `inspector/card-reorder`. Le piano roll garde ses adaptateurs DOM
 dans `src/presentation/piano-roll/interactions/` et ses peintres Canvas dans
@@ -157,7 +160,7 @@ une `TimeMap` ou une boucle effective à partir du snapshot publié et de la
 projection compatible ; les peintres reçoivent seulement ce snapshot explicite.
 
 `src/presentation/styles/index.css` importe des propriétaires symétriques :
-primitives de range, shell, editor header et contexte, editor toolbar, contrôles du viewport,
+slider, shell, editor header et contexte, editor toolbar, contrôles du viewport,
 transport, project files, piano roll, menu radial, inspector, dialogs et
 responsive. Le fichier responsive ne coordonne que plusieurs surfaces.
 
