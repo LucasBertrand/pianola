@@ -182,29 +182,7 @@ export function HelpMemoDialog({
               </ul>
             </section>
           ))}
-        </div>
-
-        <section className="help-memo-concepts" aria-labelledby="help-memo-concepts-title">
-          <h3 id="help-memo-concepts-title">Concepts to remember</h3>
-          <div className="help-memo-concept-grid">
-            <ConceptCard title="Markers">
-              Tempo, scale and section markers are points on a clip timeline;
-              meter markers define measure boundaries. Point markers can be
-              selected, moved and copied. A meter marker is edited from its flag.
-            </ConceptCard>
-            <ConceptCard title="Clips and groups">
-              Each clip owns its notes, timeline and loop. Groups organize clip
-              order and can be nested. Bypass skips a clip or a whole group during
-              chained playback without deleting or disabling its content.
-            </ConceptCard>
-            <ConceptCard title="Instrument presets">
-              Project presets travel with this project. Personal presets are kept
-              in your local preferences and can be reused in other projects.
-              Choosing a preset fills the editor; only Save changes commits the
-              instrument to the project.
-            </ConceptCard>
-          </div>
-        </section>
+        </div>        
       </section>
     </div>
   );
@@ -212,21 +190,6 @@ export function HelpMemoDialog({
   return typeof document === "undefined"
     ? dialog
     : createPortal(dialog, document.body);
-}
-
-function ConceptCard({
-  title,
-  children,
-}: {
-  readonly title: string;
-  readonly children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <article className="help-memo-concept-card">
-      <h4>{title}</h4>
-      <p>{children}</p>
-    </article>
-  );
 }
 
 function MemoIcon({

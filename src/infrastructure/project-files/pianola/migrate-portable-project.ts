@@ -30,10 +30,10 @@ export function migratePortableProject(source: unknown) {
             ),
           },
           changes: [{
-            kind: "instrument-engine-renamed",
+            kind: "instrument-kind-renamed",
             path: "$.document",
             description:
-              "Renamed the Subtractive instrument engine and built-in preset IDs to Synth.",
+              "Renamed the Subtractive instrument kind and built-in preset IDs to Synth.",
           }],
         };
       },

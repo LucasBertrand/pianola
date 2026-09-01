@@ -46,7 +46,7 @@
     gap: 12px 10px;
   }
 
-  .instrument-editor-engine-control,
+  .instrument-editor-kind-control,
   .instrument-preset-manager {
     grid-column: 1 / -1;
   }

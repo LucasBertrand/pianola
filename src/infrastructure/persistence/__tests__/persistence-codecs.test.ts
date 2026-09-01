@@ -194,7 +194,7 @@ describe("persistence codecs", () => {
     expect(migrated.migration).toMatchObject({
       sourceVersion: 1,
       targetVersion: 2,
-      changes: [{ kind: "instrument-engine-renamed" }],
+      changes: [{ kind: "instrument-kind-renamed" }],
     });
     expect(migrated.project.document.schemaVersion).toBe(2);
     expect(migrated.project.document

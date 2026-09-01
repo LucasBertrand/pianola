@@ -30,10 +30,10 @@ export function migrateUserSettings(source: unknown) {
             settings: migrateSettingsV1ToV2(legacy["settings"]),
           },
           changes: [{
-            kind: "instrument-engine-renamed",
+            kind: "instrument-kind-renamed",
             path: "$.settings.personalInstrumentPresetsById",
             description:
-              "Renamed the Subtractive personal preset engine to Synth.",
+              "Renamed the Subtractive personal preset kind to Synth.",
           }],
         };
       },

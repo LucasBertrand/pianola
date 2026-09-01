@@ -121,7 +121,7 @@ function parsePersonalInstrumentPreset(
   const kind = readPersistenceString(preset["kind"], `${path}.kind`, 32);
 
   if (kind !== "synth") {
-    return fail(`${path}.kind`, "Unsupported personal preset engine.");
+    return fail(`${path}.kind`, "Unsupported personal preset kind.");
   }
 
   const parsed: InstrumentPreset = {
@@ -151,7 +151,7 @@ function parseSynthConfig(
   const kind = readPersistenceString(config["kind"], `${path}.kind`, 32);
 
   if (kind !== "synth") {
-    return fail(`${path}.kind`, "Unsupported personal preset engine.");
+    return fail(`${path}.kind`, "Unsupported personal preset kind.");
   }
 
   return {

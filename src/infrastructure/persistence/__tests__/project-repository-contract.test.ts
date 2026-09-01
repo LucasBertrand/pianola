@@ -69,7 +69,7 @@ describe("project repository contract", () => {
     expect(migrated.migration).toMatchObject({
       sourceVersion: 1,
       targetVersion: 2,
-      changes: [{ kind: "instrument-engine-renamed" }],
+      changes: [{ kind: "instrument-kind-renamed" }],
     });
     expect(migrated.project.document
       .projectInstrumentsById[instrumentId]?.instrument.kind).toBe("synth");

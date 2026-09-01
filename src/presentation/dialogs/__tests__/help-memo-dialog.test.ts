@@ -19,9 +19,6 @@ describe("HelpMemoDialog", () => {
     expect(markup).toContain("Grid and viewport");
     expect(markup).toContain("Pitch guide");
     expect(markup).toContain("Note colors");
-    expect(markup).toContain("Markers");
-    expect(markup).toContain("Clips and groups");
-    expect(markup).toContain("Instrument presets");
     expect(markup.match(/help-memo-command-icon/g)?.length).toBeGreaterThan(20);
     expect(markup).toContain('d="M5 4v8a7 7 0 0 0 14 0V4"');
     expect(markup).toContain('class="is-note-color-brush"');

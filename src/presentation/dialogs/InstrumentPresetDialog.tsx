@@ -182,8 +182,8 @@ export function InstrumentPresetDialog({
               }}
             />
           </label>
-          <label className="instrument-preset-dialog-control instrument-editor-engine-control">
-            <span>Engine</span>
+          <label className="instrument-preset-dialog-control instrument-editor-kind-control">
+            <span>Kind</span>
             <select value="synth" disabled>
               <option value="synth">Synth</option>
             </select>

@@ -31,7 +31,7 @@ export function validateProjectInstrument(instrument: ProjectInstrument): Valida
   validateBoundedIdentifier(
     instrument.instrument.kind,
     "instrument.kind",
-    "Instrument engine kind",
+    "Instrument kind",
     issues,
   );
 
