@@ -21,8 +21,8 @@ import {
   type TimelineEngineDiagnostic,
 } from "../worklet/worklet-timeline-engine";
 import {
-  SubtractiveWorkletVoice,
-} from "../worklet/subtractive-worklet-voice";
+  SynthVoice,
+} from "../worklet/synth/synth-voice";
 import {
   reserveWorkletVoice,
 } from "../worklet/worklet-voice-allocation";
@@ -354,7 +354,7 @@ describe("AudioWorklet timeline engine", () => {
       return;
     }
 
-    const releasingVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const releasingVoice = new SynthVoice(SAMPLE_RATE);
 
     releasingVoice.start(
       instrument.instrumentId,
@@ -446,7 +446,7 @@ describe("AudioWorklet timeline engine", () => {
     engine.play(120);
     renderFrames(engine, RENDER_QUANTUM);
     const diagnosticCount = diagnostics.length;
-    const start = vi.spyOn(SubtractiveWorkletVoice.prototype, "start");
+    const start = vi.spyOn(SynthVoice.prototype, "start");
 
     engine.replaceInstrumentEvents(
       instrument.instrumentId,
@@ -484,7 +484,7 @@ describe("AudioWorklet timeline engine", () => {
     renderFrames(engine, RENDER_QUANTUM);
     const diagnosticCount = diagnostics.length;
     const reconcile = vi.spyOn(
-      SubtractiveWorkletVoice.prototype,
+      SynthVoice.prototype,
       "reconcileTimelineEvent",
     );
 
@@ -524,7 +524,7 @@ describe("AudioWorklet timeline engine", () => {
 
     engine.play(120);
     renderFrames(engine, RENDER_QUANTUM);
-    const release = vi.spyOn(SubtractiveWorkletVoice.prototype, "release");
+    const release = vi.spyOn(SynthVoice.prototype, "release");
 
     engine.replaceInstrumentEvents(
       instrument.instrumentId,
@@ -580,7 +580,7 @@ describe("AudioWorklet timeline engine", () => {
       durationTicks: 1_920,
     })]);
     const engine = createEngine(snapshot, []);
-    const retune = vi.spyOn(SubtractiveWorkletVoice.prototype, "retune");
+    const retune = vi.spyOn(SynthVoice.prototype, "retune");
 
     engine.play(0);
     renderFrames(engine, RENDER_QUANTUM);
@@ -607,7 +607,7 @@ describe("AudioWorklet timeline engine", () => {
     }
 
     const engine = createEngine(snapshot, []);
-    const preview = vi.spyOn(SubtractiveWorkletVoice.prototype, "preview");
+    const preview = vi.spyOn(SynthVoice.prototype, "preview");
     engine.play(0);
     renderFrames(engine, RENDER_QUANTUM);
 
@@ -642,8 +642,8 @@ describe("AudioWorklet timeline engine", () => {
         attackSeconds: 0.001,
       },
     };
-    const resetVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
-    const freeVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const resetVoice = new SynthVoice(SAMPLE_RATE);
+    const freeVoice = new SynthVoice(SAMPLE_RATE);
 
     resetVoice.start(
       instrument.instrumentId,
@@ -692,8 +692,8 @@ describe("AudioWorklet timeline engine", () => {
         sustainLevel: 1,
       },
     };
-    const fixedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
-    const trackedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const fixedVoice = new SynthVoice(SAMPLE_RATE);
+    const trackedVoice = new SynthVoice(SAMPLE_RATE);
 
     fixedVoice.start(
       instrument.instrumentId,
@@ -794,8 +794,8 @@ describe("AudioWorklet timeline engine", () => {
       filterCutoffHz: 20_000,
       filterEnvelopeAmountOctaves: 0,
     };
-    const previewedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
-    const unchangedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const previewedVoice = new SynthVoice(SAMPLE_RATE);
+    const unchangedVoice = new SynthVoice(SAMPLE_RATE);
 
     for (const voice of [previewedVoice, unchangedVoice]) {
       voice.start(
@@ -850,7 +850,7 @@ describe("AudioWorklet timeline engine", () => {
       filterCutoffHz: 20_000,
       filterEnvelopeAmountOctaves: 0,
     };
-    const voice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const voice = new SynthVoice(SAMPLE_RATE);
 
     voice.start(
       instrument.instrumentId,
@@ -911,8 +911,8 @@ describe("AudioWorklet timeline engine", () => {
         curve: 0,
       },
     };
-    const previewedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
-    const unchangedVoice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+    const previewedVoice = new SynthVoice(SAMPLE_RATE);
+    const unchangedVoice = new SynthVoice(SAMPLE_RATE);
 
     for (const voice of [previewedVoice, unchangedVoice]) {
       voice.start(
@@ -1164,7 +1164,7 @@ function renderFrames(
 }
 
 function renderVoiceFrames(
-  voice: SubtractiveWorkletVoice,
+  voice: SynthVoice,
   frameCount: number,
 ): void {
   for (let frame = 0; frame < frameCount; frame += 1) {

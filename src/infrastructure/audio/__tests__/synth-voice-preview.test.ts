@@ -7,16 +7,16 @@ import {
   INSTRUMENT_PARAMETER_PREVIEW_POLICY,
 } from "../instrument-preview-policy";
 import type {
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
 } from "../playback-model";
 import {
-  SubtractiveWorkletVoice,
-} from "../worklet/subtractive-worklet-voice";
+  SynthVoice,
+} from "../worklet/synth/synth-voice";
 
 const SAMPLE_RATE = 48_000;
 const INSTRUMENT_ID = "preview-test";
-const BASE_CONFIG: SubtractivePlaybackPresetSnapshot = {
-  kind: "subtractive",
+const BASE_CONFIG: SynthPlaybackPresetSnapshot = {
+  kind: "synth",
   oscillatorWaveform: "sine",
   polyphony: 8,
   oscillatorDetuneCents: 0,
@@ -42,7 +42,7 @@ const BASE_CONFIG: SubtractivePlaybackPresetSnapshot = {
   },
 };
 
-describe("subtractive parameter preview policy", () => {
+describe("synth parameter preview policy", () => {
   test("formalizes active, next-note and restart-only parameters", () => {
     expect(INSTRUMENT_PARAMETER_PREVIEW_POLICY).toMatchObject({
       masterTuningFrequencyHz: "active-smoothed",
@@ -197,15 +197,15 @@ describe("subtractive parameter preview policy", () => {
 });
 
 function startVoice(
-  config: SubtractivePlaybackPresetSnapshot,
-): SubtractiveWorkletVoice {
-  const voice = new SubtractiveWorkletVoice(SAMPLE_RATE);
+  config: SynthPlaybackPresetSnapshot,
+): SynthVoice {
+  const voice = new SynthVoice(SAMPLE_RATE);
   voice.start(INSTRUMENT_ID, 60, config, 440, 1, null, null);
   return voice;
 }
 
 function render(
-  voice: SubtractiveWorkletVoice,
+  voice: SynthVoice,
   sampleCount: number,
 ): number[] {
   return Array.from({ length: sampleCount }, () => voice.render());

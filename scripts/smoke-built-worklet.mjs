@@ -50,7 +50,7 @@ if (registeredName !== "playback-processor" || Processor === null) {
 
 const processor = new Processor();
 const instrument = {
-  kind: "subtractive",
+  kind: "synth",
   oscillatorWaveform: "sine",
   polyphony: 1,
   oscillatorDetuneCents: 0,

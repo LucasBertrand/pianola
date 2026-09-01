@@ -8,17 +8,19 @@ Le point d’entrée unique du format portable est
 et un `PersistedEditorWorkspace` séparé. Il ne contient aucune préférence
 utilisateur.
 
-Le writer courant produit la première version portable, version 1. Le lecteur
+Le writer courant produit la version portable 2. Le lecteur
 traite toujours le JSON comme inconnu, reconnaît format et version, puis valide
-strictement le document et le workspace. Il n'existe encore aucune version
-historique ni migration. Une version future, un champ inconnu ou une migration
+strictement le document et le workspace. La migration pure `1 -> 2` renomme le
+moteur d'instrument et ses discriminants de `subtractive` vers `synth`, ainsi
+que les identifiants des presets intégrés préfixés par `subtractive-`. Une
+version future, un champ inconnu ou une migration
 absente est refusé sans réécriture du fichier source. L'import crée un nouveau
 `documentId` local même si le fichier vient d'un projet déjà présent dans la
-bibliothèque. Lorsqu'une future migration existera, son rapport sera affiché
-une seule fois dans la modale stylisée `application-dialog`.
+bibliothèque. Le rapport de migration est affiché une seule fois dans la modale
+stylisée `application-dialog`.
 
 Le format local est différent du format portable. L'enveloppe
-`app.pianola.stored-project.v1` ajoute `documentId`, révision et `updatedAt` ;
+`app.pianola.stored-project.v2` ajoute `documentId`, révision et `updatedAt` ;
 elle est sérialisée dans le Web Worker puis conservée en deux générations par
 IndexedDB. Le catalogue ne contient que les résumés nécessaires à l'accueil.
 Les ports sont sous `src/application/ports/` et les codecs, Worker,
@@ -29,14 +31,24 @@ Le pipeline portable :
 
 1. reçoit une valeur JSON inconnue ;
 2. confie identité, version et classification des incompatibilités au pipeline
-   commun de `infrastructure/versioned-data/` ;
+   commun de `infrastructure/migration/` ;
 3. applique les migrations pures déclarées, successivement et sans saut ;
 4. valide strictement les limites et sections courantes ;
 5. crée une entrée locale distincte sans modifier `UserSettings`.
 
-La fenêtre supportée contient uniquement la première baseline : fichiers
-`.pianola` 1, snapshots locaux 1 et documents musicaux de schéma 1.
-Les writers n'émettent que la version 1. Toute modification future de
+La fenêtre supportée contient les fichiers `.pianola` 1 et 2, les snapshots
+locaux 1 et 2, et les documents musicaux de schéma 1 via leur enveloppe 1 ou de
+schéma 2 directement. Les writers n'émettent que la version 2. Les enveloppes
+concernées par le renommage sont précisément :
+
+- `app.pianola.project`, `schemaVersion: 2`, qui contient le document musical ;
+- `app.pianola.stored-project.v2`, `schemaVersion: 2`, pour les générations locales ;
+- `app.pianola.user-settings.v2`, `schemaVersion: 2`, dont le payload
+  `settings.schemaVersion: 2` contient les presets personnels ;
+- le document musical imbriqué, `document.schemaVersion: 2`.
+
+Le layout IndexedDB et l'enveloppe de récupération ne changent pas : ils ne
+portent aucun instrument. Toute modification future de
 structure ou de vocabulaire persistant augmente la version de son enveloppe et
 ajoute une migration pure `n -> n + 1` couverte par test. Le changement doit :
 
@@ -47,7 +59,7 @@ ajoute une migration pure `n -> n + 1` couverte par test. Le changement doit :
    refus d'une étape absente ou d'une version future.
 
 Le contrat commun et un exemple exécutable sont documentés dans
-[`src/infrastructure/versioned-data/README.md`](../../src/infrastructure/versioned-data/README.md).
+[`src/infrastructure/migration/README.md`](../../src/infrastructure/migration/README.md).
 
 Une version future n'est jamais remplacée. Si aucune des deux générations ne
 s'ouvre, les diagnostics distinguent JSON corrompu, donnée invalide,
@@ -66,7 +78,7 @@ Tests ciblés :
 npm test -- src/infrastructure/persistence/__tests__/persistence-codecs.test.ts
 npm test -- src/infrastructure/persistence/__tests__/project-repository-contract.test.ts
 npm test -- src/infrastructure/persistence/__tests__/indexed-db-reset.test.ts
-npm test -- src/infrastructure/versioned-data/__tests__/versioned-migration-pipeline.test.ts
+npm test -- src/infrastructure/migration/__tests__/versioned-migration-pipeline.test.ts
 ```
 
 ## MIDI

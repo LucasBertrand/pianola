@@ -28,7 +28,7 @@ Un fichier doit avoir un propriétaire fonctionnel unique :
 | intentions et orchestrations neutres | `src/application/` | [`src/application/README.md`](../../src/application/README.md) |
 | timeline et moteur temps réel | `src/infrastructure/audio/` | [`src/infrastructure/audio/README.md`](../../src/infrastructure/audio/README.md) |
 | formats `.pianola` et MIDI | `src/infrastructure/project-files/` | [`src/infrastructure/project-files/README.md`](../../src/infrastructure/project-files/README.md) |
-| routage des données versionnées | `src/infrastructure/versioned-data/` | [`README local`](../../src/infrastructure/versioned-data/README.md) |
+| routage des données versionnées | `src/infrastructure/migration/` | [`README local`](../../src/infrastructure/migration/README.md) |
 | React et adaptateurs d'interface | `src/presentation/` | [`src/presentation/README.md`](../../src/presentation/README.md) |
 | rendu du piano roll | `src/presentation/piano-roll/rendering/` | [`README local`](../../src/presentation/piano-roll/rendering/README.md) |
 
@@ -59,7 +59,7 @@ fourre-tout nommés seulement `types`, `helpers`, `utils`, `common`, `state`,
   carte du code rendus inexacts.
 - Toute évolution de donnée persistée augmente la version de son enveloppe et
   ajoute une migration pure `n -> n + 1` déclarée près du format ; le pipeline
-  commun sous `infrastructure/versioned-data/` est l'unique point de routage.
+  commun sous `infrastructure/migration/` est l'unique point de routage.
   Ne pas disperser des branches de rétrocompatibilité dans les parseurs métier.
 
 ## Boucle de travail
@@ -83,7 +83,7 @@ Pour un changement Canvas, tactile ou Web Audio, compléter les tests par une
 vérification humaine dans un navigateur adapté. Pour les formats projet,
 vérifier les contrats décrits dans le
 [guide des fichiers](project-files.md) et la procédure du
-[`README` des données versionnées](../../src/infrastructure/versioned-data/README.md).
+[`README` des migrations](../../src/infrastructure/migration/README.md).
 
 ## Avant de livrer
 

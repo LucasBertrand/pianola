@@ -21,7 +21,7 @@ import {
   type NoteLabelMode,
 } from "../../editor-core/model/note-label-mode";
 
-export const USER_SETTINGS_SCHEMA_VERSION = 1;
+export const USER_SETTINGS_SCHEMA_VERSION = 2;
 
 export type ShortcutActionId =
   | "editor.redo"

@@ -3,7 +3,7 @@ import type {
 } from "./identifiers";
 import type {
   InstrumentPreset,
-  SubtractiveSynthConfig,
+  SynthConfig,
 } from "./instruments/instrument";
 
 export interface MergedInstrumentPresetLibrary {
@@ -22,13 +22,13 @@ export function createPersonalInstrumentPresetId(): PresetId {
 export function createPersonalInstrumentPreset(
   id: PresetId,
   name: string,
-  config: SubtractiveSynthConfig,
+  config: SynthConfig,
 ): InstrumentPreset {
   return {
     id,
     name: name.trim(),
-    kind: "subtractive",
-    config: cloneSubtractiveSynthConfig(config),
+    kind: "synth",
+    config: cloneSynthConfig(config),
   };
 }
 
@@ -37,13 +37,13 @@ export function cloneInstrumentPreset(
 ): InstrumentPreset {
   return {
     ...preset,
-    config: cloneSubtractiveSynthConfig(preset.config),
+    config: cloneSynthConfig(preset.config),
   };
 }
 
-export function cloneSubtractiveSynthConfig(
-  config: SubtractiveSynthConfig,
-): SubtractiveSynthConfig {
+export function cloneSynthConfig(
+  config: SynthConfig,
+): SynthConfig {
   return {
     ...config,
     envelope: { ...config.envelope },

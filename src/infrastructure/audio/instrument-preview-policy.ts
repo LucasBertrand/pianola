@@ -4,7 +4,7 @@ export type InstrumentParameterPreviewBehavior =
   | "processor-restart";
 
 /**
- * Canonical behavior of every real-time subtractive synth parameter.
+ * Canonical behavior of every real-time synth parameter.
  * Keep the dialog, transport and worklet implementations aligned with this
  * matrix instead of deciding preview semantics at individual call sites.
  */

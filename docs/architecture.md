@@ -198,7 +198,7 @@ ClipPlaybackSource
   → WorkletTimelineEngine
       timeline/transport publiés + surcharges tempo/boucle
       → état effectif (horloge, boucles, occurrences et polyphonie)
-  → SubtractiveWorkletVoice (oscillateur, enveloppes et filtre par échantillon)
+  → worklet/synth/SynthVoice (oscillateur, enveloppes et filtre par échantillon)
 ```
 
 Le worklet possède le transport et déclenche les occurrences depuis le nombre
@@ -234,8 +234,9 @@ suivantes. Aucune note n’est recompilée pendant cette interaction. Annuler re
 le paramètre transitoire ; confirmer publie une unique transaction dans
 `ProjectStore`.
 
-La façade publique est `src/infrastructure/audio/audio-worklet-transport.ts`. Le protocole et
-le DSP sont sous `src/infrastructure/audio/worklet/`. L’adaptateur navigateur peut être remplacé
+La façade publique est `src/infrastructure/audio/audio-worklet-transport.ts`. Le protocole est
+sous `src/infrastructure/audio/worklet/` et le DSP propre au synthé sous son
+propriétaire `worklet/synth/`. L’adaptateur navigateur peut être remplacé
 sans modifier le moteur temps réel pur.
 
 ## Persistance et fichiers projet
@@ -251,14 +252,15 @@ Les contrats `ProjectRepository`, `StoredProjectCodec`,
 `src/application/ports/`. Leurs implémentations Worker, IndexedDB, navigateur et
 mémoire sont sous `src/infrastructure/persistence/`. Les codecs routent d'abord
 l'identité et la version inconnues dans le pipeline commun
-`src/infrastructure/versioned-data/`. Chaque format ne déclare que sa version
+`src/infrastructure/migration/`. Chaque format ne déclare que sa version
 courante, le format attendu par version et ses étapes pures successives ; le
 pipeline refuse centralement les versions futures, les étapes manquantes et les
 sorties de migration incohérentes, puis les parseurs valident strictement le
 modèle courant.
-Le fichier portable, le snapshot local, le document musical et le layout
-IndexedDB partent tous de leur version 1. Aucune version historique ni migration
-de projet n'est encore déclarée.
+Le fichier portable, le snapshot local, le document musical et les réglages
+utilisateur écrivent leur version 2. Leurs migrations `1 -> 2` remplacent le
+vocabulaire persistant `Subtractive` par `Synth` dans les projets et presets.
+Le layout IndexedDB reste en version 1 car sa structure ne change pas.
 
 Les échecs complets alimentent les diagnostics de quarantaine et restent
 exportables sans mutation. IndexedDB crée son premier layout avec
@@ -269,10 +271,10 @@ courante.
 
 ```text
 Autosave : document + workspace → Worker → deux générations IndexedDB
-Ouverture: génération v1 → validation stricte
-Export   : document + workspace → JSON portable v1 validé → Blob
-Import   : File → version v1 → validation → nouvelle entrée locale
-Settings : mise à jour atomique → document IndexedDB séparé
+Ouverture: génération v1/v2 → migration éventuelle → validation v2
+Export   : document + workspace → JSON portable v2 validé → Blob
+Import   : File → version 1/2 → migration éventuelle → nouvelle entrée locale
+Settings : v1/v2 → migration éventuelle → document v2 IndexedDB séparé
 MIDI     : File ↔ codec SMF ↔ analyse/projection neutre ↔ projet
 ```
 

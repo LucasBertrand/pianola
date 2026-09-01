@@ -14,8 +14,8 @@ départ visible, le propriétaire d’état et les témoins actuels.
 | clips et groupes | `src/presentation/inspector/clips/ClipInspector.tsx` | `ProjectDocument.clipHierarchy`, `ActiveClipSelection.activeClipId` et identité transitoire du clip joué | tests de hiérarchie, commandes et suite centrale de régression |
 | projections temporelles | gestes dans `PianoRollTimeMapOverlay.tsx`, `PianoRollLoopOverlay.tsx` et `piano-roll-gesture-strategy.ts` | état publié dans `ProjectStore`, projections dans `TimeMapMarkerPreviewSession` / `LoopPreviewSession`, état effectif dans les consommateurs et le worklet | tests des sessions, projections, sélection mixte et AudioWorklet |
 | transport | `src/presentation/transport/TransportControls.tsx` puis `usePianoRollTransportViewport.ts` | `TimeMap` et boucle publiées du clip, enchaînement global et auto-scroll du document ; timeline/transport publiés et surcharges effectives dans le worklet | politiques transport/viewport, tests AudioWorklet et suite centrale |
-| persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` ; routage commun des versions dans `src/infrastructure/versioned-data/versioned-migration-pipeline.ts` | `StoredProject`, rapport transitoire, générations et quarantaine de `ProjectRepository` ; réglages dans `UserSettingsRepository` | contrats sous `src/infrastructure/persistence/__tests__/` et pipeline sous `src/infrastructure/versioned-data/__tests__/` |
-| fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` puis `migrations/migrate-portable-project.ts` | document + `PersistedEditorWorkspace`, avec rapport de migration transitoire | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
+| persistance locale | `src/application/ports/project-repository.ts` puis `src/infrastructure/persistence/` ; routage commun des versions dans `src/infrastructure/migration/versioned-migration-pipeline.ts` | `StoredProject`, rapport transitoire, générations et quarantaine de `ProjectRepository` ; réglages dans `UserSettingsRepository` | contrats sous `src/infrastructure/persistence/__tests__/` et pipeline sous `src/infrastructure/migration/__tests__/` |
+| fichiers `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` puis `migrate-portable-project.ts` | document + `PersistedEditorWorkspace`, avec rapport de migration transitoire | `src/infrastructure/persistence/__tests__/persistence-codecs.test.ts` |
 | MIDI | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` puis `useMidiFileWorkflow.ts` | analyse transitoire puis nouveau projet | `tests/integration/midi-regression.test.mjs` |
 | aide et mémo éditeur | `src/presentation/project-files/ProjectMenu.tsx` puis `src/presentation/dialogs/HelpMemoDialog.tsx` | état d'ouverture React transitoire ; contenu de référence sans état métier | tests colocalisés du menu projet et de la modale |
 | sliders | `src/presentation/slider/Slider.tsx` | valeur durable du consommateur ; `SliderPointerSession` transitoire pendant un geste | tests purs colocalisés de `slider-value.ts` et `slider-pointer-session.ts` |
@@ -36,6 +36,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le playhead | `src/editor-core/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier Undo/Redo ou les transactions | `src/application/history/editor-command-service.ts` | `project-store.ts`, puis reducers sous `src/domain/commands/` |
 | modifier l’indicateur de lecture des clips | `src/presentation/inspector/clips/clip-playhead-visual.ts` | `src/presentation/inspector/clips/ClipInspector.tsx`, puis `src/presentation/styles/inspector.css` |
+| modifier le DSP du synthé | `src/infrastructure/audio/worklet/synth/synth-voice.ts` | `polyblep-oscillator.ts` et `sample-envelope.ts` dans le même propriétaire ; banque et allocation globales restent sous `worklet/` |
 | modifier la concaténation d’un groupe | `src/presentation/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-concatenation-commands.ts` |
 | modifier la découpe d’un clip | `src/presentation/dialogs/ClipSplitDialog.tsx` | `src/presentation/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
 | modifier la duplication d’un groupe | `src/presentation/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
@@ -48,8 +49,8 @@ restent le garde-fou de parité des flux transversaux.
 | ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
 | modifier le master bus | `src/presentation/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | `meter-marker-operations.ts`, `point-marker-operations.ts`, commandes de transport, validation et painters ruler/grid |
-| modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | pipeline `pianola/migrations/`, workspace codec, parseur de document puis `presentation/project-files/useProjectMigrationDialog.tsx` pour un futur rapport |
-| modifier autosave ou récupération | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` | `src/application/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports, migrations de codec puis repository IndexedDB/Worker |
+| modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | `migrate-portable-project.ts`, migration de document partagée sous `infrastructure/migration/`, workspace codec, parseur de document puis `presentation/project-files/useProjectMigrationDialog.tsx` pour un futur rapport |
+| modifier autosave ou récupération | `src/presentation/project-files/usePianoRollProjectLifecycle.ts` | `src/application/persistence/project-autosave.ts`, projection sous `src/application/editor-session/workspace-persistence.ts`, ports, migrations à la racine de `src/infrastructure/persistence/codecs/`, puis repository IndexedDB/Worker |
 | modifier le MIDI | `src/infrastructure/project-files/midi/standard-midi-file.ts` | reader/writer et analyse |
 | modifier le mémo d'aide | `src/presentation/dialogs/HelpMemoDialog.tsx` | `src/presentation/project-files/ProjectMenu.tsx`, puis `src/presentation/styles/dialogs.css` |
 | modifier un slider | `src/presentation/slider/Slider.tsx` | `slider-pointer-session.ts`, `slider-value.ts`, puis `styles/slider.css` |
@@ -108,7 +109,7 @@ TransportControls
   → createTransferableAudioWorkletTimeline
   → AudioWorkletTransport / MessagePort
   → WorkletTimelineEngine
-  → SubtractiveWorkletVoice
+  → synth/SynthVoice
 ```
 
 Le statut et les voix ne sont ni persistés ni annulables. Le worklet avance
@@ -124,8 +125,8 @@ ProjectStore / signaux workspace
   → IndexedDbProjectRepository
   → génération + résumé publiés atomiquement
 
-Ouverture courante : génération v1 → validation stricte
-Future ouverture historique : version → migrations pures → validation courante
+Ouverture courante : génération v1/v2 → migration éventuelle → validation v2
+Ouverture historique : version → migrations pures → validation courante
 Échec complet : diagnostics par génération → archive brute + rapport texte
 
 Export : useProjectFileWorkflow → portable-project-codec → Blob

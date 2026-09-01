@@ -28,7 +28,7 @@ import {
 } from "./project-workspace-codec";
 import {
   migrateStoredProject,
-} from "./migrations/migrate-stored-project";
+} from "./migrate-stored-project";
 import {
   STORED_PROJECT_FORMAT,
   STORED_PROJECT_SCHEMA_VERSION,

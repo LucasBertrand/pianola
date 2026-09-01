@@ -21,8 +21,8 @@ import {
   getClipDurationTicks,
 } from "../../domain/clips/clip";
 import {
-  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+  MAXIMUM_SYNTH_POLYPHONY,
+  MINIMUM_SYNTH_POLYPHONY,
 } from "../../domain/instruments/instrument";
 import {
   MAXIMUM_MASTER_GAIN,
@@ -38,7 +38,7 @@ import type {
   PlaybackSnapshot,
   PlaybackPlan,
   PlaybackInstrumentSnapshot,
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
   TempoMapSnapshot,
 } from "./playback-model";
 import type {
@@ -176,7 +176,7 @@ function compileInstrumentSnapshot(
   notesById: Readonly<Record<string, Note>>,
   projectDurationTicks: number,
 ): PlaybackInstrumentSnapshot {
-  if (instrument.kind !== "subtractive") {
+  if (instrument.kind !== "synth") {
     throw new PlaybackSnapshotCompilationError(
       `Project instrument "${projectInstrument.id}" uses unsupported instrument kind`
         + ` "${instrument.kind}".`,
@@ -198,12 +198,12 @@ function compileInstrumentSnapshot(
   if (
     !Number.isSafeInteger(instrument.polyphony)
     || instrument.polyphony
-      < MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+      < MINIMUM_SYNTH_POLYPHONY
     || instrument.polyphony
-      > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+      > MAXIMUM_SYNTH_POLYPHONY
   ) {
     throw new PlaybackSnapshotCompilationError(
-      `Project instrument "${projectInstrument.id}" subtractive synth polyphony must be between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
+      `Project instrument "${projectInstrument.id}" synth polyphony must be between ${MINIMUM_SYNTH_POLYPHONY} and ${MAXIMUM_SYNTH_POLYPHONY}.`,
     );
   }
 
@@ -300,10 +300,10 @@ function packInstrumentEvents(
 function cloneInstrument(
   instrumentId: InstrumentId,
   instrument: InstrumentConfig,
-): SubtractivePlaybackPresetSnapshot {
-  if (instrument.kind !== "subtractive") {
+): SynthPlaybackPresetSnapshot {
+  if (instrument.kind !== "synth") {
     throw new PlaybackSnapshotCompilationError(
-      `Project instrument "${instrumentId}" does not contain a subtractive instrument.`,
+      `Project instrument "${instrumentId}" does not contain a synth instrument.`,
     );
   }
 
@@ -316,7 +316,7 @@ function cloneInstrument(
   });
 
   return Object.freeze({
-    kind: "subtractive",
+    kind: "synth",
     oscillatorWaveform: instrument.oscillatorWaveform,
     polyphony: instrument.polyphony,
     oscillatorDetuneCents: instrument.oscillatorDetuneCents,

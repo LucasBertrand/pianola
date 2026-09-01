@@ -9,11 +9,11 @@ import {
 } from "../../domain/instruments/instrument-constants";
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
-  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+  MAXIMUM_SYNTH_POLYPHONY,
+  MINIMUM_SYNTH_POLYPHONY,
   type InstrumentPreset,
   type OscillatorWaveform,
-  type SubtractiveSynthConfig,
+  type SynthConfig,
 } from "../../domain/instruments/instrument";
 import {
   type PresetId,
@@ -30,11 +30,11 @@ export interface InstrumentPresetDialogProps {
   readonly selectedPresetId: PresetId | "";
   readonly instrumentName: string;
   readonly instrumentColor: string;
-  readonly instrument: SubtractiveSynthConfig;
+  readonly instrument: SynthConfig;
   readonly onPresetSelectionChange: (presetId: PresetId) => void;
   readonly onInstrumentNameChange: (name: string) => void;
   readonly onInstrumentColorChange: (color: string) => void;
-  readonly onInstrumentChange: (instrument: SubtractiveSynthConfig) => void;
+  readonly onInstrumentChange: (instrument: SynthConfig) => void;
   readonly selectedPresetIsPersonal: boolean;
   readonly onCreatePreset: (name: string) => Promise<void>;
   readonly onSavePreset: () => Promise<void>;
@@ -75,7 +75,7 @@ export function InstrumentPresetDialog({
   const [presetActionPending, setPresetActionPending] = useState(false);
   const [presetActionError, setPresetActionError] = useState<string | null>(null);
   const update = (
-    changes: Partial<SubtractiveSynthConfig>,
+    changes: Partial<SynthConfig>,
   ): void => {
     onInstrumentChange({ ...instrument, ...changes });
   };
@@ -184,8 +184,8 @@ export function InstrumentPresetDialog({
           </label>
           <label className="instrument-preset-dialog-control instrument-editor-engine-control">
             <span>Engine</span>
-            <select value="subtractive" disabled>
-              <option value="subtractive">Subtractive</option>
+            <select value="synth" disabled>
+              <option value="synth">Synth</option>
             </select>
           </label>
           <div className="instrument-preset-manager">
@@ -356,11 +356,11 @@ export function InstrumentPresetDialog({
                     {Array.from(
                       {
                         length:
-                          MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-                          - MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+                          MAXIMUM_SYNTH_POLYPHONY
+                          - MINIMUM_SYNTH_POLYPHONY
                           + 1,
                       },
-                      (_, index) => MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY + index,
+                      (_, index) => MINIMUM_SYNTH_POLYPHONY + index,
                     ).map((value) => (
                       <option key={value} value={value}>{value}</option>
                     ))}
@@ -527,8 +527,8 @@ function PresetOptions({
 
 interface EnvelopeControlsProps {
   readonly title: string;
-  readonly envelope: SubtractiveSynthConfig["envelope"];
-  readonly onChange: (envelope: SubtractiveSynthConfig["envelope"]) => void;
+  readonly envelope: SynthConfig["envelope"];
+  readonly onChange: (envelope: SynthConfig["envelope"]) => void;
 }
 
 function EnvelopeControls({
@@ -637,7 +637,7 @@ function WaveformVisual({
 }
 
 interface EnvelopeVisualProps {
-  readonly envelope: SubtractiveSynthConfig["envelope"];
+  readonly envelope: SynthConfig["envelope"];
 }
 
 function EnvelopeVisual({
@@ -715,7 +715,7 @@ function createWaveformPoints(
 }
 
 function createEnvelopePreview(
-  envelope: SubtractiveSynthConfig["envelope"],
+  envelope: SynthConfig["envelope"],
 ): {
   readonly points: string;
   readonly boundaries: readonly number[];

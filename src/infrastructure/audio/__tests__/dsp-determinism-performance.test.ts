@@ -7,14 +7,14 @@ import type {
   OscillatorWaveform,
 } from "../../../domain/instruments/instrument";
 import type {
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
 } from "../playback-model";
 import type {
   AudioWorkletTimeline,
 } from "../worklet/audio-worklet-protocol";
 import {
-  SubtractiveWorkletVoice,
-} from "../worklet/subtractive-worklet-voice";
+  SynthVoice,
+} from "../worklet/synth/synth-voice";
 import {
   WorkletTimelineEngine,
 } from "../worklet/worklet-timeline-engine";
@@ -88,7 +88,7 @@ const PERFORMANCE_CASES = [
   { voiceCount: 24, maximumMillisecondsPerQuantum: 2.4 },
 ] as const;
 
-describe("deterministic subtractive DSP bench", () => {
+describe("deterministic synth DSP bench", () => {
   test.each(SAMPLE_RATES)("voice and engine are deterministic at %i Hz", (sampleRate) => {
     for (const waveform of WAVEFORMS) {
       expect(renderVoice(waveform, sampleRate)).toEqual(
@@ -217,7 +217,7 @@ function renderVoice(
   waveform: OscillatorWaveform,
   sampleRate: number,
 ): Float32Array {
-  const voice = new SubtractiveWorkletVoice(sampleRate);
+  const voice = new SynthVoice(sampleRate);
   voice.start("dsp", 69, createConfig(waveform, 1), 440, 1, null, null);
   for (let index = 0; index < Math.round(sampleRate * 0.25); index += 1) {
     voice.render();
@@ -292,9 +292,9 @@ function createEngine(
 function createConfig(
   waveform: OscillatorWaveform,
   polyphony: number,
-): SubtractivePlaybackPresetSnapshot {
+): SynthPlaybackPresetSnapshot {
   return {
-    kind: "subtractive",
+    kind: "synth",
     oscillatorWaveform: waveform,
     polyphony,
     oscillatorDetuneCents: 0,

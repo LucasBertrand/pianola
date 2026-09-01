@@ -3,7 +3,7 @@
 ## Que possède cette zone ?
 
 La compilation de la timeline transférable, le transport à l’échantillon, les
-boucles, les voix soustractives, les enveloppes et le protocole AudioWorklet.
+boucles, les voix de synthèse, les enveloppes et le protocole AudioWorklet.
 
 ## Quel fichier lire en premier ?
 
@@ -11,6 +11,11 @@ La façade navigateur est `audio-worklet-transport.ts`. Le cœur temps réel est
 `worklet/worklet-timeline-engine.ts`; il est indépendant du DOM et testable sans
 navigateur. `worklet/playback-processor.ts` ne fait que relier ce cœur à
 `AudioWorkletProcessor`.
+
+Les briques DSP propres au synthé sont regroupées sous `worklet/synth/` : voix,
+oscillateur PolyBLEP et enveloppe échantillonnée. La timeline, le protocole, la
+banque et l'allocation globales de voix, ainsi que l'étage master restent au
+niveau de `worklet/`.
 
 ```text
 PlaybackSource
@@ -80,7 +85,7 @@ largeur demandée n’est plus représentable, ce qui stabilise les largeurs 5/9
 dans l’aigu sans ajouter d’allocation ni de suréchantillonnage.
 
 `__tests__/dsp-determinism-performance.test.ts` complète ces goldens sur la voix
-soustractive et sur le moteur entier à 44,1, 48 et 96 kHz. Il mesure aussi la
+de synthèse et sur le moteur entier à 44,1, 48 et 96 kHz. Il mesure aussi la
 discontinuité maximale, vérifie le rendu bit-déterministe et impose, à 48 kHz,
 des budgets médians par quantum de 0,25 ms, 0,9 ms et 2,4 ms pour respectivement
 1, 8 et 24 voix. Les buffers sont préalloués et un garde interdit les

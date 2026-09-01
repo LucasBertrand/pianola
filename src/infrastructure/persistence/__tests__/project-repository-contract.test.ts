@@ -42,6 +42,39 @@ describe("project repository contract", () => {
   runRepositoryContract("memory", createMemoryHarness);
   runRepositoryContract("IndexedDB", createIndexedDbHarness);
 
+  test("migrates a stored project envelope from version 1", async () => {
+    const snapshot = createSnapshot();
+    const encoded = await DIRECT_STORED_PROJECT_CODEC.encode(snapshot);
+    const legacy = JSON.parse(
+      encoded.serialized
+        .replaceAll('"synth"', '"subtractive"')
+        .replaceAll('"synth-', '"subtractive-'),
+    ) as {
+      format: string;
+      schemaVersion: number;
+      document: {
+        schemaVersion: number;
+        instrumentOrder: readonly string[];
+      };
+    };
+    legacy.format = "app.pianola.stored-project.v1";
+    legacy.schemaVersion = 1;
+    legacy.document.schemaVersion = 1;
+
+    const migrated = await DIRECT_STORED_PROJECT_CODEC.decode(
+      JSON.stringify(legacy),
+    );
+    const instrumentId = migrated.project.document.instrumentOrder[0]!;
+
+    expect(migrated.migration).toMatchObject({
+      sourceVersion: 1,
+      targetVersion: 2,
+      changes: [{ kind: "instrument-engine-renamed" }],
+    });
+    expect(migrated.project.document
+      .projectInstrumentsById[instrumentId]?.instrument.kind).toBe("synth");
+  });
+
   test("reports quota exhaustion without publishing a project", async () => {
     const repository = new InMemoryProjectRepository(
       DIRECT_STORED_PROJECT_CODEC,

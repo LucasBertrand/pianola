@@ -4,9 +4,11 @@ Cette zone possède le moteur générique qui route une enveloppe persistée sel
 son format et sa version, applique sans saut ses migrations `n -> n + 1`, puis
 produit un rapport agrégé.
 
-Elle ne possède aucun schéma concret. Les migrations de snapshots locaux et de
-réglages restent sous `infrastructure/persistence/`; celles des fichiers
-portables restent sous `infrastructure/project-files/pianola/`.
+Cette zone contient aussi les transformations pures partagées par plusieurs
+enveloppes, comme la transition du document projet de la version 1 à la version
+2. Les routeurs propres aux snapshots locaux et aux réglages restent
+à la racine de `infrastructure/persistence/codecs/`; celui des fichiers
+portables reste à la racine de `infrastructure/project-files/pianola/`.
 
 Le moteur réutilise les lecteurs JSON stricts et les erreurs de persistance
 existants. Il ne dépend ni du navigateur, ni d'IndexedDB, ni d'un codec concret.
@@ -33,5 +35,5 @@ manquante est refusée et le payload d'origine reste intact.
 Test ciblé :
 
 ```bash
-npm test -- src/infrastructure/versioned-data/__tests__/versioned-migration-pipeline.test.ts
+npm test -- src/infrastructure/migration/__tests__/versioned-migration-pipeline.test.ts
 ```

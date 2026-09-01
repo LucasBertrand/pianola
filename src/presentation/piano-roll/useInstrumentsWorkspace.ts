@@ -15,7 +15,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   InstrumentPreset,
-  SubtractiveSynthConfig,
+  SynthConfig,
 } from "../../domain/instruments/instrument";
 import type {
   PianoRollControllerPort,
@@ -52,7 +52,7 @@ export interface InstrumentsWorkspaceOptions {
   readonly onUserSettingsChange: (settings: UserSettings) => void;
   readonly previewInstrumentSettings: (
     instrumentId: InstrumentId,
-    config: SubtractiveSynthConfig | null,
+    config: SynthConfig | null,
   ) => void;
 }
 

@@ -15,7 +15,7 @@ import type {
 } from "../../../domain/identifiers";
 import type {
   InstrumentPreset,
-  SubtractiveSynthConfig,
+  SynthConfig,
 } from "../../../domain/instruments/instrument";
 import {
   createPersonalInstrumentPresetId,
@@ -51,11 +51,11 @@ export interface PianoRollUserPreferences {
   readonly togglePitchPreview: () => void;
   readonly createPersonalPreset: (
     name: string,
-    config: SubtractiveSynthConfig,
+    config: SynthConfig,
   ) => Promise<InstrumentPreset>;
   readonly updatePersonalPreset: (
     presetId: PresetId,
-    config: SubtractiveSynthConfig,
+    config: SynthConfig,
   ) => Promise<InstrumentPreset>;
   readonly renamePersonalPreset: (
     presetId: PresetId,
@@ -157,7 +157,7 @@ export function usePianoRollUserPreferences({
   }, [persistPreference]);
   const createPersonalPreset = useCallback(async (
     name: string,
-    config: SubtractiveSynthConfig,
+    config: SynthConfig,
   ): Promise<InstrumentPreset> => {
     let preset: InstrumentPreset | undefined;
     const updatedSettings = await repository.update((current) => {
@@ -180,7 +180,7 @@ export function usePianoRollUserPreferences({
   }, [onSettingsChange, repository]);
   const updatePersonalPreset = useCallback(async (
     presetId: PresetId,
-    config: SubtractiveSynthConfig,
+    config: SynthConfig,
   ): Promise<InstrumentPreset> => {
     let preset: InstrumentPreset | undefined;
     const updatedSettings = await repository.update((current) => {

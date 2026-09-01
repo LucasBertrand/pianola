@@ -9,12 +9,12 @@ import type {
   Tick,
 } from "../identifiers";
 
-export const DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY =
-  PROJECT_CONSTANTS.defaultSubtractiveSynthPolyphony;
-export const MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY =
-  PROJECT_CONSTANTS.minimumSubtractiveSynthPolyphony;
-export const MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY =
-  PROJECT_CONSTANTS.maximumSubtractiveSynthPolyphony;
+export const DEFAULT_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.defaultSynthPolyphony;
+export const MINIMUM_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.minimumSynthPolyphony;
+export const MAXIMUM_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.maximumSynthPolyphony;
 export const MAXIMUM_INSTRUMENT_NAME_LENGTH =
   PROJECT_CONSTANTS.maximumInstrumentNameLength;
 export const MAXIMUM_PROJECT_INSTRUMENT_COUNT =
@@ -39,8 +39,8 @@ export type OscillatorWaveform =
   | "sawtooth"
   | "triangle";
 
-export interface SubtractiveSynthConfig {
-  readonly kind: "subtractive";
+export interface SynthConfig {
+  readonly kind: "synth";
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
@@ -55,17 +55,17 @@ export interface SubtractiveSynthConfig {
   readonly filterEnvelope: AdsrEnvelope;
 }
 
-export type InstrumentConfig = SubtractiveSynthConfig;
+export type InstrumentConfig = SynthConfig;
 
-export interface SubtractiveSynthPreset {
+export interface SynthPreset {
   readonly id: PresetId;
   readonly name: string;
-  readonly kind: "subtractive";
-  readonly config: SubtractiveSynthConfig;
+  readonly kind: "synth";
+  readonly config: SynthConfig;
 }
 
 /** A named, reusable sound definition shared by every clip. */
-export type InstrumentPreset = SubtractiveSynthPreset;
+export type InstrumentPreset = SynthPreset;
 
 export type EffectParameterValue = number | boolean | string;
 

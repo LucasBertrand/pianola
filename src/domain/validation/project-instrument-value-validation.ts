@@ -7,8 +7,8 @@ import {
   MAXIMUM_DESCRIPTOR_PARAMETER_COUNT,
   MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
-  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+  MAXIMUM_SYNTH_POLYPHONY,
+  MINIMUM_SYNTH_POLYPHONY,
 } from "../instruments/instrument";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
@@ -53,13 +53,13 @@ export function appendInstrumentConfigIssues(
   );
   if (
     !Number.isSafeInteger(instrument.polyphony)
-    || instrument.polyphony < MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
-    || instrument.polyphony > MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY
+    || instrument.polyphony < MINIMUM_SYNTH_POLYPHONY
+    || instrument.polyphony > MAXIMUM_SYNTH_POLYPHONY
   ) {
     pushProjectInstrumentIssue(
       issues,
       "instrument.polyphony",
-      `Subtractive synth polyphony must be an integer between ${MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY} and ${MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY}.`,
+      `Synth polyphony must be an integer between ${MINIMUM_SYNTH_POLYPHONY} and ${MAXIMUM_SYNTH_POLYPHONY}.`,
     );
   }
   validateFiniteNumber(

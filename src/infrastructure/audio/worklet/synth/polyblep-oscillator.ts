@@ -1,6 +1,6 @@
 import type {
   OscillatorWaveform,
-} from "../../../domain/instruments/instrument";
+} from "../../../../domain/instruments/instrument";
 
 // A frequency-relative leak removes the tiny integration bias left by the two
 // discrete BLEP transitions. Unlike a fixed per-sample leak, it has the same

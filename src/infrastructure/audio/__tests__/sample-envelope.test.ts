@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   SampleEnvelope,
   shapeEnvelopeProgress,
-} from "../worklet/sample-envelope";
+} from "../worklet/synth/sample-envelope";
 
 describe("sample envelope curvature", () => {
   test("moves continuously from exponential through linear to logarithmic", () => {

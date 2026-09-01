@@ -25,7 +25,7 @@ import {
 } from "./pianola-project-schema";
 import {
   migratePortableProject,
-} from "./migrations/migrate-portable-project";
+} from "./migrate-portable-project";
 
 export function serializePianolaProject(
   project: PianolaProject,

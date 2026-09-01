@@ -107,11 +107,10 @@ refuse les champs qui ne font pas partie de la baseline courante au lieu de les
 convertir ou de les abandonner silencieusement. Les seules données par clip
 persistées sont `pitchSnapSettings` et `gridSettings`.
 
-Le snapshot projet local courant est la première baseline, version 1. Les
-préférences utilisateur restent également en version 1 pendant cette phase de
-développement. Un futur rapport de
-migration restera transitoire et n'entrera pas dans Undo/Redo. IndexedDB utilise
-également son premier layout, version 1 ; un layout local supérieur incompatible
+Le snapshot projet local et les préférences utilisateur courants sont en
+version 2. Leurs versions 1 sont migrées vers le vocabulaire `Synth` ; le
+rapport de migration reste transitoire et n'entre pas dans Undo/Redo. IndexedDB
+utilise toujours son premier layout, version 1 ; un layout local supérieur incompatible
 est supprimé et recréé pendant ce reset initial.
 Les diagnostics de projets et les payloads de quarantaine
 restent propriétaires de l'infrastructure ; les réglages incompatibles sont

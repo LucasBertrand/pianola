@@ -72,7 +72,7 @@ import {
   createDefaultTransportState,
 } from "../../src/domain/transport/transport";
 import {
-  DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
+  DEFAULT_SYNTH_POLYPHONY,
 } from "../../src/domain/instruments/instrument";
 import {
   PROJECT_SCHEMA_VERSION,
@@ -1131,10 +1131,10 @@ function getActiveTestMeasureCount(state) {
     assert.deepEqual([...instrumentA.startTicks], [240, 240, 960]);
     assert.deepEqual([...instrumentA.pitches], [60, 72, 50]);
     assert.deepEqual([...instrumentA.durationTicks], [480, 120, 240]);
-    assert.equal(instrumentA.instrument.kind, "subtractive");
+    assert.equal(instrumentA.instrument.kind, "synth");
     assert.equal(
       instrumentA.instrument.polyphony,
-      DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
+      DEFAULT_SYNTH_POLYPHONY,
     );
     assert.notEqual(
       instrumentA.instrument,
@@ -1288,7 +1288,7 @@ function getActiveTestMeasureCount(state) {
     const { project: loaded } = parsePianolaProject(serialized);
     const nativeDocument = JSON.parse(serialized);
 
-    assert.equal(nativeDocument.schemaVersion, 1);
+    assert.equal(nativeDocument.schemaVersion, 2);
     assert.equal(loaded.document.masterBus.gain, 0.41);
     assert.equal(loaded.document.masterBus.tuningFrequencyHz, 442);
     assert.equal(
@@ -1303,7 +1303,7 @@ function getActiveTestMeasureCount(state) {
     );
     assert.equal(
       loaded.document.projectInstrumentsById["voice-a"].instrument.polyphony,
-      DEFAULT_SUBTRACTIVE_SYNTH_POLYPHONY,
+      DEFAULT_SYNTH_POLYPHONY,
     );
 
     const invalidCurrentDocument = JSON.parse(serialized);

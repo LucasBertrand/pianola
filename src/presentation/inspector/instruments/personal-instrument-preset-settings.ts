@@ -5,7 +5,7 @@ import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
   type InstrumentPreset,
-  type SubtractiveSynthConfig,
+  type SynthConfig,
 } from "../../../domain/instruments/instrument";
 import type {
   PresetId,
@@ -18,7 +18,7 @@ export function addPersonalInstrumentPreset(
   settings: UserSettings,
   presetId: PresetId,
   presetName: string,
-  config: SubtractiveSynthConfig,
+  config: SynthConfig,
 ): { readonly settings: UserSettings; readonly preset: InstrumentPreset } {
   const normalizedName = validatePersonalPresetName(presetName);
   assertPersonalPresetNameAvailable(settings, normalizedName);
@@ -55,7 +55,7 @@ export function addPersonalInstrumentPreset(
 export function updatePersonalInstrumentPreset(
   settings: UserSettings,
   presetId: PresetId,
-  config: SubtractiveSynthConfig,
+  config: SynthConfig,
 ): { readonly settings: UserSettings; readonly preset: InstrumentPreset } {
   const currentPreset = getPersonalInstrumentPreset(settings, presetId);
   const preset = createPersonalInstrumentPreset(

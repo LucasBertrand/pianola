@@ -1,6 +1,6 @@
 import type {
   PlaybackEnvelope,
-} from "../playback-model";
+} from "../../playback-model";
 
 const MINIMUM_EDGE_SECONDS = 0.001;
 

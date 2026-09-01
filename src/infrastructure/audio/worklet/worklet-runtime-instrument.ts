@@ -1,5 +1,5 @@
 import type {
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
 } from "../playback-model";
 import type {
   AudioWorkletTimelineInstrument,
@@ -7,9 +7,9 @@ import type {
 
 export interface WorkletRuntimeInstrument {
   timeline: AudioWorkletTimelineInstrument;
-  publishedConfig: SubtractivePlaybackPresetSnapshot;
-  config: SubtractivePlaybackPresetSnapshot;
-  previewConfig: SubtractivePlaybackPresetSnapshot | null;
+  publishedConfig: SynthPlaybackPresetSnapshot;
+  config: SynthPlaybackPresetSnapshot;
+  previewConfig: SynthPlaybackPresetSnapshot | null;
   gain: number;
   pan: number;
   muted: boolean;

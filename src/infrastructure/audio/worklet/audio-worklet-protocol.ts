@@ -13,7 +13,7 @@ import type {
 } from "../../../domain/transport/transport";
 import type {
   PlaybackStatus,
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
 } from "../playback-model";
 import type {
   MasterLevelMeasurement,
@@ -38,7 +38,7 @@ export interface AudioWorkletTimelineInstrument {
   readonly pan: number;
   readonly muted: boolean;
   readonly solo: boolean;
-  readonly instrument: SubtractivePlaybackPresetSnapshot;
+  readonly instrument: SynthPlaybackPresetSnapshot;
 }
 
 /** Minimum transferable data required by the real-time rendering thread. */
@@ -129,7 +129,7 @@ export type MainToAudioWorkletMessage = VersionedMessage & (
   | {
       readonly type: "instrument-config";
       readonly instrumentId: InstrumentId;
-      readonly instrument: SubtractivePlaybackPresetSnapshot;
+      readonly instrument: SynthPlaybackPresetSnapshot;
       readonly sequence: number;
       readonly stateVersion: number;
     }

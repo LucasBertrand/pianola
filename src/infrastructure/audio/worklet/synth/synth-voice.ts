@@ -1,10 +1,10 @@
 import type {
   InstrumentId,
   NoteId,
-} from "../../../domain/identifiers";
+} from "../../../../domain/identifiers";
 import type {
-  SubtractivePlaybackPresetSnapshot,
-} from "../playback-model";
+  SynthPlaybackPresetSnapshot,
+} from "../../playback-model";
 import {
   PolyBlepOscillator,
 } from "./polyblep-oscillator";
@@ -19,7 +19,7 @@ const FIXED_NOTE_LEVEL = 100 / 127;
 const FILTER_COEFFICIENT_UPDATE_SAMPLES = 32;
 
 /** Reusable DSP voice initialized from the fixed worklet-side pool. */
-export class SubtractiveWorkletVoice {
+export class SynthVoice {
   public instrumentId: InstrumentId = "";
   public noteId: NoteId | null = null;
   public sequence = 0;
@@ -28,7 +28,7 @@ export class SubtractiveWorkletVoice {
   private readonly amplitudeEnvelope = new SampleEnvelope();
   private readonly filterEnvelope = new SampleEnvelope();
   private baseFrequencyHz = 440;
-  private waveform: SubtractivePlaybackPresetSnapshot["oscillatorWaveform"] =
+  private waveform: SynthPlaybackPresetSnapshot["oscillatorWaveform"] =
     "sine";
   private pulseWidth = 0.5;
   private targetPulseWidth = 0.5;
@@ -64,7 +64,7 @@ export class SubtractiveWorkletVoice {
   public start(
     instrumentId: InstrumentId,
     pitch: number,
-    config: SubtractivePlaybackPresetSnapshot,
+    config: SynthPlaybackPresetSnapshot,
     tuningFrequencyHz: number,
     sequence: number,
     endTick: number | null,
@@ -156,7 +156,7 @@ export class SubtractiveWorkletVoice {
     return this.amplitudeEnvelope.currentValue;
   }
 
-  public preview(config: SubtractivePlaybackPresetSnapshot): void {
+  public preview(config: SynthPlaybackPresetSnapshot): void {
     this.oscillatorDetuneCents = config.oscillatorDetuneCents;
     this.targetFrequencyHz = this.baseFrequencyHz
       * 2 ** (config.oscillatorDetuneCents / 1_200);

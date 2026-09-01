@@ -11,7 +11,7 @@ import {
   type OscillatorWaveform,
   type ProjectInstrument,
   type ProjectInstrumentInterpretation,
-  type SubtractiveSynthConfig,
+  type SynthConfig,
 } from "../../../../domain/instruments/instrument";
 import {
   type InstrumentId,
@@ -22,8 +22,8 @@ import {
   MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+  MAXIMUM_SYNTH_POLYPHONY,
+  MINIMUM_SYNTH_POLYPHONY,
 } from "../../../../domain/instruments/instrument";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
@@ -182,7 +182,7 @@ export function parseInstrumentPresets(
       `${presetPath}.config`,
     );
 
-    if (kind !== "subtractive" || kind !== config.kind) {
+    if (kind !== "synth" || kind !== config.kind) {
       fail(
         "INVALID_DATA",
         `${presetPath}.kind`,
@@ -346,24 +346,24 @@ function parseInstrument(
     MAXIMUM_NAME_LENGTH,
   );
 
-  if (kind !== "subtractive") {
+  if (kind !== "synth") {
     return fail(
       "INVALID_DATA",
       `${path}.kind`,
       `Instrument kind "${kind}" is not supported.`
-        + " Only subtractive instruments are supported.",
+        + " Only synth instruments are supported.",
     );
   }
 
-  return parseSubtractiveSynth(instrument, path);
+  return parseSynth(instrument, path);
 }
 
-function parseSubtractiveSynth(
+function parseSynth(
   instrument: UnknownRecord,
   path: string,
-): SubtractiveSynthConfig {
+): SynthConfig {
   return {
-    kind: "subtractive",
+    kind: "synth",
     oscillatorWaveform: parseWaveform(
       instrument["oscillatorWaveform"],
       `${path}.oscillatorWaveform`,
@@ -379,8 +379,8 @@ function parseSubtractiveSynth(
     polyphony: readIntegerInRange(
       instrument["polyphony"],
       `${path}.polyphony`,
-      MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-      MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+      MINIMUM_SYNTH_POLYPHONY,
+      MAXIMUM_SYNTH_POLYPHONY,
     ),
     pulseWidth: readNumberInRange(
       instrument["pulseWidth"],

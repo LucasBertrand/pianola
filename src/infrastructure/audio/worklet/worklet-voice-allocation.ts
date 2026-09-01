@@ -2,8 +2,8 @@ import type {
   InstrumentId,
 } from "../../../domain/identifiers";
 import type {
-  SubtractiveWorkletVoice,
-} from "./subtractive-worklet-voice";
+  SynthVoice,
+} from "./synth/synth-voice";
 
 export const GLOBAL_VOICE_LIMIT = 24;
 export const GLOBAL_VOICE_STORAGE_LIMIT = GLOBAL_VOICE_LIMIT * 2;
@@ -11,14 +11,14 @@ export const VOICE_STEAL_RELEASE_SECONDS = 0.006;
 
 /** Bounded, allocation-free voice reservation for the audio render thread. */
 export function reserveWorkletVoice(
-  voices: SubtractiveWorkletVoice[],
+  voices: SynthVoice[],
   instrumentId: InstrumentId,
   instrumentPolyphony: number,
-): SubtractiveWorkletVoice | undefined {
+): SynthVoice | undefined {
   let audibleInstrumentVoiceCount = 0;
   let audibleVoiceCount = 0;
-  let oldestInstrumentVoice: SubtractiveWorkletVoice | undefined;
-  let quietestGlobalVoice: SubtractiveWorkletVoice | undefined;
+  let oldestInstrumentVoice: SynthVoice | undefined;
+  let quietestGlobalVoice: SynthVoice | undefined;
 
   for (let voiceIndex = 0; voiceIndex < voices.length; voiceIndex += 1) {
     const voice = voices[voiceIndex];
@@ -68,9 +68,9 @@ export function reserveWorkletVoice(
 }
 
 function removeVoice(
-  voices: SubtractiveWorkletVoice[],
-  target: SubtractiveWorkletVoice | undefined,
-): SubtractiveWorkletVoice | undefined {
+  voices: SynthVoice[],
+  target: SynthVoice | undefined,
+): SynthVoice | undefined {
   if (target === undefined) {
     return undefined;
   }
@@ -83,8 +83,8 @@ function removeVoice(
 }
 
 function removeLowestPriorityVoice(
-  voices: SubtractiveWorkletVoice[],
-): SubtractiveWorkletVoice | undefined {
+  voices: SynthVoice[],
+): SynthVoice | undefined {
   let selectedIndex = -1;
 
   for (let voiceIndex = 0; voiceIndex < voices.length; voiceIndex += 1) {
@@ -121,9 +121,9 @@ function removeLowestPriorityVoice(
 }
 
 function removeVoiceAt(
-  voices: SubtractiveWorkletVoice[],
+  voices: SynthVoice[],
   selectedIndex: number,
-): SubtractiveWorkletVoice | undefined {
+): SynthVoice | undefined {
   const removedVoice = voices[selectedIndex];
 
   for (

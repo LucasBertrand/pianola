@@ -83,7 +83,7 @@ src/
 │   ├── browser/                 enregistrement du service worker
 │   ├── persistence/             IndexedDB, Worker et codecs locaux
 │   ├── project-files/           formats `.pianola` et Standard MIDI File
-│   └── versioned-data/          routage et migrations des enveloppes versionnées
+│   └── migration/               routage et migrations des enveloppes versionnées
 └── presentation/                React, DOM, Canvas et styles par surface
 ```
 
@@ -215,10 +215,11 @@ Tous les gestes et contrôles sont détaillés dans
 
 ## Fichiers et données
 
-Le format `.pianola` version 1 stocke un document musical de schéma 1 et le workspace projet,
+Le format `.pianola` version 2 stocke un document musical de schéma 2 et le workspace projet,
 jamais les préférences utilisateur. Le parseur traite le JSON comme inconnu,
 vérifie identité, version et limites, puis crée une entrée distincte dans la
-bibliothèque IndexedDB. Toute autre version de fichier est refusée.
+bibliothèque IndexedDB. La version 1 est migrée vers le vocabulaire `Synth` ;
+une version future ou une transition absente est refusée.
 
 L’import MIDI analyse d’abord le SMF, présente les avertissements et collisions,
 puis construit un nouveau projet. L’export reçoit une projection musicale
@@ -226,10 +227,10 @@ neutre ; le codec ne connaît ni React, ni le store, ni le clip affiché.
 
 Les données restent locales. L'autosave conserve deux générations validées et
 publie leur résumé dans le catalogue ; l'export `.pianola` reste la sauvegarde
-portable appartenant à l'utilisateur. Fichiers, snapshots et layout IndexedDB
-partent tous de leur première baseline. Il n'existe encore aucune version
-historique à migrer. Les enveloppes projet futures sont refusées intactes ; un
-layout IndexedDB supérieur incompatible est recréé pendant ce reset initial.
+portable appartenant à l'utilisateur. Les fichiers portables, snapshots locaux,
+documents musicaux et réglages sont en version 2 et acceptent leur baseline 1
+par migration pure. Le layout IndexedDB reste en version 1 ; un layout supérieur
+incompatible est recréé pendant ce reset initial.
 
 ## Tests et validation
 
@@ -288,7 +289,7 @@ fichier fourre-tout nommé seulement `types`, `helpers`, `utils`, `common`,
 
 - aucune synchronisation cloud ou collaboration temps réel ;
 - aucun système de plugins ou d’effets audio éditables ;
-- un seul type d’instrument sonore, le synthé soustractif ;
+- un seul type d’instrument sonore, le synthé ;
 - pas de tests navigateur automatisés ;
 - support MIDI centré sur les événements nécessaires au piano roll.
 

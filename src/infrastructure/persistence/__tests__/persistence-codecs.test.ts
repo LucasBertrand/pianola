@@ -28,6 +28,7 @@ import {
 } from "../../../application/ports/user-settings-repository";
 import {
   createDefaultInstrumentConfig,
+  DEFAULT_INSTRUMENT_PRESET_ID,
 } from "../../../domain/instrument-presets";
 import {
   createPersonalInstrumentPreset,
@@ -82,7 +83,7 @@ describe("persistence codecs", () => {
     });
 
     expect(parsePianolaProject(serialized)).toMatchObject({
-      migration: { sourceVersion: 1, targetVersion: 1, changes: [] },
+      migration: { sourceVersion: 2, targetVersion: 2, changes: [] },
       project: {
         sourceDocumentId: "pianola-project",
         document: {
@@ -178,6 +179,33 @@ describe("persistence codecs", () => {
       .toThrow("Project file version 999 is not supported");
   });
 
+  test("migrates the portable Synth vocabulary from version 1", () => {
+    const document = createTestProject();
+    const serialized = serializePianolaProject({
+      sourceDocumentId: "legacy-portable-synth",
+      exportedAt: "2026-08-22T12:00:00.000Z",
+      document,
+      workspace: createDefaultPersistedEditorWorkspace(document),
+    });
+    const legacy = downgradeSynthVocabularyToVersion1(serialized);
+    const migrated = parsePianolaProject(JSON.stringify(legacy));
+    const instrumentId = migrated.project.document.instrumentOrder[0]!;
+
+    expect(migrated.migration).toMatchObject({
+      sourceVersion: 1,
+      targetVersion: 2,
+      changes: [{ kind: "instrument-engine-renamed" }],
+    });
+    expect(migrated.project.document.schemaVersion).toBe(2);
+    expect(migrated.project.document
+      .projectInstrumentsById[instrumentId]?.instrument.kind).toBe("synth");
+    expect(migrated.project.document.instrumentPresetOrder)
+      .toContain(DEFAULT_INSTRUMENT_PRESET_ID);
+    expect(migrated.project.document
+      .instrumentPresetsById[DEFAULT_INSTRUMENT_PRESET_ID]?.kind)
+      .toBe("synth");
+  });
+
   test("rejects unknown portable fields", () => {
     const document = createTestProject();
     const source = JSON.parse(serializePianolaProject({
@@ -266,6 +294,28 @@ describe("persistence codecs", () => {
     )).toThrow("Expected an array");
   });
 
+  test("migrates personal Synth presets from user settings version 1", () => {
+    const settings = recoverDefaultUserSettings();
+    const preset = createPersonalInstrumentPreset(
+      "personal-legacy-synth",
+      "Legacy Synth",
+      createDefaultInstrumentConfig(0),
+    );
+    const current = serializeUserSettings({
+      ...settings,
+      personalInstrumentPresetsById: { [preset.id]: preset },
+      personalInstrumentPresetOrder: [preset.id],
+    }, "2026-08-24T12:00:00.000Z");
+    const legacy = downgradeSynthVocabularyToVersion1(current);
+    legacy["format"] = "app.pianola.user-settings.v1";
+    const migrated = parseUserSettingsEnvelope(JSON.stringify(legacy));
+
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.settings.schemaVersion).toBe(2);
+    expect(migrated.settings.personalInstrumentPresetsById[preset.id])
+      .toMatchObject({ kind: "synth", config: { kind: "synth" } });
+  });
+
   test("rejects browser-reserved shortcut bindings", () => {
     const settings = recoverDefaultUserSettings();
 
@@ -294,3 +344,41 @@ describe("persistence codecs", () => {
     await expect(repository.list()).resolves.toEqual([]);
   });
 });
+
+function downgradeSynthVocabularyToVersion1(
+  serialized: string,
+): Record<string, unknown> {
+  return downgradeValue(JSON.parse(serialized) as unknown) as Record<
+    string,
+    unknown
+  >;
+}
+
+function downgradeValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    if (value === "synth") {
+      return "subtractive";
+    }
+
+    return value.startsWith("synth-")
+      ? `subtractive-${value.slice("synth-".length)}`
+      : value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(downgradeValue);
+  }
+
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [
+      downgradeValue(key),
+      key === "schemaVersion" && nested === 2
+        ? 1
+        : downgradeValue(nested),
+    ]),
+  );
+}

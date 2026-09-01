@@ -7,43 +7,43 @@ import {
 import {
   type AdsrEnvelope,
   type InstrumentPreset,
-  type SubtractiveSynthConfig,
+  type SynthConfig,
 } from "./instruments/instrument";
 import {
   type PresetId,
 } from "./identifiers";
 
 export const DEFAULT_INSTRUMENT_PRESET_ID =
-  "subtractive-sawtooth";
+  "synth-sawtooth";
 
 const BUILT_IN_PRESETS = Object.freeze([
-  createSubtractivePreset(
+  createSynthPreset(
     DEFAULT_INSTRUMENT_PRESET_ID,
     "Sawtooth",
-    createSubtractiveConfig(),
+    createSynthConfig(),
   ),
-  createSubtractivePreset(
-    "subtractive-sine",
+  createSynthPreset(
+    "synth-sine",
     "Sine",
-    createSubtractiveConfig({
+    createSynthConfig({
       oscillatorWaveform: "sine",
       filterCutoffHz: 12_000,
       filterEnvelopeAmountOctaves: 0.25,
     }),
   ),
-  createSubtractivePreset(
-    "subtractive-triangle",
+  createSynthPreset(
+    "synth-triangle",
     "Triangle",
-    createSubtractiveConfig({
+    createSynthConfig({
       oscillatorWaveform: "triangle",
       filterCutoffHz: 10_000,
       filterEnvelopeAmountOctaves: 0.25,
     }),
   ),
-  createSubtractivePreset(
-    "subtractive-warm-pad",
+  createSynthPreset(
+    "synth-warm-pad",
     "Pad",
-    createSubtractiveConfig({
+    createSynthConfig({
       oscillatorWaveform: "triangle",
       polyphony: 8,
       envelope: {
@@ -63,10 +63,10 @@ const BUILT_IN_PRESETS = Object.freeze([
       },
     }),
   ),
-  createSubtractivePreset(
-    "subtractive-pulse-bass",
+  createSynthPreset(
+    "synth-pulse-bass",
     "Pulse Bass",
-    createSubtractiveConfig({
+    createSynthConfig({
       oscillatorWaveform: "square",
       polyphony: 1,
       pulseWidth: 0.28,
@@ -87,10 +87,10 @@ const BUILT_IN_PRESETS = Object.freeze([
       },
     }),
   ),
-  createSubtractivePreset(
-    "subtractive-bright-pluck",
+  createSynthPreset(
+    "synth-bright-pluck",
     "Bright Pluck",
-    createSubtractiveConfig({
+    createSynthConfig({
       polyphony: 6,
       envelope: {
         attackSeconds: 0.002,
@@ -109,10 +109,10 @@ const BUILT_IN_PRESETS = Object.freeze([
       },
     }),
   ),
-  createSubtractivePreset(
+  createSynthPreset(
     "lead-sawtooth",
     "Lead",
-    createSubtractiveConfig({
+    createSynthConfig({
       oscillatorWaveform: "sawtooth",
       filterCutoffHz: 12_000,
       filterEnvelopeAmountOctaves: 0.25,
@@ -160,7 +160,7 @@ export function getDefaultInstrumentPresetId(
 /** Returns an independent instrument configuration initialized from a preset. */
 export function createInstrumentConfigFromPreset(
   preset: InstrumentPreset,
-): SubtractiveSynthConfig {
+): SynthConfig {
   return {
     ...preset.config,
     envelope: { ...preset.config.envelope },
@@ -171,7 +171,7 @@ export function createInstrumentConfigFromPreset(
 /** Creates the deterministic built-in configuration used by generated instruments. */
 export function createDefaultInstrumentConfig(
   instrumentIndex: number,
-): SubtractiveSynthConfig {
+): SynthConfig {
   const presetId = getDefaultInstrumentPresetId(instrumentIndex);
   const preset = BUILT_IN_PRESETS_BY_ID[presetId];
 
@@ -196,27 +196,27 @@ export function selectInstrumentPresetId(
   return presetId;
 }
 
-function createSubtractivePreset(
+function createSynthPreset(
   id: PresetId,
   name: string,
-  config: SubtractiveSynthConfig,
+  config: SynthConfig,
 ): InstrumentPreset {
   return Object.freeze({
     id,
     name,
-    kind: "subtractive",
+    kind: "synth",
     config,
   });
 }
 
-function createSubtractiveConfig(
+function createSynthConfig(
   changes: Partial<
-    Omit<SubtractiveSynthConfig, "envelope" | "filterEnvelope">
+    Omit<SynthConfig, "envelope" | "filterEnvelope">
   > & {
     readonly envelope?: Partial<AdsrEnvelope>;
     readonly filterEnvelope?: Partial<AdsrEnvelope>;
   } = {},
-): SubtractiveSynthConfig {
+): SynthConfig {
   const defaultEnvelope = {
     attackSeconds: INSTRUMENT_CONSTANTS.attackSeconds,
     decaySeconds: INSTRUMENT_CONSTANTS.decaySeconds,
@@ -233,13 +233,13 @@ function createSubtractiveConfig(
   };
 
   return Object.freeze({
-    kind: "subtractive",
+    kind: "synth",
     oscillatorWaveform:
       changes.oscillatorWaveform
       ?? INSTRUMENT_CONSTANTS.defaultOscillatorWaveform,
     polyphony:
       changes.polyphony
-      ?? PROJECT_CONSTANTS.defaultSubtractiveSynthPolyphony,
+      ?? PROJECT_CONSTANTS.defaultSynthPolyphony,
     oscillatorDetuneCents:
       changes.oscillatorDetuneCents
       ?? INSTRUMENT_CONSTANTS.oscillatorDetuneCents,

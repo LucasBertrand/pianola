@@ -13,12 +13,12 @@ import {
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-  MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-  MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+  MAXIMUM_SYNTH_POLYPHONY,
+  MINIMUM_SYNTH_POLYPHONY,
   type AdsrEnvelope,
   type InstrumentPreset,
   type OscillatorWaveform,
-  type SubtractiveSynthConfig,
+  type SynthConfig,
 } from "../../../domain/instruments/instrument";
 import {
   validateInstrumentPreset,
@@ -120,7 +120,7 @@ function parsePersonalInstrumentPreset(
 
   const kind = readPersistenceString(preset["kind"], `${path}.kind`, 32);
 
-  if (kind !== "subtractive") {
+  if (kind !== "synth") {
     return fail(`${path}.kind`, "Unsupported personal preset engine.");
   }
 
@@ -132,7 +132,7 @@ function parsePersonalInstrumentPreset(
       MAXIMUM_INSTRUMENT_NAME_LENGTH,
     ),
     kind,
-    config: parseSubtractiveConfig(preset["config"], `${path}.config`),
+    config: parseSynthConfig(preset["config"], `${path}.config`),
   };
   const validation = validateInstrumentPreset(parsed);
 
@@ -143,14 +143,14 @@ function parsePersonalInstrumentPreset(
   return parsed;
 }
 
-function parseSubtractiveConfig(
+function parseSynthConfig(
   source: unknown,
   path: string,
-): SubtractiveSynthConfig {
+): SynthConfig {
   const config = readPersistenceRecord(source, path);
   const kind = readPersistenceString(config["kind"], `${path}.kind`, 32);
 
-  if (kind !== "subtractive") {
+  if (kind !== "synth") {
     return fail(`${path}.kind`, "Unsupported personal preset engine.");
   }
 
@@ -163,8 +163,8 @@ function parseSubtractiveConfig(
     polyphony: readIntegerInRange(
       config["polyphony"],
       `${path}.polyphony`,
-      MINIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
-      MAXIMUM_SUBTRACTIVE_SYNTH_POLYPHONY,
+      MINIMUM_SYNTH_POLYPHONY,
+      MAXIMUM_SYNTH_POLYPHONY,
     ),
     oscillatorDetuneCents: readFiniteNumber(
       config["oscillatorDetuneCents"],

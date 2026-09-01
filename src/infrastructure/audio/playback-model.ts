@@ -41,8 +41,8 @@ export interface PlaybackEnvelope {
   readonly curve: number;
 }
 
-export interface SubtractivePlaybackPresetSnapshot {
-  readonly kind: "subtractive";
+export interface SynthPlaybackPresetSnapshot {
+  readonly kind: "synth";
   readonly oscillatorWaveform: OscillatorWaveform;
   readonly polyphony: number;
   readonly oscillatorDetuneCents: number;
@@ -63,10 +63,10 @@ export interface PlaybackInstrumentSnapshotBase extends PackedInstrumentEvents {
   readonly solo: boolean;
 }
 
-/** Immutable audio representation of one subtractive project instrument. */
-export interface SubtractivePlaybackInstrumentSnapshot
+/** Immutable audio representation of one synth project instrument. */
+export interface SynthPlaybackInstrumentSnapshot
   extends PlaybackInstrumentSnapshotBase {
-  readonly instrument: SubtractivePlaybackPresetSnapshot;
+  readonly instrument: SynthPlaybackPresetSnapshot;
 }
 
 /**
@@ -74,7 +74,7 @@ export interface SubtractivePlaybackInstrumentSnapshot
  * Add a member only when its sample renderer is implemented.
  */
 export type PlaybackInstrumentSnapshot =
-  SubtractivePlaybackInstrumentSnapshot;
+  SynthPlaybackInstrumentSnapshot;
 
 export interface PlaybackPlan {
   readonly sourceId: ClipId;

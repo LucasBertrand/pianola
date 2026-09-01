@@ -18,7 +18,7 @@ import {
 } from "../../../domain/instrument-presets";
 import type {
   InstrumentPreset,
-  SubtractiveSynthConfig,
+  SynthConfig,
 } from "../../../domain/instruments/instrument";
 import type {
   EditorRuntime,
@@ -34,18 +34,18 @@ export interface InstrumentDialogWorkflowOptions {
   readonly removeInstrument: ProjectInstrumentWorkflow["remove"];
   readonly previewInstrumentSettings: (
     instrumentId: InstrumentId,
-    config: SubtractiveSynthConfig | null,
+    config: SynthConfig | null,
   ) => void;
   readonly dismissApplicationDialog: () => void;
   readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly personalPresetIds: ReadonlySet<PresetId>;
   readonly createPersonalPreset: (
     name: string,
-    config: SubtractiveSynthConfig,
+    config: SynthConfig,
   ) => Promise<InstrumentPreset>;
   readonly updatePersonalPreset: (
     presetId: PresetId,
-    config: SubtractiveSynthConfig,
+    config: SynthConfig,
   ) => Promise<InstrumentPreset>;
   readonly renamePersonalPreset: (
     presetId: PresetId,
@@ -60,13 +60,13 @@ export interface InstrumentDialogWorkflow {
   readonly selectedPresetId: PresetId | "";
   readonly name: string;
   readonly color: string;
-  readonly config: SubtractiveSynthConfig | null;
+  readonly config: SynthConfig | null;
   readonly openCreate: () => void;
   readonly openEdit: (instrumentId: InstrumentId) => void;
   readonly selectPreset: (presetId: PresetId) => void;
   readonly setName: (name: string) => void;
   readonly setColor: (color: string) => void;
-  readonly setConfig: (config: SubtractiveSynthConfig) => void;
+  readonly setConfig: (config: SynthConfig) => void;
   readonly selectedPresetIsPersonal: boolean;
   readonly createPreset: (name: string) => Promise<void>;
   readonly savePreset: () => Promise<void>;
@@ -98,7 +98,7 @@ export function useInstrumentDialogWorkflow({
   const [color, setColor] = useState<string>(
     APPLICATION_COLORS.accent.primary,
   );
-  const [config, setConfig] = useState<SubtractiveSynthConfig | null>(null);
+  const [config, setConfig] = useState<SynthConfig | null>(null);
   const [editedInstrumentId, setEditedInstrumentId] =
     useState<InstrumentId | null>(null);
   const cancel = useCallback((): void => {
@@ -141,7 +141,7 @@ export function useInstrumentDialogWorkflow({
 
     if (
       projectInstrument === undefined
-      || projectInstrument.instrument.kind !== "subtractive"
+      || projectInstrument.instrument.kind !== "synth"
     ) {
       return;
     }
@@ -172,7 +172,7 @@ export function useInstrumentDialogWorkflow({
     }
   }, [editedInstrumentId, presetsById, previewInstrumentSettings]);
   const updateConfig = useCallback((
-    nextConfig: SubtractiveSynthConfig,
+    nextConfig: SynthConfig,
   ): void => {
     setConfig(nextConfig);
 

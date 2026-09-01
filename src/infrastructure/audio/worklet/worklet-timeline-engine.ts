@@ -11,7 +11,7 @@ import type {
 } from "../../../domain/transport/transport";
 import type {
   PlaybackStatus,
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
 } from "../playback-model";
 import type {
   AudioWorkletTimeline,
@@ -412,7 +412,7 @@ export class WorkletTimelineEngine {
   ): void {
     const runtime = this.runtimeInstrumentsById.get(instrumentId);
 
-    if (runtime === undefined || (config !== null && config.kind !== "subtractive")) {
+    if (runtime === undefined || (config !== null && config.kind !== "synth")) {
       return;
     }
 
@@ -500,7 +500,7 @@ export class WorkletTimelineEngine {
 
   public updateInstrumentConfig(
     instrumentId: InstrumentId,
-    config: SubtractivePlaybackPresetSnapshot,
+    config: SynthPlaybackPresetSnapshot,
     sequence: number,
     stateVersion: number,
   ): void {

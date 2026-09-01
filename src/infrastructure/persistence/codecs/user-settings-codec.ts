@@ -20,7 +20,7 @@ import {
 } from "./personal-instrument-preset-codec";
 import {
   migrateUserSettings,
-} from "./migrations/migrate-user-settings";
+} from "./migrate-user-settings";
 import {
   USER_SETTINGS_FORMAT,
 } from "./user-settings-codec-constants";

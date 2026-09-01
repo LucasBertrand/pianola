@@ -3,11 +3,11 @@ import type {
   NoteId,
 } from "../../../domain/identifiers";
 import type {
-  SubtractivePlaybackPresetSnapshot,
+  SynthPlaybackPresetSnapshot,
 } from "../playback-model";
 import {
-  SubtractiveWorkletVoice,
-} from "./subtractive-worklet-voice";
+  SynthVoice,
+} from "./synth/synth-voice";
 import type {
   WorkletRuntimeInstrument,
 } from "./worklet-runtime-instrument";
@@ -19,17 +19,17 @@ import {
 
 /** Owns the bounded set of DSP voices and their mix state. */
 export class WorkletVoiceBank {
-  private readonly voices: SubtractiveWorkletVoice[];
-  private readonly availableVoices: SubtractiveWorkletVoice[];
+  private readonly voices: SynthVoice[];
+  private readonly availableVoices: SynthVoice[];
   private voiceSequence = 0;
   private tuningFrequencyHz = 440;
 
   public constructor(private readonly sampleRate: number) {
-    this.voices = new Array<SubtractiveWorkletVoice>(
+    this.voices = new Array<SynthVoice>(
       GLOBAL_VOICE_STORAGE_LIMIT,
     );
     this.voices.length = 0;
-    this.availableVoices = new Array<SubtractiveWorkletVoice>(
+    this.availableVoices = new Array<SynthVoice>(
       GLOBAL_VOICE_STORAGE_LIMIT,
     );
 
@@ -39,7 +39,7 @@ export class WorkletVoiceBank {
       voiceIndex += 1
     ) {
       this.availableVoices[voiceIndex] =
-        new SubtractiveWorkletVoice(sampleRate);
+        new SynthVoice(sampleRate);
     }
   }
 
@@ -69,7 +69,7 @@ export class WorkletVoiceBank {
 
   public previewInstrument(
     instrumentId: InstrumentId,
-    config: SubtractivePlaybackPresetSnapshot,
+    config: SynthPlaybackPresetSnapshot,
   ): void {
     for (const voice of this.voices) {
       if (voice.instrumentId === instrumentId && !voice.ended) {
@@ -259,7 +259,7 @@ export class WorkletVoiceBank {
     pitch: number,
     endTick: number | null,
     auditionSamples: number | null,
-  ): SubtractiveWorkletVoice | undefined {
+  ): SynthVoice | undefined {
     const displacedVoice = reserveWorkletVoice(
       this.voices,
       runtime.timeline.instrumentId,
@@ -290,7 +290,7 @@ export class WorkletVoiceBank {
   }
 
   private configureVoiceMix(
-    voice: SubtractiveWorkletVoice,
+    voice: SynthVoice,
     runtime: WorkletRuntimeInstrument,
   ): void {
     voice.configureMix(
