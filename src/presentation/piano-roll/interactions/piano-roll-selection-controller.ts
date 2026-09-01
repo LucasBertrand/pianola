@@ -164,23 +164,6 @@ implements PianoRollControllerPort {
     this.showSelection();
   }
 
-  public togglePitchSelection(pitch: number): void {
-    if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
-      return;
-    }
-
-    const state = this.options.editorCommands.getState();
-    const changed = this.selection.togglePitch(
-      state,
-      pitch,
-      () => true,
-    );
-
-    if (changed) {
-      this.showSelection();
-    }
-  }
-
   public cancel(): void {
     const visuals = this.options.getVisuals();
 

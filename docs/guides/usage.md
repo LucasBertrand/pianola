@@ -49,6 +49,11 @@ nom contextualisé et l'octave, ou `Degree`, qui affiche le degré de la gamme o
 de l'accord actif (`1`, `♭3`, `♯4`, etc.). Une note qui traverse un marqueur
 tonal adapte son label de chaque côté de la frontière.
 
+Lorsque la preview de hauteur est active, appuyer sur une touche du clavier
+latéral tient la note jusqu'au relâchement du pointeur. Glisser vers une autre
+touche relâche la voix précédente et attaque la nouvelle ; cela permet
+d'entendre la durée exacte des enveloppes d'attaque, de decay et de release.
+
 ## Instruments
 
 L’inspecteur projet ajoute, édite, réordonne et supprime les instruments

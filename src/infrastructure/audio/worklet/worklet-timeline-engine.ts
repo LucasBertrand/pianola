@@ -468,11 +468,15 @@ export class WorkletTimelineEngine {
   }
 
   public audition(
+    auditionId: number,
     instrumentId: InstrumentId,
     pitch: number,
-    durationSeconds: number,
   ): void {
-    this.instrumentRuntime.audition(instrumentId, pitch, durationSeconds);
+    this.instrumentRuntime.audition(auditionId, instrumentId, pitch);
+  }
+
+  public releaseAudition(auditionId: number): void {
+    this.instrumentRuntime.releaseAudition(auditionId);
   }
 
   public process(left: Float32Array, right: Float32Array): void {

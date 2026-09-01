@@ -229,12 +229,16 @@ class PlaybackProcessor extends AudioWorkletProcessor {
           message.sequence, message.stateVersion);
         break;
 
-      case "audition":
+      case "audition-start":
         this.engine.audition(
+          message.auditionId,
           message.instrumentId,
           message.pitch,
-          message.durationSeconds,
         );
+        break;
+
+      case "audition-release":
+        this.engine.releaseAudition(message.auditionId);
         break;
     }
 

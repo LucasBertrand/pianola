@@ -57,6 +57,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier un slider | `src/presentation/slider/Slider.tsx` | `slider-pointer-session.ts`, `slider-value.ts`, puis `styles/slider.css` |
 | modifier les couleurs | `src/presentation/styles/application-colors.ts` | tokens CSS et styles de surface |
 | modifier les labels de notes | `src/presentation/piano-roll/rendering/pitch-label.ts` | `domain/music-theory/pitch-snap.ts`, puis préférence, Canvas et ghosts du piano roll |
+| modifier l'audition du clavier du piano roll | `src/presentation/piano-roll/PianoKeyboard.tsx` | `useAudioPlayback.ts`, `audio-worklet-transport.ts`, puis `worklet-instrument-runtime.ts` et la banque de voix |
 | modifier le responsive | `src/presentation/styles/responsive.css` | styles propriétaires des surfaces impliquées |
 
 ## Flux : geste de note

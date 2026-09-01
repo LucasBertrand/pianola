@@ -3,9 +3,6 @@ import React, {
   useRef,
 } from "react";
 import {
-  INTERACTION_CONSTANTS,
-} from "../../editor-core/interactions/interaction-constants";
-import {
   VIEWPORT_CONSTANTS,
 } from "../../editor-core/viewport/viewport-constants";
 import type {
@@ -45,13 +42,6 @@ const PITCH_CLASS_NAMES = [
   "B",
 ] as const;
 const PIANO_KEYS = createPianoKeys();
-const PIANO_KEY_LONG_PRESS_DELAY_MS =
-  INTERACTION_CONSTANTS.pianoKeyLongPressDelayMs;
-const PIANO_KEY_PEN_LONG_PRESS_DELAY_MS =
-  INTERACTION_CONSTANTS.pianoKeyPenLongPressDelayMs;
-const PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE =
-  INTERACTION_CONSTANTS.pianoKeyLongPressMovementToleranceCssPixels;
-
 export interface PianoKeyboardProps {
   readonly viewport: ReadonlyRenderSignal<ViewportState>;
   readonly playheadTick: ReadonlyRenderSignal<number>;
@@ -64,8 +54,7 @@ export interface PianoKeyboardProps {
   readonly previewEnabled: boolean;
   readonly pitchSnapSettings: PitchSnapSettings;
   readonly onPreviewToggle: () => void;
-  readonly onPitchAudition?: (pitch: number) => void;
-  readonly onPitchLongPress?: (pitch: number) => void;
+  readonly onPitchAuditionChange?: (pitch: number | null) => void;
   readonly onPitchInteractionChange?: (
     pitch: number | null,
   ) => void;
@@ -84,8 +73,7 @@ export function PianoKeyboard(
     previewEnabled,
     pitchSnapSettings,
     onPreviewToggle,
-    onPitchAudition,
-    onPitchLongPress,
+    onPitchAuditionChange,
     onPitchInteractionChange,
   } = props;
   const keysElementRef = useRef<HTMLDivElement | null>(null);
@@ -120,10 +108,7 @@ export function PianoKeyboard(
 
     if (
       element === null
-      || (
-        onPitchAudition === undefined
-        && onPitchLongPress === undefined
-      )
+      || onPitchAuditionChange === undefined
     ) {
       return undefined;
     }
@@ -131,21 +116,11 @@ export function PianoKeyboard(
     let activePointerId = -1;
     let activePitch = -1;
     let lastAuditionedPitch = -1;
-    let originClientX = 0;
-    let originClientY = 0;
     let keyboardLeft = 0;
     let keyboardRight = 0;
     let keyboardTop = 0;
     let keyboardBottom = 0;
     let highlightedKeyElement: HTMLElement | null = null;
-    let longPressTimerId: number | null = null;
-
-    const clearLongPress = (): void => {
-      if (longPressTimerId !== null) {
-        window.clearTimeout(longPressTimerId);
-        longPressTimerId = null;
-      }
-    };
     const updateInteractionPitch = (
       pitch: number | null,
     ): void => {
@@ -239,7 +214,7 @@ export function PianoKeyboard(
         && auditionedPitch !== lastAuditionedPitch
       ) {
         lastAuditionedPitch = auditionedPitch;
-        onPitchAudition?.(auditionedPitch);
+        onPitchAuditionChange?.(auditionedPitch);
       }
 
       return auditionedPitch;
@@ -287,8 +262,6 @@ export function PianoKeyboard(
       if (Number.isInteger(pitch)) {
         activePointerId = event.pointerId;
         activePitch = pitch;
-        originClientX = event.clientX;
-        originClientY = event.clientY;
         updateHitTestGeometry();
         element.setPointerCapture(event.pointerId);
         const auditionedPitch = auditionPitchRange(pitch, pitch);
@@ -296,25 +269,6 @@ export function PianoKeyboard(
         updateInteractionPitch(
           previewEnabled ? auditionedPitch : pitch,
         );
-
-        if (onPitchLongPress !== undefined) {
-          const delay =
-            event.pointerType === "pen"
-              ? PIANO_KEY_PEN_LONG_PRESS_DELAY_MS
-              : PIANO_KEY_LONG_PRESS_DELAY_MS;
-
-          longPressTimerId = window.setTimeout(() => {
-            longPressTimerId = null;
-
-            if (
-              activePointerId === event.pointerId
-              && activePitch === pitch
-            ) {
-              updateInteractionPitch(pitch);
-              onPitchLongPress(pitch);
-            }
-          }, delay);
-        }
 
         event.preventDefault();
       }
@@ -324,22 +278,12 @@ export function PianoKeyboard(
         return;
       }
 
-      if (
-        Math.abs(event.clientX - originClientX)
-          > PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE
-        || Math.abs(event.clientY - originClientY)
-          > PIANO_KEY_LONG_PRESS_MOVEMENT_TOLERANCE
-      ) {
-        clearLongPress();
-      }
-
       const pitch = getPitchAtPoint(
         event.clientX,
         event.clientY,
       );
 
       if (pitch !== null && pitch !== activePitch) {
-        clearLongPress();
         const auditionedPitch = auditionPitchRange(
           activePitch,
           pitch,
@@ -358,10 +302,10 @@ export function PianoKeyboard(
         return;
       }
 
-      clearLongPress();
       activePointerId = -1;
       activePitch = -1;
       lastAuditionedPitch = -1;
+      onPitchAuditionChange?.(null);
       updateInteractionPitch(null);
 
       if (element.hasPointerCapture(event.pointerId)) {
@@ -382,7 +326,7 @@ export function PianoKeyboard(
     element.addEventListener("contextmenu", handleContextMenu);
 
     return (): void => {
-      clearLongPress();
+      onPitchAuditionChange?.(null);
       updateInteractionPitch(null);
       element.removeEventListener(
         "pointerdown",
@@ -407,8 +351,7 @@ export function PianoKeyboard(
       );
     };
   }, [
-    onPitchAudition,
-    onPitchLongPress,
+    onPitchAuditionChange,
     onPitchInteractionChange,
     pitchSnapSettings,
     previewEnabled,
@@ -491,7 +434,7 @@ function createPianoKeys(): readonly React.JSX.Element[] {
         type="button"
         className={`piano-key${black ? " is-black" : ""}`}
         data-pitch={pitch}
-        aria-label={`Select ${pitchName} notes`}
+        aria-label={`Piano key ${pitchName}`}
         key={pitch}
       >
         {label}

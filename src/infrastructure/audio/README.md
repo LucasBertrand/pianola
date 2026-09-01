@@ -53,6 +53,12 @@ relâchées, et seules celles qui viennent de le recouvrir sont déclenchées.
 Le worklet avance le tick depuis le nombre d’échantillons rendus : aucun timer,
 frame React ou callback du thread principal ne déclenche une note.
 
+L'audition du clavier du piano roll utilise une paire de messages identifiés
+`audition-start` / `audition-release`. La voix reste tenue tant que le pointeur
+est appuyé, puis parcourt normalement le release de ses enveloppes. Si le
+pointeur est relâché avant la fin de l'initialisation Web Audio, le départ en
+attente est annulé et aucune voix orpheline n'est créée.
+
 ## État publié et état effectif
 
 `WorkletTimelineEngine` conserve la timeline et le transport publiés séparément

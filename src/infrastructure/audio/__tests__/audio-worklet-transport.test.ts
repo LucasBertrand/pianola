@@ -681,6 +681,83 @@ describe("AudioWorklet browser transport", () => {
     await transport.dispose();
   });
 
+  test("holds pitch auditions until their handle is released", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compileAudioPlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const fakePort = new FakeMessagePort();
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      {},
+      0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+
+    const audition = transport.beginPitchAudition(TEST_INSTRUMENT_ID, 64);
+
+    await audition.ready;
+    expect(fakePort.messages.at(-1)).toMatchObject({
+      type: "audition-start",
+      auditionId: 1,
+      instrumentId: TEST_INSTRUMENT_ID,
+      pitch: 64,
+    });
+    expect(fakePort.messages.some((message) => (
+      "durationSeconds" in message
+    ))).toBe(false);
+
+    audition.release();
+    audition.release();
+    expect(fakePort.messages.slice(-1)).toEqual([
+      expect.objectContaining({
+        type: "audition-release",
+        auditionId: 1,
+      }),
+    ]);
+
+    await transport.dispose();
+  });
+
+  test("cancels a released audition while audio is still initializing", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compileAudioPlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const fakePort = new FakeMessagePort();
+    const fakeContext = new FakeAudioContext();
+    let resolveModule!: () => void;
+
+    fakeContext.audioWorklet.addModule = () => new Promise<void>((resolve) => {
+      resolveModule = resolve;
+    });
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      {},
+      0,
+      () => fakeContext as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+
+    const audition = transport.beginPitchAudition(TEST_INSTRUMENT_ID, 67);
+
+    audition.release();
+    resolveModule();
+    await audition.ready;
+    expect(fakePort.messages.map((message) => message.type)).toEqual([
+      "load-timeline",
+    ]);
+
+    await transport.dispose();
+  });
+
   test("rejects messages from an incompatible worklet protocol", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);

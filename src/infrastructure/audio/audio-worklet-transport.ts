@@ -28,6 +28,7 @@ import {
 } from "./audio-constants";
 import type {
   AudioTransportController,
+  PitchAuditionHandle,
   PlaybackStatus,
 } from "../../application/ports/audio-transport";
 import type {
@@ -89,6 +90,8 @@ export class AudioWorkletTransport implements AudioTransportController {
   private operationSequence = 0;
   private tempoMapPreviewVersion = 0;
   private loopPreviewVersion = 0;
+  private auditionSequence = 0;
+  private readonly activeAuditionIds = new Set<number>();
   private pendingPositionAcknowledgement: PlaybackStatus | null = null;
   private disposed = false;
 
@@ -369,10 +372,10 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.post({ type: "instrument-gain", instrumentId, gain });
   }
 
-  public async auditionPitch(
+  public beginPitchAudition(
     instrumentId: InstrumentId,
     pitch: number,
-  ): Promise<void> {
+  ): PitchAuditionHandle {
     this.assertUsable();
 
     if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
@@ -383,20 +386,26 @@ export class AudioWorkletTransport implements AudioTransportController {
       throw new Error(`Instrument "${instrumentId}" is unavailable.`);
     }
 
-    await this.ensureInitialized();
-    const context = this.requireContext();
-
-    if (context.state !== "running") {
-      await context.resume();
-    }
-
-    this.assertUsable();
-    this.post({
-      type: "audition",
+    const auditionId = ++this.auditionSequence;
+    this.activeAuditionIds.add(auditionId);
+    let released = false;
+    const ready = this.startPitchAudition(
+      auditionId,
       instrumentId,
       pitch,
-      durationSeconds: AUDIO_CONSTANTS.auditionNoteDurationSeconds,
-    });
+    );
+
+    return {
+      ready,
+      release: (): void => {
+        if (released) {
+          return;
+        }
+
+        released = true;
+        this.releasePitchAudition(auditionId);
+      },
+    };
   }
 
   public async dispose(): Promise<void> {
@@ -406,6 +415,7 @@ export class AudioWorkletTransport implements AudioTransportController {
 
     this.disposed = true;
     this.operationSequence += 1;
+    this.activeAuditionIds.clear();
     this.disconnectNode();
     const context = this.context;
 
@@ -809,6 +819,50 @@ export class AudioWorkletTransport implements AudioTransportController {
     this.node = null;
     node?.disconnect();
     node?.port.close();
+  }
+
+  private async startPitchAudition(
+    auditionId: number,
+    instrumentId: InstrumentId,
+    pitch: number,
+  ): Promise<void> {
+    try {
+      await this.ensureInitialized();
+
+      if (!this.activeAuditionIds.has(auditionId)) {
+        return;
+      }
+
+      const context = this.requireContext();
+
+      if (context.state !== "running") {
+        await context.resume();
+      }
+
+      this.assertUsable();
+
+      if (!this.activeAuditionIds.has(auditionId)) {
+        return;
+      }
+
+      this.post({
+        type: "audition-start",
+        auditionId,
+        instrumentId,
+        pitch,
+      });
+    } catch (error: unknown) {
+      this.activeAuditionIds.delete(auditionId);
+      throw error;
+    }
+  }
+
+  private releasePitchAudition(auditionId: number): void {
+    if (!this.activeAuditionIds.delete(auditionId)) {
+      return;
+    }
+
+    this.post({ type: "audition-release", auditionId });
   }
 
   private assertUsable(): void {

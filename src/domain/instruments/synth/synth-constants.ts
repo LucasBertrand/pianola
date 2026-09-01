@@ -26,7 +26,7 @@ export const SYNTH_CONSTANTS = Object.freeze({
   maximumFilterCutoffHz: 20_000,
   filterResonance: 0.2,
   minimumFilterResonance: 0,
-  maximumFilterResonance: 24,
+  maximumFilterResonance: 12,
   filterKeyTracking: 0,
   minimumFilterKeyTracking: 0,
   maximumFilterKeyTracking: 1,

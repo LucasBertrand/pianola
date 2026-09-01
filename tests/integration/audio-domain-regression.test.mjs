@@ -274,10 +274,6 @@ function getActiveTestMeasureCount(state) {
     assert.equal(selection.size, 2);
     selection.toggleInstrument(toggleState, "voice-a");
     assert.equal(selection.size, 0);
-    selection.togglePitch(toggleState, 60);
-    assert.equal(selection.size, 2);
-    selection.togglePitch(toggleState, 60);
-    assert.equal(selection.size, 0);
   });
 
   test("delivers repeated selection intentions without signal invalidation", () => {

@@ -217,10 +217,6 @@ export function PianoRollWorkspace({
     },
     [runtime],
   );
-  const handlePitchSelect = useCallback((pitch: number): void => {
-    pianoRollControllerRef.current
-      ?.togglePitchSelection(pitch);
-  }, []);
   const clearTimelineSelection = useCallback((): void => {
     pianoRollControllerRef.current?.clearSelection();
   }, []);
@@ -270,7 +266,8 @@ export function PianoRollWorkspace({
   } = transportViewport.viewport;
   const handleAutoFit = transportViewport.autoFit;
   const handleReturnToStart = transportViewport.returnToStart;
-  const handlePitchAudition = transportViewport.auditionPitch;
+  const handlePitchAuditionChange =
+    transportViewport.changePitchAudition;
 
   usePrimaryActionTrigger(
     togglePlayback,
@@ -607,8 +604,7 @@ export function PianoRollWorkspace({
           previewEnabled={preferences.pitchPreviewEnabled}
           pitchSnapSettings={pitchSnapSettings}
           onPreviewToggle={preferences.togglePitchPreview}
-          onPitchAudition={handlePitchAudition}
-          onPitchLongPress={handlePitchSelect}
+          onPitchAuditionChange={handlePitchAuditionChange}
           onPitchInteractionChange={(pitch) => {
             runtime.highlightedPitch.set(pitch);
           }}

@@ -24,7 +24,7 @@ export class WorkletVoiceBank {
   private voiceSequence = 0;
   private tuningFrequencyHz = 440;
 
-  public constructor(private readonly sampleRate: number) {
+  public constructor(sampleRate: number) {
     this.voices = new Array<WorkletVoiceSlot>(
       GLOBAL_VOICE_STORAGE_LIMIT,
     );
@@ -168,15 +168,18 @@ export class WorkletVoiceBank {
 
   public startAuditionVoice(
     runtime: WorkletRuntimeInstrument,
+    auditionId: number,
     pitch: number,
-    durationSeconds: number,
   ): void {
-    this.startVoice(
-      runtime,
-      pitch,
-      null,
-      Math.max(1, Math.round(durationSeconds * this.sampleRate)),
-    );
+    this.startVoice(runtime, pitch, null, auditionId);
+  }
+
+  public releaseAuditionVoice(auditionId: number): void {
+    for (const voice of this.voices) {
+      if (voice.auditionId === auditionId && !voice.ended) {
+        voice.release();
+      }
+    }
   }
 
   public renderFrame(
@@ -258,7 +261,7 @@ export class WorkletVoiceBank {
     runtime: WorkletRuntimeInstrument,
     pitch: number,
     endTick: number | null,
-    auditionSamples: number | null,
+    auditionId: number | null,
   ): WorkletVoiceSlot | undefined {
     const displacedVoice = reserveWorkletVoice(
       this.voices,
@@ -280,7 +283,7 @@ export class WorkletVoiceBank {
       this.tuningFrequencyHz,
       this.voiceSequence,
       endTick,
-      auditionSamples,
+      auditionId,
       runtime.config.oscillator.freePhase
         ? deterministicVoicePhase(this.voiceSequence)
         : 0,

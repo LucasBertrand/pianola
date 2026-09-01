@@ -126,10 +126,7 @@ describe("P3 editor controller contracts", () => {
 
     expect(controller.getSelectedNotes()).toEqual([note]);
 
-    controller.togglePitchSelection(64);
-
-    expect(controller.getSelectedNotes()).toEqual([]);
-    expect(publishedSelectionSizes).toEqual([1, 0]);
+    expect(publishedSelectionSizes).toEqual([1]);
   });
 
   test("selects every note in the active clip through one request", () => {

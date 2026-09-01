@@ -165,14 +165,18 @@ export class WorkletInstrumentRuntime {
   }
 
   public audition(
+    auditionId: number,
     instrumentId: InstrumentId,
     pitch: number,
-    durationSeconds: number,
   ): void {
     const runtime = this.runtimesById.get(instrumentId);
     if (runtime !== undefined) {
-      this.voiceBank.startAuditionVoice(runtime, pitch, durationSeconds);
+      this.voiceBank.startAuditionVoice(runtime, auditionId, pitch);
     }
+  }
+
+  public releaseAudition(auditionId: number): void {
+    this.voiceBank.releaseAuditionVoice(auditionId);
   }
 
   public reconcileAll(currentTick: number, playbackBoundaryTick: number): void {

@@ -17,8 +17,16 @@ import type {
 
 export type PlaybackStatus = "stopped" | "playing" | "paused";
 
+export interface PitchAuditionHandle {
+  readonly ready: Promise<void>;
+  release(): void;
+}
+
 export interface InstrumentPreviewPort {
-  auditionPitch(instrumentId: InstrumentId, pitch: number): Promise<void>;
+  beginPitchAudition(
+    instrumentId: InstrumentId,
+    pitch: number,
+  ): PitchAuditionHandle;
   previewInstrumentGain(instrumentId: InstrumentId, gain: number): void;
 }
 

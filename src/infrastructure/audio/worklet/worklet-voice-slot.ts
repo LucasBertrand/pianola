@@ -15,7 +15,7 @@ export class WorkletVoiceSlot {
   public noteId: NoteId | null = null;
   public sequence = 0;
   public endTick: number | null = null;
-  private auditionSamples: number | null = null;
+  public auditionId: number | null = null;
   private mixLeft = 0;
   private mixRight = 0;
   private readonly voice: SynthVoice;
@@ -31,7 +31,7 @@ export class WorkletVoiceSlot {
     tuningFrequencyHz: number,
     sequence: number,
     endTick: number | null,
-    auditionSamples: number | null,
+    auditionId: number | null,
     initialPhase: number,
     preserveContinuity: boolean,
   ): void {
@@ -39,7 +39,7 @@ export class WorkletVoiceSlot {
     this.noteId = null;
     this.sequence = sequence;
     this.endTick = endTick;
-    this.auditionSamples = auditionSamples;
+    this.auditionId = auditionId;
     this.mixLeft = 0;
     this.mixRight = 0;
     this.voice.start(
@@ -104,17 +104,11 @@ export class WorkletVoiceSlot {
   }
 
   public release(releaseSeconds?: number): void {
-    this.auditionSamples = null;
+    this.auditionId = null;
     this.voice.release(releaseSeconds);
   }
 
   public render(): number {
-    if (this.auditionSamples !== null) {
-      this.auditionSamples -= 1;
-      if (this.auditionSamples <= 0) {
-        this.release();
-      }
-    }
     return this.voice.render();
   }
 }

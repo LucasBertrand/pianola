@@ -440,8 +440,10 @@ export function InstrumentPresetDialog({
                   value={instrument.filterResonance}
                   minimum={SYNTH_CONSTANTS.minimumFilterResonance}
                   maximum={SYNTH_CONSTANTS.maximumFilterResonance}
-                  step={EDITOR_CONSTANTS.filterResonanceStep}
-                  onChange={(value) => update({ filterResonance: value })}
+                  step={EDITOR_CONSTANTS.filterResonanceStep}                  
+                  scale="power"
+                  onChange={(value) => update({ filterResonance: value })
+                }
                 />
                 <ParameterControl
                   label="Key tracking"
@@ -470,16 +472,16 @@ export function InstrumentPresetDialog({
               />
             </div>
           </fieldset>
+          <EnvelopeControls
+            title="Amplitude envelope"
+            envelope={instrument.envelope}
+            onChange={(envelope) => update({ envelope })}
+          />
 
           <EnvelopeControls
             title="Filter envelope"
             envelope={instrument.filterEnvelope}
             onChange={(filterEnvelope) => update({ filterEnvelope })}
-          />
-          <EnvelopeControls
-            title="Amplitude envelope"
-            envelope={instrument.envelope}
-            onChange={(envelope) => update({ envelope })}
           />
         </div>
 

@@ -7,7 +7,7 @@ import {
 } from "node:url";
 
 const assetsDirectory = path.resolve("dist", "assets");
-const protocolVersion = 2;
+const protocolVersion = 3;
 const workletAssetName = (await readdir(assetsDirectory)).find((fileName) => (
   fileName.startsWith("playback-processor-")
   && fileName.endsWith(".js")

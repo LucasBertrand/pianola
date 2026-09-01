@@ -45,7 +45,7 @@ export interface PianoRollTransportViewport {
   readonly viewport: ViewportControls;
   readonly autoFit: () => void;
   readonly returnToStart: () => void;
-  readonly auditionPitch: (pitch: number) => void;
+  readonly changePitchAudition: (pitch: number | null) => void;
 }
 
 export interface UsePianoRollTransportViewportOptions {
@@ -125,9 +125,9 @@ export function usePianoRollTransportViewport({
     runtime,
     viewport,
   ]);
-  const auditionPitch = useCallback((pitch: number): void => {
-    if (selectedInstrumentId !== null) {
-      playback.auditionPitch(selectedInstrumentId, pitch);
+  const changePitchAudition = useCallback((pitch: number | null): void => {
+    if (selectedInstrumentId !== null || pitch === null) {
+      playback.changePitchAudition(selectedInstrumentId, pitch);
     }
   }, [playback, selectedInstrumentId]);
 
@@ -137,7 +137,7 @@ export function usePianoRollTransportViewport({
     viewport,
     autoFit: handleAutoFit,
     returnToStart,
-    auditionPitch,
+    changePitchAudition,
   };
 }
 

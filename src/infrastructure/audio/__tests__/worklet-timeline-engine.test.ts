@@ -632,6 +632,27 @@ describe("AudioWorklet timeline engine", () => {
     preview.mockRestore();
   });
 
+  test("holds an audition voice until the matching release arrives", () => {
+    const snapshot = createSnapshotWithNotes([]);
+    const instrument = snapshot.instruments[0];
+
+    expect(instrument).toBeDefined();
+    if (instrument === undefined) {
+      return;
+    }
+
+    const engine = createEngine(snapshot, []);
+    const release = vi.spyOn(SynthVoice.prototype, "release");
+
+    engine.audition(17, instrument.instrumentId, 60);
+    renderFrames(engine, Math.round(SAMPLE_RATE * 0.5));
+    expect(release).not.toHaveBeenCalled();
+
+    engine.releaseAudition(17);
+    expect(release).toHaveBeenCalledOnce();
+    release.mockRestore();
+  });
+
   test("uses the initial oscillator phase supplied by the voice owner", () => {
     const instrument = createSnapshotWithNotes([]).instruments[0];
 

@@ -23,6 +23,7 @@ import type {
   ProjectStorePort,
 } from "../../application/history/project-store";
 import type {
+  PitchAuditionHandle,
   PlaybackStatus,
 } from "../../application/ports/audio-transport";
 import {
@@ -67,9 +68,9 @@ export interface AudioPlaybackActions {
   readonly stopPlayback: () => void;
   readonly returnToStart: () => void;
   readonly seek: (tick: Tick) => void;
-  readonly auditionPitch: (
-    instrumentId: InstrumentId,
-    pitch: number,
+  readonly changePitchAudition: (
+    instrumentId: InstrumentId | null,
+    pitch: number | null,
   ) => void;
   readonly previewInstrumentGain: (
     instrumentId: InstrumentId,
@@ -98,6 +99,7 @@ export function useAudioPlayback(
   const [playingClipId, setPlayingClipIdState] =
     useState<ClipId | null>(null);
   const transportRef = useRef<AudioWorkletTransport | null>(null);
+  const pitchAuditionRef = useRef<PitchAuditionHandle | null>(null);
   const loadedClipIdRef = useRef<ClipId | null>(null);
   const queuedClipIdRef = useRef<ClipId | null>(null);
   const playingClipIdRef = useRef<ClipId | null>(null);
@@ -338,6 +340,8 @@ export function useAudioPlayback(
 
     return (): void => {
       unsubscribe();
+      pitchAuditionRef.current?.release();
+      pitchAuditionRef.current = null;
       void transport.dispose().catch(() => {
         // Teardown errors cannot be surfaced after the UI has unmounted.
       });
@@ -622,19 +626,36 @@ export function useAudioPlayback(
     publishTimingPreviews,
   ]);
 
-  const auditionPitch = useCallback((
-    instrumentId: InstrumentId,
-    pitch: number,
+  const changePitchAudition = useCallback((
+    instrumentId: InstrumentId | null,
+    pitch: number | null,
   ): void => {
+    pitchAuditionRef.current?.release();
+    pitchAuditionRef.current = null;
+
+    if (pitch === null || instrumentId === null) {
+      return;
+    }
+
     const transport = transportRef.current;
 
     if (transport === null) {
       return;
     }
 
-    void transport.auditionPitch(instrumentId, pitch).catch((error: unknown) => {
+    try {
+      const audition = transport.beginPitchAudition(instrumentId, pitch);
+
+      pitchAuditionRef.current = audition;
+      void audition.ready.catch((error: unknown) => {
+        if (pitchAuditionRef.current === audition) {
+          pitchAuditionRef.current = null;
+        }
+        onErrorRef.current(error);
+      });
+    } catch (error: unknown) {
       onErrorRef.current(error);
-    });
+    }
   }, []);
 
   const previewInstrumentGain = useCallback((
@@ -671,7 +692,7 @@ export function useAudioPlayback(
     stopPlayback,
     returnToStart,
     seek,
-    auditionPitch,
+    changePitchAudition,
     previewInstrumentGain,
     previewInstrumentSettings,
     previewMasterGain,

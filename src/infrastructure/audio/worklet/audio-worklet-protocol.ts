@@ -19,7 +19,7 @@ import type {
 } from "./worklet-master-stage";
 
 export const PLAYBACK_PROCESSOR_NAME = "playback-processor";
-export const AUDIO_WORKLET_PROTOCOL_VERSION = 2 as const;
+export const AUDIO_WORKLET_PROTOCOL_VERSION = 3 as const;
 
 interface VersionedMessage {
   readonly protocolVersion: typeof AUDIO_WORKLET_PROTOCOL_VERSION;
@@ -179,10 +179,14 @@ export type MainToAudioWorkletMessage = VersionedMessage & (
       readonly stateVersion: number;
     }
   | {
-      readonly type: "audition";
+      readonly type: "audition-start";
+      readonly auditionId: number;
       readonly instrumentId: InstrumentId;
       readonly pitch: number;
-      readonly durationSeconds: number;
+    }
+  | {
+      readonly type: "audition-release";
+      readonly auditionId: number;
     });
 
 export type AudioWorkletToMainMessage = VersionedMessage & (
