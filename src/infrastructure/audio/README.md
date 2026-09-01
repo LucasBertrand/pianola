@@ -17,8 +17,9 @@ instruments, previews, audibilité et banques de voix à
 ce cœur à `AudioWorkletProcessor`.
 
 Les briques DSP propres au synthé sont regroupées sous `synth/` : voix mono,
-oscillateur PolyBLEP, enveloppe échantillonnée, filtre state-variable et lissage
-préalloué. `project-synth-runtime-config.ts` est l'unique projection du
+oscillateur PolyBLEP, enveloppe échantillonnée, filtre passe-bas state-variable
+à quatre pôles (24 dB/octave) et lissage préalloué.
+`project-synth-runtime-config.ts` est l'unique projection du
 `SynthConfig` durable vers le `SynthRuntimeConfig` du DSP. L'identité et le
 panoramique d'une note appartiennent à `worklet/worklet-voice-slot.ts`; la
 timeline, le protocole, la banque et l'allocation globales de voix, ainsi que

@@ -28,6 +28,9 @@ import {
   Slider,
 } from "../slider/Slider";
 import {
+  FilterResponseVisual,
+} from "./FilterResponseVisual";
+import {
   SYNTH_WAVEFORM_OPTIONS,
 } from "./synth-waveform-options";
 
@@ -420,42 +423,52 @@ export function InstrumentPresetDialog({
 
           <fieldset className="instrument-editor-module">
             <legend>Filter</legend>
-            <ParameterControl
-              label="Cutoff"
-              value={instrument.filterCutoffHz}
-              minimum={SYNTH_CONSTANTS.minimumFilterCutoffHz}
-              maximum={SYNTH_CONSTANTS.maximumFilterCutoffHz}
-              step={EDITOR_CONSTANTS.filterCutoffStepHz}
-              scale="logarithmic"
-              suffix=" Hz"
-              onChange={(value) => update({ filterCutoffHz: value })}
-            />
-            <ParameterControl
-              label="Resonance"
-              value={instrument.filterResonance}
-              minimum={SYNTH_CONSTANTS.minimumFilterResonance}
-              maximum={SYNTH_CONSTANTS.maximumFilterResonance}
-              step={EDITOR_CONSTANTS.filterResonanceStep}
-              onChange={(value) => update({ filterResonance: value })}
-            />
-            <ParameterControl
-              label="Key tracking"
-              value={instrument.filterKeyTracking}
-              minimum={SYNTH_CONSTANTS.minimumFilterKeyTracking}
-              maximum={SYNTH_CONSTANTS.maximumFilterKeyTracking}
-              step={EDITOR_CONSTANTS.filterKeyTrackingStep}
-              format={(value) => `${Math.round(value * 100)}%`}
-              onChange={(value) => update({ filterKeyTracking: value })}
-            />
-            <ParameterControl
-              label="Envelope amount"
-              value={instrument.filterEnvelopeAmountOctaves}
-              minimum={SYNTH_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
-              maximum={SYNTH_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
-              step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
-              suffix=" oct"
-              onChange={(value) => update({ filterEnvelopeAmountOctaves: value })}
-            />
+            <div className="instrument-editor-module-layout has-visual">
+              <div className="instrument-editor-control-list">
+                <ParameterControl
+                  label="Cutoff"
+                  value={instrument.filterCutoffHz}
+                  minimum={SYNTH_CONSTANTS.minimumFilterCutoffHz}
+                  maximum={SYNTH_CONSTANTS.maximumFilterCutoffHz}
+                  step={EDITOR_CONSTANTS.filterCutoffStepHz}
+                  scale="logarithmic"
+                  suffix=" Hz"
+                  onChange={(value) => update({ filterCutoffHz: value })}
+                />
+                <ParameterControl
+                  label="Resonance"
+                  value={instrument.filterResonance}
+                  minimum={SYNTH_CONSTANTS.minimumFilterResonance}
+                  maximum={SYNTH_CONSTANTS.maximumFilterResonance}
+                  step={EDITOR_CONSTANTS.filterResonanceStep}
+                  onChange={(value) => update({ filterResonance: value })}
+                />
+                <ParameterControl
+                  label="Key tracking"
+                  value={instrument.filterKeyTracking}
+                  minimum={SYNTH_CONSTANTS.minimumFilterKeyTracking}
+                  maximum={SYNTH_CONSTANTS.maximumFilterKeyTracking}
+                  step={EDITOR_CONSTANTS.filterKeyTrackingStep}
+                  format={(value) => `${Math.round(value * 100)}%`}
+                  onChange={(value) => update({ filterKeyTracking: value })}
+                />
+                <ParameterControl
+                  label="Envelope amount"
+                  value={instrument.filterEnvelopeAmountOctaves}
+                  minimum={SYNTH_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
+                  maximum={SYNTH_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
+                  step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
+                  suffix=" oct"
+                  onChange={(value) => update({
+                    filterEnvelopeAmountOctaves: value,
+                  })}
+                />
+              </div>
+              <FilterResponseVisual
+                cutoffHz={instrument.filterCutoffHz}
+                resonance={instrument.filterResonance}
+              />
+            </div>
           </fieldset>
 
           <EnvelopeControls

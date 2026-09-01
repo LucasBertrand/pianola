@@ -68,7 +68,7 @@ const METRIC_BUDGETS: Readonly<Record<OscillatorWaveform, {
     maximumOutOfBandEnergyDb: -20,
   },
   sawtooth: {
-    maximumPeak: 0.92,
+    maximumPeak: 0.923,
     minimumRms: 0.34,
     maximumRms: 0.48,
     maximumAbsoluteDc: 0.002,

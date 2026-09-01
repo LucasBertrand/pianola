@@ -6,11 +6,14 @@ import {
 } from "../parameters/smoothed-parameter";
 
 const FILTER_COEFFICIENT_UPDATE_SAMPLES = 32;
+const SECOND_STAGE_DAMPING = Math.SQRT2;
 
-/** Allocation-free state-variable low-pass owned by one synth voice. */
+/** Allocation-free four-pole state-variable low-pass owned by one synth voice. */
 export class StateVariableLowpass {
-  private integratorOne = 0;
-  private integratorTwo = 0;
+  private firstStageIntegratorOne = 0;
+  private firstStageIntegratorTwo = 0;
+  private secondStageIntegratorOne = 0;
+  private secondStageIntegratorTwo = 0;
   private coefficientCountdown = 0;
   private coefficientG = 0;
   private damping = 1;
@@ -35,8 +38,10 @@ export class StateVariableLowpass {
     this.keyTracking.reset(config.keyTracking);
     this.envelopeAmountOctaves.reset(config.envelopeAmountOctaves);
     if (!preserveContinuity) {
-      this.integratorOne = 0;
-      this.integratorTwo = 0;
+      this.firstStageIntegratorOne = 0;
+      this.firstStageIntegratorTwo = 0;
+      this.secondStageIntegratorOne = 0;
+      this.secondStageIntegratorTwo = 0;
     }
     this.coefficientCountdown = 0;
     this.coefficientG = 0;
@@ -73,16 +78,35 @@ export class StateVariableLowpass {
     }
 
     this.coefficientCountdown -= 1;
-    const denominator = 1 + this.coefficientG
+    const firstStageDenominator = 1 + this.coefficientG
       * (this.coefficientG + this.damping);
-    const band = (
-      this.integratorOne
-      + this.coefficientG * (input - this.integratorTwo)
-    ) / denominator;
-    const low = this.integratorTwo + this.coefficientG * band;
+    const firstStageBand = (
+      this.firstStageIntegratorOne
+      + this.coefficientG * (input - this.firstStageIntegratorTwo)
+    ) / firstStageDenominator;
+    const firstStageLow = this.firstStageIntegratorTwo
+      + this.coefficientG * firstStageBand;
 
-    this.integratorOne = 2 * band - this.integratorOne;
-    this.integratorTwo = 2 * low - this.integratorTwo;
-    return Number.isFinite(low) ? low : 0;
+    this.firstStageIntegratorOne = 2 * firstStageBand
+      - this.firstStageIntegratorOne;
+    this.firstStageIntegratorTwo = 2 * firstStageLow
+      - this.firstStageIntegratorTwo;
+
+    const secondStageDenominator = 1 + this.coefficientG
+      * (this.coefficientG + SECOND_STAGE_DAMPING);
+    const secondStageBand = (
+      this.secondStageIntegratorOne
+      + this.coefficientG * (
+        firstStageLow - this.secondStageIntegratorTwo
+      )
+    ) / secondStageDenominator;
+    const secondStageLow = this.secondStageIntegratorTwo
+      + this.coefficientG * secondStageBand;
+
+    this.secondStageIntegratorOne = 2 * secondStageBand
+      - this.secondStageIntegratorOne;
+    this.secondStageIntegratorTwo = 2 * secondStageLow
+      - this.secondStageIntegratorTwo;
+    return Number.isFinite(secondStageLow) ? secondStageLow : 0;
   }
 }

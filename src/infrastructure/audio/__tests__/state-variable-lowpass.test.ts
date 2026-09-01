@@ -56,6 +56,18 @@ describe("state-variable low-pass", () => {
     expect(trackedEnergy).toBeGreaterThan(fixedEnergy * 2);
   });
 
+  test("attenuates at approximately 24 dB per octave above cutoff", () => {
+    const config = { ...BASE_CONFIG, cutoffHz: 250, resonance: 0 };
+    const lowerOctaveAmplitude = steadyStateAmplitude(config, 2_000);
+    const upperOctaveAmplitude = steadyStateAmplitude(config, 4_000);
+    const attenuationDb = 20 * Math.log10(
+      lowerOctaveAmplitude / upperOctaveAmplitude,
+    );
+
+    expect(attenuationDb).toBeGreaterThan(21);
+    expect(attenuationDb).toBeLessThan(27);
+  });
+
   test.each([
     { cutoffHz: 0, resonance: 0, keyTracking: 0, envelopeAmountOctaves: 0 },
     { cutoffHz: Number.POSITIVE_INFINITY, resonance: 24, keyTracking: 1,
@@ -99,4 +111,22 @@ function alternatingSignalEnergy(
   }
 
   return energy;
+}
+
+function steadyStateAmplitude(
+  config: SynthFilterRuntimeConfig,
+  frequencyHz: number,
+): number {
+  const filter = createFilter(config);
+  let energy = 0;
+  const warmupSamples = 4_096;
+  const measuredSamples = 4_096;
+
+  for (let sample = 0; sample < warmupSamples + measuredSamples; sample += 1) {
+    const input = Math.sin(2 * Math.PI * frequencyHz * sample / SAMPLE_RATE);
+    const output = filter.process(input, 0, 60);
+    if (sample >= warmupSamples) energy += output * output;
+  }
+
+  return Math.sqrt(energy / measuredSamples);
 }
