@@ -53,7 +53,7 @@ describe("synth parameter preview policy", () => {
     expect(SYNTH_PREVIEW_POLICY).toMatchObject({
       kind: "processor-restart",
       oscillator: {
-        waveform: "next-note",
+        waveform: "active-immediate",
         detuneCents: "active-smoothed",
         freePhase: "next-note",
         pulseWidth: "active-smoothed",
@@ -82,25 +82,24 @@ describe("synth parameter preview policy", () => {
     expect(countPositiveCrossings(settled)).toBeLessThan(530);
   });
 
-  test("keeps waveform changes for the next note", () => {
+  test("applies waveform changes immediately to active voices", () => {
     const previewed = startVoice(BASE_CONFIG);
-    const unchanged = startVoice(BASE_CONFIG);
+    const baseline = startVoice(BASE_CONFIG);
 
     render(previewed, 128);
-    render(unchanged, 128);
+    render(baseline, 128);
     previewed.preview(projectSynthRuntimeConfig({
       ...BASE_CONFIG,
       oscillatorWaveform: "square",
     }));
 
-    expect(render(previewed, 512)).toEqual(render(unchanged, 512));
+    expect(render(previewed, 512)).not.toEqual(render(baseline, 512));
 
-    const nextSine = startVoice(BASE_CONFIG);
-    const nextSquare = startVoice({
-      ...BASE_CONFIG,
-      oscillatorWaveform: "square",
-    });
-    expect(render(nextSquare, 256)).not.toEqual(render(nextSine, 256));
+    previewed.preview(projectSynthRuntimeConfig(BASE_CONFIG));
+    const restored = render(previewed, 2_048).slice(-512);
+    const baselineTail = render(baseline, 2_048).slice(-512);
+
+    expect(meanAbsoluteDifference(restored, baselineTail)).toBeLessThan(0.000_1);
   });
 
   test("smooths pulse width on active voices and restores it on cancel", () => {

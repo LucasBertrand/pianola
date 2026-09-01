@@ -3,6 +3,7 @@ import type {
 } from "./synth-runtime-config";
 
 export type SynthParameterPreviewBehavior =
+  | "active-immediate"
   | "active-smoothed"
   | "next-note"
   | "processor-restart";
@@ -18,7 +19,7 @@ export const SYNTH_PREVIEW_POLICY = Object.freeze({
   kind: "processor-restart",
   polyphony: "next-note",
   oscillator: Object.freeze({
-    waveform: "next-note",
+    waveform: "active-immediate",
     detuneCents: "active-smoothed",
     freePhase: "next-note",
     pulseWidth: "active-smoothed",

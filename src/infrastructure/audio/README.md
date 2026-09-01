@@ -116,8 +116,9 @@ reviennent alors à leur valeur d’origine avec la même rampe de 10 ms.
 
 | Comportement | Paramètres |
 | --- | --- |
+| Actif immédiatement | Waveform |
 | Actif avec lissage | Tuning master, detune, pulse width, sustain et courbe des deux enveloppes, cutoff, résonance, key tracking, quantité d’enveloppe de filtre |
-| Prochaine note seulement | Waveform, polyphonie, phase libre, attack/decay/release des deux enveloppes |
+| Prochaine note seulement | Polyphonie, phase libre, attack/decay/release des deux enveloppes |
 | Redémarrage du processeur requis | Type d’instrument (`kind`) ; ce changement n’est actuellement pas exposé par l’éditeur |
 
 ## Étage master temps réel

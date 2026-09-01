@@ -100,6 +100,7 @@ export class SynthVoice {
   }
 
   public preview(config: SynthRuntimeConfig): void {
+    this.waveform = config.oscillator.waveform;
     this.oscillatorDetuneCents = config.oscillator.detuneCents;
     this.frequencyHz.setTarget(
       this.baseFrequencyHz * 2 ** (config.oscillator.detuneCents / 1_200),
