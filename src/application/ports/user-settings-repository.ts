@@ -6,10 +6,10 @@ import type {
 } from "../../domain/identifiers";
 import type {
   InstrumentPreset,
-} from "../../domain/instruments/instrument";
+} from "../../domain/instruments/presets/instrument-preset";
 import {
   cloneInstrumentPreset,
-} from "../../domain/personal-instrument-presets";
+} from "../../domain/instruments/presets/personal-preset-library";
 import type {
   SelectionMode,
 } from "../../editor-core/interactions/gestures/gesture-draft";

@@ -1,9 +1,9 @@
 import {
   type Note,
 } from "../../../domain/notes/note";
-import {
-  type ProjectInstrument,
-} from "../../../domain/instruments/instrument";
+import type {
+  ProjectInstrument,
+} from "../../../domain/instruments/project-instrument";
 import {
   type MeterMarker,
   type TempoMarker,

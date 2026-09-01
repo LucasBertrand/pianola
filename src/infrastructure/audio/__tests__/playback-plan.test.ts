@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
-  compilePlaybackPlan,
-} from "../playback-snapshot";
-import { createClipPlaybackSource } from "../playback-source";
+  compileAudioPlaybackPlan,
+} from "../../../application/audio/compile-audio-playback-plan";
+import { createClipPlaybackSource } from "../../../application/audio/playback-source";
 import {
   createTestProject,
   TEST_CLIP_ID,
@@ -44,7 +44,7 @@ describe("playback plans", () => {
       ...baseState,
       clipsById: { ...baseState.clipsById, [clip.id]: clip },
     };
-    const plan = compilePlaybackPlan(
+    const plan = compileAudioPlaybackPlan(
       state,
       createClipPlaybackSource(clip),
     );

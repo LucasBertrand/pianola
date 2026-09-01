@@ -4,7 +4,7 @@ Ce document fixe le propriétaire canonique de chaque famille d’état. Il sert
 référence avant toute nouvelle persistance, commande Undo/Redo ou mise à jour à
 haute fréquence.
 
-Dernière mise à jour : 31 août 2026.
+Dernière mise à jour : 1er septembre 2026.
 
 | Catégorie | Données principales | Propriétaire | Durée de vie | Persistée | Undo/Redo | Fréquence |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -14,8 +14,9 @@ Dernière mise à jour : 31 août 2026.
 | préférences utilisateur | mode de sélection, couleur et type de label des notes, préécoute du pitch, presets personnels et raccourcis par action | `UserSettingsRepository`, projeté temporairement par `usePianoRollUserPreferences` | installation et utilisateur local | oui, document IndexedDB séparé ; jamais exporté | non | faible |
 | session d’édition | sélection de notes, presse-papier, draft géométrique de note, lasso, dialogue ou import en attente | `EditorSelection`, `PianoRollInteractionSession` et hooks de capacité | geste, montage du piano roll ou action utilisateur | non | snapshots d’identifiants avant/après pour la sélection ; les autres états restent hors historique | élevée |
 | projection éditoriale temporelle | `TimeMap` projetée pour un déplacement de marqueurs et région de boucle projetée | `TimeMapMarkerPreviewSession` et `LoopPreviewSession` dans `application/editor-session/` | un geste, lié au clip et à la révision sources | non | non ; le commit seul publie une transaction | élevée pendant le geste |
-| état audio effectif | timeline et transport publiés, surchargés indépendamment par le tempo projeté, la boucle projetée ou les paramètres d’instrument en cours d’édition | `AudioWorkletTransport` puis `WorkletTimelineEngine` | source audio courante ou interaction | non | non ; retirer une surcharge révèle le dernier état publié | audio-rate et interaction |
-| temps réel | playhead unique `{ clipId, tick }`, statut de lecture, tick à l’échantillon, voix DSP et buffers Canvas | `application/editor-session/EditorRuntime.playheadPosition`, `useAudioPlayback` et `WorkletTimelineEngine` | session ou frame courante | non | non | audio-rate ou frame |
+| plan de lecture audio | source explicite, tempo, mixage, configurations durables et événements compactés | `application/audio/AudioPlaybackPlan`, dérivé du `ProjectDocument` | révision publiée de la source | non | non ; il est recompilé depuis le document | faible à moyenne |
+| état audio effectif | timeline et transport publiés, surchargés indépendamment par le tempo projeté, la boucle projetée ou les paramètres d’instrument en cours d’édition | `AudioWorkletTransport` pour le cycle navigateur, `AudioWorkletStateSynchronizer` pour les révisions, puis `WorkletTimelineEngine` et `WorkletInstrumentRuntime` | source audio courante ou interaction | non | non ; retirer une surcharge révèle le dernier état publié | audio-rate et interaction |
+| temps réel | playhead unique `{ clipId, tick }`, statut de lecture, tick à l’échantillon, slots de voix et état mutable des composants DSP | `application/editor-session/EditorRuntime.playheadPosition`, `useAudioPlayback`, `WorkletTimelineEngine`, `WorkletVoiceSlot` et composants sous `infrastructure/audio/synth/` | session, voix ou frame courante | non | non | audio-rate ou frame |
 
 ## Règles
 
@@ -58,8 +59,10 @@ Dernière mise à jour : 31 août 2026.
   tempo et de boucle. Ces canaux sont versionnés indépendamment ; publier une
   nouvelle révision ne consomme pas la surcharge active, et la retirer révèle
   la dernière valeur publiée plutôt qu’une copie ancienne.
-- Le compilateur audio reçoit un `PlaybackSource` explicite. Il ne choisit pas le
-  clip à partir de l’écran actif.
+- Le compilateur audio applicatif reçoit un `PlaybackSource` explicite. Il ne
+  choisit pas le clip à partir de l’écran actif. L'infrastructure applique une
+  seule projection nommée de `SynthConfig` vers `SynthRuntimeConfig`; ce DTO et
+  l'état mutable du DSP ne deviennent jamais des autorités persistantes.
 - Le playhead est une entité unique située dans exactement un clip. Le clip
   actif du workspace reste une sélection d’édition indépendante : le changer
   ne déplace pas le playhead. En revanche, repositionner le playhead dans le

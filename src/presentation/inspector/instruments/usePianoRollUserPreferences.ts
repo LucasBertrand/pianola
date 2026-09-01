@@ -15,12 +15,13 @@ import type {
 } from "../../../domain/identifiers";
 import type {
   InstrumentPreset,
+} from "../../../domain/instruments/presets/instrument-preset";
+import type {
   SynthConfig,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/synth/synth-config";
 import {
-  createPersonalInstrumentPresetId,
   mergeInstrumentPresetLibraries,
-} from "../../../domain/personal-instrument-presets";
+} from "../../../domain/instruments/presets/personal-preset-library";
 import type {
   SelectionMode,
 } from "../../../editor-core/interactions/gestures/gesture-draft";
@@ -70,6 +71,7 @@ export interface UsePianoRollUserPreferencesOptions {
   readonly projectPresetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly projectPresetOrder: readonly PresetId[];
   readonly repository: UserSettingsRepository;
+  readonly createPersonalPresetId: () => PresetId;
   readonly onSettingsChange: (settings: UserSettings) => void;
   readonly onPersistenceError: (error: unknown) => void;
   readonly saveProjectPreset: (
@@ -86,6 +88,7 @@ export function usePianoRollUserPreferences({
   projectPresetsById,
   projectPresetOrder,
   repository,
+  createPersonalPresetId,
   onSettingsChange,
   onPersistenceError,
   saveProjectPreset,
@@ -163,7 +166,7 @@ export function usePianoRollUserPreferences({
     const updatedSettings = await repository.update((current) => {
       const result = addPersonalInstrumentPreset(
         current,
-        createPersonalInstrumentPresetId(),
+        createPersonalPresetId(),
         name,
         config,
       );
@@ -177,7 +180,7 @@ export function usePianoRollUserPreferences({
     }
 
     return preset;
-  }, [onSettingsChange, repository]);
+  }, [createPersonalPresetId, onSettingsChange, repository]);
   const updatePersonalPreset = useCallback(async (
     presetId: PresetId,
     config: SynthConfig,

@@ -1,15 +1,17 @@
-/** Persistent instrument defaults and validation limits. */
-export const INSTRUMENT_CONSTANTS = Object.freeze({
-  minimumGain: 0,
-  maximumGain: 1,
-  pan: 0,
+import {
+  PROJECT_CONSTANTS,
+} from "../../project/project-constants";
+
+export const DEFAULT_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.defaultSynthPolyphony;
+export const MINIMUM_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.minimumSynthPolyphony;
+export const MAXIMUM_SYNTH_POLYPHONY =
+  PROJECT_CONSTANTS.maximumSynthPolyphony;
+
+/** Persistent synth defaults and validation limits. */
+export const SYNTH_CONSTANTS = Object.freeze({
   defaultOscillatorWaveform: "sawtooth",
-  oscillatorWaveformOptions: Object.freeze([
-    Object.freeze({ value: "sine", label: "Sine" }),
-    Object.freeze({ value: "triangle", label: "Triangle" }),
-    Object.freeze({ value: "sawtooth", label: "Saw" }),
-    Object.freeze({ value: "square", label: "Square" }),
-  ] as const),
   oscillatorDetuneCents: 0,
   oscillatorFreePhase: false,
   pulseWidth: 0.5,
@@ -40,9 +42,4 @@ export const INSTRUMENT_CONSTANTS = Object.freeze({
   maximumEnvelopeCurve: 1,
   maximumEnvelopeTimeSeconds: 2,
   maximumEnvelopeDecaySeconds: 10,
-  transposeSemitones: 0,
-  timingOffsetTicks: 0,
-  gateRatio: 1,
-  velocityScale: 1,
-  probability: 1,
 } as const);

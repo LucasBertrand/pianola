@@ -15,11 +15,13 @@ import type {
 import {
   createInstrumentConfigFromPreset,
   selectInstrumentPresetId,
-} from "../../../domain/instrument-presets";
+} from "../../../domain/instruments/synth/built-in-synth-presets";
 import type {
   InstrumentPreset,
+} from "../../../domain/instruments/presets/instrument-preset";
+import type {
   SynthConfig,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/synth/synth-config";
 import type {
   EditorRuntime,
 } from "../../../application/editor-session/editor-runtime";

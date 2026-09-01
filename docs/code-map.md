@@ -36,7 +36,7 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le playhead | `src/editor-core/model/playhead-position.ts` | signal global `playheadPosition`, puis `useAudioPlayback.ts` et `PianoRollTimeline.tsx` |
 | modifier Undo/Redo ou les transactions | `src/application/history/editor-command-service.ts` | `project-store.ts`, puis reducers sous `src/domain/commands/` |
 | modifier l’indicateur de lecture des clips | `src/presentation/inspector/clips/clip-playhead-visual.ts` | `src/presentation/inspector/clips/ClipInspector.tsx`, puis `src/presentation/styles/inspector.css` |
-| modifier le DSP du synthé | `src/infrastructure/audio/worklet/synth/synth-voice.ts` | `polyblep-oscillator.ts` et `sample-envelope.ts` dans le même propriétaire ; banque et allocation globales restent sous `worklet/` |
+| modifier le DSP du synthé | `src/infrastructure/audio/synth/synth-voice.ts` | composant ciblé sous `synth/oscillator/`, `synth/envelope/`, `synth/filter/` ou `synth/parameters/` ; slots, banque et allocation globales restent sous `worklet/` |
 | modifier la concaténation d’un groupe | `src/presentation/inspector/clips/useClipGroupConcatenation.ts` | `src/domain/clips/concatenate-clips.ts`, puis `src/domain/commands/clip-concatenation-commands.ts` |
 | modifier la découpe d’un clip | `src/presentation/dialogs/ClipSplitDialog.tsx` | `src/presentation/inspector/clips/useClipSplitting.ts`, `src/domain/clips/split-clip.ts`, puis `SplitClipIntoGroupCommand` |
 | modifier la duplication d’un groupe | `src/presentation/inspector/clips/useClipGroupDuplication.ts` | `src/domain/clips/duplicate-clip.ts`, puis transaction de commandes hiérarchiques |
@@ -46,7 +46,8 @@ restent le garde-fou de parité des flux transversaux.
 | modifier le menu radial ou le bouton du stylet | `src/presentation/radial-menu/piano-roll-radial-command-model.ts` | `usePianoRollRadialMenuCommands.ts`, `useDocumentRadialMenu.ts`, puis `piano-roll/interactions/useStylusAction.ts` |
 | modifier les collisions | `src/presentation/piano-roll/interactions/useNoteCollisionDialogWorkflow.ts` | `src/domain/note-collision.ts` |
 | modifier l’inspecteur | `src/presentation/inspector/ProjectInspector.tsx` | sous-capacité clips ou instruments |
-| ajouter un champ instrument | `src/domain/instruments/instrument.ts` | validation, commandes et codec portable/local |
+| ajouter un champ de synthé durable | `src/domain/instruments/synth/synth-config.ts` | constantes et validation voisines, projecteur `infrastructure/audio/synth/project-synth-runtime-config.ts`, commandes et codecs portable/local |
+| ajouter un champ d'instrument projet | `src/domain/instruments/project-instrument.ts` | validation de l'agrégat, commandes et codecs portable/local |
 | modifier le master bus | `src/presentation/transport/MasterGainControl.tsx` | `src/domain/master-bus.ts` et transport workflow |
 | modifier le tempo ou la métrique | `src/domain/transport/time-map.ts` | `meter-marker-operations.ts`, `point-marker-operations.ts`, commandes de transport, validation et painters ruler/grid |
 | modifier `.pianola` | `src/infrastructure/project-files/pianola/pianola-project-codec.ts` | `migrate-portable-project.ts`, migration de document partagée sous `infrastructure/migration/`, workspace codec, parseur de document puis `presentation/project-files/useProjectMigrationDialog.tsx` pour un futur rapport |
@@ -105,7 +106,7 @@ et inversement.
 TransportControls
   → usePianoRollTransportViewport
   → useAudioPlayback
-  → compilePlaybackPlan
+  → compileAudioPlaybackPlan / AudioPlaybackPlan (application)
   → createTransferableAudioWorkletTimeline
   → AudioWorkletTransport / MessagePort
   → WorkletTimelineEngine
@@ -160,7 +161,7 @@ ProjectInstrumentControls
   → useProjectInstrumentWorkflow
   → commandes instrument
   → ProjectStore
-  → PlaybackSnapshot et styles dérivés
+  → AudioPlaybackPlan et styles dérivés
 ```
 
 Le brouillon et sa projection audio ne sont pas persistants et ne recompilent

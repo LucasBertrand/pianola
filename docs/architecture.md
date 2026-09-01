@@ -71,7 +71,8 @@ Le domaine est réparti par propriétaire :
 | --- | --- |
 | `src/domain/identifiers.ts` | identifiants et tick |
 | `src/domain/notes/note.ts` | note, pitch, vélocité, sourdine et verrouillage |
-| `src/domain/instruments/instrument.ts` | sons, presets et instruments |
+| `src/domain/instruments/project-instrument.ts` | identité, mixage durable, interprétation et descripteurs futurs de l'instrument projet |
+| `src/domain/instruments/synth/synth-config.ts` | configuration durable du synthé ; presets sous `instruments/presets/` |
 | `src/domain/clips/clip.ts` | pistes, timeline et clips |
 | `src/domain/transport/transport.ts` | horloge (PPQN) et boucle locale au clip |
 | `src/domain/transport/time-map.ts` | surface publique de la time map ; modèle, navigation, normalisation, marqueurs et éditions structurelles sont dans des modules voisins |
@@ -190,15 +191,16 @@ ciblage/stratégie, contrôleur de sélection et contrôleur visuel.
 
 ```text
 ClipPlaybackSource
-  → compilePlaybackPlan
-  → PlaybackSnapshot publié
+  → compileAudioPlaybackPlan
+  → AudioPlaybackPlan publié (application)
+  → projectSynthRuntimeConfig (anti-corruption infrastructure)
   → createTransferableAudioWorkletTimeline (données audio minimales)
   → AudioWorkletTransport (cycle de vie navigateur et commandes)
   → MessagePort
-  → WorkletTimelineEngine
+  → WorkletTimelineEngine (horloge et séquencement)
       timeline/transport publiés + surcharges tempo/boucle
-      → état effectif (horloge, boucles, occurrences et polyphonie)
-  → worklet/synth/SynthVoice (oscillateur, enveloppes et filtre par échantillon)
+      → WorkletInstrumentRuntime (configs, previews, audibilité, voix)
+  → synth/SynthVoice (oscillateur, enveloppes et filtre par échantillon)
 ```
 
 Le worklet possède le transport et déclenche les occurrences depuis le nombre
@@ -234,10 +236,12 @@ suivantes. Aucune note n’est recompilée pendant cette interaction. Annuler re
 le paramètre transitoire ; confirmer publie une unique transaction dans
 `ProjectStore`.
 
-La façade publique est `src/infrastructure/audio/audio-worklet-transport.ts`. Le protocole est
-sous `src/infrastructure/audio/worklet/` et le DSP propre au synthé sous son
-propriétaire `worklet/synth/`. L’adaptateur navigateur peut être remplacé
-sans modifier le moteur temps réel pur.
+Les contrats publics et le plan de lecture sont sous `src/application/ports/`
+et `src/application/audio/`. La façade concrète navigateur est
+`src/infrastructure/audio/audio-worklet-transport.ts`; son synchroniseur pur est
+voisin. Le protocole est sous `src/infrastructure/audio/worklet/` et le DSP
+propre au synthé sous `src/infrastructure/audio/synth/`. L’adaptateur navigateur
+peut être remplacé sans modifier le moteur temps réel pur.
 
 ## Persistance et fichiers projet
 

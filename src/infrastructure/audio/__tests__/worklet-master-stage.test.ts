@@ -8,13 +8,13 @@ import {
 } from "../../../domain/project/project-document";
 import {
   createClipPlaybackSource,
-} from "../playback-source";
+} from "../../../application/audio/playback-source";
 import {
-  compilePlaybackPlan,
-} from "../playback-snapshot";
+  compileAudioPlaybackPlan,
+} from "../../../application/audio/compile-audio-playback-plan";
 import type {
-  PlaybackSnapshot,
-} from "../playback-model";
+  AudioPlaybackPlan,
+} from "../../../application/audio/audio-playback-plan";
 import {
   MASTER_CEILING_GAIN,
   MASTER_HEADROOM_GAIN,
@@ -90,11 +90,11 @@ describe("AudioWorklet master stage", () => {
       clips: [{ id: TEST_CLIP_ID, notes }],
     });
     const clip = getActiveClip(project);
-    const compiled = compilePlaybackPlan(
+    const compiled = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
-    const snapshot: PlaybackSnapshot = {
+    const snapshot: AudioPlaybackPlan = {
       ...compiled,
       masterGain: 1,
       instruments: compiled.instruments.map((instrument) => ({

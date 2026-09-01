@@ -5,16 +5,19 @@ import {
 } from "vitest";
 import type {
   OscillatorWaveform,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/synth/synth-config";
 import type {
-  SynthPlaybackPresetSnapshot,
-} from "../playback-model";
+  SynthRuntimeConfig,
+} from "../synth/synth-runtime-config";
+import {
+  projectSynthRuntimeConfig,
+} from "../synth/project-synth-runtime-config";
 import type {
   AudioWorkletTimeline,
 } from "../worklet/audio-worklet-protocol";
 import {
   SynthVoice,
-} from "../worklet/synth/synth-voice";
+} from "../synth/synth-voice";
 import {
   WorkletTimelineEngine,
 } from "../worklet/worklet-timeline-engine";
@@ -218,7 +221,7 @@ function renderVoice(
   sampleRate: number,
 ): Float32Array {
   const voice = new SynthVoice(sampleRate);
-  voice.start("dsp", 69, createConfig(waveform, 1), 440, 1, null, null);
+  voice.start(69, createConfig(waveform, 1), 440, 0);
   for (let index = 0; index < Math.round(sampleRate * 0.25); index += 1) {
     voice.render();
   }
@@ -292,8 +295,8 @@ function createEngine(
 function createConfig(
   waveform: OscillatorWaveform,
   polyphony: number,
-): SynthPlaybackPresetSnapshot {
-  return {
+): SynthRuntimeConfig {
+  return projectSynthRuntimeConfig({
     kind: "synth",
     oscillatorWaveform: waveform,
     polyphony,
@@ -318,7 +321,7 @@ function createConfig(
       releaseSeconds: 0.01,
       curve: 0,
     },
-  };
+  });
 }
 
 function scaleMetrics(metrics: DspMetrics, scale: number): DspMetrics {

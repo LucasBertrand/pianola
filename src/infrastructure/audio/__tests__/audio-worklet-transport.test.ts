@@ -11,10 +11,10 @@ import {
 } from "../audio-worklet-transport";
 import {
   createClipPlaybackSource,
-} from "../playback-source";
+} from "../../../application/audio/playback-source";
 import {
-  compilePlaybackPlan,
-} from "../playback-snapshot";
+  compileAudioPlaybackPlan,
+} from "../../../application/audio/compile-audio-playback-plan";
 import type {
   AudioWorkletToMainMessage,
   MainToAudioWorkletMessage,
@@ -43,7 +43,7 @@ describe("AudioWorklet browser transport", () => {
       }],
     });
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -97,7 +97,7 @@ describe("AudioWorklet browser transport", () => {
   test("publishes independent versioned tempo and loop previews", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -172,7 +172,7 @@ describe("AudioWorklet browser transport", () => {
   test("sends versioned lightweight commands without retransferring notes", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const snapshot = compileAudioPlaybackPlan(project, createClipPlaybackSource(clip));
     const originalInstrument = snapshot.instruments[0];
     expect(originalInstrument).toBeDefined();
     if (originalInstrument === undefined) return;
@@ -220,7 +220,7 @@ describe("AudioWorklet browser transport", () => {
   test("retransfers only the instrument events that changed", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const snapshot = compileAudioPlaybackPlan(project, createClipPlaybackSource(clip));
     const instrument = snapshot.instruments[0];
     expect(instrument).toBeDefined();
     if (instrument === undefined) return;
@@ -265,7 +265,7 @@ describe("AudioWorklet browser transport", () => {
       }],
     });
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const snapshot = compileAudioPlaybackPlan(project, createClipPlaybackSource(clip));
     const instrument = snapshot.instruments[0];
     expect(instrument).toBeDefined();
     if (instrument === undefined) return;
@@ -294,7 +294,7 @@ describe("AudioWorklet browser transport", () => {
   test("replaces a playing clip immediately without a stop command", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -329,7 +329,7 @@ describe("AudioWorklet browser transport", () => {
   test("promotes a queued clip and ignores late position reports", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -407,7 +407,7 @@ describe("AudioWorklet browser transport", () => {
   test("promotes a preloaded clip racing an incremental update and queue clear", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(project, createClipPlaybackSource(clip));
+    const snapshot = compileAudioPlaybackPlan(project, createClipPlaybackSource(clip));
     const instrument = snapshot.instruments[0];
     expect(instrument).toBeDefined();
     if (instrument === undefined) return;
@@ -463,7 +463,7 @@ describe("AudioWorklet browser transport", () => {
   test("publishes exact worklet positions after pause and stop", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -545,7 +545,7 @@ describe("AudioWorklet browser transport", () => {
   test("forgets queued snapshots after the worklet acknowledges replacement and clearing", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -642,7 +642,7 @@ describe("AudioWorklet browser transport", () => {
   test("forwards reduced-rate master levels through the browser callback", async () => {
     const project = createTestProject();
     const clip = getActiveClip(project);
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(clip),
     );
@@ -680,6 +680,44 @@ describe("AudioWorklet browser transport", () => {
     expect(reports).toEqual([0.8]);
     await transport.dispose();
   });
+
+  test("rejects messages from an incompatible worklet protocol", async () => {
+    const project = createTestProject();
+    const clip = getActiveClip(project);
+    const snapshot = compileAudioPlaybackPlan(
+      project,
+      createClipPlaybackSource(clip),
+    );
+    const fakePort = new FakeMessagePort();
+    const errors: unknown[] = [];
+    const transport = new AudioWorkletTransport(
+      snapshot,
+      clip.transportSettings,
+      { onError(error) { errors.push(error); } },
+      0,
+      () => new FakeAudioContext() as unknown as AudioContext,
+      () => new FakeAudioWorkletNode(fakePort) as unknown as AudioWorkletNode,
+    );
+
+    await transport.play();
+    fakePort.emitRaw({
+      protocolVersion: 1,
+      type: "transport-state",
+      status: "playing",
+      sourceId: snapshot.sourceId,
+      tick: 12,
+      frame: 128,
+      sequence: 1,
+    });
+
+    expect(errors).toEqual([
+      expect.objectContaining({
+        message: "Unsupported audio worklet protocol version.",
+      }),
+    ]);
+    expect(transport.status).toBe("stopped");
+    await transport.dispose();
+  });
 });
 
 type UnversionedWorkletMessage<T> = T extends AudioWorkletToMainMessage
@@ -698,6 +736,10 @@ class FakeMessagePort {
       ...message,
       protocolVersion: AUDIO_WORKLET_PROTOCOL_VERSION,
     } } as MessageEvent);
+  }
+
+  public emitRaw(message: object): void {
+    this.onmessage?.({ data: message } as MessageEvent);
   }
 
   public close(): void {}

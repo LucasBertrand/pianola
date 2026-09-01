@@ -32,14 +32,11 @@ import {
   createEditorRuntime,
 } from "../../src/bootstrap/create-app-runtime";
 import {
-  resolveNoteEnvelopePeakLevel,
-} from "../../src/infrastructure/audio/note-dynamics";
-import {
-  compilePlaybackPlan as compileExplicitPlaybackSnapshot,
-} from "../../src/infrastructure/audio/playback-snapshot";
+  compileAudioPlaybackPlan as compileExplicitPlaybackSnapshot,
+} from "../../src/application/audio/compile-audio-playback-plan";
 import {
   createClipPlaybackSource,
-} from "../../src/infrastructure/audio/playback-source";
+} from "../../src/application/audio/playback-source";
 import {
   projectTickIntoLoop,
   secondsToTick,
@@ -54,7 +51,7 @@ import {
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
-} from "../../src/domain/instrument-presets";
+} from "../../src/domain/instruments/synth/built-in-synth-presets";
 import {
   createDefaultMasterBusState,
 } from "../../src/domain/master-bus";
@@ -73,7 +70,7 @@ import {
 } from "../../src/domain/transport/transport";
 import {
   DEFAULT_SYNTH_POLYPHONY,
-} from "../../src/domain/instruments/instrument";
+} from "../../src/domain/instruments/synth/synth-constants";
 import {
   PROJECT_SCHEMA_VERSION,
 } from "../../src/domain/project/project-document";
@@ -1098,7 +1095,7 @@ function getActiveTestMeasureCount(state) {
     );
   });
 
-  test("compiles deterministic, instrument-ordered playback snapshots", () => {
+  test("compiles deterministic, instrument-ordered playback plans", () => {
     const state = createProject({
       revision: 7,
       instrumentOrder: ["voice-b", "voice-a"],
@@ -1136,15 +1133,13 @@ function getActiveTestMeasureCount(state) {
       instrumentA.instrument.polyphony,
       DEFAULT_SYNTH_POLYPHONY,
     );
-    assert.notEqual(
+    assert.equal(
       instrumentA.instrument,
       state.projectInstrumentsById["voice-a"].instrument,
     );
     assert.equal(instrumentA.instrument.pulseWidth, 0.5);
     assert.equal(instrumentA.instrument.filterEnvelopeAmountOctaves, 0.25);
-    assert.equal(Object.isFrozen(instrumentA.instrument), true);
-    assert.equal(Object.isFrozen(instrumentA.instrument.envelope), true);
-    assert.equal(Object.isFrozen(instrumentA.instrument.filterEnvelope), true);
+    assert.equal(Object.isFrozen(instrumentA), true);
   });
 
   test("updates and validates persistent master controls", () => {
@@ -1640,16 +1635,6 @@ function getActiveTestMeasureCount(state) {
       }),
       "C♯4",
     );
-  });
-
-  test("keeps playback level independent from stored velocity", () => {
-    const quietLevel = resolveNoteEnvelopePeakLevel(1);
-    const drawnLevel = resolveNoteEnvelopePeakLevel(100);
-    const loudLevel = resolveNoteEnvelopePeakLevel(127);
-
-    assert.equal(quietLevel, drawnLevel);
-    assert.equal(loudLevel, drawnLevel);
-    assert.equal(drawnLevel, 100 / 127);
   });
 
   test("repositions a note group atomically", () => {

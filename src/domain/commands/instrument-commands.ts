@@ -9,20 +9,24 @@ import {
   type ClipId,
   type PresetId,
 } from "../identifiers";
-import {
-  type InstrumentPreset,
-  type ProjectInstrument,
-} from "../instruments/instrument";
+import type {
+  InstrumentPreset,
+} from "../instruments/presets/instrument-preset";
+import type {
+  ProjectInstrument,
+} from "../instruments/project-instrument";
 import {
   type EditorSessionState,
 } from "../project/project-document";
 import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-} from "../instruments/instrument";
+} from "../instruments/project-instrument";
 import {
   assertValidProjectInstrument,
+} from "../instruments/project-instrument-validation";
+import {
   validateInstrumentPreset,
-} from "../validation/instrument-validation";
+} from "../instruments/presets/instrument-preset-validation";
 import type {
   AddProjectInstrumentCommand,
   DeleteProjectInstrumentCommand,

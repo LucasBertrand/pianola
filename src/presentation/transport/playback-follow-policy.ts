@@ -1,6 +1,6 @@
 import type {
   PlaybackStatus,
-} from "../../infrastructure/audio/playback-model";
+} from "../../application/ports/audio-transport";
 import type {
   ClipId,
 } from "../../domain/identifiers";

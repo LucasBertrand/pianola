@@ -13,14 +13,18 @@ import {
   type InstrumentId,
   type PresetId,
 } from "../../../domain/identifiers";
-import {
-  type InstrumentConfig,
-  type InstrumentPreset,
-  type ProjectInstrument,
-} from "../../../domain/instruments/instrument";
+import type {
+  InstrumentConfig,
+} from "../../../domain/instruments/synth/synth-config";
+import type {
+  InstrumentPreset,
+} from "../../../domain/instruments/presets/instrument-preset";
+import type {
+  ProjectInstrument,
+} from "../../../domain/instruments/project-instrument";
 import {
   createDefaultProjectInstrument,
-} from "../../../domain/project-instrument-factory";
+} from "../../../domain/instruments/project-instrument-defaults";
 import type {
   ShowApplicationConfirmation,
 } from "../../../application/dialogs/application-dialog-port";

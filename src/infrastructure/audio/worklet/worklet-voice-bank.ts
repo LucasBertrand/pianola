@@ -3,11 +3,11 @@ import type {
   NoteId,
 } from "../../../domain/identifiers";
 import type {
-  SynthPlaybackPresetSnapshot,
-} from "../playback-model";
+  SynthRuntimeConfig,
+} from "../synth/synth-runtime-config";
 import {
-  SynthVoice,
-} from "./synth/synth-voice";
+  WorkletVoiceSlot,
+} from "./worklet-voice-slot";
 import type {
   WorkletRuntimeInstrument,
 } from "./worklet-runtime-instrument";
@@ -19,17 +19,17 @@ import {
 
 /** Owns the bounded set of DSP voices and their mix state. */
 export class WorkletVoiceBank {
-  private readonly voices: SynthVoice[];
-  private readonly availableVoices: SynthVoice[];
+  private readonly voices: WorkletVoiceSlot[];
+  private readonly availableVoices: WorkletVoiceSlot[];
   private voiceSequence = 0;
   private tuningFrequencyHz = 440;
 
   public constructor(private readonly sampleRate: number) {
-    this.voices = new Array<SynthVoice>(
+    this.voices = new Array<WorkletVoiceSlot>(
       GLOBAL_VOICE_STORAGE_LIMIT,
     );
     this.voices.length = 0;
-    this.availableVoices = new Array<SynthVoice>(
+    this.availableVoices = new Array<WorkletVoiceSlot>(
       GLOBAL_VOICE_STORAGE_LIMIT,
     );
 
@@ -39,7 +39,7 @@ export class WorkletVoiceBank {
       voiceIndex += 1
     ) {
       this.availableVoices[voiceIndex] =
-        new SynthVoice(sampleRate);
+        new WorkletVoiceSlot(sampleRate);
     }
   }
 
@@ -69,7 +69,7 @@ export class WorkletVoiceBank {
 
   public previewInstrument(
     instrumentId: InstrumentId,
-    config: SynthPlaybackPresetSnapshot,
+    config: SynthRuntimeConfig,
   ): void {
     for (const voice of this.voices) {
       if (voice.instrumentId === instrumentId && !voice.ended) {
@@ -259,7 +259,7 @@ export class WorkletVoiceBank {
     pitch: number,
     endTick: number | null,
     auditionSamples: number | null,
-  ): SynthVoice | undefined {
+  ): WorkletVoiceSlot | undefined {
     const displacedVoice = reserveWorkletVoice(
       this.voices,
       runtime.timeline.instrumentId,
@@ -281,6 +281,9 @@ export class WorkletVoiceBank {
       this.voiceSequence,
       endTick,
       auditionSamples,
+      runtime.config.oscillator.freePhase
+        ? deterministicVoicePhase(this.voiceSequence)
+        : 0,
       displacedVoice?.instrumentId === runtime.timeline.instrumentId,
     );
 
@@ -290,7 +293,7 @@ export class WorkletVoiceBank {
   }
 
   private configureVoiceMix(
-    voice: SynthVoice,
+    voice: WorkletVoiceSlot,
     runtime: WorkletRuntimeInstrument,
   ): void {
     voice.configureMix(
@@ -299,6 +302,10 @@ export class WorkletVoiceBank {
       runtime.audible,
     );
   }
+}
+
+function deterministicVoicePhase(sequence: number): number {
+  return (sequence * 0.618_033_988_749_894_9) % 1;
 }
 
 function sanitizeSample(value: number): number {

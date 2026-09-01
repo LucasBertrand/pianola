@@ -14,8 +14,10 @@ import type {
 } from "../identifiers";
 import type {
   InstrumentPreset,
+} from "../instruments/presets/instrument-preset";
+import type {
   ProjectInstrument,
-} from "../instruments/instrument";
+} from "../instruments/project-instrument";
 import type {
   MasterBusState,
 } from "../master-bus";

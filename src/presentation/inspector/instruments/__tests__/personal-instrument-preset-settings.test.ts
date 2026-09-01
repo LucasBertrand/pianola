@@ -4,7 +4,7 @@ import {
 } from "../../../../application/ports/user-settings-repository";
 import {
   createDefaultInstrumentConfig,
-} from "../../../../domain/instrument-presets";
+} from "../../../../domain/instruments/synth/built-in-synth-presets";
 import {
   addPersonalInstrumentPreset,
   deletePersonalInstrumentPreset,

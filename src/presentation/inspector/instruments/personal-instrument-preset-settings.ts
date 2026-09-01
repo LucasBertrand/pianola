@@ -4,15 +4,19 @@ import type {
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-  type InstrumentPreset,
-  type SynthConfig,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/project-instrument";
+import type {
+  InstrumentPreset,
+} from "../../../domain/instruments/presets/instrument-preset";
+import type {
+  SynthConfig,
+} from "../../../domain/instruments/synth/synth-config";
 import type {
   PresetId,
 } from "../../../domain/identifiers";
 import {
   createPersonalInstrumentPreset,
-} from "../../../domain/personal-instrument-presets";
+} from "../../../domain/instruments/presets/personal-preset-library";
 
 export function addPersonalInstrumentPreset(
   settings: UserSettings,

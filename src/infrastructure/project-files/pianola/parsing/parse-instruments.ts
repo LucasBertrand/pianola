@@ -1,18 +1,30 @@
 import {
-  INSTRUMENT_CONSTANTS,
-} from "../../../../domain/instruments/instrument-constants";
+  SYNTH_CONSTANTS,
+} from "../../../../domain/instruments/synth/synth-constants";
 import {
-  type AdsrEnvelope,
-  type EffectDescriptor,
-  type EffectParameterValue,
-  type GenerativeRuleDescriptor,
-  type InstrumentConfig,
-  type InstrumentPreset,
-  type OscillatorWaveform,
-  type ProjectInstrument,
-  type ProjectInstrumentInterpretation,
-  type SynthConfig,
-} from "../../../../domain/instruments/instrument";
+  MAXIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_GAIN,
+} from "../../../../domain/master-bus";
+import type {
+  AdsrEnvelope,
+} from "../../../../domain/instruments/synth/synth-envelope";
+import type {
+  EffectDescriptor,
+  EffectParameterValue,
+  GenerativeRuleDescriptor,
+} from "../../../../domain/instruments/instrument-descriptors";
+import type {
+  InstrumentConfig,
+  OscillatorWaveform,
+  SynthConfig,
+} from "../../../../domain/instruments/synth/synth-config";
+import type {
+  InstrumentPreset,
+} from "../../../../domain/instruments/presets/instrument-preset";
+import type {
+  ProjectInstrument,
+  ProjectInstrumentInterpretation,
+} from "../../../../domain/instruments/project-instrument";
 import {
   type InstrumentId,
   type PresetId,
@@ -22,16 +34,20 @@ import {
   MAXIMUM_INSTRUMENT_DESCRIPTOR_COUNT,
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
+} from "../../../../domain/instruments/project-instrument";
+import {
   MAXIMUM_SYNTH_POLYPHONY,
   MINIMUM_SYNTH_POLYPHONY,
-} from "../../../../domain/instruments/instrument";
+} from "../../../../domain/instruments/synth/synth-constants";
 import {
   MAXIMUM_ENTITY_ID_LENGTH,
 } from "../../../../domain/identifiers";
 import {
   validateInstrumentPreset,
+} from "../../../../domain/instruments/presets/instrument-preset-validation";
+import {
   validateProjectInstrument,
-} from "../../../../domain/validation/instrument-validation";
+} from "../../../../domain/instruments/project-instrument-validation";
 import { fail } from "../pianola-project-error";
 import {
   assertExactRecordKeys,
@@ -299,8 +315,8 @@ function parseProjectInstrument(
     gain: readNumberInRange(
       instrument["gain"],
       `${path}.gain`,
-      INSTRUMENT_CONSTANTS.minimumGain,
-      INSTRUMENT_CONSTANTS.maximumGain,
+      MINIMUM_MASTER_GAIN,
+      MAXIMUM_MASTER_GAIN,
     ),
     muted: readBoolean(instrument["muted"], `${path}.muted`),
     solo: readBoolean(instrument["solo"], `${path}.solo`),
@@ -385,8 +401,8 @@ function parseSynth(
     pulseWidth: readNumberInRange(
       instrument["pulseWidth"],
       `${path}.pulseWidth`,
-      INSTRUMENT_CONSTANTS.minimumPulseWidth,
-      INSTRUMENT_CONSTANTS.maximumPulseWidth,
+      SYNTH_CONSTANTS.minimumPulseWidth,
+      SYNTH_CONSTANTS.maximumPulseWidth,
     ),
     envelope: parseEnvelope(
       instrument["envelope"],
@@ -395,26 +411,26 @@ function parseSynth(
     filterCutoffHz: readNumberInRange(
       instrument["filterCutoffHz"],
       `${path}.filterCutoffHz`,
-      INSTRUMENT_CONSTANTS.minimumFilterCutoffHz,
-      INSTRUMENT_CONSTANTS.maximumFilterCutoffHz,
+      SYNTH_CONSTANTS.minimumFilterCutoffHz,
+      SYNTH_CONSTANTS.maximumFilterCutoffHz,
     ),
     filterResonance: readNumberInRange(
       instrument["filterResonance"],
       `${path}.filterResonance`,
-      INSTRUMENT_CONSTANTS.minimumFilterResonance,
-      INSTRUMENT_CONSTANTS.maximumFilterResonance,
+      SYNTH_CONSTANTS.minimumFilterResonance,
+      SYNTH_CONSTANTS.maximumFilterResonance,
     ),
     filterKeyTracking: readNumberInRange(
       instrument["filterKeyTracking"],
       `${path}.filterKeyTracking`,
-      INSTRUMENT_CONSTANTS.minimumFilterKeyTracking,
-      INSTRUMENT_CONSTANTS.maximumFilterKeyTracking,
+      SYNTH_CONSTANTS.minimumFilterKeyTracking,
+      SYNTH_CONSTANTS.maximumFilterKeyTracking,
     ),
     filterEnvelopeAmountOctaves: readNumberInRange(
       instrument["filterEnvelopeAmountOctaves"],
       `${path}.filterEnvelopeAmountOctaves`,
-      INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
-      INSTRUMENT_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
+      SYNTH_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
+      SYNTH_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
     ),
     filterEnvelope: parseEnvelope(
       instrument["filterEnvelope"],
@@ -472,8 +488,8 @@ function parseEnvelope(
     curve: readNumberInRange(
       envelope["curve"],
       `${path}.curve`,
-      INSTRUMENT_CONSTANTS.minimumEnvelopeCurve,
-      INSTRUMENT_CONSTANTS.maximumEnvelopeCurve,
+      SYNTH_CONSTANTS.minimumEnvelopeCurve,
+      SYNTH_CONSTANTS.maximumEnvelopeCurve,
     ),
   };
 }

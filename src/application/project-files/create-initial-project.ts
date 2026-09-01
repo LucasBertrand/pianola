@@ -13,7 +13,7 @@ import {
 } from "../../domain/clips/clip-hierarchy";
 import {
   createDefaultInstrumentPresetLibrary,
-} from "../../domain/instrument-presets";
+} from "../../domain/instruments/synth/built-in-synth-presets";
 import {
   createDefaultMasterBusState,
 } from "../../domain/master-bus";

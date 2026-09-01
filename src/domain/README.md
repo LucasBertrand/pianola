@@ -8,8 +8,10 @@ master bus, validations, commandes, transformations, collisions et historique.
 ## Quel fichier lire en premier ?
 
 Commencer par `project/project-document.ts`, puis suivre vers `clips/clip.ts`,
-`clips/clip-hierarchy.ts`,
-`instruments/instrument.ts` ou `notes/note.ts`. Une mutation commence dans
+`clips/clip-hierarchy.ts`, `instruments/project-instrument.ts`,
+`instruments/synth/synth-config.ts` ou `notes/note.ts`. Les presets sont sous
+`instruments/presets/` et leurs validations restent colocalisées avec leur
+propriétaire. Une mutation commence dans
 `commands/command-types.ts` et aboutit au reducer. La structure temporelle
 d’un clip — marqueurs de tempo, métrique, gamme et section, dérivation des
 mesures — est exposée par `transport/time-map.ts` et répartie dans les modules
@@ -21,8 +23,9 @@ Les invariants sont validés dans
 
 ## Quelles dépendances sont autorisées ?
 
-Les constantes métier sont colocalisées dans le domaine. Celui-ci ne dépend ni
-de React, ni du navigateur, ni de `ui` ou `app`.
+Les constantes métier sont colocalisées dans le domaine. La création des
+identifiants de presets personnels est injectée par le workflow : le domaine ne
+dépend ni du temps, ni de l'aléatoire, ni de React ou du navigateur.
 
 ## Où sont les tests ?
 

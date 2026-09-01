@@ -6,8 +6,9 @@ import {
   EDITOR_CONSTANTS,
 } from "../../../editor-core/model/editor-constants";
 import {
-  INSTRUMENT_CONSTANTS,
-} from "../../../domain/instruments/instrument-constants";
+  MAXIMUM_MASTER_GAIN,
+  MINIMUM_MASTER_GAIN,
+} from "../../../domain/master-bus";
 import {
   Slider,
 } from "../../slider/Slider";
@@ -58,8 +59,8 @@ export function InstrumentGainSlider(
       }}
     >
       <Slider
-        min={INSTRUMENT_CONSTANTS.minimumGain}
-        max={INSTRUMENT_CONSTANTS.maximumGain}
+        min={MINIMUM_MASTER_GAIN}
+        max={MAXIMUM_MASTER_GAIN}
         step={EDITOR_CONSTANTS.gainStep}
         value={gain}
         aria-label={`Volume for ${instrumentName}`}

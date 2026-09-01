@@ -5,22 +5,31 @@ import {
   EDITOR_CONSTANTS,
 } from "../../editor-core/model/editor-constants";
 import {
-  INSTRUMENT_CONSTANTS,
-} from "../../domain/instruments/instrument-constants";
+  SYNTH_CONSTANTS,
+} from "../../domain/instruments/synth/synth-constants";
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
+} from "../../domain/instruments/project-instrument";
+import {
   MAXIMUM_SYNTH_POLYPHONY,
   MINIMUM_SYNTH_POLYPHONY,
-  type InstrumentPreset,
-  type OscillatorWaveform,
-  type SynthConfig,
-} from "../../domain/instruments/instrument";
+} from "../../domain/instruments/synth/synth-constants";
+import type {
+  InstrumentPreset,
+} from "../../domain/instruments/presets/instrument-preset";
+import type {
+  OscillatorWaveform,
+  SynthConfig,
+} from "../../domain/instruments/synth/synth-config";
 import {
   type PresetId,
 } from "../../domain/identifiers";
 import {
   Slider,
 } from "../slider/Slider";
+import {
+  SYNTH_WAVEFORM_OPTIONS,
+} from "./synth-waveform-options";
 
 export interface InstrumentPresetDialogProps {
   readonly mode: "create" | "edit";
@@ -336,7 +345,7 @@ export function InstrumentPresetDialog({
                       });
                     }}
                   >
-                    {INSTRUMENT_CONSTANTS.oscillatorWaveformOptions.map(
+                    {SYNTH_WAVEFORM_OPTIONS.map(
                       (option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
@@ -379,8 +388,8 @@ export function InstrumentPresetDialog({
                   <ParameterControl
                     label="Pulse width"
                     value={instrument.pulseWidth}
-                    minimum={INSTRUMENT_CONSTANTS.minimumPulseWidth}
-                    maximum={INSTRUMENT_CONSTANTS.maximumPulseWidth}
+                    minimum={SYNTH_CONSTANTS.minimumPulseWidth}
+                    maximum={SYNTH_CONSTANTS.maximumPulseWidth}
                     step={EDITOR_CONSTANTS.pulseWidthStep}
                     format={(value) => `${Math.round(value * 100)}%`}
                     onChange={(value) => update({ pulseWidth: value })}
@@ -414,8 +423,8 @@ export function InstrumentPresetDialog({
             <ParameterControl
               label="Cutoff"
               value={instrument.filterCutoffHz}
-              minimum={INSTRUMENT_CONSTANTS.minimumFilterCutoffHz}
-              maximum={INSTRUMENT_CONSTANTS.maximumFilterCutoffHz}
+              minimum={SYNTH_CONSTANTS.minimumFilterCutoffHz}
+              maximum={SYNTH_CONSTANTS.maximumFilterCutoffHz}
               step={EDITOR_CONSTANTS.filterCutoffStepHz}
               scale="logarithmic"
               suffix=" Hz"
@@ -424,16 +433,16 @@ export function InstrumentPresetDialog({
             <ParameterControl
               label="Resonance"
               value={instrument.filterResonance}
-              minimum={INSTRUMENT_CONSTANTS.minimumFilterResonance}
-              maximum={INSTRUMENT_CONSTANTS.maximumFilterResonance}
+              minimum={SYNTH_CONSTANTS.minimumFilterResonance}
+              maximum={SYNTH_CONSTANTS.maximumFilterResonance}
               step={EDITOR_CONSTANTS.filterResonanceStep}
               onChange={(value) => update({ filterResonance: value })}
             />
             <ParameterControl
               label="Key tracking"
               value={instrument.filterKeyTracking}
-              minimum={INSTRUMENT_CONSTANTS.minimumFilterKeyTracking}
-              maximum={INSTRUMENT_CONSTANTS.maximumFilterKeyTracking}
+              minimum={SYNTH_CONSTANTS.minimumFilterKeyTracking}
+              maximum={SYNTH_CONSTANTS.maximumFilterKeyTracking}
               step={EDITOR_CONSTANTS.filterKeyTrackingStep}
               format={(value) => `${Math.round(value * 100)}%`}
               onChange={(value) => update({ filterKeyTracking: value })}
@@ -441,8 +450,8 @@ export function InstrumentPresetDialog({
             <ParameterControl
               label="Envelope amount"
               value={instrument.filterEnvelopeAmountOctaves}
-              minimum={INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
-              maximum={INSTRUMENT_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
+              minimum={SYNTH_CONSTANTS.minimumFilterEnvelopeAmountOctaves}
+              maximum={SYNTH_CONSTANTS.maximumFilterEnvelopeAmountOctaves}
               step={EDITOR_CONSTANTS.filterEnvelopeAmountStepOctaves}
               suffix=" oct"
               onChange={(value) => update({ filterEnvelopeAmountOctaves: value })}
@@ -545,7 +554,7 @@ function EnvelopeControls({
             label="Attack"
             value={envelope.attackSeconds}
             minimum={0}
-            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds}
+            maximum={SYNTH_CONSTANTS.maximumEnvelopeTimeSeconds}
             step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
             scale="power"
             format={formatMilliseconds}
@@ -558,7 +567,7 @@ function EnvelopeControls({
             label="Decay"
             value={envelope.decaySeconds}
             minimum={0}
-            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds}
+            maximum={SYNTH_CONSTANTS.maximumEnvelopeDecaySeconds}
             step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
             scale="power"
             format={formatMilliseconds}
@@ -583,7 +592,7 @@ function EnvelopeControls({
             label="Release"
             value={envelope.releaseSeconds}
             minimum={0}
-            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds}
+            maximum={SYNTH_CONSTANTS.maximumEnvelopeTimeSeconds}
             step={EDITOR_CONSTANTS.envelopeTimeStepSeconds}
             scale="power"
             format={formatMilliseconds}
@@ -595,8 +604,8 @@ function EnvelopeControls({
           <ParameterControl
             label="Curve"
             value={envelope.curve}
-            minimum={INSTRUMENT_CONSTANTS.minimumEnvelopeCurve}
-            maximum={INSTRUMENT_CONSTANTS.maximumEnvelopeCurve}
+            minimum={SYNTH_CONSTANTS.minimumEnvelopeCurve}
+            maximum={SYNTH_CONSTANTS.maximumEnvelopeCurve}
             step={EDITOR_CONSTANTS.envelopeCurveStep}
             format={(value) => `${Math.round(value * 100)}%`}
             onChange={(curve) => onChange({ ...envelope, curve })}
@@ -727,16 +736,16 @@ function createEnvelopePreview(
   const bottom = 66;
   const attackWeight = envelopeStageWeight(
     envelope.attackSeconds,
-    INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+    SYNTH_CONSTANTS.maximumEnvelopeTimeSeconds,
   );
   const decayWeight = envelopeStageWeight(
     envelope.decaySeconds,
-    INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds,
+    SYNTH_CONSTANTS.maximumEnvelopeDecaySeconds,
   );
   const sustainWeight = 0.24;
   const releaseWeight = envelopeStageWeight(
     envelope.releaseSeconds,
-    INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+    SYNTH_CONSTANTS.maximumEnvelopeTimeSeconds,
   );
   const weightTotal =
     attackWeight + decayWeight + sustainWeight + releaseWeight;

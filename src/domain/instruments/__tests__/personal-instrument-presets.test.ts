@@ -2,11 +2,11 @@ import { describe, expect, test } from "vitest";
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
-} from "../../instrument-presets";
+} from "../../instruments/synth/built-in-synth-presets";
 import {
   createPersonalInstrumentPreset,
   mergeInstrumentPresetLibraries,
-} from "../../personal-instrument-presets";
+} from "../../instruments/presets/personal-preset-library";
 
 describe("personal instrument preset library", () => {
   test("clones a sound when creating a personal preset", () => {

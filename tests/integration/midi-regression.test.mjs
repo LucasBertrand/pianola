@@ -4,7 +4,7 @@ import {
 } from "vitest";
 import {
   createDefaultInstrumentConfig,
-} from "../../src/domain/instrument-presets";
+} from "../../src/domain/instruments/synth/built-in-synth-presets";
 import {
   createDefaultMasterBusState,
 } from "../../src/domain/master-bus";
@@ -24,7 +24,7 @@ import {
 } from "../../src/domain/project/project-document";
 import {
   createDefaultProjectInstrument,
-} from "../../src/domain/project-instrument-factory";
+} from "../../src/domain/instruments/project-instrument-defaults";
 import {
   MidiCodecError,
 } from "../../src/infrastructure/project-files/midi/midi-codec-error";

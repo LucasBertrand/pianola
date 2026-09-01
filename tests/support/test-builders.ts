@@ -1,7 +1,7 @@
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
-} from "../../src/domain/instrument-presets";
+} from "../../src/domain/instruments/synth/built-in-synth-presets";
 import {
   createDefaultMasterBusState,
 } from "../../src/domain/master-bus";
@@ -28,7 +28,7 @@ import {
 import {
   type Note,
 } from "../../src/domain/notes/note";
-import { createDefaultProjectInstrument } from "../../src/domain/project-instrument-factory";
+import { createDefaultProjectInstrument } from "../../src/domain/instruments/project-instrument-defaults";
 import {
   PROJECT_CONSTANTS,
 } from "../../src/domain/project/project-constants";

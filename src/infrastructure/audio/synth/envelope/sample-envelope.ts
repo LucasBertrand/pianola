@@ -1,6 +1,6 @@
 import type {
-  PlaybackEnvelope,
-} from "../../playback-model";
+  SynthEnvelopeRuntimeConfig,
+} from "../synth-runtime-config";
 
 const MINIMUM_EDGE_SECONDS = 0.001;
 
@@ -28,7 +28,7 @@ export class SampleEnvelope {
   private smoothingCoefficient = 1;
 
   public reset(
-    config: PlaybackEnvelope,
+    config: SynthEnvelopeRuntimeConfig,
     sampleRate: number,
     initialValue = 0,
   ): void {

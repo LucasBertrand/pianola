@@ -2,8 +2,8 @@ import type {
   InstrumentId,
 } from "../../../domain/identifiers";
 import type {
-  SynthVoice,
-} from "./synth/synth-voice";
+  WorkletVoiceSlot,
+} from "./worklet-voice-slot";
 
 export const GLOBAL_VOICE_LIMIT = 24;
 export const GLOBAL_VOICE_STORAGE_LIMIT = GLOBAL_VOICE_LIMIT * 2;
@@ -11,14 +11,14 @@ export const VOICE_STEAL_RELEASE_SECONDS = 0.006;
 
 /** Bounded, allocation-free voice reservation for the audio render thread. */
 export function reserveWorkletVoice(
-  voices: SynthVoice[],
+  voices: WorkletVoiceSlot[],
   instrumentId: InstrumentId,
   instrumentPolyphony: number,
-): SynthVoice | undefined {
+): WorkletVoiceSlot | undefined {
   let audibleInstrumentVoiceCount = 0;
   let audibleVoiceCount = 0;
-  let oldestInstrumentVoice: SynthVoice | undefined;
-  let quietestGlobalVoice: SynthVoice | undefined;
+  let oldestInstrumentVoice: WorkletVoiceSlot | undefined;
+  let quietestGlobalVoice: WorkletVoiceSlot | undefined;
 
   for (let voiceIndex = 0; voiceIndex < voices.length; voiceIndex += 1) {
     const voice = voices[voiceIndex];
@@ -68,9 +68,9 @@ export function reserveWorkletVoice(
 }
 
 function removeVoice(
-  voices: SynthVoice[],
-  target: SynthVoice | undefined,
-): SynthVoice | undefined {
+  voices: WorkletVoiceSlot[],
+  target: WorkletVoiceSlot | undefined,
+): WorkletVoiceSlot | undefined {
   if (target === undefined) {
     return undefined;
   }
@@ -83,8 +83,8 @@ function removeVoice(
 }
 
 function removeLowestPriorityVoice(
-  voices: SynthVoice[],
-): SynthVoice | undefined {
+  voices: WorkletVoiceSlot[],
+): WorkletVoiceSlot | undefined {
   let selectedIndex = -1;
 
   for (let voiceIndex = 0; voiceIndex < voices.length; voiceIndex += 1) {
@@ -121,9 +121,9 @@ function removeLowestPriorityVoice(
 }
 
 function removeVoiceAt(
-  voices: SynthVoice[],
+  voices: WorkletVoiceSlot[],
   selectedIndex: number,
-): SynthVoice | undefined {
+): WorkletVoiceSlot | undefined {
   const removedVoice = voices[selectedIndex];
 
   for (

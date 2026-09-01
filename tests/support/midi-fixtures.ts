@@ -7,9 +7,9 @@ import {
 import {
   type Note,
 } from "../../src/domain/notes/note";
-import {
-  type ProjectInstrument,
-} from "../../src/domain/instruments/instrument";
+import type {
+  ProjectInstrument,
+} from "../../src/domain/instruments/project-instrument";
 import {
   type EditorSessionState,
 } from "../../src/domain/project/project-document";

@@ -125,6 +125,9 @@ import {
   usePianoRollUserPreferences,
 } from "../inspector/instruments/usePianoRollUserPreferences";
 import {
+  createBrowserPersonalPresetId,
+} from "../inspector/instruments/personal-preset-id-provider";
+import {
   useNoteCollisionDialogWorkflow,
 } from "./interactions/useNoteCollisionDialogWorkflow";
 import {
@@ -311,6 +314,7 @@ export function PianoRollWorkspace({
     projectPresetsById: projectState.instrumentPresetsById,
     projectPresetOrder: projectState.instrumentPresetOrder,
     repository: userSettingsRepository,
+    createPersonalPresetId: createBrowserPersonalPresetId,
     onSettingsChange: onUserSettingsChange,
     onPersistenceError(error) {
       showApplicationAlert(

@@ -1,7 +1,7 @@
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
-} from "../../src/domain/instrument-presets";
+} from "../../src/domain/instruments/synth/built-in-synth-presets";
 import {
   createDefaultMasterBusState,
 } from "../../src/domain/master-bus";
@@ -34,9 +34,9 @@ import {
   type InstrumentId,
 } from "../../src/domain/identifiers";
 import { type Note } from "../../src/domain/notes/note";
-import {
-  type ProjectInstrument,
-} from "../../src/domain/instruments/instrument";
+import type {
+  ProjectInstrument,
+} from "../../src/domain/instruments/project-instrument";
 import type {
   PersistedEditorWorkspace,
 } from "../../src/application/ports/project-repository";

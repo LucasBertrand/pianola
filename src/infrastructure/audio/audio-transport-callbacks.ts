@@ -4,7 +4,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   PlaybackStatus,
-} from "./playback-model";
+} from "../../application/ports/audio-transport";
 import type {
   MasterLevelMeasurement,
 } from "./worklet/worklet-master-stage";

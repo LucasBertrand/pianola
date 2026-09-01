@@ -18,9 +18,9 @@ import {
 import {
   type Note,
 } from "../../../domain/notes/note";
-import {
-  type ProjectInstrument,
-} from "../../../domain/instruments/instrument";
+import type {
+  ProjectInstrument,
+} from "../../../domain/instruments/project-instrument";
 import {
   type EditorSessionState,
 } from "../../../domain/project/project-document";
@@ -39,13 +39,15 @@ import {
   getClip,
   PROJECT_SCHEMA_VERSION,
 } from "../../../domain/project/project-document";
-import { createDefaultProjectInstrument } from "../../../domain/project-instrument-factory";
+import { createDefaultProjectInstrument } from "../../../domain/instruments/project-instrument-defaults";
 import {
   createDefaultInstrumentConfig,
   createDefaultInstrumentPresetLibrary,
-} from "../../../domain/instrument-presets";
+} from "../../../domain/instruments/synth/built-in-synth-presets";
 import { assertValidInstrumentTrack } from "../../../domain/validation/note-validation";
-import { assertValidProjectInstrument } from "../../../domain/validation/instrument-validation";
+import {
+  assertValidProjectInstrument,
+} from "../../../domain/instruments/project-instrument-validation";
 import {
   assertValidClipTimeline,
   assertValidProjectClock,

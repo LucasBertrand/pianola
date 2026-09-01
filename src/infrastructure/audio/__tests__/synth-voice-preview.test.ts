@@ -4,18 +4,23 @@ import {
   test,
 } from "vitest";
 import {
-  INSTRUMENT_PARAMETER_PREVIEW_POLICY,
-} from "../instrument-preview-policy";
+  SYNTH_PREVIEW_POLICY,
+} from "../synth/synth-preview-policy";
+import {
+  MASTER_TUNING_PREVIEW_BEHAVIOR,
+} from "../master-tuning-preview-policy";
 import type {
-  SynthPlaybackPresetSnapshot,
-} from "../playback-model";
+  SynthConfig,
+} from "../../../domain/instruments/synth/synth-config";
+import {
+  projectSynthRuntimeConfig,
+} from "../synth/project-synth-runtime-config";
 import {
   SynthVoice,
-} from "../worklet/synth/synth-voice";
+} from "../synth/synth-voice";
 
 const SAMPLE_RATE = 48_000;
-const INSTRUMENT_ID = "preview-test";
-const BASE_CONFIG: SynthPlaybackPresetSnapshot = {
+const BASE_CONFIG: SynthConfig = {
   kind: "synth",
   oscillatorWaveform: "sine",
   polyphony: 8,
@@ -44,17 +49,23 @@ const BASE_CONFIG: SynthPlaybackPresetSnapshot = {
 
 describe("synth parameter preview policy", () => {
   test("formalizes active, next-note and restart-only parameters", () => {
-    expect(INSTRUMENT_PARAMETER_PREVIEW_POLICY).toMatchObject({
-      masterTuningFrequencyHz: "active-smoothed",
-      oscillatorWaveform: "next-note",
-      oscillatorDetuneCents: "active-smoothed",
-      oscillatorFreePhase: "next-note",
-      pulseWidth: "active-smoothed",
-      "envelope.attackSeconds": "next-note",
-      "envelope.sustainLevel": "active-smoothed",
-      "filterEnvelope.attackSeconds": "next-note",
-      "filterEnvelope.sustainLevel": "active-smoothed",
+    expect(MASTER_TUNING_PREVIEW_BEHAVIOR).toBe("active-smoothed");
+    expect(SYNTH_PREVIEW_POLICY).toMatchObject({
       kind: "processor-restart",
+      oscillator: {
+        waveform: "next-note",
+        detuneCents: "active-smoothed",
+        freePhase: "next-note",
+        pulseWidth: "active-smoothed",
+      },
+      amplitudeEnvelope: {
+        attackSeconds: "next-note",
+        sustainLevel: "active-smoothed",
+      },
+      filterEnvelope: {
+        attackSeconds: "next-note",
+        sustainLevel: "active-smoothed",
+      },
     });
   });
 
@@ -77,7 +88,10 @@ describe("synth parameter preview policy", () => {
 
     render(previewed, 128);
     render(unchanged, 128);
-    previewed.preview({ ...BASE_CONFIG, oscillatorWaveform: "square" });
+    previewed.preview(projectSynthRuntimeConfig({
+      ...BASE_CONFIG,
+      oscillatorWaveform: "square",
+    }));
 
     expect(render(previewed, 512)).toEqual(render(unchanged, 512));
 
@@ -99,13 +113,13 @@ describe("synth parameter preview policy", () => {
     render(baseline, 128);
     render(retainedPreview, 128);
     const preview = { ...config, pulseWidth: 0.05 };
-    cancelled.preview(preview);
-    retainedPreview.preview(preview);
+    cancelled.preview(projectSynthRuntimeConfig(preview));
+    retainedPreview.preview(projectSynthRuntimeConfig(preview));
     render(cancelled, 2_400);
     render(baseline, 2_400);
     render(retainedPreview, 2_400);
 
-    cancelled.preview(config);
+    cancelled.preview(projectSynthRuntimeConfig(config));
     const cancelledTail = render(cancelled, 9_600).slice(-1_024);
     const baselineTail = render(baseline, 9_600).slice(-1_024);
     const previewTail = render(retainedPreview, 9_600).slice(-1_024);
@@ -144,7 +158,7 @@ describe("synth parameter preview policy", () => {
     const active = startVoice(slowConfig);
     const unchanged = startVoice(slowConfig);
 
-    active.preview(durationOnlyConfig);
+    active.preview(projectSynthRuntimeConfig(durationOnlyConfig));
     expect(render(active, 128)).toEqual(render(unchanged, 128));
 
     const next = startVoice(previewConfig);
@@ -181,26 +195,31 @@ describe("synth parameter preview policy", () => {
     const active = startVoice(config);
     const unchanged = startVoice(config);
 
-    active.preview(durationOnly);
+    active.preview(projectSynthRuntimeConfig(durationOnly));
     expect(render(active, 256)).toEqual(render(unchanged, 256));
 
-    active.preview({
+    active.preview(projectSynthRuntimeConfig({
       ...durationOnly,
       filterEnvelope: {
         ...durationOnly.filterEnvelope,
         sustainLevel: 0,
         curve: 1,
       },
-    });
+    }));
     expect(render(active, 2_048)).not.toEqual(render(unchanged, 2_048));
   });
 });
 
 function startVoice(
-  config: SynthPlaybackPresetSnapshot,
+  config: SynthConfig,
 ): SynthVoice {
   const voice = new SynthVoice(SAMPLE_RATE);
-  voice.start(INSTRUMENT_ID, 60, config, 440, 1, null, null);
+  voice.start(
+    60,
+    projectSynthRuntimeConfig(config),
+    440,
+    0,
+  );
   return voice;
 }
 

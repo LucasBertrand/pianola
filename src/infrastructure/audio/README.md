@@ -2,24 +2,32 @@
 
 ## Que possède cette zone ?
 
-La compilation de la timeline transférable, le transport à l’échantillon, les
-boucles, les voix de synthèse, les enveloppes et le protocole AudioWorklet.
+La projection runtime et la timeline transférable, le transport à
+l’échantillon, les boucles, les composants DSP du synthé et le protocole
+AudioWorklet. Le plan de lecture et son compilateur appartiennent à
+`application/audio/`.
 
 ## Quel fichier lire en premier ?
 
-La façade navigateur est `audio-worklet-transport.ts`. Le cœur temps réel est
-`worklet/worklet-timeline-engine.ts`; il est indépendant du DOM et testable sans
-navigateur. `worklet/playback-processor.ts` ne fait que relier ce cœur à
-`AudioWorkletProcessor`.
+La façade navigateur est `audio-worklet-transport.ts`; les révisions, queues et
+timelines en attente sont isolées dans `audio-worklet-state-synchronizer.ts`.
+Le cœur temps réel est `worklet/worklet-timeline-engine.ts`; il délègue les
+instruments, previews, audibilité et banques de voix à
+`worklet/worklet-instrument-runtime.ts`. `worklet/playback-processor.ts` relie
+ce cœur à `AudioWorkletProcessor`.
 
-Les briques DSP propres au synthé sont regroupées sous `worklet/synth/` : voix,
-oscillateur PolyBLEP et enveloppe échantillonnée. La timeline, le protocole, la
-banque et l'allocation globales de voix, ainsi que l'étage master restent au
-niveau de `worklet/`.
+Les briques DSP propres au synthé sont regroupées sous `synth/` : voix mono,
+oscillateur PolyBLEP, enveloppe échantillonnée, filtre state-variable et lissage
+préalloué. `project-synth-runtime-config.ts` est l'unique projection du
+`SynthConfig` durable vers le `SynthRuntimeConfig` du DSP. L'identité et le
+panoramique d'une note appartiennent à `worklet/worklet-voice-slot.ts`; la
+timeline, le protocole, la banque et l'allocation globales de voix, ainsi que
+l'étage master restent au niveau de `worklet/`.
 
 ```text
-PlaybackSource
-  → compilePlaybackPlan
+PlaybackSource (application)
+  → compileAudioPlaybackPlan → AudioPlaybackPlan (application)
+  → projectSynthRuntimeConfig
   → createTransferableAudioWorkletTimeline
   → AudioWorkletTransport ── MessagePort ──→ WorkletTimelineEngine
                                            → voix/DSP stéréo
@@ -93,7 +101,9 @@ allocations par constructeurs usuels pendant `process()`.
 
 ## Politique de prévisualisation des paramètres
 
-La matrice canonique se trouve dans `instrument-preview-policy.ts`. Une
+La matrice canonique du synthé se trouve dans
+`synth/synth-preview-policy.ts`; le tuning master a sa politique séparée dans
+`master-tuning-preview-policy.ts`. Une
 annulation renvoie la configuration publiée au worklet ; les paramètres actifs
 reviennent alors à leur valeur d’origine avec la même rampe de 10 ms.
 
@@ -131,8 +141,9 @@ par quantum audio.
 
 ## Quelles dépendances sont autorisées ?
 
-L’infrastructure audio peut dépendre du domaine et de ses propres constantes.
-Elle ne dépend ni de React, ni de la présentation, ni du bootstrap.
+L’infrastructure audio implémente les ports de `application` et projette les
+configurations durables du domaine. Elle ne dépend ni de React, ni de la
+présentation, ni du bootstrap.
 
 ## Où sont les tests ?
 
@@ -142,3 +153,6 @@ actifs et la stabilité DSP.
 `__tests__/audio-worklet-transport.test.ts` vérifie les transferts différentiels,
 le versionnage et les courses entre commandes, remplacements et clips
 préchargés.
+`__tests__/state-variable-lowpass.test.ts` couvre le filtre isolé et
+`__tests__/audio-worklet-state-synchronizer.test.ts` les décisions de révision
+sans navigateur.

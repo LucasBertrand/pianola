@@ -1,15 +1,15 @@
 import type {
-  SynthPlaybackPresetSnapshot,
-} from "../playback-model";
+  SynthRuntimeConfig,
+} from "../synth/synth-runtime-config";
 import type {
   AudioWorkletTimelineInstrument,
 } from "./audio-worklet-protocol";
 
 export interface WorkletRuntimeInstrument {
   timeline: AudioWorkletTimelineInstrument;
-  publishedConfig: SynthPlaybackPresetSnapshot;
-  config: SynthPlaybackPresetSnapshot;
-  previewConfig: SynthPlaybackPresetSnapshot | null;
+  publishedConfig: SynthRuntimeConfig;
+  config: SynthRuntimeConfig;
+  previewConfig: SynthRuntimeConfig | null;
   gain: number;
   pan: number;
   muted: boolean;

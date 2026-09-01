@@ -5,10 +5,10 @@ import {
 } from "vitest";
 import type {
   OscillatorWaveform,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/synth/synth-config";
 import {
   PolyBlepOscillator,
-} from "../worklet/synth/polyblep-oscillator";
+} from "../synth/oscillator/polyblep-oscillator";
 
 const SAMPLE_RATE = 48_000;
 const FFT_SIZE = 8_192;

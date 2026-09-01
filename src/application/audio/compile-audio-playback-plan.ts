@@ -1,7 +1,9 @@
-import {
-  type InstrumentConfig,
-  type ProjectInstrument,
-} from "../../domain/instruments/instrument";
+import type {
+  InstrumentConfig,
+} from "../../domain/instruments/synth/synth-config";
+import type {
+  ProjectInstrument,
+} from "../../domain/instruments/project-instrument";
 import {
   isNoteAudible,
   type Note,
@@ -23,7 +25,7 @@ import {
 import {
   MAXIMUM_SYNTH_POLYPHONY,
   MINIMUM_SYNTH_POLYPHONY,
-} from "../../domain/instruments/instrument";
+} from "../../domain/instruments/synth/synth-constants";
 import {
   MAXIMUM_MASTER_GAIN,
   MAXIMUM_MASTER_TUNING_FREQUENCY_HZ,
@@ -32,30 +34,28 @@ import {
 } from "../../domain/master-bus";
 import {
   validateProjectInstrument,
-} from "../../domain/validation/instrument-validation";
+} from "../../domain/instruments/project-instrument-validation";
 import type {
   PackedInstrumentEvents,
-  PlaybackSnapshot,
-  PlaybackPlan,
-  PlaybackInstrumentSnapshot,
-  SynthPlaybackPresetSnapshot,
+  AudioPlaybackPlan,
+  AudioPlaybackInstrumentPlan,
   TempoMapSnapshot,
-} from "./playback-model";
+} from "./audio-playback-plan";
 import type {
   PlaybackSource,
 } from "./playback-source";
 
-export class PlaybackSnapshotCompilationError extends Error {
+export class AudioPlaybackPlanCompilationError extends Error {
   public constructor(message: string) {
     super(message);
-    this.name = "PlaybackSnapshotCompilationError";
+    this.name = "AudioPlaybackPlanCompilationError";
   }
 }
 
-export function compilePlaybackPlan(
+export function compileAudioPlaybackPlan(
   projectState: ProjectDocument,
   source: PlaybackSource,
-): PlaybackPlan {
+): AudioPlaybackPlan {
   const clip = source.clip;
 
   assertPositiveSafeInteger(projectState.clock.ppqn, "Project PPQN");
@@ -74,13 +74,13 @@ export function compilePlaybackPlan(
     || projectState.masterBus.gain < MINIMUM_MASTER_GAIN
     || projectState.masterBus.gain > MAXIMUM_MASTER_GAIN
   ) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       "Master gain is outside the supported range.",
     );
   }
 
   if (typeof projectState.masterBus.muted !== "boolean") {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       "Master mute state must be a boolean.",
     );
   }
@@ -92,18 +92,18 @@ export function compilePlaybackPlan(
     || projectState.masterBus.tuningFrequencyHz
       > MAXIMUM_MASTER_TUNING_FREQUENCY_HZ
   ) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       "Master tuning is outside the supported range.",
     );
   }
 
   if (!Number.isSafeInteger(durationTicks) || durationTicks <= 0) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       "Project duration must be a positive safe integer.",
     );
   }
 
-  const instruments: PlaybackInstrumentSnapshot[] = [];
+  const instruments: AudioPlaybackInstrumentPlan[] = [];
   const compiledInstrumentIds = new Set<InstrumentId>();
 
   for (
@@ -118,7 +118,7 @@ export function compilePlaybackPlan(
     }
 
     if (compiledInstrumentIds.has(instrumentId)) {
-      throw new PlaybackSnapshotCompilationError(
+      throw new AudioPlaybackPlanCompilationError(
         `Project instrument "${instrumentId}" appears more than once in instrumentOrder.`,
       );
     }
@@ -127,13 +127,13 @@ export function compilePlaybackPlan(
     const track = clip.tracksByInstrumentId[instrumentId];
 
     if (projectInstrument === undefined) {
-      throw new PlaybackSnapshotCompilationError(
+      throw new AudioPlaybackPlanCompilationError(
         `Project instrument "${instrumentId}" is missing from projectInstrumentsById.`,
       );
     }
 
     if (track === undefined || track.instrumentId !== instrumentId) {
-      throw new PlaybackSnapshotCompilationError(
+      throw new AudioPlaybackPlanCompilationError(
         `Instrument track "${instrumentId}" is missing or belongs to another instrument.`,
       );
     }
@@ -150,7 +150,7 @@ export function compilePlaybackPlan(
     );
   }
 
-  const snapshot: PlaybackSnapshot = {
+  const plan: AudioPlaybackPlan = {
     sourceId: source.sourceId,
     projectRevision: projectState.revision,
     ppqn: projectState.clock.ppqn,
@@ -166,7 +166,7 @@ export function compilePlaybackPlan(
     instruments: Object.freeze(instruments),
   };
 
-  return Object.freeze(snapshot);
+  return Object.freeze(plan);
 }
 
 function compileInstrumentSnapshot(
@@ -175,9 +175,9 @@ function compileInstrumentSnapshot(
   instrument: InstrumentConfig,
   notesById: Readonly<Record<string, Note>>,
   projectDurationTicks: number,
-): PlaybackInstrumentSnapshot {
+): AudioPlaybackInstrumentPlan {
   if (instrument.kind !== "synth") {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Project instrument "${projectInstrument.id}" uses unsupported instrument kind`
         + ` "${instrument.kind}".`,
     );
@@ -188,7 +188,7 @@ function compileInstrumentSnapshot(
   if (!instrumentValidation.valid) {
     const firstIssue = instrumentValidation.issues[0];
 
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       firstIssue === undefined
         ? `Project instrument "${projectInstrument.id}" is invalid.`
         : `Project instrument "${projectInstrument.id}" is invalid at ${firstIssue.path}: ${firstIssue.message}`,
@@ -202,7 +202,7 @@ function compileInstrumentSnapshot(
     || instrument.polyphony
       > MAXIMUM_SYNTH_POLYPHONY
   ) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Project instrument "${projectInstrument.id}" synth polyphony must be between ${MINIMUM_SYNTH_POLYPHONY} and ${MAXIMUM_SYNTH_POLYPHONY}.`,
     );
   }
@@ -213,7 +213,7 @@ function compileInstrumentSnapshot(
   );
 
   if (!Number.isFinite(projectInstrument.pan) || projectInstrument.pan < -1 || projectInstrument.pan > 1) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Project instrument "${projectInstrument.id}" pan must be between -1 and 1.`,
     );
   }
@@ -244,16 +244,16 @@ function compileInstrumentSnapshot(
   notes.sort(compareNotesForPlayback);
 
   const events = packInstrumentEvents(sourceId, projectInstrument.id, notes);
-  const snapshot: PlaybackInstrumentSnapshot = {
+  const plan: AudioPlaybackInstrumentPlan = {
     ...events,
     gain: projectInstrument.gain,
     pan: projectInstrument.pan,
     muted: projectInstrument.muted,
     solo: projectInstrument.solo,
-    instrument: cloneInstrument(projectInstrument.id, instrument),
+    instrument,
   };
 
-  return Object.freeze(snapshot);
+  return Object.freeze(plan);
 }
 
 function packInstrumentEvents(
@@ -297,51 +297,10 @@ function packInstrumentEvents(
   });
 }
 
-function cloneInstrument(
-  instrumentId: InstrumentId,
-  instrument: InstrumentConfig,
-): SynthPlaybackPresetSnapshot {
-  if (instrument.kind !== "synth") {
-    throw new PlaybackSnapshotCompilationError(
-      `Project instrument "${instrumentId}" does not contain a synth instrument.`,
-    );
-  }
-
-  const envelope = Object.freeze({
-    attackSeconds: instrument.envelope.attackSeconds,
-    decaySeconds: instrument.envelope.decaySeconds,
-    sustainLevel: instrument.envelope.sustainLevel,
-    releaseSeconds: instrument.envelope.releaseSeconds,
-    curve: instrument.envelope.curve,
-  });
-
-  return Object.freeze({
-    kind: "synth",
-    oscillatorWaveform: instrument.oscillatorWaveform,
-    polyphony: instrument.polyphony,
-    oscillatorDetuneCents: instrument.oscillatorDetuneCents,
-    oscillatorFreePhase: instrument.oscillatorFreePhase,
-    pulseWidth: instrument.pulseWidth,
-    envelope,
-    filterCutoffHz: instrument.filterCutoffHz,
-    filterResonance: instrument.filterResonance,
-    filterKeyTracking: instrument.filterKeyTracking,
-    filterEnvelopeAmountOctaves:
-      instrument.filterEnvelopeAmountOctaves,
-    filterEnvelope: Object.freeze({
-      attackSeconds: instrument.filterEnvelope.attackSeconds,
-      decaySeconds: instrument.filterEnvelope.decaySeconds,
-      sustainLevel: instrument.filterEnvelope.sustainLevel,
-      releaseSeconds: instrument.filterEnvelope.releaseSeconds,
-      curve: instrument.filterEnvelope.curve,
-    }),
-  });
-}
-
 /**
  * Flattens the clip time map into parallel arrays segmented on the union of
  * tempo and meter marker ticks. Segment seconds accumulate with the tempo of
- * the previous segment, so tick↔seconds conversion stays exact across tempo
+ * the previous segment, so tickâ†”seconds conversion stays exact across tempo
  * changes.
  */
 export function compileTempoMapSnapshot(
@@ -352,7 +311,7 @@ export function compileTempoMapSnapshot(
     timeMap.meterMarkers[0]?.startTick !== 0
     || timeMap.tempoMarkers[0]?.startTick !== 0
   ) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       "A playback time map must start with meter and tempo markers at tick 0.",
     );
   }
@@ -404,19 +363,19 @@ function assertCompilableNote(
   const endTick = note.startTick + note.durationTicks;
 
   if (note.id !== recordKey) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" does not match record key "${recordKey}".`,
     );
   }
 
   if (note.instrumentId !== instrumentId) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" belongs to instrument "${note.instrumentId}" instead of "${instrumentId}".`,
     );
   }
 
   if (!Number.isInteger(note.pitch) || note.pitch < 0 || note.pitch > 127) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" pitch must be an integer between 0 and 127.`,
     );
   }
@@ -426,19 +385,19 @@ function assertCompilableNote(
     || note.velocity < 0
     || note.velocity > 127
   ) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" velocity must be an integer between 0 and 127.`,
     );
   }
 
   if (typeof note.muted !== "boolean") {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" muted must be a boolean.`,
     );
   }
 
   if (typeof note.locked !== "boolean") {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" locked must be a boolean.`,
     );
   }
@@ -451,7 +410,7 @@ function assertCompilableNote(
     || !Number.isSafeInteger(endTick)
     || endTick > projectDurationTicks
   ) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `Note "${note.id}" has invalid or out-of-project timing.`,
     );
   }
@@ -489,7 +448,7 @@ function compareNotesForPlayback(left: Note, right: Note): number {
 
 function assertFiniteNumber(value: number, label: string): void {
   if (!Number.isFinite(value)) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `${label} must be finite.`,
     );
   }
@@ -500,7 +459,7 @@ function assertPositiveFiniteNumber(
   label: string,
 ): void {
   if (!Number.isFinite(value) || value <= 0) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `${label} must be positive and finite.`,
     );
   }
@@ -511,7 +470,7 @@ function assertPositiveSafeInteger(
   label: string,
 ): void {
   if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new PlaybackSnapshotCompilationError(
+    throw new AudioPlaybackPlanCompilationError(
       `${label} must be a positive safe integer.`,
     );
   }

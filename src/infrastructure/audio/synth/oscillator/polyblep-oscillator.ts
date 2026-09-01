@@ -1,6 +1,6 @@
 import type {
-  OscillatorWaveform,
-} from "../../../../domain/instruments/instrument";
+  SynthOscillatorRuntimeConfig,
+} from "../synth-runtime-config";
 
 // A frequency-relative leak removes the tiny integration bias left by the two
 // discrete BLEP transitions. Unlike a fixed per-sample leak, it has the same
@@ -18,7 +18,7 @@ export class PolyBlepOscillator {
   }
 
   public render(
-    waveform: OscillatorWaveform,
+    waveform: SynthOscillatorRuntimeConfig["waveform"],
     phaseIncrement: number,
     pulseWidth: number,
   ): number {

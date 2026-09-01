@@ -9,14 +9,20 @@ import {
   type PresetId,
   type Tick,
 } from "../identifiers";
-import {
-  type EffectDescriptor,
-  type GenerativeRuleDescriptor,
-  type InstrumentConfig,
-  type InstrumentPreset,
-  type ProjectInstrument,
-  type ProjectInstrumentInterpretation,
-} from "../instruments/instrument";
+import type {
+  EffectDescriptor,
+  GenerativeRuleDescriptor,
+} from "../instruments/instrument-descriptors";
+import type {
+  InstrumentConfig,
+} from "../instruments/synth/synth-config";
+import type {
+  InstrumentPreset,
+} from "../instruments/presets/instrument-preset";
+import type {
+  ProjectInstrument,
+  ProjectInstrumentInterpretation,
+} from "../instruments/project-instrument";
 import {
   type LoopRegion,
 } from "../transport/transport";

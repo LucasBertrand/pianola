@@ -29,10 +29,10 @@ import {
 import {
   createDefaultInstrumentConfig,
   DEFAULT_INSTRUMENT_PRESET_ID,
-} from "../../../domain/instrument-presets";
+} from "../../../domain/instruments/synth/built-in-synth-presets";
 import {
   createPersonalInstrumentPreset,
-} from "../../../domain/personal-instrument-presets";
+} from "../../../domain/instruments/presets/personal-preset-library";
 
 describe("persistence codecs", () => {
   test("round-trips the new portable document and workspace", () => {
@@ -81,7 +81,13 @@ describe("persistence codecs", () => {
       document,
       workspace,
     });
+    const serializedStructure = JSON.parse(serialized) as {
+      schemaVersion: number;
+      document: { schemaVersion: number };
+    };
 
+    expect(serializedStructure.schemaVersion).toBe(2);
+    expect(serializedStructure.document.schemaVersion).toBe(2);
     expect(parsePianolaProject(serialized)).toMatchObject({
       migration: { sourceVersion: 2, targetVersion: 2, changes: [] },
       project: {
@@ -276,7 +282,26 @@ describe("persistence codecs", () => {
       withPreset,
       "2026-08-24T12:00:00.000Z",
     )).settings;
+    const serializedEnvelope = JSON.parse(serializeUserSettings(
+      withPreset,
+      "2026-08-24T12:00:00.000Z",
+    )) as {
+      schemaVersion: number;
+      settings: {
+        schemaVersion: number;
+        personalInstrumentPresetsById: Record<string, unknown>;
+        personalInstrumentPresetOrder: string[];
+      };
+    };
 
+    expect(serializedEnvelope).toMatchObject({
+      schemaVersion: 2,
+      settings: {
+        schemaVersion: 2,
+        personalInstrumentPresetOrder: [preset.id],
+        personalInstrumentPresetsById: { [preset.id]: preset },
+      },
+    });
     expect(roundTrip.personalInstrumentPresetOrder).toEqual([preset.id]);
     expect(roundTrip.personalInstrumentPresetsById[preset.id])
       .toEqual(preset);

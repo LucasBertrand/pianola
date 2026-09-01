@@ -24,17 +24,17 @@ import type {
 } from "../../application/history/project-store";
 import type {
   PlaybackStatus,
-} from "../../infrastructure/audio/playback-model";
+} from "../../application/ports/audio-transport";
 import {
   AudioWorkletTransport,
 } from "../../infrastructure/audio/audio-worklet-transport";
 import {
-  compilePlaybackPlan,
+  compileAudioPlaybackPlan,
   compileTempoMapSnapshot,
-} from "../../infrastructure/audio/playback-snapshot";
+} from "../../application/audio/compile-audio-playback-plan";
 import {
   createClipPlaybackSource,
-} from "../../infrastructure/audio/playback-source";
+} from "../../application/audio/playback-source";
 import type {
   MutableRenderSignal,
 } from "../../editor-core/model/render-signal";
@@ -43,7 +43,7 @@ import type {
 } from "../../editor-core/model/playhead-position";
 import type {
   InstrumentConfig,
-} from "../../domain/instruments/instrument";
+} from "../../domain/instruments/synth/synth-config";
 import type {
   TimeMapMarkerPreviewSession,
 } from "../../application/editor-session/time-map-marker-preview-session";
@@ -197,7 +197,7 @@ export function useAudioPlayback(
 
       publishPlayhead(initialPosition.clipId, initialPosition.tick);
       transport = new AudioWorkletTransport(
-        compilePlaybackPlan(
+        compileAudioPlaybackPlan(
           state,
           createClipPlaybackSource(initialClip),
         ),
@@ -761,7 +761,7 @@ function replaceTransportClip(
   const clip = getClip(state, clipId);
 
   transport.replacePlaybackState(
-    compilePlaybackPlan(
+    compileAudioPlaybackPlan(
       state,
       createClipPlaybackSource(clip),
     ),
@@ -787,7 +787,7 @@ function synchronizeAutoAdvanceQueue(
   const nextClip = getClip(state, nextClipId);
 
   transport.queuePlaybackState(
-    compilePlaybackPlan(
+    compileAudioPlaybackPlan(
       state,
       createClipPlaybackSource(nextClip),
     ),

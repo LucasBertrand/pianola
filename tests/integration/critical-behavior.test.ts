@@ -4,11 +4,11 @@ import {
   test,
 } from "vitest";
 import {
-  compilePlaybackPlan,
-} from "../../src/infrastructure/audio/playback-snapshot";
+  compileAudioPlaybackPlan,
+} from "../../src/application/audio/compile-audio-playback-plan";
 import {
   createClipPlaybackSource,
-} from "../../src/infrastructure/audio/playback-source";
+} from "../../src/application/audio/playback-source";
 import {
   WorkletTimelineEngine,
   type TimelineEngineDiagnostic,
@@ -107,7 +107,7 @@ describe("P0 critical behavior witnesses", () => {
 
   test("launches playback on the deterministic sample clock", () => {
     const project = createCriticalBehaviorProject();
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(getActiveClip(project)),
     );
@@ -156,7 +156,7 @@ describe("P0 critical behavior witnesses", () => {
       return;
     }
 
-    const snapshot = compilePlaybackPlan(
+    const snapshot = compileAudioPlaybackPlan(
       project,
       createClipPlaybackSource(secondClip),
     );

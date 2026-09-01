@@ -5,7 +5,7 @@ import {
   TEST_CLIP_ID,
   TEST_INSTRUMENT_ID,
 } from "../../../../tests/support/test-builders";
-import { compilePlaybackPlan } from "../../../infrastructure/audio/playback-snapshot";
+import { compileAudioPlaybackPlan } from "../../../application/audio/compile-audio-playback-plan";
 import { ProjectStore } from "../../../application/history/project-store";
 import { CommandRejectedError } from "../command-errors";
 
@@ -103,7 +103,7 @@ function getNoteFlags(store: ProjectStore) {
 }
 
 function getPlaybackNoteIds(store: ProjectStore): readonly string[] {
-  return compilePlaybackPlan(store.getState(), {
+  return compileAudioPlaybackPlan(store.getState(), {
     kind: "clip",
     sourceId: TEST_CLIP_ID,
     clip: store.getState().clipsById[TEST_CLIP_ID]!,

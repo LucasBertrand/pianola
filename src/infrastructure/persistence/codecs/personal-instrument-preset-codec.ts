@@ -1,9 +1,9 @@
 import {
-  INSTRUMENT_CONSTANTS,
-} from "../../../domain/instruments/instrument-constants";
+  SYNTH_CONSTANTS,
+} from "../../../domain/instruments/synth/synth-constants";
 import {
   createDefaultInstrumentPresetLibrary,
-} from "../../../domain/instrument-presets";
+} from "../../../domain/instruments/synth/built-in-synth-presets";
 import type {
   PresetId,
 } from "../../../domain/identifiers";
@@ -13,16 +13,24 @@ import {
 import {
   MAXIMUM_INSTRUMENT_NAME_LENGTH,
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
+} from "../../../domain/instruments/project-instrument";
+import {
   MAXIMUM_SYNTH_POLYPHONY,
   MINIMUM_SYNTH_POLYPHONY,
-  type AdsrEnvelope,
-  type InstrumentPreset,
-  type OscillatorWaveform,
-  type SynthConfig,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/synth/synth-constants";
+import type {
+  AdsrEnvelope,
+} from "../../../domain/instruments/synth/synth-envelope";
+import type {
+  InstrumentPreset,
+} from "../../../domain/instruments/presets/instrument-preset";
+import type {
+  OscillatorWaveform,
+  SynthConfig,
+} from "../../../domain/instruments/synth/synth-config";
 import {
   validateInstrumentPreset,
-} from "../../../domain/validation/instrument-validation";
+} from "../../../domain/instruments/presets/instrument-preset-validation";
 import {
   ProjectPersistenceError,
 } from "./project-persistence-error";
@@ -177,33 +185,33 @@ function parseSynthConfig(
     pulseWidth: readPersistenceNumber(
       config["pulseWidth"],
       `${path}.pulseWidth`,
-      INSTRUMENT_CONSTANTS.minimumPulseWidth,
-      INSTRUMENT_CONSTANTS.maximumPulseWidth,
+      SYNTH_CONSTANTS.minimumPulseWidth,
+      SYNTH_CONSTANTS.maximumPulseWidth,
     ),
     envelope: parseEnvelope(config["envelope"], `${path}.envelope`),
     filterCutoffHz: readPersistenceNumber(
       config["filterCutoffHz"],
       `${path}.filterCutoffHz`,
-      INSTRUMENT_CONSTANTS.minimumFilterCutoffHz,
-      INSTRUMENT_CONSTANTS.maximumFilterCutoffHz,
+      SYNTH_CONSTANTS.minimumFilterCutoffHz,
+      SYNTH_CONSTANTS.maximumFilterCutoffHz,
     ),
     filterResonance: readPersistenceNumber(
       config["filterResonance"],
       `${path}.filterResonance`,
-      INSTRUMENT_CONSTANTS.minimumFilterResonance,
-      INSTRUMENT_CONSTANTS.maximumFilterResonance,
+      SYNTH_CONSTANTS.minimumFilterResonance,
+      SYNTH_CONSTANTS.maximumFilterResonance,
     ),
     filterKeyTracking: readPersistenceNumber(
       config["filterKeyTracking"],
       `${path}.filterKeyTracking`,
-      INSTRUMENT_CONSTANTS.minimumFilterKeyTracking,
-      INSTRUMENT_CONSTANTS.maximumFilterKeyTracking,
+      SYNTH_CONSTANTS.minimumFilterKeyTracking,
+      SYNTH_CONSTANTS.maximumFilterKeyTracking,
     ),
     filterEnvelopeAmountOctaves: readPersistenceNumber(
       config["filterEnvelopeAmountOctaves"],
       `${path}.filterEnvelopeAmountOctaves`,
-      INSTRUMENT_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
-      INSTRUMENT_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
+      SYNTH_CONSTANTS.minimumFilterEnvelopeAmountOctaves,
+      SYNTH_CONSTANTS.maximumFilterEnvelopeAmountOctaves,
     ),
     filterEnvelope: parseEnvelope(
       config["filterEnvelope"],
@@ -220,13 +228,13 @@ function parseEnvelope(source: unknown, path: string): AdsrEnvelope {
       envelope["attackSeconds"],
       `${path}.attackSeconds`,
       0,
-      INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+      SYNTH_CONSTANTS.maximumEnvelopeTimeSeconds,
     ),
     decaySeconds: readPersistenceNumber(
       envelope["decaySeconds"],
       `${path}.decaySeconds`,
       0,
-      INSTRUMENT_CONSTANTS.maximumEnvelopeDecaySeconds,
+      SYNTH_CONSTANTS.maximumEnvelopeDecaySeconds,
     ),
     sustainLevel: readPersistenceNumber(
       envelope["sustainLevel"],
@@ -238,13 +246,13 @@ function parseEnvelope(source: unknown, path: string): AdsrEnvelope {
       envelope["releaseSeconds"],
       `${path}.releaseSeconds`,
       0,
-      INSTRUMENT_CONSTANTS.maximumEnvelopeTimeSeconds,
+      SYNTH_CONSTANTS.maximumEnvelopeTimeSeconds,
     ),
     curve: readPersistenceNumber(
       envelope["curve"],
       `${path}.curve`,
-      INSTRUMENT_CONSTANTS.minimumEnvelopeCurve,
-      INSTRUMENT_CONSTANTS.maximumEnvelopeCurve,
+      SYNTH_CONSTANTS.minimumEnvelopeCurve,
+      SYNTH_CONSTANTS.maximumEnvelopeCurve,
     ),
   };
 }

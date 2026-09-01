@@ -5,22 +5,21 @@ import type {
   Tick,
 } from "../../../domain/identifiers";
 import type {
-  InstrumentConfig,
-} from "../../../domain/instruments/instrument";
-import type {
   LoopRegion,
   TransportState,
 } from "../../../domain/transport/transport";
 import type {
   PlaybackStatus,
-  SynthPlaybackPresetSnapshot,
-} from "../playback-model";
+} from "../../../application/ports/audio-transport";
+import type {
+  SynthRuntimeConfig,
+} from "../synth/synth-runtime-config";
 import type {
   MasterLevelMeasurement,
 } from "./worklet-master-stage";
 
 export const PLAYBACK_PROCESSOR_NAME = "playback-processor";
-export const AUDIO_WORKLET_PROTOCOL_VERSION = 1 as const;
+export const AUDIO_WORKLET_PROTOCOL_VERSION = 2 as const;
 
 interface VersionedMessage {
   readonly protocolVersion: typeof AUDIO_WORKLET_PROTOCOL_VERSION;
@@ -38,7 +37,7 @@ export interface AudioWorkletTimelineInstrument {
   readonly pan: number;
   readonly muted: boolean;
   readonly solo: boolean;
-  readonly instrument: SynthPlaybackPresetSnapshot;
+  readonly instrument: SynthRuntimeConfig;
 }
 
 /** Minimum transferable data required by the real-time rendering thread. */
@@ -124,12 +123,12 @@ export type MainToAudioWorkletMessage = VersionedMessage & (
   | {
       readonly type: "instrument-preview";
       readonly instrumentId: InstrumentId;
-      readonly instrument: InstrumentConfig | null;
+      readonly instrument: SynthRuntimeConfig | null;
     }
   | {
       readonly type: "instrument-config";
       readonly instrumentId: InstrumentId;
-      readonly instrument: SynthPlaybackPresetSnapshot;
+      readonly instrument: SynthRuntimeConfig;
       readonly sequence: number;
       readonly stateVersion: number;
     }

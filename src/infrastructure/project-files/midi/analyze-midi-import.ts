@@ -2,8 +2,8 @@ import { MIDI_CONSTANTS } from "./midi-constants";
 import {
   PROJECT_CONSTANTS,
 } from "../../../domain/project/project-constants";
-import { createDefaultProjectInstrument } from "../../../domain/project-instrument-factory";
-import { createDefaultInstrumentConfig } from "../../../domain/instrument-presets";
+import { createDefaultProjectInstrument } from "../../../domain/instruments/project-instrument-defaults";
+import { createDefaultInstrumentConfig } from "../../../domain/instruments/synth/built-in-synth-presets";
 import { MidiImportError } from "./midi-import-error";
 import {
   getMeasureCountCoveringTick,

@@ -15,8 +15,10 @@ import type {
 } from "../../domain/identifiers";
 import type {
   InstrumentPreset,
+} from "../../domain/instruments/presets/instrument-preset";
+import type {
   SynthConfig,
-} from "../../domain/instruments/instrument";
+} from "../../domain/instruments/synth/synth-config";
 import type {
   PianoRollControllerPort,
 } from "../../editor-core/interactions/piano-roll-controller-port";
@@ -36,6 +38,9 @@ import {
   useInstrumentDialogWorkflow,
   type InstrumentDialogWorkflow,
 } from "../inspector/instruments/useInstrumentDialogWorkflow";
+import {
+  createBrowserPersonalPresetId,
+} from "../inspector/instruments/personal-preset-id-provider";
 
 export interface InstrumentsWorkspaceOptions {
   readonly runtime: EditorRuntime;
@@ -101,6 +106,7 @@ export function useInstrumentsWorkspace({
     projectPresetsById,
     projectPresetOrder,
     repository: userSettingsRepository,
+    createPersonalPresetId: createBrowserPersonalPresetId,
     onSettingsChange: onUserSettingsChange,
     onPersistenceError(error) {
       alert(

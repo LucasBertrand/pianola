@@ -4,31 +4,23 @@ import type {
   Tick,
 } from "../../../domain/identifiers";
 import type {
-  InstrumentConfig,
-} from "../../../domain/instruments/instrument";
-import type {
   TransportState,
 } from "../../../domain/transport/transport";
 import type {
   PlaybackStatus,
-  SynthPlaybackPresetSnapshot,
-} from "../playback-model";
+} from "../../../application/ports/audio-transport";
+import type {
+  SynthRuntimeConfig,
+} from "../synth/synth-runtime-config";
 import type {
   AudioWorkletTimeline,
 } from "./audio-worklet-protocol";
 import {
   findTempoIndexAtTick,
-  lowerBound,
 } from "./worklet-timeline-query";
-import type {
-  WorkletRuntimeInstrument,
-} from "./worklet-runtime-instrument";
 import {
-  WorkletVoiceBank,
-} from "./worklet-voice-bank";
-import {
-  WorkletHeldNoteStarter,
-} from "./worklet-held-note-starter";
+  WorkletInstrumentRuntime,
+} from "./worklet-instrument-runtime";
 import {
   WorkletMasterStage,
   type MasterLevelMeasurement,
@@ -71,12 +63,8 @@ export class WorkletTimelineEngine {
     readonly sequence: number;
     readonly stateVersion: number;
   } | null = null;
-  private runtimeInstruments: WorkletRuntimeInstrument[] = [];
-  private readonly runtimeInstrumentsById =
-    new Map<InstrumentId, WorkletRuntimeInstrument>();
-  private readonly voiceBank: WorkletVoiceBank;
+  private readonly instrumentRuntime: WorkletInstrumentRuntime;
   private readonly masterStage: WorkletMasterStage;
-  private readonly heldNoteStarter = new WorkletHeldNoteStarter();
   private currentStatus: PlaybackStatus = "stopped";
   private currentTick = 0;
   private tickCompensation = 0;
@@ -97,7 +85,10 @@ export class WorkletTimelineEngine {
     options: WorkletTimelineEngineOptions = {},
   ) {
     this.onDiagnostic = options.onDiagnostic;
-    this.voiceBank = new WorkletVoiceBank(sampleRate);
+    this.instrumentRuntime = new WorkletInstrumentRuntime(
+      sampleRate,
+      (event) => this.onDiagnostic?.({ type: "note-start", ...event }),
+    );
     this.masterStage = new WorkletMasterStage(
       sampleRate,
       options.masterProtectionMode,
@@ -171,8 +162,6 @@ export class WorkletTimelineEngine {
     sequence: number,
     stateVersion: number,
   ): void {
-    const previousRuntimeById = new Map(this.runtimeInstrumentsById);
-
     this.publishedTimeline = timeline;
     this.publishedTransport = transport;
     this.tempoMapPreview = null;
@@ -184,42 +173,16 @@ export class WorkletTimelineEngine {
     this.masterGain = timeline.masterGain;
     this.masterMuted = timeline.masterMuted;
     this.tuningFrequencyHz = timeline.masterTuningFrequencyHz;
-    this.voiceBank.setTuningFrequency(this.tuningFrequencyHz);
     this.currentTick = clampTick(this.currentTick, timeline.durationTicks);
     this.refreshTempoCursor();
     this.loopActive = this.currentStatus === "playing"
       && transport.loopEnabled
       && this.currentTick <= transport.loop.endTick;
-    this.runtimeInstruments = [];
-    this.runtimeInstrumentsById.clear();
-
-    const hasSoloInstrument = timeline.instruments.some(
-      (instrument) => instrument.solo,
+    this.instrumentRuntime.activate(
+      timeline.instruments,
+      this.currentTick,
+      this.tuningFrequencyHz,
     );
-
-    for (const instrument of timeline.instruments) {
-      const previousRuntime = previousRuntimeById.get(instrument.instrumentId);
-      const runtime: WorkletRuntimeInstrument = {
-        timeline: instrument,
-        publishedConfig: instrument.instrument,
-        config: previousRuntime?.previewConfig ?? instrument.instrument,
-        previewConfig: previousRuntime?.previewConfig ?? null,
-        gain: instrument.gain,
-        pan: instrument.pan,
-        muted: instrument.muted,
-        solo: instrument.solo,
-        audible: !instrument.muted
-          && (!hasSoloInstrument || instrument.solo),
-        cursor: lowerBound(instrument.startTicks, this.currentTick),
-      };
-
-      this.runtimeInstruments.push(runtime);
-      this.runtimeInstrumentsById.set(instrument.instrumentId, runtime);
-    }
-
-    this.voiceBank.synchronizeMix(this.runtimeInstrumentsById);
-
-    this.refreshCursors(this.currentTick);
     this.stateRevision += 1;
   }
 
@@ -396,30 +359,15 @@ export class WorkletTimelineEngine {
     if (this.currentStatus === "playing") {
       const boundaryTick = this.resolvePlaybackBoundaryTick();
 
-      for (const runtime of this.runtimeInstruments) {
-        this.voiceBank.reconcileTimelineInstrument(
-          runtime,
-          this.currentTick,
-          boundaryTick,
-        );
-      }
+      this.instrumentRuntime.reconcileAll(this.currentTick, boundaryTick);
     }
   }
 
   public previewInstrument(
     instrumentId: InstrumentId,
-    config: InstrumentConfig | null,
+    config: SynthRuntimeConfig | null,
   ): void {
-    const runtime = this.runtimeInstrumentsById.get(instrumentId);
-
-    if (runtime === undefined || (config !== null && config.kind !== "synth")) {
-      return;
-    }
-
-    runtime.previewConfig = config;
-    runtime.config = config ?? runtime.publishedConfig;
-
-    this.voiceBank.previewInstrument(instrumentId, runtime.config);
+    this.instrumentRuntime.previewInstrument(instrumentId, config);
   }
 
   public previewInstrumentGain(
@@ -430,13 +378,7 @@ export class WorkletTimelineEngine {
   ): void {
     if (sequence !== undefined && stateVersion !== undefined
       && !this.acceptStateMessage(sequence, stateVersion)) return;
-    const runtime = this.runtimeInstrumentsById.get(instrumentId);
-
-    if (runtime !== undefined) {
-      runtime.gain = gain;
-
-      this.voiceBank.previewInstrumentGain(runtime);
-    }
+    this.instrumentRuntime.previewGain(instrumentId, gain);
   }
 
   public previewMasterGain(gain: number, sequence?: number,
@@ -455,27 +397,14 @@ export class WorkletTimelineEngine {
     stateVersion: number,
   ): void {
     if (!this.acceptStateMessage(sequence, stateVersion)) return;
-    const runtime = this.runtimeInstrumentsById.get(instrumentId);
-    if (runtime === undefined) return;
-    runtime.timeline = { ...runtime.timeline, ...events };
-    runtime.cursor = lowerBound(runtime.timeline.startTicks, this.currentTick);
-    if (this.currentStatus === "playing") {
-      const playbackBoundaryTick = this.resolvePlaybackBoundaryTick();
-
-      this.voiceBank.reconcileTimelineInstrument(
-        runtime,
-        this.currentTick,
-        playbackBoundaryTick,
-      );
-      this.heldNoteStarter.startInstrument(
-        runtime,
-        this.currentTick,
-        this.renderedFrame,
-        playbackBoundaryTick,
-        this.voiceBank,
-        this.onDiagnostic,
-      );
-    }
+    this.instrumentRuntime.replaceEvents(
+      instrumentId,
+      events,
+      this.currentTick,
+      this.resolvePlaybackBoundaryTick(),
+      this.currentStatus === "playing",
+      this.renderedFrame,
+    );
   }
 
   public updateTransport(
@@ -500,42 +429,30 @@ export class WorkletTimelineEngine {
 
   public updateInstrumentConfig(
     instrumentId: InstrumentId,
-    config: SynthPlaybackPresetSnapshot,
+    config: SynthRuntimeConfig,
     sequence: number,
     stateVersion: number,
   ): void {
     if (!this.acceptStateMessage(sequence, stateVersion)) return;
-    const runtime = this.runtimeInstrumentsById.get(instrumentId);
-    if (runtime === undefined) return;
-    runtime.publishedConfig = config;
-    if (runtime.previewConfig === null) {
-      runtime.config = config;
-      this.voiceBank.previewInstrument(instrumentId, config);
-    }
+    this.instrumentRuntime.updateConfig(instrumentId, config);
   }
 
   public updateInstrumentPan(instrumentId: InstrumentId, pan: number,
     sequence: number, stateVersion: number): void {
-    const runtime = this.acceptInstrumentMessage(instrumentId, sequence, stateVersion);
-    if (runtime === undefined) return;
-    runtime.pan = pan;
-    this.voiceBank.previewInstrumentGain(runtime);
+    if (!this.acceptInstrumentMessage(instrumentId, sequence, stateVersion)) return;
+    this.instrumentRuntime.updatePan(instrumentId, pan);
   }
 
   public updateInstrumentMute(instrumentId: InstrumentId, muted: boolean,
     sequence: number, stateVersion: number): void {
-    const runtime = this.acceptInstrumentMessage(instrumentId, sequence, stateVersion);
-    if (runtime === undefined) return;
-    runtime.muted = muted;
-    this.refreshAudibility();
+    if (!this.acceptInstrumentMessage(instrumentId, sequence, stateVersion)) return;
+    this.instrumentRuntime.updateMute(instrumentId, muted);
   }
 
   public updateInstrumentSolo(instrumentId: InstrumentId, solo: boolean,
     sequence: number, stateVersion: number): void {
-    const runtime = this.acceptInstrumentMessage(instrumentId, sequence, stateVersion);
-    if (runtime === undefined) return;
-    runtime.solo = solo;
-    this.refreshAudibility();
+    if (!this.acceptInstrumentMessage(instrumentId, sequence, stateVersion)) return;
+    this.instrumentRuntime.updateSolo(instrumentId, solo);
   }
 
   public updateMasterMute(muted: boolean, sequence: number,
@@ -547,7 +464,7 @@ export class WorkletTimelineEngine {
     stateVersion: number): void {
     if (!this.acceptStateMessage(sequence, stateVersion)) return;
     this.tuningFrequencyHz = tuningFrequencyHz;
-    this.voiceBank.setTuningFrequency(tuningFrequencyHz);
+    this.instrumentRuntime.setTuningFrequency(tuningFrequencyHz);
   }
 
   public audition(
@@ -555,17 +472,7 @@ export class WorkletTimelineEngine {
     pitch: number,
     durationSeconds: number,
   ): void {
-    const runtime = this.runtimeInstrumentsById.get(instrumentId);
-
-    if (runtime === undefined) {
-      return;
-    }
-
-    this.voiceBank.startAuditionVoice(
-      runtime,
-      pitch,
-      durationSeconds,
-    );
+    this.instrumentRuntime.audition(instrumentId, pitch, durationSeconds);
   }
 
   public process(left: Float32Array, right: Float32Array): void {
@@ -582,7 +489,7 @@ export class WorkletTimelineEngine {
 
       const masterLevel = this.masterMuted ? 0 : this.masterGain;
 
-      this.voiceBank.renderFrame(left, right, frameIndex);
+      this.instrumentRuntime.renderFrame(left, right, frameIndex);
       this.masterStage.processFrame(left, right, frameIndex, masterLevel);
 
       if (this.currentStatus === "playing") {
@@ -592,78 +499,30 @@ export class WorkletTimelineEngine {
       this.renderedFrame += 1;
     }
 
-    this.voiceBank.pruneEndedVoices();
+    this.instrumentRuntime.pruneEndedVoices();
   }
 
   private startDueNotes(): void {
-    for (let runtimeIndex = 0;
-      runtimeIndex < this.runtimeInstruments.length;
-      runtimeIndex += 1) {
-      const runtime = this.runtimeInstruments[runtimeIndex];
-      if (runtime === undefined) continue;
-      const { timeline } = runtime;
-
-      while (runtime.cursor < timeline.startTicks.length) {
-        const startTick = timeline.startTicks[runtime.cursor];
-
-        if (startTick === undefined || startTick > this.currentTick) {
-          break;
-        }
-
-        const durationTicks = timeline.durationTicks[runtime.cursor];
-        const pitch = timeline.pitches[runtime.cursor];
-
-        if (
-          durationTicks !== undefined
-          && pitch !== undefined
-          && runtime.audible
-        ) {
-          const boundaryTick = this.resolvePlaybackBoundaryTick();
-          const endTick = Math.min(
-            boundaryTick,
-            startTick + durationTicks,
-          );
-
-          if (endTick > this.currentTick) {
-            const noteId = timeline.noteIds[runtime.cursor];
-
-            if (noteId === undefined) {
-              runtime.cursor += 1;
-              continue;
-            }
-
-            this.voiceBank.startTimelineVoice(runtime, noteId, pitch, endTick);
-            this.onDiagnostic?.({
-              type: "note-start",
-              frame: this.renderedFrame,
-              tick: startTick,
-              instrumentId: timeline.instrumentId,
-              pitch,
-            });
-          }
-        }
-
-        runtime.cursor += 1;
-      }
-    }
+    this.instrumentRuntime.startDueNotes(
+      this.currentTick,
+      this.resolvePlaybackBoundaryTick(),
+      this.renderedFrame,
+    );
   }
 
   private startHeldNotes(
     tick: number,
     diagnosticFrame = this.renderedFrame,
   ): void {
-    this.heldNoteStarter.start(
-      this.runtimeInstruments,
+    this.instrumentRuntime.startHeldNotes(
       tick,
       diagnosticFrame,
       this.resolvePlaybackBoundaryTick(),
-      this.voiceBank,
-      this.onDiagnostic,
     );
   }
 
   private releaseDueNotes(): void {
-    this.voiceBank.releaseDueTimelineVoices(this.currentTick);
+    this.instrumentRuntime.releaseDueNotes(this.currentTick);
   }
 
   private advanceTransportOneSample(): void {
@@ -747,7 +606,7 @@ export class WorkletTimelineEngine {
   }
 
   private releaseTimelineVoices(): void {
-    this.voiceBank.releaseTimelineVoices();
+    this.instrumentRuntime.releaseTimelineVoices();
   }
 
   private acceptStateMessage(sequence: number, stateVersion: number): boolean {
@@ -758,28 +617,13 @@ export class WorkletTimelineEngine {
   }
 
   private acceptInstrumentMessage(instrumentId: InstrumentId,
-    sequence: number, stateVersion: number): WorkletRuntimeInstrument | undefined {
+    sequence: number, stateVersion: number): boolean {
     return this.acceptStateMessage(sequence, stateVersion)
-      ? this.runtimeInstrumentsById.get(instrumentId) : undefined;
-  }
-
-  private refreshAudibility(): void {
-    const hasSolo = this.runtimeInstruments.some((runtime) => runtime.solo);
-    for (const runtime of this.runtimeInstruments) {
-      runtime.audible = !runtime.muted && (!hasSolo || runtime.solo);
-    }
-    this.voiceBank.synchronizeMix(this.runtimeInstrumentsById);
+      && this.instrumentRuntime.hasInstrument(instrumentId);
   }
 
   private refreshCursors(tick: number): void {
-    for (let runtimeIndex = 0;
-      runtimeIndex < this.runtimeInstruments.length;
-      runtimeIndex += 1) {
-      const runtime = this.runtimeInstruments[runtimeIndex];
-      if (runtime !== undefined) {
-        runtime.cursor = lowerBound(runtime.timeline.startTicks, tick);
-      }
-    }
+    this.instrumentRuntime.refreshCursors(tick);
   }
 
   private refreshTempoCursor(): void {

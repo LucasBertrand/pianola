@@ -14,10 +14,10 @@ import {
 } from "../../../../tests/support/test-builders";
 import {
   createDefaultInstrumentConfig,
-} from "../../instrument-presets";
+} from "../../instruments/synth/built-in-synth-presets";
 import {
   createPersonalInstrumentPreset,
-} from "../../personal-instrument-presets";
+} from "../../instruments/presets/personal-preset-library";
 
 describe("P2 command family contracts", () => {
   test("project commands support success, rejection, undo and redo", () => {

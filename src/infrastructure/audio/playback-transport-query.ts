@@ -6,21 +6,21 @@ import type {
   TransportState,
 } from "../../domain/transport/transport";
 import type {
-  PlaybackInstrumentSnapshot,
-  PlaybackSnapshot,
-} from "./playback-model";
+  AudioPlaybackInstrumentPlan,
+  AudioPlaybackPlan,
+} from "../../application/audio/audio-playback-plan";
 
 export function findPlaybackInstrument(
-  snapshot: PlaybackSnapshot,
+  snapshot: AudioPlaybackPlan,
   instrumentId: InstrumentId,
-): PlaybackInstrumentSnapshot | undefined {
+): AudioPlaybackInstrumentPlan | undefined {
   return snapshot.instruments.find(
     (instrument) => instrument.instrumentId === instrumentId,
   );
 }
 
 export function assertCompatiblePlaybackState(
-  snapshot: PlaybackSnapshot,
+  snapshot: AudioPlaybackPlan,
   transport: TransportState,
 ): void {
   if (

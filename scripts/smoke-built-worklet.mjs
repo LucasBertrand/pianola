@@ -7,7 +7,7 @@ import {
 } from "node:url";
 
 const assetsDirectory = path.resolve("dist", "assets");
-const protocolVersion = 1;
+const protocolVersion = 2;
 const workletAssetName = (await readdir(assetsDirectory)).find((fileName) => (
   fileName.startsWith("playback-processor-")
   && fileName.endsWith(".js")
@@ -50,23 +50,27 @@ if (registeredName !== "playback-processor" || Processor === null) {
 
 const processor = new Processor();
 const instrument = {
-  kind: "synth",
-  oscillatorWaveform: "sine",
+  kind: "synth-runtime",
   polyphony: 1,
-  oscillatorDetuneCents: 0,
-  oscillatorFreePhase: false,
-  pulseWidth: 0.5,
-  envelope: {
+  oscillator: {
+    waveform: "sine",
+    detuneCents: 0,
+    freePhase: false,
+    pulseWidth: 0.5,
+  },
+  amplitudeEnvelope: {
     attackSeconds: 0.003,
     decaySeconds: 0,
     sustainLevel: 1,
     releaseSeconds: 0.01,
     curve: 0,
   },
-  filterCutoffHz: 8_000,
-  filterResonance: 0.2,
-  filterKeyTracking: 0,
-  filterEnvelopeAmountOctaves: 0,
+  filter: {
+    cutoffHz: 8_000,
+    resonance: 0.2,
+    keyTracking: 0,
+    envelopeAmountOctaves: 0,
+  },
   filterEnvelope: {
     attackSeconds: 0.003,
     decaySeconds: 0,

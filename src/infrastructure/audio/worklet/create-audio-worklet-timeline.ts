@@ -1,9 +1,9 @@
+import {
+  projectSynthRuntimeConfig,
+} from "../synth/project-synth-runtime-config";
 import type {
-  InstrumentConfig,
-} from "../../../domain/instruments/instrument";
-import type {
-  PlaybackSnapshot,
-} from "../playback-model";
+  AudioPlaybackPlan,
+} from "../../../application/audio/audio-playback-plan";
 import type {
   AudioWorkletTimeline,
   AudioWorkletTimelineInstrument,
@@ -22,7 +22,7 @@ export interface TransferableInstrumentEvents {
 }
 
 export function createTransferableInstrumentEvents(
-  instrument: PlaybackSnapshot["instruments"][number],
+  instrument: AudioPlaybackPlan["instruments"][number],
 ): TransferableInstrumentEvents {
   const pitches = new Uint8Array(instrument.pitches);
   const startTicks = new Float64Array(instrument.startTicks);
@@ -45,7 +45,7 @@ export function createTransferableInstrumentEvents(
 
 /** Keeps stable event identity and clones numeric arrays for zero-copy transfer. */
 export function createTransferableAudioWorkletTimeline(
-  snapshot: PlaybackSnapshot,
+  snapshot: AudioPlaybackPlan,
 ): TransferableAudioWorkletTimeline {
   const transfers: Transferable[] = [];
   const cloneFloat64Array = (value: Float64Array): Float64Array => {
@@ -80,7 +80,7 @@ export function createTransferableAudioWorkletTimeline(
         pan: instrument.pan,
         muted: instrument.muted,
         solo: instrument.solo,
-        instrument: cloneInstrument(instrument.instrument),
+        instrument: projectSynthRuntimeConfig(instrument.instrument),
       };
     });
 
@@ -140,15 +140,5 @@ function createMaximumEndTickTree(
   return {
     maximumEndTickTree: tree,
     leafCount,
-  };
-}
-
-function cloneInstrument<TInstrument extends InstrumentConfig>(
-  instrument: TInstrument,
-): TInstrument {
-  return {
-    ...instrument,
-    envelope: { ...instrument.envelope },
-    filterEnvelope: { ...instrument.filterEnvelope },
   };
 }

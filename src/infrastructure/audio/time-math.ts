@@ -6,7 +6,7 @@ import {
 } from "../../domain/identifiers";
 import type {
   TempoMapSnapshot,
-} from "./playback-model";
+} from "../../application/audio/audio-playback-plan";
 
 export interface LoopTickProjection {
   readonly tick: Tick;

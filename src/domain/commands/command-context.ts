@@ -7,9 +7,9 @@ import {
   isNoteEditable,
   type Note,
 } from "../notes/note";
-import {
-  type ProjectInstrument,
-} from "../instruments/instrument";
+import type {
+  ProjectInstrument,
+} from "../instruments/project-instrument";
 import {
   type EditorSessionState,
 } from "../project/project-document";

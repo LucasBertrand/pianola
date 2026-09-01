@@ -9,23 +9,29 @@ import {
 } from "../../../domain/project/project-document";
 import {
   createClipPlaybackSource,
-} from "../playback-source";
+} from "../../../application/audio/playback-source";
 import {
-  compilePlaybackPlan,
-} from "../playback-snapshot";
+  compileAudioPlaybackPlan,
+} from "../../../application/audio/compile-audio-playback-plan";
 import type {
-  PlaybackSnapshot,
-} from "../playback-model";
+  AudioPlaybackPlan,
+} from "../../../application/audio/audio-playback-plan";
+import {
+  projectSynthRuntimeConfig,
+} from "../synth/project-synth-runtime-config";
 import {
   WorkletTimelineEngine,
   type TimelineEngineDiagnostic,
 } from "../worklet/worklet-timeline-engine";
 import {
   SynthVoice,
-} from "../worklet/synth/synth-voice";
+} from "../synth/synth-voice";
 import {
   reserveWorkletVoice,
 } from "../worklet/worklet-voice-allocation";
+import {
+  WorkletVoiceSlot,
+} from "../worklet/worklet-voice-slot";
 import {
   createTransferableInstrumentEvents,
   createTransferableAudioWorkletTimeline,
@@ -297,7 +303,7 @@ describe("AudioWorklet timeline engine", () => {
       return;
     }
 
-    const snapshot: PlaybackSnapshot = {
+    const snapshot: AudioPlaybackPlan = {
       ...baseSnapshot,
       instruments: [{
         ...instrument,
@@ -354,16 +360,18 @@ describe("AudioWorklet timeline engine", () => {
       return;
     }
 
-    const releasingVoice = new SynthVoice(SAMPLE_RATE);
+    const releasingVoice = new WorkletVoiceSlot(SAMPLE_RATE);
 
     releasingVoice.start(
       instrument.instrumentId,
       60,
-      { ...instrument.instrument, polyphony: 1 },
+      projectSynthRuntimeConfig({ ...instrument.instrument, polyphony: 1 }),
       440,
       1,
       96,
       null,
+      0,
+      false,
     );
     releasingVoice.release();
     const voices = [releasingVoice];
@@ -398,10 +406,10 @@ describe("AudioWorklet timeline engine", () => {
     renderFrames(engine, RENDER_QUANTUM);
     const tickBeforePreview = engine.positionTick;
 
-    engine.previewInstrument(instrument.instrumentId, {
+    engine.previewInstrument(instrument.instrumentId, projectSynthRuntimeConfig({
       ...instrument.instrument,
       filterCutoffHz: 1_234,
-    });
+    }));
 
     expect(engine.positionTick).toBe(tickBeforePreview);
     expect(engine.status).toBe("playing");
@@ -484,7 +492,7 @@ describe("AudioWorklet timeline engine", () => {
     renderFrames(engine, RENDER_QUANTUM);
     const diagnosticCount = diagnostics.length;
     const reconcile = vi.spyOn(
-      SynthVoice.prototype,
+      WorkletVoiceSlot.prototype,
       "reconcileTimelineEvent",
     );
 
@@ -611,18 +619,20 @@ describe("AudioWorklet timeline engine", () => {
     engine.play(0);
     renderFrames(engine, RENDER_QUANTUM);
 
-    engine.previewInstrument(instrument.instrumentId, {
+    engine.previewInstrument(instrument.instrumentId, projectSynthRuntimeConfig({
       ...instrument.instrument,
       pulseWidth: 0.05,
       filterEnvelopeAmountOctaves: 7,
-    });
+    }));
     engine.previewInstrument(instrument.instrumentId, null);
 
-    expect(preview).toHaveBeenLastCalledWith(instrument.instrument);
+    expect(preview).toHaveBeenLastCalledWith(
+      projectSynthRuntimeConfig(instrument.instrument),
+    );
     preview.mockRestore();
   });
 
-  test("uses a free oscillator phase only when it is enabled", () => {
+  test("uses the initial oscillator phase supplied by the voice owner", () => {
     const instrument = createSnapshotWithNotes([]).instruments[0];
 
     expect(instrument).toBeDefined();
@@ -631,7 +641,6 @@ describe("AudioWorklet timeline engine", () => {
       return;
     }
 
-    const random = vi.spyOn(Math, "random").mockReturnValue(0.25);
     const config = {
       ...instrument.instrument,
       oscillatorWaveform: "sine" as const,
@@ -646,28 +655,20 @@ describe("AudioWorklet timeline engine", () => {
     const freeVoice = new SynthVoice(SAMPLE_RATE);
 
     resetVoice.start(
-      instrument.instrumentId,
       60,
-      { ...config, oscillatorFreePhase: false },
+      projectSynthRuntimeConfig({ ...config, oscillatorFreePhase: false }),
       440,
-      1,
-      null,
-      null,
+      0,
     );
     freeVoice.start(
-      instrument.instrumentId,
       60,
-      { ...config, oscillatorFreePhase: true },
+      projectSynthRuntimeConfig({ ...config, oscillatorFreePhase: true }),
       440,
-      2,
-      null,
-      null,
+      0.25,
     );
 
     expect(resetVoice.render()).toBe(0);
     expect(Math.abs(freeVoice.render())).toBeGreaterThan(0);
-    expect(random).toHaveBeenCalledOnce();
-    random.mockRestore();
   });
 
   test("opens the filter higher for high notes with key tracking", () => {
@@ -696,22 +697,16 @@ describe("AudioWorklet timeline engine", () => {
     const trackedVoice = new SynthVoice(SAMPLE_RATE);
 
     fixedVoice.start(
-      instrument.instrumentId,
       84,
-      { ...config, filterKeyTracking: 0 },
+      projectSynthRuntimeConfig({ ...config, filterKeyTracking: 0 }),
       440,
-      1,
-      null,
-      null,
+      0,
     );
     trackedVoice.start(
-      instrument.instrumentId,
       84,
-      { ...config, filterKeyTracking: 1 },
+      projectSynthRuntimeConfig({ ...config, filterKeyTracking: 1 }),
       440,
-      2,
-      null,
-      null,
+      0,
     );
 
     const fixedEnergy = Array.from(
@@ -799,13 +794,10 @@ describe("AudioWorklet timeline engine", () => {
 
     for (const voice of [previewedVoice, unchangedVoice]) {
       voice.start(
-        instrument.instrumentId,
         60,
-        config,
+        projectSynthRuntimeConfig(config),
         440,
-        1,
-        null,
-        null,
+        0,
       );
     }
 
@@ -813,7 +805,10 @@ describe("AudioWorklet timeline engine", () => {
       expect(previewedVoice.render()).toBe(unchangedVoice.render());
     }
 
-    previewedVoice.preview({ ...config, pulseWidth: 0.2 });
+    previewedVoice.preview(projectSynthRuntimeConfig({
+      ...config,
+      pulseWidth: 0.2,
+    }));
 
     const previewedSamples = Array.from(
       { length: 128 },
@@ -853,26 +848,23 @@ describe("AudioWorklet timeline engine", () => {
     const voice = new SynthVoice(SAMPLE_RATE);
 
     voice.start(
-      instrument.instrumentId,
       60,
-      config,
+      projectSynthRuntimeConfig(config),
       440,
-      1,
-      null,
-      null,
+      0,
     );
     for (let sampleIndex = 0; sampleIndex < 128; sampleIndex += 1) {
       voice.render();
     }
 
-    voice.preview({
+    voice.preview(projectSynthRuntimeConfig({
       ...config,
       envelope: { ...config.envelope, sustainLevel: 0 },
       filterEnvelope: {
         ...config.filterEnvelope,
         sustainLevel: 0,
       },
-    });
+    }));
 
     voice.render();
     expect(voice.level).toBeGreaterThan(0.9);
@@ -916,26 +908,23 @@ describe("AudioWorklet timeline engine", () => {
 
     for (const voice of [previewedVoice, unchangedVoice]) {
       voice.start(
-        instrument.instrumentId,
         60,
-        config,
+        projectSynthRuntimeConfig(config),
         440,
-        1,
-        null,
-        null,
+        0,
       );
       for (let sampleIndex = 0; sampleIndex < 128; sampleIndex += 1) {
         voice.render();
       }
     }
 
-    previewedVoice.preview({
+    previewedVoice.preview(projectSynthRuntimeConfig({
       ...config,
       filterEnvelope: {
         ...config.filterEnvelope,
         sustainLevel: 0,
       },
-    });
+    }));
 
     const previewedSamples = Array.from(
       { length: 128 },
@@ -1108,7 +1097,7 @@ describe("AudioWorklet timeline engine", () => {
 });
 
 function createEngine(
-  snapshot: PlaybackSnapshot,
+  snapshot: AudioPlaybackPlan,
   diagnostics: TimelineEngineDiagnostic[],
 ): WorkletTimelineEngine {
   const engine = new WorkletTimelineEngine(SAMPLE_RATE, {
@@ -1123,13 +1112,13 @@ function createEngine(
   return engine;
 }
 
-function toTimeline(snapshot: PlaybackSnapshot) {
+function toTimeline(snapshot: AudioPlaybackPlan) {
   return createTransferableAudioWorkletTimeline(snapshot).timeline;
 }
 
 function createSnapshotWithNotes(
   notes: ReturnType<typeof createTestNote>[],
-): PlaybackSnapshot {
+): AudioPlaybackPlan {
   const project = createTestProject({
     clips: [{
       id: TEST_CLIP_ID,
@@ -1137,7 +1126,7 @@ function createSnapshotWithNotes(
     }],
   });
 
-  return compilePlaybackPlan(
+  return compileAudioPlaybackPlan(
     project,
     createClipPlaybackSource(getActiveClip(project)),
   );

@@ -1,22 +1,20 @@
 import type {
   PresetId,
-} from "./identifiers";
+} from "../../identifiers";
+import type {
+  SynthConfig,
+} from "../synth/synth-config";
 import type {
   InstrumentPreset,
-  SynthConfig,
-} from "./instruments/instrument";
+} from "./instrument-preset";
+import {
+  cloneInstrumentPreset,
+  cloneSynthConfig,
+} from "./instrument-preset";
 
 export interface MergedInstrumentPresetLibrary {
   readonly presetsById: Readonly<Record<PresetId, InstrumentPreset>>;
   readonly presetOrder: readonly PresetId[];
-}
-
-export function createPersonalInstrumentPresetId(): PresetId {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return `personal-preset-${globalThis.crypto.randomUUID()}`;
-  }
-
-  return `personal-preset-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function createPersonalInstrumentPreset(
@@ -32,24 +30,7 @@ export function createPersonalInstrumentPreset(
   };
 }
 
-export function cloneInstrumentPreset(
-  preset: InstrumentPreset,
-): InstrumentPreset {
-  return {
-    ...preset,
-    config: cloneSynthConfig(preset.config),
-  };
-}
-
-export function cloneSynthConfig(
-  config: SynthConfig,
-): SynthConfig {
-  return {
-    ...config,
-    envelope: { ...config.envelope },
-    filterEnvelope: { ...config.filterEnvelope },
-  };
-}
+export { cloneInstrumentPreset, cloneSynthConfig };
 
 /** Personal definitions override stale project snapshots with the same ID. */
 export function mergeInstrumentPresetLibraries(
@@ -58,10 +39,7 @@ export function mergeInstrumentPresetLibraries(
   personalPresetsById: Readonly<Record<PresetId, InstrumentPreset>>,
   personalPresetOrder: readonly PresetId[],
 ): MergedInstrumentPresetLibrary {
-  const presetsById = {
-    ...projectPresetsById,
-    ...personalPresetsById,
-  };
+  const presetsById = { ...projectPresetsById, ...personalPresetsById };
   const seen = new Set<PresetId>();
   const presetOrder: PresetId[] = [];
 

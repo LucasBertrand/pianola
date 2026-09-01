@@ -1,6 +1,6 @@
 import type {
   OscillatorWaveform,
-} from "../../../domain/instruments/instrument";
+} from "../../../domain/instruments/synth/synth-config";
 
 export interface DspMetrics {
   readonly peak: number;

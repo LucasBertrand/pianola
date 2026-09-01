@@ -8,7 +8,7 @@ import {
 } from "../../domain/project/project-document";
 import {
   MAXIMUM_PROJECT_INSTRUMENT_COUNT,
-} from "../../domain/instruments/instrument";
+} from "../../domain/instruments/project-instrument";
 import {
   type ClipGroupId,
   type ClipId,

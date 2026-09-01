@@ -1,7 +1,7 @@
 import React from "react";
 import type {
   PlaybackStatus,
-} from "../../infrastructure/audio/playback-model";
+} from "../../application/ports/audio-transport";
 import {
   isStopAtEndEnabled,
 } from "./transport-control-state";

@@ -407,6 +407,7 @@ function isReferenceIdentifier(identifier) {
 function evaluateImport(sourceRootPath, sourceFile, specifier) {
   const sourceZone = getSourceZone(sourceRootPath, sourceFile);
   const targetZone = getTargetZone(sourceRootPath, sourceFile, specifier);
+  const relativeTarget = getRelativeTarget(sourceRootPath, sourceFile, specifier);
   const externalPackage = getExternalPackage(specifier);
   const relativeSourceFile = relative(sourceFile);
 
@@ -424,6 +425,19 @@ function evaluateImport(sourceRootPath, sourceFile, specifier) {
   }
 
   if (
+    sourceZone === "presentation"
+    && relativeTarget?.startsWith("infrastructure/audio/")
+    && relativeTarget !== "infrastructure/audio/audio-worklet-transport"
+  ) {
+    return createViolation(
+      relativeSourceFile,
+      specifier,
+      "presentation-audio-contract-isolation",
+      "Presentation must consume audio contracts and playback plans from application; only the concrete browser transport composition is allowed.",
+    );
+  }
+
+  if (
     REACT_PACKAGES.has(externalPackage)
     && !REACT_SOURCE_ZONES.has(sourceZone)
   ) {
@@ -438,6 +452,14 @@ function evaluateImport(sourceRootPath, sourceFile, specifier) {
   }
 
   return null;
+}
+
+function getRelativeTarget(sourceRootPath, sourceFile, specifier) {
+  if (!specifier.startsWith(".")) return null;
+  return toPosixPath(path.relative(
+    sourceRootPath,
+    path.resolve(path.dirname(sourceFile), specifier),
+  ));
 }
 
 function selectLayerRule(sourceZone, targetZone) {

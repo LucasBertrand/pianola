@@ -122,7 +122,8 @@ Le domaine est réparti par vocabulaire produit :
 
 - `src/domain/identifiers.ts` pour les identifiants et ticks ;
 - `src/domain/notes/note.ts` pour une note ;
-- `src/domain/instruments/instrument.ts` pour sons et instruments projet ;
+- `src/domain/instruments/project-instrument.ts` pour l'instrument projet et
+  `src/domain/instruments/synth/synth-config.ts` pour le son durable ;
 - `src/domain/clips/clip.ts` pour pistes, timelines et clips ;
 - `src/domain/transport/transport.ts` pour horloge, métrique et boucle ;
 - `src/domain/transport/time-map.ts` comme surface publique des modules de

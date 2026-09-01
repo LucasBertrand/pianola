@@ -18,10 +18,10 @@ import {
 } from "../indexed-db/pianola-indexed-db";
 import {
   createDefaultInstrumentConfig,
-} from "../../../domain/instrument-presets";
+} from "../../../domain/instruments/synth/built-in-synth-presets";
 import {
   createPersonalInstrumentPreset,
-} from "../../../domain/personal-instrument-presets";
+} from "../../../domain/instruments/presets/personal-preset-library";
 import {
   DEFAULT_USER_SETTINGS,
 } from "../../../application/ports/user-settings-repository";
