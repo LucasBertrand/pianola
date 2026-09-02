@@ -65,7 +65,7 @@ import {
 } from "../editor-header/EditorHeader";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   PointerInteractionStrategy,
 } from "../../editor-core/interactions/pointer/pointer-interaction-strategy";

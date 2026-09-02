@@ -97,7 +97,7 @@ import {
   getPagedScrollXForTick,
   getPlaybackFollowScrollX,
   getScrollXToRevealTick,
-} from "../../src/editor-core/geometry/viewport-bounds";
+} from "../../src/editor-core/viewport/viewport-bounds";
 import {
   EditingNoteMask,
 } from "../../src/editor-core/interactions/editing-note-mask";

@@ -27,8 +27,9 @@ interdits.
 
 ## Où sont les tests ?
 
-Les unités géométriques vivent près de `geometry/`, les tests de recognizers
-près de `interactions/` et les politiques de sélection près de `selection/`.
+Les unités géométriques vivent près de `geometry/`, les calculs de cadrage près
+de `viewport/`, les tests de recognizers près de `interactions/` et les politiques
+de sélection près de `selection/`.
 Les contrats de contrôleur sont dans
 `tests/integration/editor-controller-contracts.test.ts` et les flux complets de
 gestes dans la suite d'intégration.

@@ -14,7 +14,7 @@ import type {
 } from "../../application/piano-roll/timeline/marker-collision-resolution";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   Note,
 } from "../../domain/notes/note";

@@ -1,9 +1,9 @@
 import {
   VIEWPORT_CONSTANTS,
-} from "../viewport/viewport-constants";
+} from "./viewport-constants";
 import type {
   ViewportState,
-} from "./converter";
+} from "../geometry/converter";
 
 const SCROLL_EPSILON_CSS_PIXELS = 0.000001;
 

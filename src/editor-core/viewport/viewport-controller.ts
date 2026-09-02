@@ -33,7 +33,7 @@ import {
   getMinimumHorizontalZoom,
   getMinimumVerticalZoom,
   getPlaybackFollowScrollX,
-} from "../geometry/viewport-bounds";
+} from "./viewport-bounds";
 import type {
   MutableRenderSignal,
   ReadonlyRenderSignal,

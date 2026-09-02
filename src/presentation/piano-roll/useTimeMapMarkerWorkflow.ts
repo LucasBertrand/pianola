@@ -51,7 +51,7 @@ import type {
 } from "../../application/dialogs/application-dialog-port";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   NoteCollisionResolutionRequest,
 } from "../../application/piano-roll/notes/note-collision-resolution";

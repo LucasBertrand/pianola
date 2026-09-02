@@ -20,7 +20,7 @@ import type {
 } from "../../application/history/editor-command-service";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   EditorSelection,
 } from "../../editor-core/selection/editor-selection";

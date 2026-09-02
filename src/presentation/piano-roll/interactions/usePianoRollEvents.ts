@@ -18,7 +18,7 @@ import type {
 } from "../../../editor-core/interactions/gestures/gesture-draft";
 import type {
   PianoRollControllerPort,
-} from "../../../editor-core/interactions/piano-roll-controller-port";
+} from "../piano-roll-controller-port";
 import {
   PianoRollInteractionSession,
 } from "../../../editor-core/interactions/piano-roll-interaction-session";

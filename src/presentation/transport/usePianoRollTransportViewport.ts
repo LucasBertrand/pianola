@@ -14,7 +14,7 @@ import type {
 } from "../../domain/identifiers";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "../piano-roll/piano-roll-controller-port";
 import {
   computeClipFitViewport,
 } from "../../editor-core/viewport/compute-clip-fit-viewport";

@@ -21,7 +21,7 @@ import type {
 } from "../../domain/instruments/synth/synth-config";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   UserSettings,
   UserSettingsRepository,

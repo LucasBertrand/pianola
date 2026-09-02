@@ -5,10 +5,10 @@ import {
 } from "vitest";
 import {
   VIEWPORT_CONSTANTS,
-} from "../../viewport/viewport-constants";
+} from "../viewport-constants";
 import type {
   ViewportState,
-} from "../converter";
+} from "../../geometry/converter";
 import {
   constrainViewportToContent,
   getMaximumHorizontalScroll,

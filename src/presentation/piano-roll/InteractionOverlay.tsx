@@ -28,7 +28,7 @@ import {
 } from "./interactions/usePianoRollEvents";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   SelectionMode,
 } from "../../editor-core/interactions/gestures/gesture-draft";

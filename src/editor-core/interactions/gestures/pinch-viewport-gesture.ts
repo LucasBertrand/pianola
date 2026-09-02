@@ -6,7 +6,7 @@ import {
   getMaximumVerticalScroll,
   getMinimumHorizontalZoom,
   getMinimumVerticalZoom,
-} from "../../geometry/viewport-bounds";
+} from "../../viewport/viewport-bounds";
 import type {
   PointerSample,
 } from "../pointer/pointer-sample";

@@ -14,7 +14,7 @@ import type {
 } from "../../../editor-core/geometry/converter";
 import type {
   PianoRollControllerPort,
-} from "../../../editor-core/interactions/piano-roll-controller-port";
+} from "../piano-roll-controller-port";
 import type {
   PianoRollInteractionSession,
 } from "../../../editor-core/interactions/piano-roll-interaction-session";

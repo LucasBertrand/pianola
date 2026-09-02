@@ -17,7 +17,7 @@ import {
 } from "../../domain/transport/transport";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "../piano-roll/piano-roll-controller-port";
 import type {
   EditorRuntime,
 } from "../../application/editor-session/editor-runtime";

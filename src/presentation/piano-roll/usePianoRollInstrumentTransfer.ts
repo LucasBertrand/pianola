@@ -30,7 +30,7 @@ import {
 } from "../../application/piano-roll/selection/selection-edit-plans";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 
 export interface PianoRollInstrumentTransferOptions {
   readonly commands: EditorCommandPort;

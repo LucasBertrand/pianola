@@ -18,7 +18,7 @@ import type {
 } from "../../domain/notes/note";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import {
   useProjectStoreSelector,
 } from "./useProjectStoreSelector";

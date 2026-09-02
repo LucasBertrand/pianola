@@ -50,7 +50,7 @@ import {
 } from "../../domain/selection-transformations";
 import type {
   PianoRollControllerPort,
-} from "../../editor-core/interactions/piano-roll-controller-port";
+} from "./piano-roll-controller-port";
 import type {
   ShowApplicationAlert,
 } from "../../application/dialogs/application-dialog-port";
