@@ -74,8 +74,8 @@ sous des noms différents.
 
 Tâches :
 
-- `P01-T01` — ajouter les README racine de `app`, `project`, `editor`, `audio`,
-  `project-io` et `ui` au fur et à mesure de la création de ces dossiers ; y
+- `P01-T01` — ajouter les README racine de `app`, `project`, `editor`, `audio`
+  et `project-io` au fur et à mesure de la création de ces dossiers ; y
   copier seulement responsabilité, point d'entrée et dépendances cibles ;
 - `P01-T02` — adapter les scripts de structure et de frontières pour accepter
   simultanément les chemins source et cible pendant le chantier, tout en
@@ -83,9 +83,9 @@ Tâches :
 - `P01-T03` — créer une table temporaire exhaustive `ancien chemin → lot →
   destination` dans le journal ou dans un fichier de travail référencé par le
   journal ;
-- `P01-T04` — réserver les nouveaux termes
-  `EditorSession`, `ProjectEditorSettings`, `PianoRollSession`,
-  `PianoRollScreen` et `PlaybackController` ; interdire toute nouvelle
+- `P01-T04` — réserver les nouveaux termes `Editor`, `EditorSession`,
+  `EditorProjectSettings`, `EditorInteractionState` et
+  `PlaybackController` ; interdire toute nouvelle
   occurrence ambiguë de `Workspace`.
 
 Ne pas créer de proxies de réexport, alias TypeScript globaux ou barrels pour
@@ -109,15 +109,15 @@ massifs.
 Tâches :
 
 - `P02-T01` — remplacer `EditorSessionState extends ProjectDocument` par trois
-  objets composés : `ProjectDocument`, `ProjectEditorSettings` et
+  objets composés : `ProjectDocument`, `EditorProjectSettings` et
   `EditorSession` ;
 - `P02-T02` — faire accepter aux commandes et reducers un
   `ProjectDocument`; faire de `ProjectStore` l'autorité de ce document seul ;
 - `P02-T03` — sortir `activeClipId` du document et conserver sa restauration
   via les réglages/session, sans le faire entrer dans Undo/Redo ;
 - `P02-T04` — déplacer `autoScrollEnabled` dans
-  `ProjectEditorSettings`; conserver le wire model courant par un mapper
-  explicite dans les codecs ;
+  `EditorProjectSettings`; conserver le wire model courant par un adaptateur
+  explicite sous `editor`, sans faire dépendre les codecs de l'éditeur ;
 - `P02-T05` — remplacer les dépendances de `EditorSelection` et
   `ViewportController` à la session entière par des snapshots ou requêtes
   étroits ; sortir le formatage d'en-tête du contrôleur ;
@@ -160,7 +160,14 @@ Tâches :
   défauts et validation d'instrument ; synthé et enveloppes de configuration ;
   bibliothèque de presets ; primitives de commande indissociables ;
 - `P03-T06` — séparer le calcul d'intervalles de collision du plan de
-  transaction et de restauration de sélection.
+  transaction et de restauration de sélection ;
+- `P03-T07` — distribuer `domain/music-theory` : types, valeurs persistables et
+  validation des motifs sous `project/timeline/pitch-pattern.ts`; affecter le
+  reste à `P04-T07` ;
+- `P03-T08` — absorber `time-map-model.ts` dans un vrai
+  `project/timeline/time-map.ts`, supprimer ses réexports et rediriger les
+  consommateurs vers navigation, marqueurs, normalisation ou éditions
+  structurelles.
 
 Ne pas réécrire les algorithmes de time map, split/concaténation, collision ou
 théorie musicale dans ce lot. Un déplacement mécanique peut être combiné avec
@@ -176,8 +183,9 @@ Critères de passage :
   musicale pure déjà acceptée ;
 - `PROJECT_CONSTANTS` n'existe plus ;
 - chaque intention durable retourne au plus une transaction ;
-- les façades locales utiles, notamment `time-map`, ont une responsabilité
-  documentée.
+- `time-map.ts` contient une implémentation et aucun réexport d'agrégation ;
+- le module `project` ne contient plus de fonction de snap, de libellé ou de
+  reconnaissance destinée à l'éditeur.
 
 ### P04 — Construire `editor` et supprimer la catégorie `editor-core`
 
@@ -186,8 +194,9 @@ pureté des calculs.
 
 Tâches :
 
-- `P04-T01` — déplacer la présentation du piano roll, l'inspecteur, toolbar,
-  dialogues produit et menu radial sous `src/editor/` ;
+- `P04-T01` — déplacer l'accueil, le menu projet, la présentation du piano
+  roll, l'inspecteur, header, toolbar, dialogues, diagnostics et menu radial
+  sous `src/editor/` ;
 - `P04-T02` — redistribuer géométrie, interactions, sélection, viewport et
   signaux d'`editor-core` dans la sous-capacité qui les consomme ;
 - `P04-T03` — déplacer styles de rendu, préférences de couleur/label et
@@ -198,18 +207,24 @@ Tâches :
 - `P04-T05` — renommer les interfaces locales `*Port` en `*Handle`,
   `*Snapshot` ou `*Actions`, et appliquer le vocabulaire de session cible ;
 - `P04-T06` — déplacer les tests unitaires avec leurs modules et laisser les
-  tests traversants dans `tests/integration/`.
+  tests traversants dans `tests/integration/` ;
+- `P04-T07` — déplacer sous `editor/pitch/` les réglages et calculs de snap,
+  options de sélecteur, labels, orthographe tonale et reconnaissance d'accords.
 
 Critères de passage :
 
 - `src/editor-core/` ne contient plus de code ; sa suppression physique est
   enregistrée ;
+- aucune arborescence `editor/piano-roll/` n'est créée : `editor` est le piano
+  roll au sens produit ;
 - les fichiers purs migrés n'importent ni React, ni DOM, ni Canvas, ni Web
   Audio ;
 - les adaptateurs d'événements portent explicitement la conversion DOM →
   échantillon neutre ;
 - `EDITOR_CONSTANTS` et les noms techniques ambigus de workspace ont disparu
   du code produit ;
+- `src/domain/music-theory/` a disparu et ses responsabilités sont réparties
+  entre `project/timeline` et `editor/pitch` ;
 - la preview d'un geste reste séparée du document publié.
 
 ### P05 — Sortir les intentions durables de React
@@ -231,8 +246,9 @@ Tâches :
 - `P05-T05` — créer `IdGenerator` et `Clock` minimaux, injectés seulement aux
   intentions qui en ont besoin ; supprimer les UUID, temps, hasard et compteurs
   React utilisés pour des identités durables ;
-- `P05-T06` — déplacer le contrat graphique de dialogue dans `ui/dialog/` et
-  faire traduire les résultats métier par les adaptateurs UI.
+- `P05-T06` — déplacer le contrat graphique de dialogue dans
+  `editor/ui/dialog/` et faire traduire les résultats métier par les
+  adaptateurs UI.
 
 Critères de passage :
 
@@ -260,8 +276,8 @@ Tâches :
   enchaînement, audition et publication des previews ;
 - `P06-T04` — isoler `BrowserAudioEngine` et sa fabrique paresseuse ; injecter
   cette fabrique depuis `app` ;
-- `P06-T05` — remplacer `useAudioPlayback` par un hook d'abonnement/actions et
-  déplacer les composants/styles de transport sous `audio/ui` ;
+- `P06-T05` — remplacer `useAudioPlayback` par un hook d'abonnement/actions sous
+  `editor/transport`; garder composants et styles dans l'éditeur ;
 - `P06-T06` — supprimer `audio/time-math.ts` si son absence d'usage produit est
   toujours confirmée, sinon lui donner un consommateur et un propriétaire réels.
 
@@ -269,6 +285,7 @@ Critères de passage :
 
 - un seul contrôleur possède le playhead et le choix de la source ;
 - React ne possède ni horloge audio ni logique d'auto-enchaînement ;
+- `src/audio/` ne contient aucun React, JSX, DOM, composant ou CSS ;
 - tempo, boucle et instrument gardent des previews indépendantes et versionnées ;
 - le chemin `process()` du worklet ne reçoit aucune allocation ou abstraction
   nouvelle ;
@@ -292,11 +309,14 @@ Tâches :
 - `P07-T04` — réunir codec SMF, analyse, collisions d'import, construction de
   projet et export sous `project-io/midi/` ; créer une façade
   `importMidiProject` qui ne construit pas de session d'éditeur ;
-- `P07-T05` — rendre les hooks de fichiers minces et composer menu/page
-  d'accueil depuis `app` afin d'éviter une dépendance `editor → project-io` ;
-- `P07-T06` — déplacer le codec direct réservé aux contrats vers le support de
+- `P07-T05` — rendre les hooks de fichiers minces et les déplacer avec le menu
+  et l'accueil sous `editor`; ils consomment les opérations headless de
+  `project-io` ;
+- `P07-T06` — faire posséder à `project-io` le wire DTO des réglages et à
+  `editor` sa conversion vers `EditorProjectSettings`, sans import inverse ;
+- `P07-T07` — déplacer le codec direct réservé aux contrats vers le support de
   test, ou tester directement le codec synchrone réel ;
-- `P07-T07` — centraliser la génération d'identifiants de documents via
+- `P07-T08` — centraliser la génération d'identifiants de documents via
   l'implémentation injectée par `app`.
 
 Critères de passage :
@@ -309,39 +329,45 @@ Critères de passage :
 - aucune constante navigateur ne vit avec les constantes de format ;
 - `ProjectPersistenceError` n'est plus le vocabulaire d'une erreur générique de
   fichier/version ;
-- `editor` n'importe aucun fichier de `project-io`.
+- `src/project-io/` ne contient aucun React, JSX, DOM, composant, CSS ou import
+  depuis `editor` ;
+- la création du téléchargement DOM appartient à `editor/project-menu`, tandis
+  que `project-io` retourne contenu, nom et type MIME.
 
-### P08 — Finaliser `app`, le shell et les primitives partagées
+### P08 — Finaliser l'assemblage et le shell de l'éditeur
 
 **But.** Reconnecter les capacités à une composition unique et supprimer les
 indirections visuelles sans valeur.
 
 Tâches :
 
-- `P08-T01` — déplacer l'entrée Vite vers `src/main.tsx`, la page d'accueil, le
-  shell et les diagnostics sous `src/app/` ;
+- `P08-T01` — déplacer l'entrée Vite vers `src/main.tsx`; limiter `src/app/` à
+  `App.tsx` et `create-app-runtime.ts`; confirmer que page d'accueil, shell et
+  diagnostics visibles sont sous `src/editor/` ;
 - `P08-T02` — faire construire à `app-runtime.ts` repositories, codecs,
   scheduler, générateurs et fabrique audio ; exposer aux écrans des contrôleurs
   déjà assemblés ;
 - `P08-T03` — remplacer la grande interface runtime plate par des sous-objets
   nommés (`project`, `editor`, `playback`, `projectIo`) ;
-- `P08-T04` — composer header, transport et menu projet dans le shell ; supprimer
-  les trois composants d'en-tête qui ne font que relayer leurs props ;
-- `P08-T05` — déplacer seulement les vraies primitives partagées dans `ui` et
-  laisser chaque contrôle spécialisé dans sa capacité ;
-- `P08-T06` — colocaliser les CSS et établir dans `app` un ordre d'import unique
-  préservant tokens, reset, capacités et responsive.
+- `P08-T04` — composer accueil, header, transport et menu projet dans
+  `editor/Editor.tsx` et son shell ; supprimer les trois composants d'en-tête
+  qui ne font que relayer leurs props ;
+- `P08-T05` — déplacer les primitives visuelles partagées entre surfaces dans
+  `editor/ui` et laisser chaque contrôle spécialisé chez sa surface ;
+- `P08-T06` — colocaliser tous les CSS sous `editor` et y établir un ordre
+  d'import unique préservant tokens, reset, surfaces et responsive.
 
 Critères de passage :
 
 - aucune capacité autre qu'`app` ne choisit une implémentation IndexedDB,
   Worker, scheduler, Web Audio ou service worker ;
-- la composition du shell ne crée pas de cycle entre `editor`, `audio` et
-  `project-io` ;
+- `app` ne contient aucun écran, workflow utilisateur ou CSS ;
+- `audio` et `project-io` ne dépendent pas d'`editor`; l'éditeur consomme leurs
+  API headless ;
 - la runtime n'est plus un sac plat de signaux sans propriétaire ;
 - les composants passe-plats identifiés ont disparu ;
-- `ui` ne contient que des primitives avec au moins deux consommateurs de
-  capacités distinctes ;
+- `editor/ui` ne contient que des primitives utilisées par plusieurs surfaces
+  de l'éditeur ;
 - l'ordre de cascade CSS est écrit et lisible en un point.
 
 ### P09 — Nettoyage structurel et documentation courante

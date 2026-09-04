@@ -18,21 +18,25 @@ part d'un terme produit, trouve son module à la racine de `src/`, puis suit un
 flux complet sans traverser systématiquement `domain`, `application`,
 `editor-core`, `presentation` et `infrastructure`.
 
-La cible comporte six propriétaires explicites :
+La cible comporte cinq propriétaires explicites :
 
 | Module | Question à laquelle il répond |
 | --- | --- |
-| `app` | Comment l'application démarre-t-elle et assemble-t-elle les capacités ? |
+| `app` | Comment les capacités sont-elles construites et assemblées ? |
 | `project` | Qu'est-ce qu'un projet musical et comment une intention durable le modifie-t-elle ? |
-| `editor` | Comment l'utilisateur voit-il et manipule-t-il un projet ? |
-| `audio` | Comment un projet devient-il une lecture Web Audio temps réel ? |
-| `project-io` | Comment un projet entre-t-il, sort-il ou persiste-t-il ? |
-| `ui` | Quelles primitives visuelles sont réellement partagées ? |
+| `editor` | Comment l'utilisateur voit-il et manipule-t-il l'application, de l'accueil au piano roll ? |
+| `audio` | Comment un projet devient-il une lecture Web Audio temps réel, sans dépendre du rendu ? |
+| `project-io` | Comment un projet entre-t-il, sort-il ou persiste-t-il, sans dépendre du rendu ? |
 
 Ce choix n'essaie pas de reproduire quatre couches canoniques. Il conserve en
 revanche les propriétés qui ont une valeur concrète : calcul musical pur,
 gestes sans DOM, transactions atomiques, snapshots Canvas explicites,
 validation stricte des données et moteur audio préalloué.
+
+L'éditeur est le piano roll au sens produit. Il n'existe donc pas de doublon
+`editor/piano-roll` : accueil, menu projet, transport visible, Canvas,
+inspecteur, dialogues et primitives UI appartiennent tous à `editor`. `app`
+reste limité au démarrage et à l'injection des dépendances.
 
 ## Critères de réussite globaux
 
@@ -47,6 +51,12 @@ Le chantier est terminé lorsque :
   construisent plus les séquences de commandes des intentions durables ;
 - `editor-core` n'existe plus comme catégorie hybride, mais ses algorithmes purs
   restent sans React, DOM, Canvas ni Web Audio ;
+- `audio` et `project-io` ne contiennent aucun React, JSX, DOM, composant, CSS
+  ou modèle de vue ;
+- l'actuel `music-theory` est distribué entre le vocabulaire persistant du
+  projet et les outils de hauteur de l'éditeur ;
+- `time-map.ts` n'est plus une façade de réexport : il contient le modèle
+  canonique et les consommateurs importent directement les opérations ;
 - les formats `.pianola`, IndexedDB, réglages et MIDI conservent leurs contrats
   externes, sauf décision de produit explicite et migration versionnée séparée ;
 - les anciens chemins, façades de transition et code produit réservé aux tests

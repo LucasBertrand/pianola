@@ -23,12 +23,12 @@ n'est pas une simplification recevable.
 
 ## 2. Compromis assumés
 
-### Six modules plutôt que quatre couches
+### Cinq capacités plutôt que quatre couches
 
-La cible comporte davantage de racines nominales qu'une Clean Architecture
-canonique, mais chacune correspond à une question de navigation concrète. La
-frontière importante est la direction des dépendances et la propriété des
-états, pas le nombre de dossiers.
+La cible ne reproduit pas une Clean Architecture canonique, mais chaque racine
+correspond à une question concrète : assemblage, projet durable, éditeur,
+lecture audio ou entrée/sortie. La frontière importante est la direction des
+dépendances et la propriété des états, pas le nombre de dossiers.
 
 ### Pureté locale plutôt que couche `editor-core`
 
@@ -37,12 +37,18 @@ servent. On renonce à une racine techniquement homogène en apparence pour gagn
 une cohésion fonctionnelle, avec une règle d'import vérifiable fichier par
 fichier.
 
-### Flux technique complet dans `audio` et `project-io`
+### `audio` et `project-io` entièrement headless
 
-Web Audio, worklet et UI de transport partagent une capacité, de même que
-persistance, `.pianola` et MIDI partagent le cycle de vie du projet. Cette
-proximité n'autorise pas les codecs à dépendre de React ni le DSP à dépendre de
-l'UI ; les sous-frontières utiles restent explicites.
+Web Audio et le worklet partagent la capacité audio ; persistance, `.pianola`
+et MIDI partagent le cycle de vie externe du projet. En revanche, contrôles,
+dialogues, téléchargement DOM et CSS restent sous `editor`. Ce découplage vaut
+plus que la complétude d'une tranche verticale dans ces deux capacités.
+
+### Pas de racine `music-theory`
+
+Le vocabulaire des motifs persistés appartient à la timeline du projet. Snap,
+orthographe, labels et reconnaissance d'accords servent l'éditeur. Les réunir
+dans une racine autonome recréerait une catégorie technique hybride.
 
 ### Fichiers cohésifs potentiellement longs
 
@@ -72,11 +78,12 @@ Comme l'application peut être cassée entre les lots, aucun proxy de réexport
 n'est nécessaire. Un ancien chemin conservé pour « faciliter la transition »
 masque la complétude du déplacement et rend le journal moins fiable.
 
-### Cycles entre éditeur, fichiers et audio
+### Dépendances inversées depuis les moteurs vers l'éditeur
 
-L'éditeur affiche transport et menu projet, mais ne doit pas posséder leurs
-implémentations. Le shell `app` les compose. Sans cette règle, la structure par
-capacité crée rapidement `editor ↔ audio` ou `editor ↔ project-io`.
+L'éditeur affiche transport et menu projet, mais `audio` et `project-io` ne
+doivent jamais importer leurs composants, types de vue ou réglages runtime. Les
+moteurs exposent des snapshots, actions et résultats typés ; `editor` les
+consomme et `app` injecte les implémentations.
 
 ### Runtime monolithique renommé
 
@@ -174,7 +181,7 @@ séparé, sauf si elle empêche directement la parité structurelle.
 | course audio | preview tardive appliquée à une autre source | préserver source ID, séquence timeline et versions monotones |
 | fuite de ressources | listeners, Worker ou AudioContext non détruits | cycle `start/stop/dispose` documenté et exercé dans la recette |
 | régression tactile/Canvas | tests unitaires verts mais gestes incorrects | recette réelle finale sur pointeur grossier et précis |
-| dossier `ui` fourre-tout | fichier avec un seul consommateur de capacité | le remettre chez son consommateur ; exiger deux usages indépendants |
+| dossier `editor/ui` fourre-tout | primitive utilisée par une seule surface | la remettre chez cette surface ; réserver `editor/ui` aux usages transversaux internes |
 | journal obsolète | worktree différent de l'état annoncé | procédure `RECOVERY_REQUIRED`, aucune restauration automatique |
 
 ## 6. Recette automatisée finale
@@ -200,6 +207,9 @@ Contrôles structurels complémentaires à inclure dans les scripts finaux :
 - graphe fermé aux modules cibles et sans cycle ;
 - aucun import produit vers un test ;
 - aucun `EditorSessionState`, `PROJECT_CONSTANTS` ou `EDITOR_CONSTANTS` ;
+- aucune racine `music-theory` ni arborescence `editor/piano-roll` ;
+- aucun React, JSX, DOM ou CSS sous `audio` et `project-io` ;
+- aucun réexport d'agrégation dans `project/timeline/time-map.ts` ;
 - aucune exception nominative pour l'ancien hook audio ou un ancien chemin ;
 - aucune façade de compatibilité temporaire.
 
@@ -258,4 +268,3 @@ Chaque scénario reçoit `PASS`, `FAIL` ou `NOT_APPLICABLE` avec environnement e
 observation. Aucun `FAIL` n'est accepté pour clôturer. Un écart déjà présent
 dans la baseline peut être accepté seulement s'il est documenté comme identique
 et explicitement hors périmètre.
-

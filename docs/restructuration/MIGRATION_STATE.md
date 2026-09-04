@@ -9,9 +9,9 @@ initialisé pour le futur chantier ; aucun lot de migration source n'a encore
 
 | Champ | Valeur |
 | --- | --- |
-| `plan_version` | `1` |
+| `plan_version` | `2` |
 | `global_status` | `NOT_STARTED` |
-| `branch` | `TO_SET` |
+| `branch` | `restructuration/plan-directeur` |
 | `baseline_ref` | `TO_SET` |
 | `last_checkpoint` | `UNCOMMITTED` |
 | `active_batch` | `P00` |
@@ -20,12 +20,12 @@ initialisé pour le futur chantier ; aucun lot de migration source n'a encore
 | `owner` | `UNASSIGNED` |
 | `validation_mode` | `final-only` |
 | `expected_broken_state` | `aucun : la migration source n'a pas commencé` |
-| `last_update` | `2026-09-04T00:00:00+02:00` |
+| `last_update` | `2026-09-04T16:59:01+02:00` |
 
 ### Prochaine action exacte
 
-`P00-T01` — Sur la branche dédiée autorisée pour le chantier, relever le nom de
-branche, le SHA de base et `git status --short`; remplacer `TO_SET`, inventorier
+`P00-T01` — Sur la branche dédiée, relever le SHA de base et
+`git status --short`; remplacer le `baseline_ref` encore indéfini, inventorier
 chaque modification préexistante à préserver, puis attribuer `P00-T02`.
 
 ### Commande de reprise
@@ -71,18 +71,21 @@ propriétaire.
 | --- | --- | --- | --- | --- |
 | `src/bootstrap/` | `src/app/`, `src/main.tsx` | `NOT_MOVED` | — | totalité |
 | `src/domain/` | `src/project/` | `NOT_MOVED` | — | totalité |
-| `src/application/history/` | `src/project/` | `NOT_MOVED` | — | totalité |
+| `src/application/history/project-store.ts` | `src/project/` | `NOT_MOVED` | — | totalité |
+| `src/application/history/editor-command-service.ts` | `src/editor/editor-history-controller.ts` | `NOT_MOVED` | — | totalité |
 | `src/application/editor-session/` | `src/editor/`, `src/app/` | `NOT_MOVED` | — | totalité |
-| `src/application/piano-roll/` | `src/editor/piano-roll/`, `src/project/` | `NOT_MOVED` | — | totalité |
-| `src/editor-core/` | `src/editor/piano-roll/`, `src/audio/` | `NOT_MOVED` | — | totalité |
+| `src/application/piano-roll/` | `src/editor/`, `src/project/` | `NOT_MOVED` | — | totalité |
+| `src/editor-core/` | sous-capacités de `src/editor/`, `src/audio/` | `NOT_MOVED` | — | totalité |
 | `src/application/audio/`, audio port | `src/audio/` | `NOT_MOVED` | — | totalité |
 | `src/infrastructure/audio/` | `src/audio/` | `NOT_MOVED` | — | totalité |
-| `src/presentation/transport/` | `src/audio/ui/`, `src/audio/` | `NOT_MOVED` | — | totalité |
+| `src/presentation/transport/` | `src/editor/transport/`, `src/audio/` | `NOT_MOVED` | — | totalité |
 | persistance et migrations actuelles | `src/project-io/local/`, `versioning/` | `NOT_MOVED` | — | totalité |
 | fichiers `.pianola` et MIDI actuels | `src/project-io/pianola/`, `midi/` | `NOT_MOVED` | — | totalité |
 | présentation éditeur actuelle | `src/editor/` | `NOT_MOVED` | — | totalité |
-| primitives de présentation actuelles | `src/ui/` | `NOT_MOVED` | — | totalité |
-| home, shell, diagnostics actuels | `src/app/` | `NOT_MOVED` | — | totalité |
+| primitives de présentation actuelles | `src/editor/ui/` | `NOT_MOVED` | — | totalité |
+| home, shell, diagnostics actuels | sous-capacités de `src/editor/` | `NOT_MOVED` | — | totalité |
+| `src/domain/music-theory/` | `src/project/timeline/pitch-pattern.ts`, `src/editor/pitch/` | `NOT_MOVED` | — | totalité |
+| façade `src/domain/transport/time-map.ts` | vrai module `src/project/timeline/time-map.ts` + imports précis | `NOT_MOVED` | — | totalité |
 
 ## État cassé connu
 
@@ -106,9 +109,29 @@ Ne pas utiliser une formule générale telle que « ça ne compile pas ».
 
 | ID | Date | Tâche | Décision | Conséquences |
 | --- | --- | --- | --- | --- |
-| `D-001` | 2026-09-04 | plan | organisation par six capacités, validation complète uniquement en `P10` | remplace les couches horizontales sans relâcher les invariants observables |
+| `D-001` | 2026-09-04 | plan | organisation initiale par capacités, validation complète uniquement en `P10` | remplace les couches horizontales sans relâcher les invariants observables |
+| `D-002` | 2026-09-04 | revue | cinq racines ; `editor` possède toute l'interface ; `app` assemble seulement ; `audio` et `project-io` sont headless ; suppression de la façade time-map et répartition de music-theory | simplifie les frontières et interdit les dépendances des moteurs vers le rendu |
 
 ## Journal — plus récent en premier
+
+### 2026-09-04T16:59:01+02:00 — PLAN-REVISION — Codex
+
+- Statut : architecture cible corrigée avant démarrage du chantier.
+- Point de départ : commit du livrable initial `5594a6a`.
+- Changements : cinq racines ; toute l'interface sous `editor`; `app` limité à
+  l'assemblage ; `audio` et `project-io` headless ; répartition de
+  `music-theory`; remplacement de la façade `time-map.ts` par un vrai module.
+- Décisions : `D-002`.
+- Préexistant préservé : modifications d'`AGENTS.md` et `docs/Audit/` laissées
+  hors des commits du livrable.
+- État cassé attendu : aucun, migration source non commencée.
+- Contrôles exécutés : inventaire des six fichiers de `music-theory`, de leurs
+  consommateurs et du contenu de `time-map.ts`.
+- Tests/builds : non exécutés conformément au mandat documentaire.
+- Prochaine tâche : `P00-T01`.
+- Action exacte : relever le SHA de baseline et inventorier le worktree avant
+  toute modification sous `src/`.
+- Commande de reprise : `git branch --show-current; git rev-parse HEAD; git status --short`.
 
 ### 2026-09-04T00:00:00+02:00 — PLAN — Codex
 
@@ -126,4 +149,3 @@ Ne pas utiliser une formule générale telle que « ça ne compile pas ».
 - Action exacte : relever branche, SHA et worktree, puis remplir la baseline et
   la table des changements préexistants.
 - Commande de reprise : `git branch --show-current; git rev-parse HEAD; git status --short`.
-

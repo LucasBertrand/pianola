@@ -8,32 +8,33 @@ les anciennes couches soient simplement recréées sous d'autres noms.
 
 | Source actuelle | Destination principale | Traitement |
 | --- | --- | --- |
-| `src/bootstrap/` | `src/app/` et `src/main.tsx` | garder la composition, absorber les choix concrets encore faits dans les hooks |
-| `src/domain/project/`, `clips/`, `notes/`, `instruments/`, `transport/`, `music-theory/` | sous-capacités de `src/project/` | déplacer puis consolider modèles, défauts, validations et constantes par concept |
+| `src/bootstrap/` | `src/app/` et `src/main.tsx` | limiter cette zone à la composition, absorber les choix concrets encore faits dans les hooks |
+| `src/domain/project/`, `clips/`, `notes/`, `instruments/`, `transport/` | sous-capacités de `src/project/` | déplacer puis consolider modèles, défauts, validations et constantes par concept |
+| `src/domain/music-theory/` | `src/project/timeline/pitch-pattern.ts` et `src/editor/pitch/` | garder dans le projet le vocabulaire persisté ; déplacer snap, reconnaissance et libellés dans l'éditeur |
 | `src/domain/commands/` | sous-capacité concernée de `src/project/` | colocaliser types et reducers ; conserver une transaction commune |
-| `src/domain/note-collision.ts`, `selection-transformations.ts` | `src/project/notes/` et `src/project/` ou `src/editor/piano-roll/selection/` selon l'autorité | séparer calcul métier et plan de transaction/sélection |
+| `src/domain/note-collision.ts`, `selection-transformations.ts` | `src/project/notes/` et `src/project/` ou `src/editor/selection/` selon l'autorité | séparer calcul métier et plan de transaction/sélection |
 | `src/application/history/project-store.ts` | racine de `src/project/` | faire du store un store de `ProjectDocument` seulement |
 | `src/application/history/editor-command-service.ts` | `src/editor/editor-history-controller.ts` | conserver les checkpoints de sélection autour de l'historique sans contaminer le store musical |
 | `src/application/editor-session/` | `src/editor/` ; création concrète dans `src/app/` | distribuer session, réglages persistés et previews au propriétaire réel |
-| `src/application/piano-roll/` | `src/editor/piano-roll/` ou `src/project/` | garder les intentions éditoriales près de la surface ; envoyer les mutations durables dans `project` |
-| `src/editor-core/` | sous-dossiers de `src/editor/piano-roll/` ; playhead vers `src/audio/` | supprimer la racine hybride, préserver fichier par fichier l'absence de dépendance navigateur |
+| `src/application/piano-roll/` | `src/editor/` ou `src/project/` | garder les intentions éditoriales près de l'éditeur ; envoyer les mutations durables dans `project` |
+| `src/editor-core/` | sous-dossiers directs de `src/editor/` ; playhead vers `src/audio/` | supprimer la racine hybride, préserver fichier par fichier l'absence de dépendance navigateur |
 | `src/application/audio/`, `ports/audio-transport.ts` | racine de `src/audio/` | regrouper plan, contrat de transport et contrôle de lecture |
-| `src/application/dialogs/` | `src/ui/dialog/` | assumer le caractère graphique de ce contrat |
-| `src/application/product/` | `src/app/app-metadata.ts` | supprimer le dossier mono-fichier |
+| `src/application/dialogs/` | `src/editor/ui/dialog/` | assumer le caractère graphique de ce contrat |
+| `src/application/product/` | nom visible sous `src/editor/`, slug de fichier sous `src/project-io/pianola/` | supprimer l'objet global et colocaliser ses deux valeurs |
 | `src/application/project-files/` | `src/project/` pour la création initiale ; `src/project-io/` pour plans et migration | séparer création du document et frontières d'entrée/sortie |
 | ports de persistance sous `src/application/ports/` | `src/project-io/local/` ou près du service consommateur | rapprocher contrat et adaptateurs, sans dossier de ports horizontal |
 | `src/infrastructure/audio/` | `src/audio/browser/`, `worklet/` et `synth/` | déplacer sans réécrire les algorithmes temps réel |
-| `src/presentation/transport/` | `src/audio/ui/` et contrôleur non React à la racine audio | remplacer le hook central par un adaptateur React mince |
+| `src/presentation/transport/` | `src/editor/transport/` et contrôleur non React à la racine audio | découpler le contrôle visuel du moteur headless |
 | `src/application/persistence/` et ports de persistance | `src/project-io/` | rapprocher autosave, contrats et implémentations de leur cycle de vie |
 | `src/infrastructure/persistence/` et `migration/` | `src/project-io/local/` et `versioning/` | renommer le vocabulaire d'erreur générique, garder les codecs stricts |
 | `src/infrastructure/project-files/` | `src/project-io/pianola/` et `midi/` | garder les codecs, déplacer l'orchestration MIDI au point d'entrée du flux |
-| `src/presentation/project-files/` | `src/project-io/ui/` et composition `src/app/` | les hooks deviennent des adaptateurs des façades de cycle de vie |
+| `src/presentation/project-files/` | `src/editor/project-menu/` | les hooks deviennent des adaptateurs visuels des opérations headless de `project-io` |
 | `src/presentation/piano-roll/`, `inspector/`, `editor-toolbar/`, `radial-menu/` | `src/editor/` | déplacer par surface et supprimer les hooks de pure orchestration durable |
-| `src/presentation/dialogs/` | `src/editor/dialogs/` ou `src/ui/dialog/` | dialogue produit dans l'éditeur ; mécanique générique dans `ui` |
-| `src/presentation/slider/`, `command-icons/` | `src/ui/` | conserver comme primitives partagées |
-| `src/presentation/home/`, `diagnostics/`, `editor-header/` | `src/app/` | la page et le shell composent les capacités ; supprimer les passe-plats |
-| `src/infrastructure/browser/` | `src/app/browser/` | rattacher l'enregistrement du service worker au démarrage applicatif |
-| `src/presentation/styles/` | styles colocalisés sous `app`, `editor`, `audio`, `project-io`, `ui` | conserver un ordre d'import global explicite |
+| `src/presentation/dialogs/` | `src/editor/dialogs/` ou `src/editor/ui/dialog/` | dialogue produit et mécanique visuelle restent dans l'éditeur |
+| `src/presentation/slider/`, `command-icons/` | `src/editor/ui/` | conserver comme primitives internes à l'éditeur |
+| `src/presentation/home/`, `diagnostics/`, `editor-header/` | `src/editor/home/`, `diagnostics/`, `header/` | toute surface visible appartient à l'éditeur ; supprimer les passe-plats |
+| `src/infrastructure/browser/` | `src/app/register-service-worker.ts` | rattacher cet adaptateur au démarrage sans créer une nouvelle sous-couche |
+| `src/presentation/styles/` | `src/editor/styles/` et primitives sous `src/editor/ui/` | aucun CSS dans `app`, `audio`, `project` ou `project-io` |
 
 Les tests suivent leur module propriétaire. Les scénarios réellement
 transversaux restent sous `tests/integration/` jusqu'au dernier lot, où leurs
@@ -47,9 +48,9 @@ imports et noms sont mis à jour en une fois.
 store à retirer puis réinjecter `workspace` autour de l'historique.
 
 **Cible.** `ProjectStore<ProjectDocument>` d'un côté ; `EditorSession` compose
-le store, `ProjectEditorSettings` et `PianoRollSession` de l'autre. Les reducers
-ne reçoivent plus une session globale. Les sélecteurs UI combinent leurs
-snapshots à la frontière de rendu seulement.
+le store, `EditorProjectSettings` et l'état d'interaction de l'autre. Les
+reducers ne reçoivent plus une session globale. Les sélecteurs UI combinent
+leurs snapshots à la frontière de rendu seulement.
 
 **Compatibilité.** Le wire model des codecs reste distinct du modèle runtime.
 Le déplacement d'`autoScrollEnabled` ne change donc pas silencieusement le
@@ -73,7 +74,7 @@ draft de dialogue, flags et libellés.
 **Cible.** Trois ensembles cohésifs :
 
 - opérations et validation des marqueurs dans `project/timeline/` ;
-- projection et commit du geste dans `editor/piano-roll/interactions/` ;
+- projection et commit du geste dans `editor/interactions/` ;
 - draft, flags et libellés dans `editor/dialogs/` et la couche de rendu du
   ruler.
 
@@ -84,7 +85,7 @@ une divergence entre preview et résultat durable.
 
 **Constat retenu.** Boutons, labels et ton graphique forment un contrat de vue.
 
-**Cible.** Déplacer le mécanisme dans `ui/dialog/`. Les fonctions métier
+**Cible.** Déplacer le mécanisme dans `editor/ui/dialog/`. Les fonctions métier
 retournent une erreur ou une alternative typée ; les hooks traduisent ce
 résultat en contenu de modale. Aucun module `project` ne dépend du modèle de
 dialogue.
@@ -95,9 +96,9 @@ dialogue.
 projet et sa sélection.
 
 **Cible.** `project-io/midi/import-midi-project.ts` orchestre décodage, analyse,
-choix utilisateur et construction du `ProjectDocument`. Le lecteur/écrivain SMF
-reste un codec pur. La création de la session d'éditeur est faite ensuite par
-`app`, pas par l'importeur MIDI.
+décision fournie par l'éditeur et construction du `ProjectDocument`. Le
+lecteur/écrivain SMF reste un codec pur. La session est créée ensuite par
+l'éditeur à partir du document ; l'importeur MIDI ne la connaît pas.
 
 ### Transactions construites dans les hooks React
 
@@ -131,12 +132,12 @@ périmètre racine ne le sont plus.
 
 | Contenu actuel | Destination |
 | --- | --- |
-| `geometry/` | `editor/piano-roll/canvas/` si propre au rendu, sinon `interactions/` si propre au ciblage |
-| recognizers et échantillons neutres | `editor/piano-roll/interactions/` |
-| `selection/` | `editor/piano-roll/selection/` |
-| viewport | `editor/piano-roll/viewport/` |
-| signaux de rendu et masque | `editor/piano-roll/canvas/` |
-| styles de note et options de label/couleur | `editor/piano-roll/canvas/` ou `editor/preferences/` |
+| `geometry/` | `editor/canvas/` si propre au rendu, sinon `editor/interactions/` si propre au ciblage |
+| recognizers et échantillons neutres | `editor/interactions/` |
+| `selection/` | `editor/selection/` |
+| viewport | `editor/viewport/` |
+| signaux de rendu et masque | `editor/canvas/` |
+| styles de note et options de label/couleur | `editor/canvas/` ou `editor/preferences/` |
 | `playhead-position.ts` | `audio/playback-controller.ts` ou un type voisin |
 
 Les dépendances globales d'`EditorSelection` et `ViewportController` sont
@@ -153,7 +154,7 @@ la concentration, pas la légalité de l'import.
 1. compilation pure de `PlaybackPlan` ;
 2. `PlaybackController` pour source, playhead, enchaînement et actions ;
 3. adaptateur `BrowserAudioEngine` pour cycle Web Audio et worklet ;
-4. hook React d'abonnement et composants de contrôle.
+4. hook React d'abonnement et composants sous `editor/transport`.
 
 Les previews tempo, boucle et instrument restent des canaux indépendants et
 versionnés. Le refactoring ne fusionne pas ces états.
@@ -163,10 +164,11 @@ versionnés. Le refactoring ne fusionne pas ces états.
 **Constat retenu.** Transport, scheduler, codecs et repositories sont encore
 choisis dans plusieurs hooks de présentation.
 
-**Cible.** `app/app-runtime.ts` construit ou injecte ces implémentations. Les
-capacités reçoivent des objets ou fabriques explicites. Les besoins liés à un
-geste utilisateur, tel le démarrage Web Audio, sont représentés par une
-fabrique paresseuse et non par une instanciation cachée dans un hook.
+**Cible.** `app/create-app-runtime.ts` construit ou injecte ces implémentations,
+sans posséder d'écran ou de workflow. Les capacités reçoivent des objets ou
+fabriques explicites. Les besoins liés à un geste utilisateur, tel le démarrage
+Web Audio, sont représentés par une fabrique paresseuse et non par une
+instanciation cachée dans un hook.
 
 ### Identifiants et temps dispersés
 
@@ -188,6 +190,30 @@ migration et une erreur d'enveloppe générique. Les erreurs `.pianola`, MIDI et
 IndexedDB traduisent cette erreur à leur frontière sans partager un vocabulaire
 trompeur.
 
+### `music-theory` mélange projet et éditeur
+
+**Constat vérifié.** Les six fichiers et 503 lignes réunissent un type de
+marqueur persistant, un réglage de session, le snap, des groupes de sélecteur,
+des glyphes et un résumé d'accords. `chord-recognition.ts` n'a qu'un consommateur
+produit, dans le header ; les fonctions de notation et d'orthographe ne servent
+qu'au rendu. `pitch-snap.ts` est largement consommé parce qu'il réunit toutes
+ces responsabilités.
+
+**Cible.** `project/timeline/pitch-pattern.ts` garde types, valeurs persistables
+et validation. `editor/pitch/` reçoit réglages, snap, options, labels et
+reconnaissance. Il n'existe pas de racine `music-theory`.
+
+### Façade `time-map.ts`
+
+**Constat vérifié.** Le fichier actuel ne contient que des réexports : environ
+53 symboles provenant de sept modules. Il est importé par 39 fichiers produit
+et 16 fichiers de test/support. C'est la seule surface dédiée dont tout le
+contenu est une agrégation de réexports.
+
+**Cible.** Absorber `time-map-model.ts` dans un véritable
+`project/timeline/time-map.ts`, puis importer navigation, opérations de
+marqueurs, normalisation et éditions structurelles depuis leurs modules précis.
+
 ### Code produit réservé aux tests
 
 **Constat retenu.** `audio/time-math.ts` et le codec direct n'appartiennent pas
@@ -203,7 +229,6 @@ Ne pas conserver un faux point d'entrée produit pour satisfaire un test.
 Les décisions suivantes sont explicites afin qu'un agent ne « corrige » pas un
 élément volontaire :
 
-- la façade locale `time-map.ts` n'est pas un défaut en soi ;
 - l'usage de Tonal dans un calcul musical pur reste accepté ;
 - `InstrumentPresetDialog.tsx`, `ClipInspector.tsx`, `note-collision.ts` et les
   parseurs volumineux ne sont pas découpés en fonction d'un seuil de lignes ;
