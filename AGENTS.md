@@ -13,6 +13,7 @@ n'est pas nécessaire à l'objectif.
 
 ## Avant toute modification
 
+0. Ignorer `.idea/`.
 1. Lire le `README.md` racine, puis `docs/guides/contributing.md`.
 2. Vérifier `git status --short` et considérer toute modification préexistante
    comme appartenant à l'utilisateur.
