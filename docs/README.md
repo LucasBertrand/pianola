@@ -17,3 +17,4 @@ Les documents de ce répertoire décrivent le code courant.
 | comprendre les couches | [`architecture.md`](architecture.md) |
 | décider de la durée de vie d’un état | [`state-ownership.md`](state-ownership.md) |
 | comprendre les états de composition | [`app-composition.md`](app-composition.md) |
+| préparer ou reprendre la restructuration globale | [`restructuration/README.md`](restructuration/README.md) |
