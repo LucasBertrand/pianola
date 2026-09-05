@@ -57,7 +57,6 @@ transversaux vagues, de dépendances inversées ni de duplication de primitives.
 
 | ID | Étape | Statut | Critère de sortie |
 | --- | --- | --- | --- |
-| A0 | Établir la baseline documentaire et technique | vérifié | architecture déclarée, scripts et worktree consignés ; `npm run verify` vert |
 | A1 | Cartographier modules, flux et dépendances | planifié | graphe des dépendances et principaux flux documentés |
 | A2 | Inventorier les violations et anomalies de nommage | à explorer | constats prouvés, classés par sévérité et effort |
 | A3 | Définir les tranches de restructuration | à explorer | backlog ordonné avec critères de non-régression |
