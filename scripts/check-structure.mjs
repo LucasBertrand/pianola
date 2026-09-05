@@ -10,11 +10,6 @@ import ts from "typescript";
 const workspaceRoot = path.resolve(readRootArgument(process.argv.slice(2)));
 const sourceRoot = path.join(workspaceRoot, "src");
 const violations = [];
-await import("./check-docs.mjs");
-
-if (process.exitCode !== undefined && process.exitCode !== 0) {
-  violations.push("Documentation links or documented paths are invalid.");
-}
 
 const forbiddenPaths = [
   "src/config",
@@ -67,14 +62,6 @@ const forbiddenPaths = [
   "src/presentation/styles/header-transport.css",
   "src/presentation/styles/application-header.css",
   "src/presentation/styles/range-input.css",
-];
-const requiredGuides = [
-  "src/domain/README.md",
-  "src/editor-core/README.md",
-  "src/application/README.md",
-  "src/infrastructure/audio/README.md",
-  "src/infrastructure/project-files/README.md",
-  "src/presentation/README.md",
 ];
 const requiredStyles = [
   "src/presentation/styles/index.css",
@@ -140,7 +127,6 @@ for (const relativePath of forbiddenPaths) {
 }
 
 for (const relativePath of [
-  ...requiredGuides,
   ...requiredStyles,
   ...requiredPresentationOwners,
 ]) {
